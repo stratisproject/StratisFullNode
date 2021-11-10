@@ -42,7 +42,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         }
 
         [Fact]
-        public async Task DoesntBroadcastInIBD()
+        public async Task DoesntBroadcastInIBDAsync()
         {
             this.ibdState.IsInitialBlockDownload().Returns(true);
 
@@ -61,7 +61,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         }
 
         [Fact]
-        public async Task DoesntBroadcastWithInactiveFederation()
+        public async Task DoesntBroadcastWithInactiveFederationAsync()
         {
             this.federationWalletManager.IsFederationWalletActive().Returns(false);
 

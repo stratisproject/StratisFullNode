@@ -130,6 +130,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// Returns 0 normal deposits
         /// Returns 4 faster deposits
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task RetrieveDeposits_ReturnsDataToAdvanceNextMaturedBlockHeightAsync()
         {
@@ -189,8 +190,9 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// Returns 6 normal deposits
         /// Returns 4 faster deposits
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
-        public async Task RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario2()
+        public async Task RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario2_Async()
         {
             // Create a "chain" of 30 blocks.
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, true, this.mainChainNetwork);
@@ -247,8 +249,9 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// Returns 6 faster deposits
         /// Returns 5 normal deposits
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
-        public async Task RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario3()
+        public async Task RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario3_Async()
         {
             // Create a "chain" of 30 blocks.
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, true, this.mainChainNetwork);
@@ -297,8 +300,9 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// Returns 6 normal deposits
         /// Returns 0 small deposits
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
-        public async Task RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario4()
+        public async Task RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario4_Async()
         {
             // Create a "chain" of 20 blocks.
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, true, this.mainChainNetwork);
@@ -353,8 +357,9 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// Returns 0 normal deposits
         /// Returns 0 small deposits
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
-        public async Task RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario5()
+        public async Task RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario5_Async()
         {
             // Create a "chain" of 20 blocks.
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(20, true, this.mainChainNetwork);
@@ -407,8 +412,9 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// Returns 0 normal deposits
         /// Returns 0 large deposits
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
-        public async Task RetrieveDeposits_ReturnsLargeDeposits_Scenario6()
+        public async Task RetrieveDeposits_ReturnsLargeDeposits_Scenario6_Async()
         {
             // Create a "chain" of 20 blocks.
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(20, true, this.mainChainNetwork);
@@ -462,8 +468,9 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// Returns 6 normal deposits
         /// Returns 6 large deposits
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
-        public async Task RetrieveDeposits_ReturnsLargeDeposits_Scenario7()
+        public async Task RetrieveDeposits_ReturnsLargeDeposits_Scenario7_Async()
         {
             // Create a "chain" of 40 blocks.
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(40, true, this.mainChainNetwork);
@@ -531,8 +538,9 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// Returns 6 normal deposits
         /// Returns 7 large deposits
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
-        public async Task RetrieveDeposits_ReturnsLargeDeposits_Scenario8()
+        public async Task RetrieveDeposits_ReturnsLargeDeposits_Scenario8_Async()
         {
             // Create a "chain" of 40 blocks.
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(40, true, this.mainChainNetwork);

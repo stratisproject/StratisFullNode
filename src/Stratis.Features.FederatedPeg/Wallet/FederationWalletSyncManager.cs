@@ -113,7 +113,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
             }
         }
 
-        private async Task OnProcessBlockAsync(Block block, CancellationToken cancellationToken)
+        private Task OnProcessBlockAsync(Block block, CancellationToken cancellationToken)
         {
             Guard.NotNull(block, nameof(block));
 
@@ -121,7 +121,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
             if (newTip == null)
             {
                 this.logger.Trace("(-)[NEW_TIP_REORG]");
-                return;
+                return Task.CompletedTask;
             }
 
             // If the new block's previous hash is the same as the
@@ -158,7 +158,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                     if (findTip == null)
                     {
                         this.logger.Trace("(-)[NEW_TIP_AHEAD_NOT_IN_WALLET]");
-                        return;
+                        return Task.CompletedTask;
                     }
 
                     this.logger.Debug("Wallet tip '{0}' is behind the new tip '{1}'.", this.walletTip, newTip);
@@ -182,7 +182,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                             if (cancellationToken.IsCancellationRequested)
                             {
                                 this.logger.Trace("(-)[CANCELLATION_REQUESTED]");
-                                return;
+                                return Task.CompletedTask;
                             }
 
                             nextblock = this.blockStore.GetBlock(next.HashBlock);
@@ -194,7 +194,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                                 if (index > 10)
                                 {
                                     this.logger.Trace("(-)[WALLET_CATCHUP_INDEX_MAX]");
-                                    return;
+                                    return Task.CompletedTask;
                                 }
 
                                 // Really ugly hack to let store catch up.
@@ -217,7 +217,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                     if (findTip == null)
                     {
                         this.logger.Trace("(-)[NEW_TIP_BEHIND_NOT_IN_WALLET]");
-                        return;
+                        return Task.CompletedTask;
                     }
 
                     this.logger.Debug("Wallet tip '{0}' is ahead or equal to the new tip '{1}'.", this.walletTip, newTip);
@@ -227,6 +227,8 @@ namespace Stratis.Features.FederatedPeg.Wallet
 
             this.walletTip = newTip;
             this.federationWalletManager.ProcessBlock(block, newTip);
+
+            return Task.CompletedTask;
         }
 
         /// <inheritdoc />

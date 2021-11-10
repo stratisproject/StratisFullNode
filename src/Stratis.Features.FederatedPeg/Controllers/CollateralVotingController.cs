@@ -32,8 +32,11 @@ namespace Stratis.Features.FederatedPeg.Controllers
             this.logger = LogManager.GetCurrentClassLogger();
         }
 
+        /// <summary>Schedules a vote to kick a federation member.</summary>
+        /// <param name="request">See <see cref="CollateralFederationMemberModel"/>.</param>
         /// <response code="400">Not yet implemented</response>
         /// <response code="500">Request is null</response>
+        /// <returns>See <see cref="cref="IActionResult"/>.</returns>
         [Route("schedulevote-kickfedmember")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]

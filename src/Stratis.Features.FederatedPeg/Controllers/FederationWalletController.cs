@@ -151,6 +151,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         /// <summary>
         /// Retrieves withdrawal history for the wallet
         /// </summary>
+        /// <param name="maxEntriesToReturn">The maximum number of history items to return.</param>
         /// <returns>HTTP response</returns>
         /// <response code="200">Returns wallet history</response>
         /// <response code="400">Unexpected exception occurred</response>

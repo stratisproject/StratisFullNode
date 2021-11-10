@@ -165,6 +165,11 @@ namespace Stratis.Features.FederatedPeg.InputConsolidation
         /// <summary>
         /// Builds a list of consolidation transactions that will need to pass before the next withdrawal transaction can come through.
         /// </summary>
+        /// <remarks>
+        /// Gathers consolidation transactions until we find a group of <see cref="FederatedPegSettings.MaxInputs"/> UTXO's summing up to 
+        /// the <paramref name="amount"/> or there are less than that number of UTXO's left.
+        /// </remarks>
+        /// <param name="amount">The consolidation amount.</param>
         /// <returns>A list of consolidation transactions.</returns>
         public List<ConsolidationTransaction> CreateRequiredConsolidationTransactions(Money amount)
         {
@@ -229,6 +234,8 @@ namespace Stratis.Features.FederatedPeg.InputConsolidation
         /// <summary>
         /// Build a consolidating transaction.
         /// </summary>
+        /// <param name="selectedInputs">The selected inputs for the consolidation transaction.</param>
+        /// <returns>The consolidation transaction.</returns>
         private Transaction BuildConsolidatingTransaction(List<UnspentOutputReference> selectedInputs)
         {
             try
@@ -357,6 +364,8 @@ namespace Stratis.Features.FederatedPeg.InputConsolidation
         /// <summary>
         /// Discerns whether an incoming transaction is a consolidating transaction.
         /// </summary>
+        /// <param name="transaction">The transaction to inspect.</param>
+        /// <returns>Determines if a transaction is a consolidation transaction.</returns>
         private bool IsConsolidatingTransaction(Transaction transaction)
         {
             return transaction.Inputs.Count == FederatedPegSettings.MaxInputs
@@ -367,6 +376,8 @@ namespace Stratis.Features.FederatedPeg.InputConsolidation
         /// <summary>
         /// Gets the equivalent transaction on this node for any incoming transaction.
         /// </summary>
+        /// <param name="toMatch">The incoming transaction.</param>
+        /// <returns>The equivalent <see cref="ConsolidationTransaction"/>.</returns>
         private ConsolidationTransaction GetInMemoryConsolidationTransaction(Transaction toMatch)
         {
             if (toMatch?.Inputs == null || !toMatch.Inputs.Any())
