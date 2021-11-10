@@ -119,8 +119,10 @@ namespace Stratis.Bitcoin.Features.Dns
         /// <param name="client">The UDP client to use to receive DNS requests and send DNS responses.</param>
         /// <param name="masterFile">The initial DNS masterfile.</param>
         /// <param name="asyncProvider">The async loop factory.</param>
+        /// <param name="nodeLifetime">The <see cref="INodeLifetime"/>.</param>
         /// <param name="loggerFactory">The logger factory.</param>
         /// <param name="dateTimeProvider">The <see cref="DateTime"/> provider.</param>
+        /// <param name="dnsSettings">The <see cref="DnsSettings"/>.</param>
         /// <param name="dataFolders">The data folders of the system.</param>
         public DnsSeedServer(IUdpClient client, IMasterFile masterFile, IAsyncProvider asyncProvider, INodeLifetime nodeLifetime, ILoggerFactory loggerFactory, IDateTimeProvider dateTimeProvider, DnsSettings dnsSettings, DataFolder dataFolders)
         {
@@ -362,6 +364,7 @@ namespace Stratis.Bitcoin.Features.Dns
         /// Handles a DNS request received by the UDP client.
         /// </summary>
         /// <param name="udpRequest">The DNS request received from the UDP client.</param>
+        /// <returns>The asynchronous task.</returns>
         private async Task HandleRequestAsync(Tuple<IPEndPoint, byte[]> udpRequest)
         {
             Request request = null;
@@ -430,7 +433,7 @@ namespace Stratis.Bitcoin.Features.Dns
         /// <summary>
         /// Seeds the given masterfile with the SOA and NS DNS records with the DNS specific settings.
         /// </summary>
-        /// <param name="masterFile"></param>
+        /// <param name="masterFile">The <see cref="IMasterFile"/>.</param>
         private void SeedMasterFile(IMasterFile masterFile)
         {
             this.logger.LogInformation("Seeding DNS masterfile with SOA and NS resource records: Host = {0}, Nameserver = {1}, Mailbox = {2}", this.dnsSettings.DnsHostName, this.dnsSettings.DnsNameServer, this.dnsSettings.DnsMailBox);
@@ -441,7 +444,7 @@ namespace Stratis.Bitcoin.Features.Dns
         /// <summary>
         /// Gets the peer count of IP v4 and v6 addresses in the DNS masterfile.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The peer count.</returns>
         private int GetPeerCount()
         {
             int count = this.MasterFile.Get(new Question(new Domain(this.dnsSettings.DnsHostName), RecordType.A)).Count;
