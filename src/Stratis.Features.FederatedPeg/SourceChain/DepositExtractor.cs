@@ -209,15 +209,15 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         }
 
         /// <inheritdoc />
-        public async Task<IDeposit> ExtractDepositFromTransaction(Transaction transaction, int blockHeight, uint256 blockHash)
+        public Task<IDeposit> ExtractDepositFromTransaction(Transaction transaction, int blockHeight, uint256 blockHash)
         {
             // If there are no deposits to the multsig (i.e. cross chain transfers) do nothing.
             if (!DepositValidationHelper.TryGetDepositsToMultisig(this.network, transaction, FederatedPegSettings.CrossChainTransferMinimum, out List<TxOut> depositsToMultisig))
-                return null;
+                return Task.FromResult((IDeposit)null);
 
             // If there are deposits to the multsig (i.e. cross chain transfers), try and extract and validate the address by the specfied destination chain.
             if (!DepositValidationHelper.TryGetTarget(transaction, this.opReturnDataReader, out bool conversionTransaction, out string targetAddress, out int targetChain))
-                return null;
+                return Task.FromResult((IDeposit)null);
 
             Money amount = depositsToMultisig.Sum(o => o.Value);
 
@@ -228,7 +228,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 if (this.federatedPegSettings.IsMainChain && amount < DepositValidationHelper.ConversionTransactionMinimum)
                 {
                     this.logger.Warn($"Ignoring conversion transaction '{transaction.GetHash()}' with amount {amount} which is below the threshold of {DepositValidationHelper.ConversionTransactionMinimum}.");
-                    return null;
+                    return Task.FromResult((IDeposit)null);
                 }
 
                 this.logger.Info("Received conversion deposit transaction '{0}' for an amount of {1}.", transaction.GetHash(), amount);
@@ -250,7 +250,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 }
             }
 
-            return new Deposit(transaction.GetHash(), depositRetrievalType, amount, targetAddress, (DestinationChain)targetChain, blockHeight, blockHash);
+            return Task.FromResult((IDeposit)new Deposit(transaction.GetHash(), depositRetrievalType, amount, targetAddress, (DestinationChain)targetChain, blockHeight, blockHash));
         }
 
         private DepositRetrievalType DetermineDepositRetrievalType(Money amount)

@@ -22,7 +22,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <summary>
         /// Enables the node operator to try and manually push fully signed transactions.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The asynchronous task returning <see cref="SignedMultisigTransactionBroadcastResult"/>.</returns>
         Task<SignedMultisigTransactionBroadcastResult> BroadcastFullySignedTransfersAsync();
 
         /// <summary>

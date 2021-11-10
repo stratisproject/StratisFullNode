@@ -745,6 +745,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// identified in the blocks.
         /// </summary>
         /// <param name="blocks">The blocks used to update the store. Must be sorted by ascending height leading up to the new tip.</param>
+        /// <param name="chainedHeadersSnapshot">The chained headers corresponding to the blocks.</param>
         private void Put(List<Block> blocks, Dictionary<uint256, ChainedHeader> chainedHeadersSnapshot)
         {
             if (blocks.Count == 0)

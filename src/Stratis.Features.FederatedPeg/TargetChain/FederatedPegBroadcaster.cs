@@ -26,7 +26,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         }
 
         /// <inheritdoc />
-        public async Task BroadcastAsync(Payload payload)
+        public Task BroadcastAsync(Payload payload)
         {
             IEnumerable<INetworkPeer> connectedPeers = this.connectionManager.ConnectedPeers.Where(peer => (peer?.IsConnected ?? false) && this.federatedPegSettings.FederationNodeIpAddresses.Contains(peer.PeerEndPoint.Address));
 
@@ -47,6 +47,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     this.logger.Error($"Error sending {payload.GetType().Name} to {peer.PeerEndPoint.Address}:{ex.ToString()}");
                 }
             });
+
+            return Task.CompletedTask;
         }
     }
 }
