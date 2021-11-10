@@ -132,6 +132,7 @@ namespace Stratis.Bitcoin.Features.Dns
         /// <summary>
         /// Initializes the DNS feature.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         public override Task InitializeAsync()
         {
             // Create long running task for DNS service.
