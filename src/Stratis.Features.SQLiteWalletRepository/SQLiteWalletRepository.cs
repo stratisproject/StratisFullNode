@@ -1323,44 +1323,26 @@ namespace Stratis.Features.SQLiteWalletRepository
             {
                 int tdConfirmations = (transactionData.OutputBlockHeight == null) ? 0 : (currentChainHeight + 1) - (int)transactionData.OutputBlockHeight;
 
+                PubKey pubKey;
+
                 if (extPubKey == null)
                 {
-                    // We cannot derive a pubKey from the scriptPubKey as it has been hashed already.
-                    Script watchOnlyScriptPubKey = Script.FromHex(transactionData.ScriptPubKey);
+                    if (!walletContainer.AddressesOfInterest.Contains(Script.FromHex(transactionData.RedeemScript), out AddressIdentifier addressIdentifier))
+                        continue;
 
-                    HdAddress watchOnlyAddress = this.ToHdAddress(new HDAddress()
-                    {
-                        AccountIndex = transactionData.AccountIndex,
-                        AddressIndex = transactionData.AddressIndex,
-                        AddressType = (int)transactionData.AddressType,
-                        PubKey = watchOnlyScriptPubKey.ToHex(),
-                        ScriptPubKey = watchOnlyScriptPubKey.ToHex(),
-                        Address = transactionData.Address,
-                        // TODO: It may be possible to construct a P2WPKH address using the P2PKH scriptPubKey as a starting point
-                        //Bech32Address = ""
-                    }, this.Network);
-
-                    watchOnlyAddress.AddressCollection = (watchOnlyAddress.AddressType == 0) ? hdAccount.ExternalAddresses : hdAccount.InternalAddresses;
-
-                    TransactionData watchOnlyTxData = this.ToTransactionData(transactionData, watchOnlyAddress.Transactions);
-
-                    yield return new UnspentOutputReference()
-                    {
-                        Account = hdAccount,
-                        Transaction = watchOnlyTxData,
-                        Confirmations = tdConfirmations,
-                        Address = watchOnlyAddress
-                    };
-
-                    continue;
+                    Script p2pkScript = Script.FromHex(addressIdentifier.PubKeyScript);
+                    
+                    pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(p2pkScript);
                 }
-
-                var keyPath = new KeyPath($"{transactionData.AddressType}/{transactionData.AddressIndex}");
-
-                if (!cachedPubKeys.TryGetValue(keyPath, out PubKey pubKey))
+                else
                 {
-                    pubKey = extPubKey.Derive(keyPath).PubKey;
-                    cachedPubKeys.Add(keyPath, pubKey);
+                    var keyPath = new KeyPath($"{transactionData.AddressType}/{transactionData.AddressIndex}");
+
+                    if (!cachedPubKeys.TryGetValue(keyPath, out pubKey))
+                    {
+                        pubKey = extPubKey.Derive(keyPath).PubKey;
+                        cachedPubKeys.Add(keyPath, pubKey);
+                    }
                 }
 
                 Script scriptPubKey = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
@@ -1384,7 +1366,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                 TransactionData txData = this.ToTransactionData(transactionData, hdAddress.Transactions);
 
                 // Check if this wallet is a normal purpose wallet (not cold staking, etc).
-                if (hdAccount.IsNormalAccount())
+                if (hdAccount.IsNormalAccount() || hdAccount.Name == Wallet.WatchOnlyAccountName)
                 {
                     bool isColdCoinStake = txData.IsColdCoinStake ?? false;
 
@@ -1638,11 +1620,23 @@ namespace Stratis.Features.SQLiteWalletRepository
 
                 if (!addressDict.TryGetValue(addressIdentifier, out HdAddress hdAddress))
                 {
-                    ExtPubKey extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey, this.Network);
+                    PubKey pubKey;
 
-                    var keyPath = new KeyPath($"{tranData.AddressType}/{tranData.AddressIndex}");
+                    if (hdAccount.ExtendedPubKey != null)
+                    {
+                        ExtPubKey extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey, this.Network);
 
-                    PubKey pubKey = extPubKey.Derive(keyPath).PubKey;
+                        var keyPath = new KeyPath($"{tranData.AddressType}/{tranData.AddressIndex}");
+
+                        pubKey = extPubKey.Derive(keyPath).PubKey;
+                    }
+                    else
+                    {
+                        // TODO: Verify if PubKeyScript is getting populated correctly for TransactionsOfInterest-derived AddressIdentifiers
+                        Script p2pkScript = Script.FromHex(addressIdentifier.PubKeyScript);
+
+                        pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(p2pkScript);
+                    }
 
                     hdAddress = this.ToHdAddress(new HDAddress()
                     {
