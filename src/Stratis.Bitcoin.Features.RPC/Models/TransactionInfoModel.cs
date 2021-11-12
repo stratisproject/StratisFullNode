@@ -8,7 +8,6 @@ namespace Stratis.Bitcoin.Features.RPC.Models
     {
         public TransactionInfoModel()
         {
-
         }
 
         public TransactionInfoModel(JObject tx)
