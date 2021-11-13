@@ -73,25 +73,40 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                 TestHelper.ConnectAndSync(node, node2);
 
                 UnspentOutputReference tx = node2.FullNode.WalletManager().GetUnspentTransactionsInWallet("mywallet", 0, Features.Wallet.Wallet.NormalAccounts).First();
-
+                
                 RPCClient rpc = node.CreateRPCClient();
 
                 PubKey pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(tx.Address.Pubkey);
+                PubKey pubKey2 = new Key().PubKey;
+
+                uint256 blockHash = rpc.GenerateToAddress(1, pubKey2.GetAddress(rpc.Network)).First();
+                Block block = rpc.GetBlock(blockHash);
+                uint256 tx2 = block.Transactions.First().GetHash();
 
                 Assert.Throws<RPCException>(() => rpc.SendCommand(RPCOperations.gettransaction, tx.Transaction.Id.ToString(), true));
+                Assert.Throws<RPCException>(() => rpc.SendCommand(RPCOperations.gettransaction, tx2.ToString(), true));;
 
+                // Test that adding the same pubkey twice doesn't throw.
+                rpc.ImportPubKey(pubKey.ToHex());
                 rpc.ImportPubKey(pubKey.ToHex());
 
+                // Add a second pubkey and ensure it doesn't throw.
+                rpc.ImportPubKey(pubKey2.ToHex());
+
+                // Add an arbitrary pubkey and ensure it doesn't throw.
+                rpc.ImportPubKey(new Key().PubKey.ToHex());
+                
                 TestBase.WaitLoop(() => node.FullNode.WalletManager().WalletTipHeight == node2.FullNode.WalletManager().WalletTipHeight);
 
                 TestBase.WaitLoop(() =>
                 {
                     try
                     {
-                        // Check if gettransaction can now find the transaction in the watch only account.
+                        // Check if gettransaction can now find the transactions in the watch only account.
                         RPCResponse walletTx = rpc.SendCommand(RPCOperations.gettransaction, tx.Transaction.Id.ToString(), true);
+                        RPCResponse walletTx2 = rpc.SendCommand(RPCOperations.gettransaction, tx2.ToString(), true);
 
-                        return walletTx != null;
+                        return walletTx != null && walletTx2 != null;
                     }
                     catch (RPCException e)
                     {
@@ -99,8 +114,9 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                     }
                 });
 
-                // Check that when include_watchonly is not set, the watched transaction cannot be located in the normal wallet accounts.
+                // Check that when include_watchonly is not set, the watched addresses' transactions cannot be located in the normal wallet accounts.
                 Assert.Throws<RPCException>(() => rpc.SendCommand(RPCOperations.gettransaction, tx.Transaction.Id.ToString(), false));
+                Assert.Throws<RPCException>(() => rpc.SendCommand(RPCOperations.gettransaction, tx2.ToString(), false));
             }
         }
 
