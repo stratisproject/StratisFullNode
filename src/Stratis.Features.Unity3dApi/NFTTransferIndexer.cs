@@ -147,7 +147,7 @@ namespace Stratis.Features.Unity3dApi
                         ChainedHeader chainTip = this.chainIndexer.Tip;
 
                         List<ReceiptResponse> receipts = this.smartContractTransactionService.ReceiptSearch(
-                            contractAddr, "TransferLog", null, currentContract.LastUpdatedBlock, null);
+                            contractAddr, "TransferLog", null, currentContract.LastUpdatedBlock + 1, null);
 
                         if (receipts == null)
                             continue;
@@ -162,7 +162,7 @@ namespace Stratis.Features.Unity3dApi
 
                         foreach (ReceiptResponse receiptRes in receipts)
                         {
-                            string jsonLog = Newtonsoft.Json.JsonConvert.SerializeObject(receiptRes.Logs.First().Log);
+                            string jsonLog = JsonConvert.SerializeObject(receiptRes.Logs.First().Log);
                             
                             TransferLog infoObj = JsonConvert.DeserializeObject<TransferLog>(jsonLog);
                             transferLogs.Add(infoObj);
