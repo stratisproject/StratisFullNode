@@ -608,7 +608,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                 if (!force && !this.TestMode && account.ExtPubKey != null)
                     throw new Exception("Addresses can only be added to watch-only accounts.");
 
-                conn.CreateWatchOnlyAddresses(account, addressType, addresses, force);
+                conn.CreateWatchOnlyAddresses(new WalletAccountReference(walletName, accountName), account, addressType, addresses, force);
                 conn.Commit();
 
                 walletContainer.AddressesOfInterest.AddAll(account.WalletId, account.AccountIndex);
@@ -1293,26 +1293,46 @@ namespace Stratis.Features.SQLiteWalletRepository
             Wallet hdWallet = this.GetWallet(walletAccountReference.WalletName);
             HdAccount hdAccount = this.GetAccounts(hdWallet, walletAccountReference.AccountName).FirstOrDefault();
 
-            var extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey, this.Network);
-
             var spendable = conn.GetSpendableOutputs(walletContainer.Wallet.WalletId, hdAccount.Index, currentChainHeight, coinBaseMaturity ?? this.Network.Consensus.CoinbaseMaturity, confirmations);
+
+            ExtPubKey extPubKey = null;
+
+            // The extPubKey will be null if this is a watch only account.
+            if (hdAccount.ExtendedPubKey != null)
+            {
+                extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey, this.Network);
+            }
 
             var cachedPubKeys = new Dictionary<KeyPath, PubKey>();
 
             foreach (HDTransactionData transactionData in spendable)
             {
-                var keyPath = new KeyPath($"{transactionData.AddressType}/{transactionData.AddressIndex}");
-                PubKey pubKey = null;
-                if (!cachedPubKeys.TryGetValue(keyPath, out pubKey))
+                int tdConfirmations = (transactionData.OutputBlockHeight == null) ? 0 : (currentChainHeight + 1) - (int)transactionData.OutputBlockHeight;
+
+                PubKey pubKey;
+
+                if (extPubKey == null)
                 {
-                    pubKey = extPubKey.Derive(keyPath).PubKey;
-                    cachedPubKeys.Add(keyPath, pubKey);
+                    if (!walletContainer.AddressesOfInterest.Contains(Script.FromHex(transactionData.RedeemScript), out AddressIdentifier addressIdentifier))
+                        continue;
+
+                    Script p2pkScript = Script.FromHex(addressIdentifier.PubKeyScript);
+
+                    pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(p2pkScript);
+                }
+                else
+                {
+                    var keyPath = new KeyPath($"{transactionData.AddressType}/{transactionData.AddressIndex}");
+
+                    if (!cachedPubKeys.TryGetValue(keyPath, out pubKey))
+                    {
+                        pubKey = extPubKey.Derive(keyPath).PubKey;
+                        cachedPubKeys.Add(keyPath, pubKey);
+                    }
                 }
 
                 Script scriptPubKey = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
                 Script witScriptPubKey = PayToWitPubKeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
-
-                int tdConfirmations = (transactionData.OutputBlockHeight == null) ? 0 : (currentChainHeight + 1) - (int)transactionData.OutputBlockHeight;
 
                 // We do not use the address from the transaction (i.e. UTXO) data here in case it is a segwit (P2WPKH) UTXO.
                 // That is because the bech32 functionality is somewhat bolted onto the HdAddress, so we need to return an HdAddress augmented with bech32 data rather than only bech32 data.
@@ -1332,11 +1352,11 @@ namespace Stratis.Features.SQLiteWalletRepository
                 TransactionData txData = this.ToTransactionData(transactionData, hdAddress.Transactions);
 
                 // Check if this wallet is a normal purpose wallet (not cold staking, etc).
-                if (hdAccount.IsNormalAccount())
+                if (hdAccount.IsNormalAccount() || hdAccount.Name == Wallet.WatchOnlyAccountName)
                 {
                     bool isColdCoinStake = txData.IsColdCoinStake ?? false;
 
-                    // Skip listing the UTXO if this is a normal wallet, and the UTXO is marked as an cold coin stake.
+                    // Skip listing the UTXO if this is a normal wallet, and the UTXO is marked as a cold coin stake.
                     if (isColdCoinStake)
                     {
                         continue;
@@ -1586,11 +1606,23 @@ namespace Stratis.Features.SQLiteWalletRepository
 
                 if (!addressDict.TryGetValue(addressIdentifier, out HdAddress hdAddress))
                 {
-                    ExtPubKey extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey, this.Network);
+                    PubKey pubKey;
 
-                    var keyPath = new KeyPath($"{tranData.AddressType}/{tranData.AddressIndex}");
+                    if (hdAccount.ExtendedPubKey != null)
+                    {
+                        ExtPubKey extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey, this.Network);
 
-                    PubKey pubKey = extPubKey.Derive(keyPath).PubKey;
+                        var keyPath = new KeyPath($"{tranData.AddressType}/{tranData.AddressIndex}");
+
+                        pubKey = extPubKey.Derive(keyPath).PubKey;
+                    }
+                    else
+                    {
+                        // TODO: Verify if PubKeyScript is getting populated correctly for TransactionsOfInterest-derived AddressIdentifiers
+                        Script p2pkScript = Script.FromHex(addressIdentifier.PubKeyScript);
+
+                        pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(p2pkScript);
+                    }
 
                     hdAddress = this.ToHdAddress(new HDAddress()
                     {
@@ -1602,10 +1634,8 @@ namespace Stratis.Features.SQLiteWalletRepository
                         PubKey = pubKey.ScriptPubKey.ToHex(),
                         Address = tranData.Address
                     }, this.Network);
-
                     hdAddress.Transactions = new TransactionCollection(hdAddress);
                     hdAddress.AddressCollection = (hdAddress.AddressType == 0) ? hdAccount.ExternalAddresses : hdAccount.InternalAddresses;
-
                     addressDict[addressIdentifier] = hdAddress;
                 }
 
