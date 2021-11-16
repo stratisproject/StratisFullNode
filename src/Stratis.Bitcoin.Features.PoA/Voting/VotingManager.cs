@@ -664,313 +664,311 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 foreach (Poll poll in this.polls.Where(x => x.IsExpired && !IsPollExpiredAt(x, chBlock.ChainedHeader.Previous)).ToList())
                 {
-                    if (!IsPollExpiredAt(poll, chBlock.ChainedHeader.Previous))
-                    {
-                        this.logger.Debug("Reverting poll expiry '{0}'.", poll);
+                    this.logger.Debug("Reverting poll expiry '{0}'.", poll);
 
-                        // Revert back to null as this field would have been when the poll was expired.
-                        poll.IsExpired = false;
-                        this.polls.OnPendingStatusChanged(poll);
-                        this.PollsRepository.UpdatePoll(transaction, poll);
+                    // Revert back to null as this field would have been when the poll was expired.
+                    poll.IsExpired = false;
+                    this.polls.OnPendingStatusChanged(poll);
+                    this.PollsRepository.UpdatePoll(transaction, poll);
+                    pollsRepositoryModified = true;
+                }
+
+                if (this.federationManager.GetMultisigMinersApplicabilityHeight() == chBlock.ChainedHeader.Height)
+                    this.federationManager.UpdateMultisigMiners(false);
+            }
+
+            byte[] rawVotingData = this.votingDataEncoder.ExtractRawVotingData(chBlock.Block.Transactions[0]);
+
+            if (rawVotingData == null)
+            {
+                this.logger.Trace("(-)[NO_VOTING_DATA]");
+
+                this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader.Previous);
+                return;
+            }
+
+            List<VotingData> votingDataList = this.votingDataEncoder.Decode(rawVotingData);
+            votingDataList.Reverse();
+
+            lock (this.locker)
+            {
+                foreach (VotingData votingData in votingDataList)
+                {
+                    if (this.IsVotingOnMultisigMember(votingData))
+                        continue;
+
+                    // If the poll is pending, that's the one we want. There should be maximum 1 of these.
+                    Poll targetPoll = this.polls.SingleOrDefault(x => x.VotingData == votingData && x.IsPending);
+
+                    // Otherwise, get the most recent poll. There could currently be unlimited of these, though they're harmless.
+                    if (targetPoll == null)
+                    {
+                        targetPoll = this.polls.Last(x => x.VotingData == votingData);
+                    }
+
+                    this.logger.Debug("Reverting poll voting in favor: '{0}'.", targetPoll);
+
+                    if (targetPoll.PollVotedInFavorBlockData == new HashHeightPair(chBlock.ChainedHeader))
+                    {
+                        targetPoll.PollVotedInFavorBlockData = null;
+                        this.polls.OnPendingStatusChanged(targetPoll);
+
+                        this.PollsRepository.UpdatePoll(transaction, targetPoll);
                         pollsRepositoryModified = true;
                     }
 
-                    if (this.federationManager.GetMultisigMinersApplicabilityHeight() == chBlock.ChainedHeader.Height)
-                        this.federationManager.UpdateMultisigMiners(false);
-                }
-
-                byte[] rawVotingData = this.votingDataEncoder.ExtractRawVotingData(chBlock.Block.Transactions[0]);
-
-                if (rawVotingData == null)
-                {
-                    this.logger.Trace("(-)[NO_VOTING_DATA]");
-
-                    this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader.Previous);
-                    return;
-                }
-
-                List<VotingData> votingDataList = this.votingDataEncoder.Decode(rawVotingData);
-                votingDataList.Reverse();
-
-                lock (this.locker)
-                {
-                    foreach (VotingData votingData in votingDataList)
+                    // Pub key of a fed member that created voting data.
+                    string fedMemberKeyHex = this.federationHistory.GetFederationMemberForBlock(chBlock.ChainedHeader).PubKey.ToHex();
+                    int voteIndex = targetPoll.PubKeysHexVotedInFavor.FindIndex(v => v.PubKey == fedMemberKeyHex);
+                    if (voteIndex >= 0)
                     {
-                        if (this.IsVotingOnMultisigMember(votingData))
-                            continue;
+                        targetPoll.PubKeysHexVotedInFavor.RemoveAt(voteIndex);
 
-                        // If the poll is pending, that's the one we want. There should be maximum 1 of these.
-                        Poll targetPoll = this.polls.SingleOrDefault(x => x.VotingData == votingData && x.IsPending);
-
-                        // Otherwise, get the most recent poll. There could currently be unlimited of these, though they're harmless.
-                        if (targetPoll == null)
+                        if (targetPoll.PubKeysHexVotedInFavor.Count == 0)
                         {
-                            targetPoll = this.polls.Last(x => x.VotingData == votingData);
-                        }
-
-                        this.logger.Debug("Reverting poll voting in favor: '{0}'.", targetPoll);
-
-                        if (targetPoll.PollVotedInFavorBlockData == new HashHeightPair(chBlock.ChainedHeader))
-                        {
-                            targetPoll.PollVotedInFavorBlockData = null;
-                            this.polls.OnPendingStatusChanged(targetPoll);
-
-                            this.PollsRepository.UpdatePoll(transaction, targetPoll);
+                            this.polls.Remove(targetPoll);
+                            this.PollsRepository.RemovePolls(transaction, targetPoll.Id);
                             pollsRepositoryModified = true;
-                        }
 
-                        // Pub key of a fed member that created voting data.
-                        string fedMemberKeyHex = this.federationHistory.GetFederationMemberForBlock(chBlock.ChainedHeader).PubKey.ToHex();
-                        int voteIndex = targetPoll.PubKeysHexVotedInFavor.FindIndex(v => v.PubKey == fedMemberKeyHex);
-                        if (voteIndex >= 0)
-                        {
-                            targetPoll.PubKeysHexVotedInFavor.RemoveAt(voteIndex);
-
-                            if (targetPoll.PubKeysHexVotedInFavor.Count == 0)
-                            {
-                                this.polls.Remove(targetPoll);
-                                this.PollsRepository.RemovePolls(transaction, targetPoll.Id);
-                                pollsRepositoryModified = true;
-
-                                this.logger.Debug("Poll with Id {0} was removed.", targetPoll.Id);
-                            }
-                        }
-                    }
-
-                    this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader.Previous);
-                }
-            }
-
-            public ChainedHeader GetPollsRepositoryTip()
-            {
-                return (this.PollsRepository.CurrentTip == null) ? null : this.chainIndexer.GetHeader(this.PollsRepository.CurrentTip.Hash);
-            }
-
-            public List<IFederationMember> GetFederationAtPollsRepositoryTip(ChainedHeader repoTip)
-            {
-                if (repoTip == null)
-                    return new List<IFederationMember>(((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers);
-
-                return this.GetModifiedFederation(repoTip);
-            }
-
-            public List<IFederationMember> GetLastKnownFederation()
-            {
-                // If too far behind to accurately determine the federation then just take the last known federation. 
-                if (((this.PollsRepository.CurrentTip?.Height ?? 0) + this.network.Consensus.MaxReorgLength) <= this.chainIndexer.Tip.Height)
-                {
-                    ChainedHeader chainedHeader = this.chainIndexer.Tip.GetAncestor((int)(this.PollsRepository.CurrentTip?.Height ?? 0) + (int)this.network.Consensus.MaxReorgLength - 1);
-                    return this.GetModifiedFederation(chainedHeader);
-                }
-
-                return this.GetModifiedFederation(this.chainIndexer.Tip);
-            }
-
-            internal bool Synchronize(ChainedHeader newTip)
-            {
-                if (newTip?.HashBlock == this.PollsRepository.CurrentTip?.Hash)
-                    return true;
-
-                ChainedHeader repoTip = GetPollsRepositoryTip();
-
-                bool bSuccess = true;
-
-                this.PollsRepository.Synchronous(() =>
-                {
-                    // Remove blocks as required.
-                    if (repoTip != null)
-                    {
-                        ChainedHeader fork = repoTip.FindFork(newTip);
-
-                        if (repoTip.Height > fork.Height)
-                        {
-                            this.PollsRepository.WithTransaction(transaction =>
-                            {
-                                List<IFederationMember> modifiedFederation = this.GetFederationAtPollsRepositoryTip(repoTip);
-
-                                for (ChainedHeader header = repoTip; header.Height > fork.Height; header = header.Previous)
-                                {
-                                    Block block = this.blockRepository.GetBlock(header.HashBlock);
-
-                                    this.UnProcessBlock(transaction, new ChainedHeaderBlock(block, header));
-                                }
-
-                                transaction.Commit();
-                            });
-
-                            repoTip = fork;
-                        }
-                    }
-
-                    // Add blocks as required.
-                    var headers = new List<ChainedHeader>();
-                    for (int height = (repoTip?.Height ?? 0) + 1; height <= newTip.Height; height++)
-                    {
-                        ChainedHeader header = this.chainIndexer.GetHeader(height);
-                        headers.Add(header);
-                    }
-
-                    if (headers.Count > 0)
-                    {
-                        this.PollsRepository.WithTransaction(transaction =>
-                        {
-                            int i = 0;
-                            foreach (Block block in this.blockRepository.EnumerateBatch(headers))
-                            {
-                                if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
-                                {
-                                    this.logger.Trace("(-)[NODE_DISPOSED]");
-                                    this.PollsRepository.SaveCurrentTip(transaction);
-                                    transaction.Commit();
-
-                                    bSuccess = false;
-                                    return;
-                                }
-
-                                ChainedHeader header = headers[i++];
-                                this.ProcessBlock(transaction, new ChainedHeaderBlock(block, header));
-
-                                if (header.Height % 10000 == 0)
-                                {
-                                    var progress = (int)((decimal)header.Height / this.chainIndexer.Tip.Height * 100);
-                                    var progressString = $"Synchronizing voting data at height {header.Height} / {this.chainIndexer.Tip.Height} ({progress} %).";
-
-                                    this.logger.Info(progressString);
-                                    this.signals.Publish(new FullNodeEvent() { Message = progressString, State = FullNodeState.Initializing.ToString() });
-                                }
-                            }
-
-                            this.PollsRepository.SaveCurrentTip(transaction);
-
-                            transaction.Commit();
-                        });
-                    }
-                });
-
-                return bSuccess;
-            }
-
-            private void OnBlockConnected(BlockConnected blockConnected)
-            {
-                this.PollsRepository.Synchronous(() =>
-                {
-                    if (this.Synchronize(blockConnected.ConnectedBlock.ChainedHeader.Previous))
-                    {
-                        this.PollsRepository.WithTransaction(transaction =>
-                        {
-                            this.ProcessBlock(transaction, blockConnected.ConnectedBlock);
-                            transaction.Commit();
-                        });
-                    }
-                });
-            }
-
-            private void OnBlockDisconnected(BlockDisconnected blockDisconnected)
-            {
-                this.PollsRepository.Synchronous(() =>
-                {
-                    if (this.Synchronize(blockDisconnected.DisconnectedBlock.ChainedHeader))
-                    {
-                        this.PollsRepository.WithTransaction(transaction =>
-                        {
-                            this.UnProcessBlock(transaction, blockDisconnected.DisconnectedBlock);
-                            transaction.Commit();
-                        });
-                    }
-                });
-            }
-
-            [NoTrace]
-            private void AddComponentStats(StringBuilder log)
-            {
-                log.AppendLine();
-                log.AppendLine(">> Voting & Poll Data");
-
-                lock (this.locker)
-                {
-                    double avgBlockProcessingTime;
-                    if (this.blocksProcessed == 0)
-                        avgBlockProcessingTime = double.NaN;
-                    else
-                        avgBlockProcessingTime = Math.Round((double)(new TimeSpan(this.blocksProcessingTime).Milliseconds) / this.blocksProcessed, 2);
-
-                    double avgBlockProcessingThroughput = Math.Round(this.blocksProcessed / (new TimeSpan(this.blocksProcessingTime).TotalSeconds), 2);
-
-                    log.AppendLine("Polls Repository Height".PadRight(LoggingConfiguration.ColumnLength) + $": {(this.PollsRepository.CurrentTip?.Height ?? 0)}".PadRight(10) + $"(Hash: {(this.PollsRepository.CurrentTip?.Hash.ToString())})");
-                    log.AppendLine("Blocks Processed".PadRight(LoggingConfiguration.ColumnLength) + $": {this.blocksProcessed}".PadRight(18) + $"Avg Time: { avgBlockProcessingTime } ms".PadRight(20) + $"Throughput: { avgBlockProcessingThroughput } per second");
-                    log.AppendLine();
-
-                    log.AppendLine(
-                        "Expired Member Polls".PadRight(24) + ": " + GetExpiredPolls().MemberPolls().Count.ToString().PadRight(16) +
-                        "Expired Whitelist Polls".PadRight(30) + ": " + GetExpiredPolls().WhitelistPolls().Count);
-                    log.AppendLine(
-                        "Pending Member Polls".PadRight(24) + ": " + GetPendingPolls().MemberPolls().Count.ToString().PadRight(16) +
-                        "Pending Whitelist Polls".PadRight(30) + ": " + GetPendingPolls().WhitelistPolls().Count);
-                    log.AppendLine(
-                        "Approved Member Polls".PadRight(24) + ": " + GetApprovedPolls().MemberPolls().Where(x => !x.IsExecuted).Count().ToString().PadRight(16) +
-                        "Approved Whitelist Polls".PadRight(30) + ": " + GetApprovedPolls().WhitelistPolls().Where(x => !x.IsExecuted).Count());
-                    log.AppendLine(
-                        "Executed Member Polls".PadRight(24) + ": " + GetExecutedPolls().MemberPolls().Count.ToString().PadRight(16) +
-                        "Executed Whitelist Polls".PadRight(30) + ": " + GetExecutedPolls().WhitelistPolls().Count);
-                    log.AppendLine(
-                        "Scheduled Votes".PadRight(24) + ": " + this.scheduledVotingData.Count.ToString().PadRight(16) +
-                        "Scheduled votes will be added to the next block this node mines.");
-
-                    if (this.nodeStats.DisplayBenchStats)
-                    {
-                        long tipHeight = this.chainIndexer.Tip.Height;
-
-                        List<Poll> pendingPolls = GetPendingPolls().OrderByDescending(p => p.PollStartBlockData.Height).ToList();
-                        if (pendingPolls.Count != 0)
-                        {
-                            log.AppendLine();
-                            log.AppendLine("--- Pending Add/Kick Member Polls ---");
-                            foreach (Poll poll in pendingPolls.Where(p => !p.IsExecuted && (p.VotingData.Key == VoteKey.AddFederationMember || p.VotingData.Key == VoteKey.KickFederationMember)))
-                            {
-                                IFederationMember federationMember = ((PoAConsensusFactory)(this.network.Consensus.ConsensusFactory)).DeserializeFederationMember(poll.VotingData.Data);
-                                string expiresIn = $", Expires In = {(Math.Max(this.poaConsensusOptions.Release1100ActivationHeight, poll.PollStartBlockData.Height + this.poaConsensusOptions.PollExpiryBlocks) - tipHeight)}";
-                                log.Append($"{poll.VotingData.Key.ToString().PadLeft(22)}, PubKey = { federationMember.PubKey.ToHex() }, In Favor = {poll.PubKeysHexVotedInFavor.Count}{expiresIn}");
-                                bool exists = this.federationManager.GetFederationMembers().Any(m => m.PubKey == federationMember.PubKey);
-                                if (poll.VotingData.Key == VoteKey.AddFederationMember && exists)
-                                    log.Append(" (Already exists)");
-                                if (poll.VotingData.Key == VoteKey.KickFederationMember && !exists)
-                                    log.Append(" (Does not exist)");
-                                log.AppendLine();
-                            }
-                        }
-
-                        List<Poll> approvedPolls = GetApprovedPolls().Where(p => !p.IsExecuted).OrderByDescending(p => p.PollVotedInFavorBlockData.Height).ToList();
-                        if (approvedPolls.Count != 0)
-                        {
-                            log.AppendLine();
-                            log.AppendLine("--- Approved Polls ---");
-                            foreach (Poll poll in approvedPolls)
-                            {
-                                log.AppendLine($"{poll.VotingData.Key.ToString().PadLeft(22)}, Applied In = ({(poll.PollStartBlockData.Height - (tipHeight - this.network.Consensus.MaxReorgLength))})");
-                            }
+                            this.logger.Debug("Poll with Id {0} was removed.", targetPoll.Id);
                         }
                     }
                 }
 
-                log.AppendLine();
-            }
-
-            [NoTrace]
-            private void EnsureInitialized()
-            {
-                if (!this.isInitialized)
-                {
-                    throw new Exception("VotingManager is not initialized. Check that voting is enabled in PoAConsensusOptions.");
-                }
-            }
-
-            /// <inheritdoc />
-            public void Dispose()
-            {
-                this.signals.Unsubscribe(this.blockConnectedSubscription);
-                this.signals.Unsubscribe(this.blockDisconnectedSubscription);
-
-                this.PollsRepository.Dispose();
+                this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader.Previous);
             }
         }
+
+        public ChainedHeader GetPollsRepositoryTip()
+        {
+            return (this.PollsRepository.CurrentTip == null) ? null : this.chainIndexer.GetHeader(this.PollsRepository.CurrentTip.Hash);
+        }
+
+        public List<IFederationMember> GetFederationAtPollsRepositoryTip(ChainedHeader repoTip)
+        {
+            if (repoTip == null)
+                return new List<IFederationMember>(((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers);
+
+            return this.GetModifiedFederation(repoTip);
+        }
+
+        public List<IFederationMember> GetLastKnownFederation()
+        {
+            // If too far behind to accurately determine the federation then just take the last known federation. 
+            if (((this.PollsRepository.CurrentTip?.Height ?? 0) + this.network.Consensus.MaxReorgLength) <= this.chainIndexer.Tip.Height)
+            {
+                ChainedHeader chainedHeader = this.chainIndexer.Tip.GetAncestor((int)(this.PollsRepository.CurrentTip?.Height ?? 0) + (int)this.network.Consensus.MaxReorgLength - 1);
+                return this.GetModifiedFederation(chainedHeader);
+            }
+
+            return this.GetModifiedFederation(this.chainIndexer.Tip);
+        }
+
+        internal bool Synchronize(ChainedHeader newTip)
+        {
+            if (newTip?.HashBlock == this.PollsRepository.CurrentTip?.Hash)
+                return true;
+
+            ChainedHeader repoTip = GetPollsRepositoryTip();
+
+            bool bSuccess = true;
+
+            this.PollsRepository.Synchronous(() =>
+            {
+                // Remove blocks as required.
+                if (repoTip != null)
+                {
+                    ChainedHeader fork = repoTip.FindFork(newTip);
+
+                    if (repoTip.Height > fork.Height)
+                    {
+                        this.PollsRepository.WithTransaction(transaction =>
+                        {
+                            List<IFederationMember> modifiedFederation = this.GetFederationAtPollsRepositoryTip(repoTip);
+
+                            for (ChainedHeader header = repoTip; header.Height > fork.Height; header = header.Previous)
+                            {
+                                Block block = this.blockRepository.GetBlock(header.HashBlock);
+
+                                this.UnProcessBlock(transaction, new ChainedHeaderBlock(block, header));
+                            }
+
+                            transaction.Commit();
+                        });
+
+                        repoTip = fork;
+                    }
+                }
+
+                // Add blocks as required.
+                var headers = new List<ChainedHeader>();
+                for (int height = (repoTip?.Height ?? 0) + 1; height <= newTip.Height; height++)
+                {
+                    ChainedHeader header = this.chainIndexer.GetHeader(height);
+                    headers.Add(header);
+                }
+
+                if (headers.Count > 0)
+                {
+                    this.PollsRepository.WithTransaction(transaction =>
+                    {
+                        int i = 0;
+                        foreach (Block block in this.blockRepository.EnumerateBatch(headers))
+                        {
+                            if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
+                            {
+                                this.logger.Trace("(-)[NODE_DISPOSED]");
+                                this.PollsRepository.SaveCurrentTip(transaction);
+                                transaction.Commit();
+
+                                bSuccess = false;
+                                return;
+                            }
+
+                            ChainedHeader header = headers[i++];
+                            this.ProcessBlock(transaction, new ChainedHeaderBlock(block, header));
+
+                            if (header.Height % 10000 == 0)
+                            {
+                                var progress = (int)((decimal)header.Height / this.chainIndexer.Tip.Height * 100);
+                                var progressString = $"Synchronizing voting data at height {header.Height} / {this.chainIndexer.Tip.Height} ({progress} %).";
+
+                                this.logger.Info(progressString);
+                                this.signals.Publish(new FullNodeEvent() { Message = progressString, State = FullNodeState.Initializing.ToString() });
+                            }
+                        }
+
+                        this.PollsRepository.SaveCurrentTip(transaction);
+
+                        transaction.Commit();
+                    });
+                }
+            });
+
+            return bSuccess;
+        }
+
+        private void OnBlockConnected(BlockConnected blockConnected)
+        {
+            this.PollsRepository.Synchronous(() =>
+            {
+                if (this.Synchronize(blockConnected.ConnectedBlock.ChainedHeader.Previous))
+                {
+                    this.PollsRepository.WithTransaction(transaction =>
+                    {
+                        this.ProcessBlock(transaction, blockConnected.ConnectedBlock);
+                        transaction.Commit();
+                    });
+                }
+            });
+        }
+
+        private void OnBlockDisconnected(BlockDisconnected blockDisconnected)
+        {
+            this.PollsRepository.Synchronous(() =>
+            {
+                if (this.Synchronize(blockDisconnected.DisconnectedBlock.ChainedHeader))
+                {
+                    this.PollsRepository.WithTransaction(transaction =>
+                    {
+                        this.UnProcessBlock(transaction, blockDisconnected.DisconnectedBlock);
+                        transaction.Commit();
+                    });
+                }
+            });
+        }
+
+        [NoTrace]
+        private void AddComponentStats(StringBuilder log)
+        {
+            log.AppendLine();
+            log.AppendLine(">> Voting & Poll Data");
+
+            lock (this.locker)
+            {
+                double avgBlockProcessingTime;
+                if (this.blocksProcessed == 0)
+                    avgBlockProcessingTime = double.NaN;
+                else
+                    avgBlockProcessingTime = Math.Round((double)(new TimeSpan(this.blocksProcessingTime).Milliseconds) / this.blocksProcessed, 2);
+
+                double avgBlockProcessingThroughput = Math.Round(this.blocksProcessed / (new TimeSpan(this.blocksProcessingTime).TotalSeconds), 2);
+
+                log.AppendLine("Polls Repository Height".PadRight(LoggingConfiguration.ColumnLength) + $": {(this.PollsRepository.CurrentTip?.Height ?? 0)}".PadRight(10) + $"(Hash: {(this.PollsRepository.CurrentTip?.Hash.ToString())})");
+                log.AppendLine("Blocks Processed".PadRight(LoggingConfiguration.ColumnLength) + $": {this.blocksProcessed}".PadRight(18) + $"Avg Time: { avgBlockProcessingTime } ms".PadRight(20) + $"Throughput: { avgBlockProcessingThroughput } per second");
+                log.AppendLine();
+
+                log.AppendLine(
+                    "Expired Member Polls".PadRight(24) + ": " + GetExpiredPolls().MemberPolls().Count.ToString().PadRight(16) +
+                    "Expired Whitelist Polls".PadRight(30) + ": " + GetExpiredPolls().WhitelistPolls().Count);
+                log.AppendLine(
+                    "Pending Member Polls".PadRight(24) + ": " + GetPendingPolls().MemberPolls().Count.ToString().PadRight(16) +
+                    "Pending Whitelist Polls".PadRight(30) + ": " + GetPendingPolls().WhitelistPolls().Count);
+                log.AppendLine(
+                    "Approved Member Polls".PadRight(24) + ": " + GetApprovedPolls().MemberPolls().Where(x => !x.IsExecuted).Count().ToString().PadRight(16) +
+                    "Approved Whitelist Polls".PadRight(30) + ": " + GetApprovedPolls().WhitelistPolls().Where(x => !x.IsExecuted).Count());
+                log.AppendLine(
+                    "Executed Member Polls".PadRight(24) + ": " + GetExecutedPolls().MemberPolls().Count.ToString().PadRight(16) +
+                    "Executed Whitelist Polls".PadRight(30) + ": " + GetExecutedPolls().WhitelistPolls().Count);
+                log.AppendLine(
+                    "Scheduled Votes".PadRight(24) + ": " + this.scheduledVotingData.Count.ToString().PadRight(16) +
+                    "Scheduled votes will be added to the next block this node mines.");
+
+                if (this.nodeStats.DisplayBenchStats)
+                {
+                    long tipHeight = this.chainIndexer.Tip.Height;
+
+                    List<Poll> pendingPolls = GetPendingPolls().OrderByDescending(p => p.PollStartBlockData.Height).ToList();
+                    if (pendingPolls.Count != 0)
+                    {
+                        log.AppendLine();
+                        log.AppendLine("--- Pending Add/Kick Member Polls ---");
+                        foreach (Poll poll in pendingPolls.Where(p => !p.IsExecuted && (p.VotingData.Key == VoteKey.AddFederationMember || p.VotingData.Key == VoteKey.KickFederationMember)))
+                        {
+                            IFederationMember federationMember = ((PoAConsensusFactory)(this.network.Consensus.ConsensusFactory)).DeserializeFederationMember(poll.VotingData.Data);
+                            string expiresIn = $", Expires In = {(Math.Max(this.poaConsensusOptions.Release1100ActivationHeight, poll.PollStartBlockData.Height + this.poaConsensusOptions.PollExpiryBlocks) - tipHeight)}";
+                            log.Append($"{poll.VotingData.Key.ToString().PadLeft(22)}, PubKey = { federationMember.PubKey.ToHex() }, In Favor = {poll.PubKeysHexVotedInFavor.Count}{expiresIn}");
+                            bool exists = this.federationManager.GetFederationMembers().Any(m => m.PubKey == federationMember.PubKey);
+                            if (poll.VotingData.Key == VoteKey.AddFederationMember && exists)
+                                log.Append(" (Already exists)");
+                            if (poll.VotingData.Key == VoteKey.KickFederationMember && !exists)
+                                log.Append(" (Does not exist)");
+                            log.AppendLine();
+                        }
+                    }
+
+                    List<Poll> approvedPolls = GetApprovedPolls().Where(p => !p.IsExecuted).OrderByDescending(p => p.PollVotedInFavorBlockData.Height).ToList();
+                    if (approvedPolls.Count != 0)
+                    {
+                        log.AppendLine();
+                        log.AppendLine("--- Approved Polls ---");
+                        foreach (Poll poll in approvedPolls)
+                        {
+                            log.AppendLine($"{poll.VotingData.Key.ToString().PadLeft(22)}, Applied In = ({(poll.PollStartBlockData.Height - (tipHeight - this.network.Consensus.MaxReorgLength))})");
+                        }
+                    }
+                }
+            }
+
+            log.AppendLine();
+        }
+
+        [NoTrace]
+        private void EnsureInitialized()
+        {
+            if (!this.isInitialized)
+            {
+                throw new Exception("VotingManager is not initialized. Check that voting is enabled in PoAConsensusOptions.");
+            }
+        }
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            this.signals.Unsubscribe(this.blockConnectedSubscription);
+            this.signals.Unsubscribe(this.blockDisconnectedSubscription);
+
+            this.PollsRepository.Dispose();
+        }
     }
+}
