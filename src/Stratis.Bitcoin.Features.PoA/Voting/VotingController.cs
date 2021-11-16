@@ -164,15 +164,47 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
-        [Route("polls/expired")]
+        /// <summary>
+        /// Retrieves a list of expired member polls.
+        /// </summary>
+        /// <returns>Expired polls</returns>
+        /// <response code="200">Returns the expired polls</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route("polls/expired/members")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        public IActionResult GetExpiredPolls([FromQuery] VoteKey voteType)
+        public IActionResult GetExpiredPollsMembers()
         {
             try
             {
-                IEnumerable<Poll> polls = this.votingManager.GetExpiredPolls().Where(v => v.VotingData.Key == voteType);
+                IEnumerable<Poll> polls = this.votingManager.GetExpiredPolls().MemberPolls();
+                IEnumerable<PollViewModel> models = polls.Select(x => new PollViewModel(x, this.pollExecutor));
+
+                return this.Json(models);
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a list of expired whitelist hash polls.
+        /// </summary>
+        /// <returns>Expired polls</returns>
+        /// <response code="200">Returns the expired polls</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route("polls/expired/whitelist")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult GetExpiredPollsWhitelist()
+        {
+            try
+            {
+                IEnumerable<Poll> polls = this.votingManager.GetExpiredPolls().WhitelistPolls();
                 IEnumerable<PollViewModel> models = polls.Select(x => new PollViewModel(x, this.pollExecutor));
 
                 return this.Json(models);

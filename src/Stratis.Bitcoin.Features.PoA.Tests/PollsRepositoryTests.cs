@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using NBitcoin;
+using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
@@ -15,11 +16,11 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
         public PollsRepositoryTests()
         {
-            string dir = TestBase.CreateTestDir(this);
-            Network network = new TestPoANetwork();
+            var dataDir = new DataFolder(TestBase.CreateTestDir(this));
+            TestPoANetwork network = new TestPoANetwork();
             this.chainIndexer = new ChainIndexer(network);
 
-            this.repository = new PollsRepository(dir, new DBreezeSerializer(network.Consensus.ConsensusFactory), chainIndexer);
+            this.repository = new PollsRepository(this.chainIndexer, dataDir, new DBreezeSerializer(network.Consensus.ConsensusFactory), network);
             this.repository.Initialize();
         }
 
