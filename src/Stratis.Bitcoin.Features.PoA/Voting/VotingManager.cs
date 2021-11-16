@@ -665,15 +665,17 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 foreach (Poll poll in this.polls.Where(x => x.IsExpired).ToList())
                 {
                     if (!IsPollExpiredAt(poll, chBlock.ChainedHeader.Previous))
+                    {
                         this.logger.Debug($"Poll '{poll.Id}' is not expired at height {chBlock.ChainedHeader.Previous.Height}; {poll.PollStartBlockData.Height + this.poaConsensusOptions.PollExpiryBlocks}", poll);
+
+                        // Revert back to null as this field would have been when the poll was expired.
+                        poll.IsExpired = false;
+                        this.polls.OnPendingStatusChanged(poll);
+                        this.PollsRepository.UpdatePoll(transaction, poll);
+                        pollsRepositoryModified = true;
+                    }
                     else
                         this.logger.Debug($"Poll '{poll.Id}' is expired at height {chBlock.ChainedHeader.Previous.Height}; {poll.PollStartBlockData.Height + this.poaConsensusOptions.PollExpiryBlocks}", poll);
-
-                    // Revert back to null as this field would have been when the poll was expired.
-                    poll.IsExpired = false;
-                    this.polls.OnPendingStatusChanged(poll);
-                    this.PollsRepository.UpdatePoll(transaction, poll);
-                    pollsRepositoryModified = true;
                 }
 
                 if (this.federationManager.GetMultisigMinersApplicabilityHeight() == chBlock.ChainedHeader.Height)
