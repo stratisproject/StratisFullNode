@@ -88,6 +88,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         if (this.chainIndexer.GetHeader(this.CurrentTip.Hash) != null)
                         {
                             this.highestPollId = (polls.Count > 0) ? polls.Max(p => p.Id) : -1;
+                            this.logger.Info("Polls repository initialized at height {0}; highest poll id: {1}.", this.CurrentTip.Height, this.highestPollId);
                             return;
                         }
 
