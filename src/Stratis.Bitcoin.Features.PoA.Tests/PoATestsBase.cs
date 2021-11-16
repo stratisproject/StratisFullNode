@@ -191,7 +191,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
                 federationMemberMaxIdleTimeSeconds: baseOptions.FederationMemberMaxIdleTimeSeconds
             )
             {
-                PollExpiryBlocks = 450
+                PollExpiryBlocks = 10
             };
 
             this.Consensus.SetPrivatePropertyValue(nameof(this.Consensus.MaxReorgLength), (uint)5);

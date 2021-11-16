@@ -86,7 +86,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         }
 
                         this.CurrentTip = this.dBreezeSerializer.Deserialize<HashHeightPair>(rowTip.Value);
-                        if (this.chainIndexer == null || this.chainIndexer.GetHeader(this.CurrentTip.Hash) != null)
+                        if (this.chainIndexer.GetHeader(this.CurrentTip.Hash) != null)
                         {
                             this.highestPollId = (polls.Count > 0) ? polls.Max(p => p.Id) : -1;
                             return;
@@ -95,7 +95,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         this.logger.Info("The polls repository tip {0} was not found in the consensus chain, determining fork.", this.CurrentTip);
 
                         // == Find fork.
-                        // The polls repository tip could not be found in the consenus chain.
+                        // The polls repository tip could not be found in the chain.
                         // Look at all other known hash/height pairs to find something in common with the consensus chain.
                         // We will take that as the last known valid height.
 
@@ -113,7 +113,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                         if (maxGoodHeight == -1)
                         {
-                            this.logger.Info("No common blocks found; the repo will be rebuil from scratch.");
+                            this.logger.Info("No common blocks found; the repo will be rebuilt from scratch.");
                             this.ResetLocked(transaction);
                             transaction.Commit();
                             return;

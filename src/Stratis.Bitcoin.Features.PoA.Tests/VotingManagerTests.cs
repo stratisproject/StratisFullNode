@@ -65,6 +65,11 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             Assert.Single(this.votingManager.GetApprovedPolls());
         }
 
+        private ChainedHeaderBlock[] GetEmptyBlocks(int count, ChainedHeader previous)
+        {
+            return GetBlocks(count, i => this.CreateBlock(i + 1), previous);
+        }
+
         private ChainedHeaderBlock[] GetBlocksWithVotingData(int count, VotingData votingData)
         {
             return GetBlocks(count, i => this.CreateBlockWithVotingData(new List<VotingData>() { votingData }, i + 1));
@@ -75,9 +80,12 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             return GetBlocks(count, i => this.CreateBlockWithVotingRequest(votingRequest, i + 1));
         }
 
-        private ChainedHeaderBlock[] GetBlocks(int count, Func<int, ChainedHeaderBlock> block)
+        private ChainedHeaderBlock[] GetBlocks(int count, Func<int, ChainedHeaderBlock> block, ChainedHeader previousHeader = null)
         {
             ChainedHeader previous = null;
+
+            if (previousHeader != null)
+                previous = previousHeader;
 
             return Enumerable.Range(0, count).Select(i =>
             {
@@ -147,6 +155,38 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             }
         }
 
+        [Fact]
+        public void CanExpireAndUnExpirePoll()
+        {
+            // Create add federation member vote.
+            var votingData = new VotingData()
+            {
+                Key = VoteKey.AddFederationMember,
+                Data = new Key().PubKey.ToBytes()
+            };
+
+            // Create a single pending poll.
+            ChainedHeaderBlock[] blocks = GetBlocksWithVotingData(1, votingData);
+            this.TriggerOnBlockConnected(blocks[0]);
+            Assert.Single(this.votingManager.GetPendingPolls());
+
+            // Advance the chain so that the poll expires.
+            blocks = GetEmptyBlocks(11, blocks[0].ChainedHeader);
+            for (int i = 0; i < blocks.Length; i++)
+            {
+                this.TriggerOnBlockConnected(blocks[i]);
+            }
+
+            // Assert that the poll expired.
+            Assert.Empty(this.votingManager.GetPendingPolls());
+
+            // Rewind the chain to before poll expiry.
+            this.TriggerOnBlockDisconnected(blocks[10]);
+
+            // Assert that the poll was "un-expired".
+            Assert.Single(this.votingManager.GetPendingPolls());
+        }
+
         private ChainedHeaderBlock CreateBlockWithVotingRequest(JoinFederationRequest votingRequest, int height)
         {
             var encoder = new JoinFederationRequestEncoder();
@@ -162,7 +202,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             Block block = new Block();
             block.Transactions.Add(tx);
 
-            block.Header.Time = (uint)(height * (this.network.ConsensusOptions as PoAConsensusOptions).TargetSpacingSeconds);
+            block.Header.Time = (uint)(height * this.network.ConsensusOptions.TargetSpacingSeconds);
 
             block.UpdateMerkleRoot();
             block.GetHash();
@@ -184,7 +224,22 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             Block block = new Block();
             block.Transactions.Add(tx);
 
-            block.Header.Time = (uint)(height * (this.network.ConsensusOptions as PoAConsensusOptions).TargetSpacingSeconds);
+            block.Header.Time = (uint)(height * this.network.ConsensusOptions.TargetSpacingSeconds);
+
+            block.UpdateMerkleRoot();
+            block.GetHash();
+
+            return new ChainedHeaderBlock(block, new ChainedHeader(block.Header, block.GetHash(), height));
+        }
+
+        private ChainedHeaderBlock CreateBlock(int height)
+        {
+            Block block = new Block();
+
+            var tx = new Transaction();
+            block.Transactions.Add(tx);
+
+            block.Header.Time = (uint)(height * this.network.ConsensusOptions.TargetSpacingSeconds);
 
             block.UpdateMerkleRoot();
             block.GetHash();

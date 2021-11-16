@@ -105,7 +105,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.idleFederationMembersKicker = idleFederationMembersKicker;
 
             this.PollsRepository.Initialize();
-
             this.PollsRepository.WithTransaction(transaction => this.polls = new PollsCollection(this.PollsRepository.GetAllPolls(transaction)));
 
             this.blockConnectedSubscription = this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
@@ -663,9 +662,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     pollsRepositoryModified = true;
                 }
 
-                foreach (Poll poll in this.polls.Where(x => x.IsExpired && !IsPollExpiredAt(x, chBlock.ChainedHeader.Previous)).ToList())
+                foreach (Poll poll in this.polls.Where(x => x.IsExpired).ToList())
                 {
-                    this.logger.Debug("Reverting poll expiry '{0}'.", poll);
+                    if (!IsPollExpiredAt(poll, chBlock.ChainedHeader.Previous))
+                        this.logger.Debug($"Poll '{poll.Id}' is not expired at height {chBlock.ChainedHeader.Previous.Height}; {poll.PollStartBlockData.Height + this.poaConsensusOptions.PollExpiryBlocks}", poll);
+                    else
+                        this.logger.Debug($"Poll '{poll.Id}' is expired at height {chBlock.ChainedHeader.Previous.Height}; {poll.PollStartBlockData.Height + this.poaConsensusOptions.PollExpiryBlocks}", poll);
 
                     // Revert back to null as this field would have been when the poll was expired.
                     poll.IsExpired = false;

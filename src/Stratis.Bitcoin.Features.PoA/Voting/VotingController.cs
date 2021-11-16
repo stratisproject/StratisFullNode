@@ -164,6 +164,26 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
+        [Route("polls/expired")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult GetExpiredPolls([FromQuery] VoteKey voteType)
+        {
+            try
+            {
+                IEnumerable<Poll> polls = this.votingManager.GetExpiredPolls().Where(v => v.VotingData.Key == voteType);
+                IEnumerable<PollViewModel> models = polls.Select(x => new PollViewModel(x, this.pollExecutor));
+
+                return this.Json(models);
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
         /// <summary>
         /// Retrieves a list of whitelisted hashes.
         /// </summary>
