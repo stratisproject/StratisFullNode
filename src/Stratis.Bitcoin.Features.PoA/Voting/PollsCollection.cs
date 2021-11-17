@@ -46,8 +46,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             if (poll.IsPending)
             {
                 // Can't insert another pending poll for the same.
-                Guard.Assert(!this.pendingPollsByVotingData.ContainsKey(poll.VotingData));
-                this.pendingPollsByVotingData[poll.VotingData] = poll;
+                if (!this.pendingPollsByVotingData.ContainsKey(poll.VotingData))
+                    this.pendingPollsByVotingData[poll.VotingData] = poll;
             }
 
             this.polls.Add(poll);
@@ -72,7 +72,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 // The poll should no longer be in this collection if its not pending.
                 Guard.Assert(poll.IsPending);
-
                 return poll;
             }
 
