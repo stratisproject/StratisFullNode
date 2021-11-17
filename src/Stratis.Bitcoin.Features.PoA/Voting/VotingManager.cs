@@ -454,14 +454,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return this.federationManager.IsMultisigMember(member.PubKey);
         }
 
-        private bool IsPollExpiredAt(Poll poll, ChainedHeader chainedHeader)
-        {
-            if (chainedHeader == null)
-                return false;
-
-            return Math.Max(poll.PollStartBlockData.Height + this.poaConsensusOptions.PollExpiryBlocks, this.poaConsensusOptions.Release1100ActivationHeight) <= chainedHeader.Height;
-        }
-
         private void ProcessBlock(DBreeze.Transactions.Transaction transaction, ChainedHeaderBlock chBlock)
         {
             long flagFall = DateTime.Now.Ticks;
@@ -472,7 +464,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 {
                     bool pollsRepositoryModified = false;
 
-                    foreach (Poll poll in this.GetPendingPolls().Where(x => this.IsPollExpiredAt(x, chBlock.ChainedHeader)).ToList())
+                    foreach (Poll poll in this.GetPendingPolls().Where(p => PollsRepository.IsPollExpiredAt(p, chBlock.ChainedHeader, this.network as PoANetwork)).ToList())
                     {
                         this.logger.Debug("Expiring poll '{0}'.", poll);
 
@@ -662,7 +654,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     pollsRepositoryModified = true;
                 }
 
-                foreach (Poll poll in this.polls.Where(x => x.IsExpired && !IsPollExpiredAt(x, chBlock.ChainedHeader.Previous)).ToList())
+                foreach (Poll poll in this.polls.Where(x => x.IsExpired && !PollsRepository.IsPollExpiredAt(x, chBlock.ChainedHeader.Previous, this.network as PoANetwork)).ToList())
                 {
                     this.logger.Debug("Reverting poll expiry '{0}'.", poll);
 

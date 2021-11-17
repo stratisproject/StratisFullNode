@@ -85,7 +85,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         // Check to see if the polls repo tip exists in chain.
                         // The node could have been rewound so we need to rebuild the repo from that point.
                         this.CurrentTip = this.dBreezeSerializer.Deserialize<HashHeightPair>(rowTip.Value);
-                        if (this.chainIndexer.GetHeader(this.CurrentTip.Hash) != null)
+                        ChainedHeader chainedHeaderTip = this.chainIndexer.GetHeader(this.CurrentTip.Hash);
+                        if (chainedHeaderTip != null)
                         {
                             this.highestPollId = (polls.Count > 0) ? polls.Max(p => p.Id) : -1;
                             this.logger.Info("Polls repository tip exists on chain; initializing at height {0}; highest poll id: {1}.", this.CurrentTip.Height, this.highestPollId);
@@ -153,7 +154,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                             // Check if the current tip is before the poll expiry activation block,
                             // if so un-expire it.
-                            if (poll.IsExpired && this.CurrentTip.Height < this.network.ConsensusOptions.Release1100ActivationHeight)
+                            if (poll.IsExpired && !IsPollExpiredAt(poll, chainedHeaderTip, this.network))
                             {
                                 this.logger.Debug("Un-expiring poll {0}.", poll.Id);
                                 poll.IsExpired = false;
@@ -350,6 +351,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     .Select(d => this.dBreezeSerializer.Deserialize<Poll>(d.Value))
                     .ToList();
             }
+        }
+
+        public static bool IsPollExpiredAt(Poll poll, ChainedHeader chainedHeader, PoANetwork network)
+        {
+            if (chainedHeader == null)
+                return false;
+
+            return Math.Max(poll.PollStartBlockData.Height + network.ConsensusOptions.PollExpiryBlocks, network.ConsensusOptions.Release1100ActivationHeight) <= chainedHeader.Height;
         }
 
         /// <inheritdoc />
