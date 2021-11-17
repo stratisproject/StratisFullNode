@@ -385,7 +385,7 @@ namespace Stratis.Bitcoin.Features.Api
 
             if (result.IsValid)
             {
-                var scriptPubKey = BitcoinAddress.Create(address, this.network).ScriptPubKey;
+                NBitcoin.Script scriptPubKey = BitcoinAddress.Create(address, this.network).ScriptPubKey;
                 result.ScriptPubKey = scriptPubKey.ToHex();
                 result.IsWitness = scriptPubKey.IsWitness(this.network);
             }
@@ -453,7 +453,7 @@ namespace Stratis.Bitcoin.Features.Api
         /// <returns>The hex-encoded merkle proof.</returns>
         [Route("gettxoutproof")]
         [HttpGet]
-        public async Task<IActionResult> GetTxOutProofAsync([FromQuery] string[] txids, string blockhash = "")
+        public Task<IActionResult> GetTxOutProofAsync([FromQuery] string[] txids, string blockhash = "")
         {
             List<uint256> transactionIds = txids.Select(txString => uint256.Parse(txString)).ToList();
 
@@ -500,7 +500,7 @@ namespace Stratis.Bitcoin.Features.Api
 
             var result = new MerkleBlock(block.Block, transactionIds.ToArray());
 
-            return this.Json(result);
+            return Task.FromResult<IActionResult>(this.Json(result));
         }
 
         /// <summary>
@@ -529,6 +529,8 @@ namespace Stratis.Bitcoin.Features.Api
         /// Signals the node to rewind to the specified height.
         /// This will be done via writing a flag to the .conf file so that on startup it be executed.
         /// </summary>
+        /// <param name="height">The rewind height.</param>
+        /// <returns>A json text result indicating success or an <see cref="ErrorResult"/> indicating failure.</returns>
         [Route("rewind")]
         [HttpPut]
         [ProducesResponseType((int)HttpStatusCode.OK)]
@@ -697,7 +699,7 @@ namespace Stratis.Bitcoin.Features.Api
         /// <summary>
         /// Schedules data folder storing chain state in the <see cref="DataFolder"/> for deletion on the next graceful shutdown.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>Returns an <see cref="OkResult"/>.</returns>
         [HttpDelete]
         [Route("datafolder/chain")]
         public IActionResult DeleteChain()
@@ -717,7 +719,7 @@ namespace Stratis.Bitcoin.Features.Api
         /// <exception cref="ArgumentNullException">Thrown if fullnode is not provided.</exception>
         internal ChainedHeader GetTransactionBlock(uint256 trxid, ChainIndexer chain)
         {
-            Guard.NotNull(fullNode, nameof(fullNode));
+            Guard.NotNull(this.fullNode, nameof(this.fullNode));
 
             ChainedHeader block = null;
             uint256 blockid = this.blockStore?.GetBlockIdByTransactionId(trxid);
