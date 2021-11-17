@@ -152,7 +152,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
         [ActionName("fundrawtransaction")]
         [ActionDescription("Add inputs to a transaction until it has enough in value to meet its out value. Note that signing is performed separately.")]
-        public async Task<FundRawTransactionResponse> FundRawTransactionAsync(string rawHex, FundRawTransactionOptions options = null, bool? isWitness = null)
+        public Task<FundRawTransactionResponse> FundRawTransactionAsync(string rawHex, FundRawTransactionOptions options = null, bool? isWitness = null)
         {
             try
             {
@@ -298,12 +298,12 @@ namespace Stratis.Bitcoin.Features.Wallet
                     }
                 }
 
-                return new FundRawTransactionResponse()
+                return Task.FromResult(new FundRawTransactionResponse()
                 {
                     ChangePos = foundChange,
                     Fee = context.TransactionFee,
                     Transaction = rawTx
-                };
+                });
             }
             catch (SecurityException)
             {
@@ -323,7 +323,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <returns>The hex format of the transaction once it has been signed.</returns>
         [ActionName("signrawtransaction")]
         [ActionDescription("Sign inputs for raw transaction. Requires all affected wallets to be unlocked using walletpassphrase.")]
-        public async Task<SignRawTransactionResponse> SignRawTransactionAsync(string rawHex)
+        public Task<SignRawTransactionResponse> SignRawTransactionAsync(string rawHex)
         {
             try
             {
@@ -370,11 +370,11 @@ namespace Stratis.Bitcoin.Features.Wallet
                 builder.AddKeys(signingKeys.ToArray());
                 builder.SignTransactionInPlace(rawTx);
 
-                return new SignRawTransactionResponse()
+                return Task.FromResult(new SignRawTransactionResponse()
                 {
                     Transaction = rawTx,
                     Complete = true
-                };
+                });
             }
             catch (SecurityException)
             {
@@ -459,10 +459,11 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// Uses the default wallet if specified, or the first wallet found.
         /// </summary>
         /// <param name="txid">Identifier of the transaction to find.</param>
+        /// <param name="include_watchonly">Set to <c>true</c> to search the watch-only account.</param>
         /// <returns>Transaction information.</returns>
         [ActionName("gettransaction")]
         [ActionDescription("Get detailed information about an in-wallet transaction.")]
-        public async Task<object> GetTransaction(string txid, bool include_watchonly = false)
+        public Task<object> GetTransaction(string txid, bool include_watchonly = false)
         {
             if (!uint256.TryParse(txid, out uint256 trxid))
                 throw new ArgumentException(nameof(txid));
@@ -471,7 +472,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             {
                 WalletHistoryModel history = GetWatchOnlyTransaction(trxid);
                 if ((history?.AccountsHistoryModel?.FirstOrDefault()?.TransactionsHistory?.Count ?? 0) != 0)
-                    return history;
+                    return Task.FromResult<object>(history);
             }
 
             // First check the regular wallet accounts.
@@ -635,13 +636,15 @@ namespace Stratis.Bitcoin.Features.Wallet
             model.Amount = model.Details.Sum(d => d.Amount);
             model.Fee = model.Details.FirstOrDefault(d => d.Category == GetTransactionDetailsCategoryModel.Send)?.Fee;
 
-            return model;
+            return Task.FromResult<object>(model);
         }
 
 
         /// <summary>
         /// We get the details via the wallet service's history method.
         /// </summary>
+        /// <param name="trxid">The hash of the transaction to get.</param>
+        /// <returns>See <see cref="WalletHistoryModel"/>.</returns>
         private WalletHistoryModel GetWatchOnlyTransaction(uint256 trxid)
         {
             var accountReference = this.GetWatchOnlyWalletAccountReference();
