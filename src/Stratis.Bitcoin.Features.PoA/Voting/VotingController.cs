@@ -80,6 +80,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <summary>
         /// Retrieves a list of pending or "active" polls.
         /// </summary>
+        /// <param name="voteType">See <see cref="VoteKey"/>.</param>
+        /// <param name="pubKeyOfMemberBeingVotedOn">The public key of the member being voted on (in hexadecimal). If omitted or empty then all polls are returned.</param>
         /// <returns>Active polls</returns>
         /// <response code="200">Returns the active polls</response>
         /// <response code="400">Unexpected exception occurred</response>
@@ -109,6 +111,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <summary>
         /// Retrieves a list of finished polls.
         /// </summary>
+        /// <param name="voteType">See <see cref="VoteKey"/>.</param>
+        /// <param name="pubKeyOfMemberBeingVotedOn">The public key of the member being voted on (in hexadecimal). If omitted or empty then all polls are returned.</param>
         /// <returns>Finished polls</returns>
         /// <response code="200">Returns the finished polls</response>
         /// <response code="400">Unexpected exception occurred</response>
@@ -138,6 +142,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <summary>
         /// Retrieves a list of executed polls.
         /// </summary>
+        /// <param name="voteType">See <see cref="VoteKey"/>.</param>
+        /// <param name="pubKeyOfMemberBeingVotedOn">The public key of the member being voted on (in hexadecimal). If omitted or empty then all polls are returned.</param>
         /// <returns>Finished polls</returns>
         /// <response code="200">Returns the finished polls</response>
         /// <response code="400">Unexpected exception occurred</response>
@@ -192,6 +198,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <summary>
         /// Votes to add a hash to the whitelist.
         /// </summary>
+        /// <param name="request">See <see cref="HashModel"/>.</param>
         /// <returns>The HTTP response</returns>
         /// <response code="200">Voted to add hash to whitelist</response>
         /// <response code="400">Invalid request, node is not a federation member, or an unexpected exception occurred</response>
@@ -209,6 +216,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <summary>
         /// Votes to remove a hash from the whitelist.
         /// </summary>
+        /// <param name="request">See <see cref="HashModel"/>.</param>
         /// <returns>The HTTP response</returns>
         /// <response code="200">Voted to remove hash from whitelist</response>
         /// <response code="400">Invalid request, node is not a federation member, or an unexpected exception occurred</response>
@@ -282,6 +290,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <summary>
         /// Votes to kick/remove a member from the federation.
         /// </summary>
+        /// <param name="model">See <see cref="KickFederationMemberModel"/>.</param>
         /// <returns>The HTTP response</returns>
         /// <response code="200">Voted to remove a member from the federation.</response>
         /// <response code="400">Invalid request, node is not a federation member, or an unexpected exception occurred</response>
