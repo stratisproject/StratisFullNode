@@ -6,15 +6,26 @@ using Stratis.Bitcoin.Configuration.Logging;
 
 namespace Stratis.Bitcoin.Features.ExternalApi
 {
+    /// <summary>
+    /// The External API Feature.
+    /// </summary>
     public sealed class ExternalApiFeature : FullNodeFeature
     {
         private readonly IExternalApiPoller externalApiPoller;
         
+        /// <summary>
+        /// The class constructor.
+        /// </summary>
+        /// <param name="externalApiPoller">The <see cref="IExternalApiPoller"/>.</param>
         public ExternalApiFeature(IExternalApiPoller externalApiPoller)
         {
             this.externalApiPoller = externalApiPoller;
         }
 
+        /// <summary>
+        /// Initializes the instance.
+        /// </summary>
+        /// <returns>The asynchronous task.</returns>
         public override Task InitializeAsync()
         {
             this.externalApiPoller?.Initialize();
@@ -22,14 +33,25 @@ namespace Stratis.Bitcoin.Features.ExternalApi
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Disposes the instance.
+        /// </summary>
         public override void Dispose()
         {
             this.externalApiPoller?.Dispose();
         }
     }
 
+    /// <summary>
+    /// <see cref="IFullNodeBuilder"/> extensions.
+    /// </summary>
     public static partial class IFullNodeBuilderExtensions
     {
+        /// <summary>
+        /// Add the External Api feature to the node.
+        /// </summary>
+        /// <param name="fullNodeBuilder">Implicitly passed <see cref="IFullNodeBuilder"/>.</param>
+        /// <returns>The <see cref="IFullNodeBuilder"/>.</returns>
         public static IFullNodeBuilder AddExternalApi(this IFullNodeBuilder fullNodeBuilder)
         {
             LoggingConfiguration.RegisterFeatureNamespace<ExternalApiFeature>("externalapi");
