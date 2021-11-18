@@ -6,6 +6,9 @@ using Stratis.Bitcoin.Features.ExternalApi.Models;
 
 namespace Stratis.Bitcoin.Features.ExternalApi.ApiClients
 {
+    /// <summary>
+    /// Retrieves gas prices from Etherscan.
+    /// </summary>
     public class EtherscanClient : IDisposable
     {
         private readonly ExternalApiSettings externalApiSettings;
@@ -18,6 +21,10 @@ namespace Stratis.Bitcoin.Features.ExternalApi.ApiClients
         private bool sampled = false;
         private int samplePointer = 0;
 
+        /// <summary>
+        /// The class constructor.
+        /// </summary>
+        /// <param name="externalApiSettings">The <see cref="ExternalApiSettings"/>.</param>
         public EtherscanClient(ExternalApiSettings externalApiSettings)
         {
             this.externalApiSettings = externalApiSettings;
@@ -58,7 +65,11 @@ namespace Stratis.Bitcoin.Features.ExternalApi.ApiClients
             return (int)Math.Ceiling((((totalFast * fastWeighting) + (totalProposed * proposedWeighting) + (totalSafe * safeWeighting)) / this.fastSamples.Length));
         }
 
-        public async Task<EtherscanGasOracleResponse> GasOracle(bool recordSamples)
+        /// <summary>
+        /// Samples the gas price from Etherscan.
+        /// </summary>
+        /// <returns>The <see cref="EtherscanGasOracleResponse"/>.</returns>
+        public async Task<EtherscanGasOracleResponse> GasOracleAsync()
         {
             string content = await this.client.GetStringAsync(this.externalApiSettings.EtherscanGasOracleUrl).ConfigureAwait(false);
 
@@ -85,23 +96,23 @@ namespace Stratis.Bitcoin.Features.ExternalApi.ApiClients
                 return response;
             }
 
-            if (recordSamples)
+            this.fastSamples[this.samplePointer] = response.result.FastGasPrice;
+            this.proposeSamples[this.samplePointer] = response.result.ProposeGasPrice;
+            this.safeSamples[this.samplePointer] = response.result.SafeGasPrice;
+
+            this.samplePointer++;
+
+            if (this.samplePointer >= this.fastSamples.Length)
             {
-                this.fastSamples[this.samplePointer] = response.result.FastGasPrice;
-                this.proposeSamples[this.samplePointer] = response.result.ProposeGasPrice;
-                this.safeSamples[this.samplePointer] = response.result.SafeGasPrice;
-
-                this.samplePointer++;
-
-                if (this.samplePointer >= this.fastSamples.Length)
-                {
-                    this.samplePointer = 0;
-                }
+                this.samplePointer = 0;
             }
 
             return response;
         }
 
+        /// <summary>
+        /// Disposes instances of this class.
+        /// </summary>
         public void Dispose()
         {
             this.client?.Dispose();
