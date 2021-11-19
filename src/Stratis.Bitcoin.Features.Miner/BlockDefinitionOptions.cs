@@ -31,6 +31,8 @@ namespace Stratis.Bitcoin.Features.Miner
         /// Restrict the options to within those allowed by network consensus rules.
         /// If set values are outside those allowed by consensus, set to nearest allowed value (minimum or maximum).
         /// </summary>
+        /// <param name="network">The network context.</param>
+        /// <returns>The <see cref="BlockDefinitionOptions"/>.</returns>
         public BlockDefinitionOptions RestrictForNetwork(Network network)
         {
             uint minAllowedBlockWeight = MinBlockSize * (uint) network.Consensus.Options.WitnessScaleFactor;
