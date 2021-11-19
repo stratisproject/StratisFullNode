@@ -178,7 +178,7 @@ namespace Stratis.Sidechains.Networks
                 FederationMemberActivationTime = 1605862800, // Friday, November 20, 2020 9:00:00 AM
                 InterFluxV2MainChainActivationHeight = 460_000,
                 VotingManagerV2ActivationHeight = 1_683_000, // Tuesday, 12 January 2021 9:00:00 AM (Estimated)
-                Release1100ActivationHeight = 3_200_000,
+                Release1100ActivationHeight = 3_390_340, // Monday, 13 December 2021 10:00:00 AM (Estimated)
                 PollExpiryBlocks = 50_000, // Roughly 9 days
                 GetMiningTimestampV2ActivationHeight = 3_500_000
             };
