@@ -65,7 +65,8 @@ namespace Stratis.Bitcoin.Features.RPC.Models
         public int Confirmations { get; set; }
 
         /// <summary>
-        /// The hash of the block containing this transaction.</summary>
+        /// The hash of the block containing this transaction.
+        /// </summary>
         [JsonProperty(PropertyName = "blockhash")]
         public string BlockHash { get; set; }
 
