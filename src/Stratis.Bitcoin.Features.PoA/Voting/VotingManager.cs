@@ -118,6 +118,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>Schedules a vote for the next time when the block will be mined.</summary>
+        /// <param name="votingData">See <see cref="VotingData"/>.</param>
         /// <exception cref="InvalidOperationException">Thrown in case caller is not a federation member.</exception>
         public void ScheduleVote(VotingData votingData)
         {
@@ -141,6 +142,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>Provides a copy of scheduled voting data.</summary>
+        /// <returns>A list of <see cref="VotingData"/>.</returns>
         public List<VotingData> GetScheduledVotes()
         {
             this.EnsureInitialized();
@@ -154,6 +156,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>Provides scheduled voting data and removes all items that were provided.</summary>
+        /// <returns>A list of <see cref="VotingData"/>.</returns>
         /// <remarks>Used by miner.</remarks>
         public List<VotingData> GetAndCleanScheduledVotes()
         {
@@ -205,6 +208,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>Provides a collection of polls that are currently active.</summary>
+        /// <returns>A list of <see cref="Poll"/> items.</returns>
         public List<Poll> GetPendingPolls()
         {
             this.EnsureInitialized();
@@ -217,6 +221,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>Provides a collection of polls that are approved but not executed yet.</summary>
+        /// <returns>A list of <see cref="Poll"/> items.</returns>
         public List<Poll> GetApprovedPolls()
         {
             this.EnsureInitialized();
@@ -228,6 +233,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>Provides a collection of polls that are approved and their results applied.</summary>
+        /// <returns>A list of <see cref="Poll"/> items.</returns>
         public List<Poll> GetExecutedPolls()
         {
             this.EnsureInitialized();
@@ -239,6 +245,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>Provides a collection of polls that are expired.</summary>
+        /// <returns>A list of <see cref="Poll"/> items.</returns>
         public List<Poll> GetExpiredPolls()
         {
             this.EnsureInitialized();
@@ -252,6 +259,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <summary>
         /// Tells us whether we have already voted to boot a federation member.
         /// </summary>
+        /// <param name="voteKey">See <see cref="VoteKey"/>.</param>
+        /// <param name="federationMemberBytes">The bytes to compare <see cref="VotingData.Data"/> against.</param>
+        /// <returns><c>True</c> if we have already voted or <c>false</c> otherwise.</returns>
         public bool AlreadyVotingFor(VoteKey voteKey, byte[] federationMemberBytes)
         {
             List<Poll> approvedPolls = this.GetApprovedPolls();
