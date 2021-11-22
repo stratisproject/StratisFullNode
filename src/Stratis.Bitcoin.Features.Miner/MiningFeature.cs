@@ -260,6 +260,7 @@ namespace Stratis.Bitcoin.Features.Miner
         /// Adds POW and POS miner components to the node, so that it can mine or stake.
         /// </summary>
         /// <param name="fullNodeBuilder">The object used to build the current node.</param>
+        /// <param name="straxMode">Indicates whether the <see cref="StraxMinting"/> class should be used.</param>
         /// <returns>The full node builder, enriched with the new component.</returns>
         public static IFullNodeBuilder AddPowPosMining(this IFullNodeBuilder fullNodeBuilder, bool straxMode)
         {

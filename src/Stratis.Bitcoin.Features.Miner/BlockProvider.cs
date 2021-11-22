@@ -19,6 +19,8 @@ namespace Stratis.Bitcoin.Features.Miner
         /// <summary>Defines how proof of work blocks are built on a Proof-of-Stake network.</summary>
         private readonly PosPowBlockDefinition posPowBlockDefinition;
 
+        /// <summary>The instance constructor.</summary>
+        /// <param name="network">The network context.</param>
         /// <param name="definitions">A list of block definitions that the builder can utilize.</param>
         public BlockProvider(Network network, IEnumerable<BlockDefinition> definitions)
         {
