@@ -266,11 +266,13 @@ namespace Stratis.Bitcoin.Features.Miner
         /// <summary>
         /// Network specific logic to add a transaction to the block from a given mempool entry.
         /// </summary>
+        /// <param name="mempoolEntry">The <see cref="TxMempoolEntry"/>.</param>
         public abstract void AddToBlock(TxMempoolEntry mempoolEntry);
 
         /// <summary>
         /// Adds a transaction to the block and updates the <see cref="BlockSize"/> and <see cref="BlockTx"/> values.
         /// </summary>
+        /// <param name="transaction">The <see cref="Transaction"/>.</param>
         protected void AddTransactionToBlock(Transaction transaction)
         {
             this.block.AddTransaction(transaction);
@@ -285,6 +287,7 @@ namespace Stratis.Bitcoin.Features.Miner
         /// <para>The block's <see cref="BlockSigOpsCost"/> and <see cref="BlockWeight"/> values are adjusted.
         /// </para>
         /// </summary>
+        /// <param name="mempoolEntry">The <see cref="TxMempoolEntry"/>.</param>
         protected void UpdateBlockStatistics(TxMempoolEntry mempoolEntry)
         {
             this.BlockSigOpsCost += mempoolEntry.SigOpCost;
@@ -295,6 +298,7 @@ namespace Stratis.Bitcoin.Features.Miner
         /// <summary>
         /// Updates the total fee amount for this block.
         /// </summary>
+        /// <param name="fee">The fee to add to the total fee amount for the block.</param>
         protected void UpdateTotalFees(Money fee)
         {
             this.fees += fee;
@@ -316,6 +320,8 @@ namespace Stratis.Bitcoin.Features.Miner
         /// mapModifiedTxs with the next transaction in the mempool to decide what
         /// transaction package to work on next.
         /// </summary>
+        /// <param name="nPackagesSelected">Updated packages selected statistic.</param>
+        /// <param name="nDescendantsUpdated">Updated descendants updated statistic.</param>
         protected virtual void AddTransactions(out int nPackagesSelected, out int nDescendantsUpdated)
         {
             nPackagesSelected = 0;
@@ -488,6 +494,7 @@ namespace Stratis.Bitcoin.Features.Miner
         /// <summary>
         /// Remove confirmed <see cref="inBlock"/> entries from given set.
         /// </summary>
+        /// <param name="testSet">The confirmed <see cref="TxMempool.SetEntries"/>.</param>
         private void OnlyUnconfirmed(TxMempool.SetEntries testSet)
         {
             foreach (TxMempoolEntry setEntry in testSet.ToList())
@@ -503,6 +510,10 @@ namespace Stratis.Bitcoin.Features.Miner
         /// <summary>
         /// Test if a new package would "fit" in the block.
         /// </summary>
+        /// <param name="entry">The <see cref="TxMempoolEntry"/>.</param>
+        /// <param name="packageSize">The package size.</param>
+        /// <param name="packageSigOpsCost">The package sigops cost.</param>
+        /// <returns><c>True</c> if the package would fit in the block or <c>false</c> otherwise.</returns>
         protected virtual bool TestPackage(TxMempoolEntry entry, long packageSize, long packageSigOpsCost)
         {
             // TODO: Switch to weight-based accounting for packages instead of vsize-based accounting.
@@ -532,6 +543,8 @@ namespace Stratis.Bitcoin.Features.Miner
         /// </list>
         /// </para>
         /// </summary>
+        /// <param name="package">The <see cref="TxMempool.SetEntries"/> package.</param>
+        /// <returns><c>True</c> if the checks have passed or <c>false</c> otherwise.</returns>
         private bool TestPackageTransactions(TxMempool.SetEntries package)
         {
             foreach (TxMempoolEntry it in package)
@@ -561,6 +574,9 @@ namespace Stratis.Bitcoin.Features.Miner
         /// state updated assuming given transactions are inBlock. Returns number
         /// of updated descendants.
         /// </summary>
+        /// <param name="alreadyAdded">The <see cref="TxMempool.SetEntries"/>.</param>
+        /// <param name="mapModifiedTx">The map to add the descendants to.</param>
+        /// <returns>The number of updated descendants.</returns>
         private int UpdatePackagesForAdded(TxMempool.SetEntries alreadyAdded, Dictionary<uint256, TxMemPoolModifiedEntry> mapModifiedTx)
         {
             int descendantsUpdated = 0;
@@ -605,6 +621,9 @@ namespace Stratis.Bitcoin.Features.Miner
         }
 
         /// <summary>Network specific logic specific as to how the block will be built.</summary>
+        /// <param name="chainTip">The chain tip.</param>
+        /// <param name="scriptPubKey">The scriptpubkey.</param>
+        /// <returns>The <see cref="BlockTemplate"/>.</returns>
         public abstract BlockTemplate Build(ChainedHeader chainTip, Script scriptPubKey);
 
         /// <summary>Update the block's header information.</summary>
