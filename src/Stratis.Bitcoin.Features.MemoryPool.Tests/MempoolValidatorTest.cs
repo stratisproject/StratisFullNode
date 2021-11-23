@@ -180,6 +180,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
         /// Validate multi input/output P2PK, P2PKH transactions in memory pool.
         /// Transaction scenario adapted from code project article referenced below.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         /// <seealso cref="https://www.codeproject.com/Articles/835098/NBitcoin-Build-Them-All"/>
         [Fact]
         public async Task AcceptToMemoryPool_WithMultiInOutValidTxns_IsSuccessfulAsync()
@@ -244,6 +245,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
         /// Validate multi sig transactions in memory pool.
         /// Transaction scenario adapted from code project article referenced below.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         /// <seealso cref="https://www.codeproject.com/Articles/835098/NBitcoin-Build-Them-All"/>
         [Fact]
         public async Task AcceptToMemoryPool_WithMultiSigValidTxns_IsSuccessfulAsync()
@@ -312,6 +314,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
         /// Validate P2SH transaction in memory pool.
         /// Transaction scenario adapted from code project article referenced below.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         /// <seealso cref="https://www.codeproject.com/Articles/835098/NBitcoin-Build-Them-All"/>
         [Fact]
         public async Task AcceptToMemoryPool_WithP2SHValidTxns_IsSuccessfulAsync()
@@ -373,6 +376,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
         /// <summary>
         /// Validate P2WPKH transaction in memory pool.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task AcceptToMemoryPool_WithP2WPKHValidTxns_IsSuccessfulAsync()
         {
@@ -517,6 +521,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
         /// <summary>
         /// Validate P2WSH transaction in memory pool.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task AcceptToMemoryPool_WithP2WSHValidTxns_IsSuccessfulAsync()
         {
@@ -1034,7 +1039,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
         }
 
         [Fact]
-        public async Task AcceptToMemoryPool_NonStandardBareMultiSig_ReturnsFalse()
+        public async Task AcceptToMemoryPool_NonStandardBareMultiSig_ReturnsFalseAsync()
         {
             string dataDir = GetTestDirectoryPath(this);
 
@@ -1686,9 +1691,10 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
         }
 
         [Fact(Skip = "Not clear how to test this without triggering In Below Out check instead.")]
-        public async Task AcceptToMemoryPool_TxPowConsensusCheckInputNegativeFee_ReturnsFalseAsync()
+        public Task AcceptToMemoryPool_TxPowConsensusCheckInputNegativeFee_ReturnsFalse()
         {
             // TODO: Execute failure case for CheckAllInputs CheckInputs PowCoinViewRule.CheckInputs NegativeFee
+            return Task.CompletedTask;
         }
 
         [Fact(Skip = "Making transactions with very large inputs/outputs pass validation is difficult, WIP.")]
