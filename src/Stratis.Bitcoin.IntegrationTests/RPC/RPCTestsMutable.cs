@@ -108,7 +108,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
 
                         return walletTx != null && walletTx2 != null;
                     }
-                    catch (RPCException e)
+                    catch (RPCException)
                     {
                         return false;
                     }
@@ -154,7 +154,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
 
                         return walletTx != null;
                     }
-                    catch (RPCException e)
+                    catch (RPCException)
                     {
                         return false;
                     }
