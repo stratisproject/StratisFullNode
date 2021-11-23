@@ -219,6 +219,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>Provides Id of the most recently added poll.</summary>
+        /// <returns>Id of the most recently added poll.</returns>
         public int GetHighestPollId()
         {
             return this.highestPollId;
@@ -233,6 +234,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>Removes polls for the provided ids.</summary>
+        /// <param name="transaction">See <see cref="DBreeze.Transactions.Transaction"/>.</param>
+        /// <param name="ids">The ids of the polls to remove.</param>
         public void DeletePollsAndSetHighestPollId(DBreeze.Transactions.Transaction transaction, params int[] ids)
         {
             lock (this.lockObject)
@@ -248,6 +251,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>Removes polls under provided ids.</summary>
+        /// <param name="transaction">See <see cref="DBreeze.Transactions.Transaction"/>.</param>
+        /// <param name="ids">The ids of the polls to remove.</param>
         public void RemovePolls(DBreeze.Transactions.Transaction transaction, params int[] ids)
         {
             lock (this.lockObject)
@@ -294,7 +299,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
-        /// <summary>Adds new poll.</summary>
+        /// <summary>Adds new polls.</summary>
+        /// <param name="transaction">See <see cref="DBreeze.Transactions.Transaction"/>.</param>
+        /// <param name="polls">The polls to add.</param>
         public void AddPolls(DBreeze.Transactions.Transaction transaction, params Poll[] polls)
         {
             lock (this.lockObject)
@@ -314,6 +321,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>Updates existing poll.</summary>
+        /// <param name="transaction">See <see cref="DBreeze.Transactions.Transaction"/>.</param>
+        /// <param name="poll">The poll to update.</param>
         public void UpdatePoll(DBreeze.Transactions.Transaction transaction, Poll poll)
         {
             lock (this.lockObject)
@@ -325,6 +334,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>Loads polls under provided keys from the database.</summary>
+        /// <param name="transaction">See <see cref="DBreeze.Transactions.Transaction"/>.</param>
+        /// <param name="ids">The ids of the polls to retrieve.</param>
+        /// <returns>A list of retrieved <see cref="Poll"/> entries.</returns>
         public List<Poll> GetPolls(DBreeze.Transactions.Transaction transaction, params int[] ids)
         {
             lock (this.lockObject)
@@ -348,6 +360,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>Loads all polls from the database.</summary>
+        /// <param name="transaction">See <see cref="DBreeze.Transactions.Transaction"/>.</param>
+        /// <returns>A list of retrieved <see cref="Poll"/> entries.</returns>
         public List<Poll> GetAllPolls(DBreeze.Transactions.Transaction transaction)
         {
             lock (this.lockObject)

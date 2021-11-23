@@ -31,11 +31,12 @@ namespace Stratis.Bitcoin.Features.PoA
 
         void Initialize();
 
-        /// <summary>Provides up to date list of federation members.</summary>
+        /// <summary>Provides up-to-date list of federation members.</summary>
         /// <remarks>
         /// Blocks that are not signed with private keys that correspond
         /// to public keys from this list are considered to be invalid.
         /// </remarks>
+        /// <returns>An up-to-date list of federation members.</returns>
         List<IFederationMember> GetFederationMembers();
 
         bool IsMultisigMember(PubKey pubKey);
@@ -285,7 +286,9 @@ namespace Stratis.Bitcoin.Features.PoA
             this.signals.Publish(new FedMemberAdded(federationMember));
         }
 
-        /// <summary>Should be protected by <see cref="locker"/>.</summary>
+        /// <summary>Adds a federation member to the internal list of federation members.</summary>
+        /// <param name="federationMember">The <see cref="IFederationMember"/> to add.</param>
+        /// <remarks>Should be protected by <see cref="locker"/>.</remarks>
         private void AddFederationMemberLocked(IFederationMember federationMember)
         {
             if (federationMember is CollateralFederationMember collateralFederationMember)

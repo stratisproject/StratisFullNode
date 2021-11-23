@@ -479,6 +479,8 @@ namespace Stratis.Bitcoin.Features.PoA
         }
 
         /// <summary>Fills block template with custom non-standard data.</summary>
+        /// <param name="blockTemplate">See <see cref="BlockTemplate"/>.</param>
+        /// <param name="dropTemplate">Indicates whether the template should be dropped.</param>
         protected virtual void FillBlockTemplate(BlockTemplate blockTemplate, out bool dropTemplate)
         {
             if (this.network.ConsensusOptions.VotingEnabled)
@@ -496,7 +498,8 @@ namespace Stratis.Bitcoin.Features.PoA
             dropTemplate = false;
         }
 
-        /// <summary>Gets scriptPubKey from the wallet.</summary>
+        /// <summary>Gets the first address from the first account of the first wallet - if any. Returns <c>null</c> otherwise.</summary>
+        /// <returns>See <see cref="HdAddress"/></returns>
         private HdAddress GetMiningAddressFromWallet()
         {
             string walletName = this.walletManager.GetWalletsNames().FirstOrDefault();
@@ -515,6 +518,7 @@ namespace Stratis.Bitcoin.Features.PoA
         }
 
         /// <summary>Adds OP_RETURN output to a coinbase transaction which contains encoded voting data.</summary>
+        /// <param name="blockTemplate">See <see cref="BlockTemplate"/>.</param>
         /// <remarks>If there are no votes scheduled output will not be added.</remarks>
         private void AddVotingData(BlockTemplate blockTemplate)
         {

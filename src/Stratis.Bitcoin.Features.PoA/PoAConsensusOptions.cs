@@ -15,6 +15,9 @@ namespace Stratis.Bitcoin.Features.PoA
         /// </remarks>
         public List<IFederationMember> GenesisFederationMembers { get; protected set; }
 
+        /// <summary>
+        /// The number of elapsed seconds required between mined block.
+        /// </summary>
         public uint TargetSpacingSeconds { get; protected set; }
 
         /// <summary>Adds capability of voting for adding\kicking federation members and other things.</summary>
@@ -62,6 +65,16 @@ namespace Stratis.Bitcoin.Features.PoA
         public int PollExpiryBlocks { get; set; }
 
         /// <summary>Initializes values for networks that use block size rules.</summary>
+        /// <param name="maxBlockBaseSize">See <see cref="ConsensusOptions.MaxBlockBaseSize"/>.</param>
+        /// <param name="maxStandardVersion">See <see cref="ConsensusOptions.MaxStandardVersion"/>.</param>
+        /// <param name="maxStandardTxWeight">See <see cref="ConsensusOptions.MaxStandardTxWeight"/>.</param>
+        /// <param name="maxBlockSigopsCost">See <see cref="ConsensusOptions.MaxBlockSigopsCost"/>.</param>
+        /// <param name="maxStandardTxSigopsCost">See <see cref="ConsensusOptions.MaxStandardTxSigopsCost"/>.</param>
+        /// <param name="genesisFederationMembers">See <see cref="GenesisFederationMembers"/>.</param>
+        /// <param name="targetSpacingSeconds">See <see cref="TargetSpacingSeconds"/>.</param>
+        /// <param name="votingEnabled">See <see cref="VotingEnabled"/>.</param>
+        /// <param name="autoKickIdleMembers">See <see cref="AutoKickIdleMembers"/>.</param>
+        /// <param name="federationMemberMaxIdleTimeSeconds">See <see cref="FederationMemberMaxIdleTimeSeconds"/>.</param>
         public PoAConsensusOptions(
             uint maxBlockBaseSize,
             int maxStandardVersion,
