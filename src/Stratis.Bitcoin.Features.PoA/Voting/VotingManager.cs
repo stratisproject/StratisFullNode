@@ -808,6 +808,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     int i = 0;
                     foreach (Block block in this.blockRepository.EnumerateBatch(headers))
                     {
+                        // Start a new transaction.
+                        if (currentTransactionCommitted)
+                            currentTransaction = this.PollsRepository.GetTransaction();
+
                         if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
                         {
                             this.logger.Trace("(-)[NODE_DISPOSED]");
@@ -825,10 +829,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                         if (header.Height % 10000 == 0)
                         {
-                            // Start a new transaction.
-                            if (currentTransactionCommitted)
-                                currentTransaction = this.PollsRepository.GetTransaction();
-
                             var progress = (int)((decimal)header.Height / this.chainIndexer.Tip.Height * 100);
                             var progressString = $"Synchronizing voting data at height {header.Height} / {this.chainIndexer.Tip.Height} ({progress} %).";
 
