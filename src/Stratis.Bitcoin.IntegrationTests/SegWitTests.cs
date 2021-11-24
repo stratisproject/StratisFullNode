@@ -559,7 +559,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 var witAddress = destinationAddress.Bech32Address;
 
                 IActionResult transactionResult = node.FullNode.NodeController<WalletController>()
-                    .BuildTransaction(new BuildTransactionRequest
+                    .BuildTransactionAsync(new BuildTransactionRequest
                     {
                         AccountName = "account 0",
                         AllowUnconfirmed = true,
@@ -571,7 +571,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 var walletBuildTransactionModel = (WalletBuildTransactionModel)(transactionResult as JsonResult)?.Value;
 
-                _ = node.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(walletBuildTransactionModel.Hex));
+                _ = node.FullNode.NodeController<WalletController>().SendTransactionAsync(new SendTransactionRequest(walletBuildTransactionModel.Hex));
 
                 Transaction witFunds = node.FullNode.Network.CreateTransaction(walletBuildTransactionModel.Hex);
                 uint witIndex = witFunds.Outputs.AsIndexedOutputs().First(o => o.TxOut.ScriptPubKey.IsScriptType(ScriptType.P2WPKH)).N;
@@ -598,7 +598,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 // Send a transaction that has a segwit input, to a segwit address.
                 transactionResult = node.FullNode.NodeController<WalletController>()
-                    .BuildTransaction(new BuildTransactionRequest
+                    .BuildTransactionAsync(new BuildTransactionRequest
                     {
                         AccountName = "account 0",
                         AllowUnconfirmed = true,
@@ -611,7 +611,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 walletBuildTransactionModel = (WalletBuildTransactionModel)(transactionResult as JsonResult)?.Value;
 
-                _ = node.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(walletBuildTransactionModel.Hex));
+                _ = node.FullNode.NodeController<WalletController>().SendTransactionAsync(new SendTransactionRequest(walletBuildTransactionModel.Hex));
 
                 TestBase.WaitLoop(() => node.CreateRPCClient().GetRawMempool().Length > 0, cancellationToken: new CancellationTokenSource(TimeSpan.FromMinutes(1)).Token);
                 TestBase.WaitLoop(() => listener.CreateRPCClient().GetRawMempool().Length > 0, cancellationToken: new CancellationTokenSource(TimeSpan.FromMinutes(1)).Token);
@@ -666,7 +666,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 var p2wpkhAmount = Money.Coins(1);
 
                 IActionResult transactionResult = node.FullNode.NodeController<WalletController>()
-                    .BuildTransaction(new BuildTransactionRequest
+                    .BuildTransactionAsync(new BuildTransactionRequest
                     {
                         AccountName = "account 0",
                         AllowUnconfirmed = true,
@@ -678,7 +678,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 var walletBuildTransactionModel = (WalletBuildTransactionModel)(transactionResult as JsonResult)?.Value;
 
-                _ = node.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(walletBuildTransactionModel.Hex));
+                _ = node.FullNode.NodeController<WalletController>().SendTransactionAsync(new SendTransactionRequest(walletBuildTransactionModel.Hex));
 
                 Transaction witFunds = node.FullNode.Network.CreateTransaction(walletBuildTransactionModel.Hex);
                 uint witIndex = witFunds.Outputs.AsIndexedOutputs().First(o => o.TxOut.ScriptPubKey.IsScriptType(ScriptType.P2WPKH)).N;
@@ -699,7 +699,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 // By sending more than the size of the P2WPKH UTXO, we guarantee that at least one non-P2WPKH UTXO gets included
                 transactionResult = node.FullNode.NodeController<WalletController>()
-                    .BuildTransaction(new BuildTransactionRequest
+                    .BuildTransactionAsync(new BuildTransactionRequest
                     {
                         AccountName = "account 0",
                         AllowUnconfirmed = true,
@@ -715,7 +715,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 walletBuildTransactionModel = (WalletBuildTransactionModel)(transactionResult as JsonResult)?.Value;
 
-                _ = node.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(walletBuildTransactionModel.Hex));
+                _ = node.FullNode.NodeController<WalletController>().SendTransactionAsync(new SendTransactionRequest(walletBuildTransactionModel.Hex));
 
                 TestBase.WaitLoop(() => node.CreateRPCClient().GetRawMempool().Length > 0, cancellationToken: new CancellationTokenSource(TimeSpan.FromMinutes(1)).Token);
                 TestBase.WaitLoop(() => listener.CreateRPCClient().GetRawMempool().Length > 0, cancellationToken: new CancellationTokenSource(TimeSpan.FromMinutes(1)).Token);
@@ -751,7 +751,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 var nonWitAddress = destinationAddress.Address;
 
                 IActionResult transactionResult = node.FullNode.NodeController<WalletController>()
-                    .BuildTransaction(new BuildTransactionRequest
+                    .BuildTransactionAsync(new BuildTransactionRequest
                     {
                         AccountName = "account 0",
                         AllowUnconfirmed = true,
@@ -763,7 +763,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 var walletBuildTransactionModel = (WalletBuildTransactionModel)(transactionResult as JsonResult)?.Value;
 
-                _ = node.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(walletBuildTransactionModel.Hex));
+                _ = node.FullNode.NodeController<WalletController>().SendTransactionAsync(new SendTransactionRequest(walletBuildTransactionModel.Hex));
 
                 Transaction witFunds = node.FullNode.Network.CreateTransaction(walletBuildTransactionModel.Hex);
                 uint witIndex = witFunds.Outputs.AsIndexedOutputs().First(o => o.TxOut.ScriptPubKey.IsScriptType(ScriptType.P2WPKH)).N;
@@ -782,7 +782,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 // By sending more than the size of the P2WPKH UTXO, we guarantee that at least one non-P2WPKH UTXO gets included
                 transactionResult = node.FullNode.NodeController<WalletController>()
-                    .BuildTransaction(new BuildTransactionRequest
+                    .BuildTransactionAsync(new BuildTransactionRequest
                     {
                         AccountName = "account 0",
                         AllowUnconfirmed = true,
@@ -799,7 +799,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 walletBuildTransactionModel = (WalletBuildTransactionModel)(transactionResult as JsonResult)?.Value;
 
-                _ = node.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(walletBuildTransactionModel.Hex));
+                _ = node.FullNode.NodeController<WalletController>().SendTransactionAsync(new SendTransactionRequest(walletBuildTransactionModel.Hex));
 
                 TestBase.WaitLoop(() => node.CreateRPCClient().GetRawMempool().Length > 0, cancellationToken: new CancellationTokenSource(TimeSpan.FromMinutes(1)).Token);
                 TestBase.WaitLoop(() => listener.CreateRPCClient().GetRawMempool().Length > 0, cancellationToken: new CancellationTokenSource(TimeSpan.FromMinutes(1)).Token);

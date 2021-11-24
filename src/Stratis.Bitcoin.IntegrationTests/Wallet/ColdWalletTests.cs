@@ -151,7 +151,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 Transaction transaction1 = stratisSender.FullNode.WalletTransactionHandler().BuildTransaction(CreateContext(stratisSender.FullNode.Network, new WalletAccountReference(WalletName, Account), Password, sendto.ScriptPubKey, amountToSend, FeeType.Medium, 1));
 
                 // Broadcast to the other node
-                await stratisSender.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(transaction1.ToHex()));
+                await stratisSender.FullNode.NodeController<WalletController>().SendTransactionAsync(new SendTransactionRequest(transaction1.ToHex()));
 
                 // Wait for the transaction to arrive
                 TestBase.WaitLoop(() => stratisHotStake.CreateRPCClient().GetRawMempool().Length > 0);
@@ -168,7 +168,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     coldWalletAddress.Address, hotWalletAddress.Address, WalletName, Account, Password, amountToSend2, new Money(0.02m, MoneyUnit.BTC), false, false, 1, false);
 
                 // Broadcast to the other node
-                await stratisHotStake.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(transaction2.ToHex()));
+                await stratisHotStake.FullNode.NodeController<WalletController>().SendTransactionAsync(new SendTransactionRequest(transaction2.ToHex()));
 
                 // Wait for the transaction to arrive
                 TestBase.WaitLoop(() => coldWalletManager.GetSpendableTransactionsInColdWallet(WalletName, true).Any());
@@ -233,7 +233,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 Transaction transaction1 = stratisSender.FullNode.WalletTransactionHandler().BuildTransaction(CreateContext(stratisSender.FullNode.Network, new WalletAccountReference(WalletName, Account), Password, coldWalletAddress.ScriptPubKey, amountToSend, FeeType.Medium, 1));
 
                 // Broadcast to the other nodes.
-                await stratisSender.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(transaction1.ToHex()));
+                await stratisSender.FullNode.NodeController<WalletController>().SendTransactionAsync(new SendTransactionRequest(transaction1.ToHex()));
 
                 // Wait for the transaction to arrive.
                 TestBase.WaitLoop(() => stratisColdStake.CreateRPCClient().GetRawMempool().Length > 0);
