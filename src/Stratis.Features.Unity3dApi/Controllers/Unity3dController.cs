@@ -102,6 +102,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// <summary>
         /// Gets UTXOs for specified address.
         /// </summary>
+        /// <returns>See <see cref="GetUTXOsResponseModel"/>.</returns>
         /// <param name="address">Address to get UTXOs for.</param>
         [Route("getutxosforaddress")]
         [HttpGet]
@@ -195,7 +196,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
                 this.logger.LogError("Exception occurred: {0}", e.ToString());
             }
 
-            if (Request.Headers["Accept"] == "application/json")
+            if (this.Request.Headers["Accept"] == "application/json")
             {
                 GetBalanceResponseModel response = new GetBalanceResponseModel()
                 {
@@ -567,11 +568,11 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// <returns>A list of receipts for transactions relating to a specific smart contract and a specific event in that smart contract.</returns>
         [Route("receipt-search")]
         [HttpGet]
-        public async Task<List<ReceiptResponse>> ReceiptSearchAPI([FromQuery] string contractAddress, [FromQuery] string eventName, [FromQuery] List<string> topics = null, [FromQuery] int fromBlock = 0, [FromQuery] int? toBlock = null)
+        public Task<List<ReceiptResponse>> ReceiptSearchAPI([FromQuery] string contractAddress, [FromQuery] string eventName, [FromQuery] List<string> topics = null, [FromQuery] int fromBlock = 0, [FromQuery] int? toBlock = null)
         {
             List<ReceiptResponse> result = this.smartContractTransactionService.ReceiptSearch(contractAddress, eventName, topics, fromBlock, toBlock);
 
-            return result;
+            return Task.FromResult(result);
         }
         
         [Route("watch-nft-contract")]
