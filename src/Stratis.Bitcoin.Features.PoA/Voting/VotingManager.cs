@@ -803,15 +803,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 if (headers.Count > 0)
                 {
                     DBreeze.Transactions.Transaction currentTransaction = this.PollsRepository.GetTransaction();
-                    bool currentTransactionCommitted = false;
 
                     int i = 0;
                     foreach (Block block in this.blockRepository.EnumerateBatch(headers))
                     {
-                        // Start a new transaction.
-                        if (currentTransactionCommitted)
-                            currentTransaction = this.PollsRepository.GetTransaction();
-
                         if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
                         {
                             this.logger.Trace("(-)[NODE_DISPOSED]");
@@ -840,7 +835,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             currentTransaction.Commit();
                             currentTransaction.Dispose();
 
-                            currentTransactionCommitted = true;
+                            currentTransaction = this.PollsRepository.GetTransaction();
                         }
                     }
 
@@ -848,13 +843,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     // thus we need to commit and dispose of it.
                     // If we ended at block 10000, then the current transaction would have been committed and
                     // disposed, thus we dont do anything.
-                    if (!currentTransactionCommitted)
-                    {
-                        this.PollsRepository.SaveCurrentTip(currentTransaction);
+                    this.PollsRepository.SaveCurrentTip(currentTransaction);
 
-                        currentTransaction.Commit();
-                        currentTransaction.Dispose();
-                    }
+                    currentTransaction.Commit();
+                    currentTransaction.Dispose();
                 }
             });
 
