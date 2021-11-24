@@ -148,6 +148,8 @@ namespace Stratis.CirrusMinerD
         /// <summary>
         /// Returns a standard Stratis node. Just like StratisD.
         /// </summary>
+        /// <param name="args">The command-line arguments.</param>
+        /// <returns>See <see cref="IFullNode"/>.</returns>
         private static IFullNode BuildStraxNode(string[] args)
         {
             // TODO: Hardcode -addressindex for better user experience
