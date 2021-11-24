@@ -842,7 +842,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     // If we ended the synchronization at say block 10100, the current transaction would still be open and
                     // thus we need to commit and dispose of it.
                     // If we ended at block 10000, then the current transaction would have been committed and
-                    // disposed, thus we dont do anything.
+                    // disposed and re-opened.
                     this.PollsRepository.SaveCurrentTip(currentTransaction);
 
                     currentTransaction.Commit();
