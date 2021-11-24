@@ -27,6 +27,7 @@ namespace Stratis.Features.Collateral
         /// <summary>Checks if given federation member fulfills the collateral requirement.</summary>
         /// <param name="federationMember">The federation member whose collateral will be checked.</param>
         /// <param name="heightToCheckAt">Counter chain height at which collateral should be checked.</param>
+        /// <returns><c>True</c> if the collateral requirement is fulfilled and <c>false</c> otherwise.</returns>
         bool CheckCollateral(IFederationMember federationMember, int heightToCheckAt);
 
         int GetCounterChainConsensusHeight();
@@ -123,6 +124,7 @@ namespace Stratis.Features.Collateral
         }
 
         /// <summary>Continuously updates info about money deposited to fed member's addresses.</summary>
+        /// <returns>The asynchronous task.</returns>
         private async Task UpdateCollateralInfoContinuouslyAsync()
         {
             while (!this.cancellationSource.IsCancellationRequested)
@@ -136,6 +138,7 @@ namespace Stratis.Features.Collateral
         /// <summary>
         /// Delay checking the federation member's collateral with <see cref="CollateralUpdateIntervalSeconds"/> seconds.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         private async Task DelayCollateralCheckAsync()
         {
             try
