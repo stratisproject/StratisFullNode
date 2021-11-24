@@ -39,6 +39,9 @@ namespace Stratis.Bitcoin.Persistence.ChainStores
 
         public BlockHeader GetHeader(ChainedHeader chainedHeader, uint256 hash)
         {
+            if (hash == this.network.GenesisHash)
+                return this.network.GetGenesis().Header;
+
             if (this.headers.TryGetValue(hash, out BlockHeader blockHeader))
             {
                 return blockHeader;
