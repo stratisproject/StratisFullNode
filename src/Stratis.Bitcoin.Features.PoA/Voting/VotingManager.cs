@@ -802,38 +802,59 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 if (headers.Count > 0)
                 {
-                    this.PollsRepository.WithTransaction(transaction =>
+                    DBreeze.Transactions.Transaction currentTransaction = this.PollsRepository.GetTransaction();
+                    bool currentTransactionCommitted = false;
+
+                    int i = 0;
+                    foreach (Block block in this.blockRepository.EnumerateBatch(headers))
                     {
-                        int i = 0;
-                        foreach (Block block in this.blockRepository.EnumerateBatch(headers))
+                        if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
                         {
-                            if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
-                            {
-                                this.logger.Trace("(-)[NODE_DISPOSED]");
-                                this.PollsRepository.SaveCurrentTip(transaction);
-                                transaction.Commit();
+                            this.logger.Trace("(-)[NODE_DISPOSED]");
+                            this.PollsRepository.SaveCurrentTip(currentTransaction);
+                            currentTransaction.Commit();
+                            currentTransaction.Dispose();
 
-                                bSuccess = false;
-                                return;
-                            }
-
-                            ChainedHeader header = headers[i++];
-                            this.ProcessBlock(transaction, new ChainedHeaderBlock(block, header));
-
-                            if (header.Height % 10000 == 0)
-                            {
-                                var progress = (int)((decimal)header.Height / this.chainIndexer.Tip.Height * 100);
-                                var progressString = $"Synchronizing voting data at height {header.Height} / {this.chainIndexer.Tip.Height} ({progress} %).";
-
-                                this.logger.Info(progressString);
-                                this.signals.Publish(new FullNodeEvent() { Message = progressString, State = FullNodeState.Initializing.ToString() });
-                            }
+                            bSuccess = false;
+                            return;
                         }
 
-                        this.PollsRepository.SaveCurrentTip(transaction);
+                        ChainedHeader header = headers[i++];
 
-                        transaction.Commit();
-                    });
+                        this.ProcessBlock(currentTransaction, new ChainedHeaderBlock(block, header));
+
+                        if (header.Height % 10000 == 0)
+                        {
+                            // Start a new transaction.
+                            if (currentTransactionCommitted)
+                                currentTransaction = this.PollsRepository.GetTransaction();
+
+                            var progress = (int)((decimal)header.Height / this.chainIndexer.Tip.Height * 100);
+                            var progressString = $"Synchronizing voting data at height {header.Height} / {this.chainIndexer.Tip.Height} ({progress} %).";
+
+                            this.logger.Info(progressString);
+                            this.signals.Publish(new FullNodeEvent() { Message = progressString, State = FullNodeState.Initializing.ToString() });
+
+                            this.PollsRepository.SaveCurrentTip(currentTransaction);
+
+                            currentTransaction.Commit();
+                            currentTransaction.Dispose();
+
+                            currentTransactionCommitted = true;
+                        }
+                    }
+
+                    // If we ended the synchronization at say block 10100, the current transaction would still be ope
+                    // thus we need to commit and dispose.
+                    // If we ended at block 10000 then the current transaction would have been committed and
+                    // disposed, thus we dont do anything.
+                    if (!currentTransactionCommitted)
+                    {
+                        this.PollsRepository.SaveCurrentTip(currentTransaction);
+
+                        currentTransaction.Commit();
+                        currentTransaction.Dispose();
+                    }
                 }
             });
 
