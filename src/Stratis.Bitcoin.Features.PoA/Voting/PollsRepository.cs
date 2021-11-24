@@ -266,7 +266,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         public DBreeze.Transactions.Transaction GetTransaction()
         {
-            return this.dbreeze.GetTransaction();
+            lock (this.lockObject)
+            {
+                return this.dbreeze.GetTransaction();
+            }
         }
 
         public T WithTransaction<T>(Func<DBreeze.Transactions.Transaction, T> func)
