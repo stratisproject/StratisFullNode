@@ -54,6 +54,8 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <param name="addressBookManager">The address book manager.</param>
         /// <param name="connectionManager">The connection manager.</param>
         /// <param name="broadcasterBehavior">The broadcaster behavior.</param>
+        /// <param name="nodeStats">See <see cref="INodeStats"/>.</param>
+        /// <param name="walletRepository">See <see cref="IWalletRepository"/>.</param>
         public WalletFeature(
             IWalletSyncManager walletSyncManager,
             IWalletManager walletManager,
