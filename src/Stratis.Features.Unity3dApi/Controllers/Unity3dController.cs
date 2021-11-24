@@ -305,7 +305,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         public async Task<IActionResult> SendTransaction([FromBody] SendTransactionRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            return await this.walletController.SendTransaction(request, cancellationToken).ConfigureAwait(false);
+            return await this.walletController.SendTransactionAsync(request, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
