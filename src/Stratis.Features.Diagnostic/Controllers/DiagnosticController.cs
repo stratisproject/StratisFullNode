@@ -23,6 +23,12 @@ namespace Stratis.Features.Diagnostic.Controllers
     {
         private readonly PeerStatisticsCollector peerStatisticsCollector;
 
+        /// <summary>
+        /// Constructs an instance of this class.
+        /// </summary>
+        /// <param name="peerStatisticsCollector">See <see cref="PeerStatisticsCollector"/>.</param>
+        /// <param name="connectionManager">See <see cref="IConnectionManager"/>.</param>
+        /// <param name="consensusManager">See <see cref="IConsensusManager"/>.</param>
         public DiagnosticController(PeerStatisticsCollector peerStatisticsCollector, IConnectionManager connectionManager, IConsensusManager consensusManager)
             : base(connectionManager: connectionManager, consensusManager: consensusManager)
         {
@@ -30,8 +36,9 @@ namespace Stratis.Features.Diagnostic.Controllers
         }
 
         /// <summary>
-        /// Returns the connected peers with some information
+        /// Returns the connected peers with some information.
         /// </summary>
+        /// <returns>The connected peers with some information.</returns>
         /// <response code="200">Returns connected peers information</response>
         /// <response code="400">Unexpected exception occurred</response>
         [HttpGet]
