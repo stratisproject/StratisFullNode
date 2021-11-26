@@ -281,6 +281,8 @@ namespace Stratis.Bitcoin.Controllers.Models
         /// <param name="network">The network where the transaction was conducted.</param>
         public ScriptPubKey(NBitcoin.Script script, Network network) : base(script)
         {
+            this.Type = this.GetScriptType(script.FindTemplate(network));
+
             // To avoid modifying the very low-level GetDestination logic, check for cold staking scripts first.
             // The decision to show the cold pubkey's address in the 'addresses' list is based on the following:
             // 1. It seems more intuitive from a user's perspective that their balance will appear against this address.
@@ -299,7 +301,6 @@ namespace Stratis.Bitcoin.Controllers.Models
             }
 
             var destinations = new List<TxDestination> { script.GetDestination(network) };
-            this.Type = this.GetScriptType(script.FindTemplate(network));
 
             if (destinations[0] == null)
             {
