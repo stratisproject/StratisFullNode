@@ -283,7 +283,7 @@ namespace Stratis.Bitcoin.Controllers.Models
         {
             this.Type = this.GetScriptType(script.FindTemplate(network));
 
-            // To avoid modifying the very low-level GetDestination logic, check for cold staking scripts first.
+            // To avoid modifying the very low-level GetDestination logic, check for a cold staking script first.
             // The decision to show the cold pubkey's address in the 'addresses' list is based on the following:
             // 1. It seems more intuitive from a user's perspective that their balance will appear against this address.
             // 2. A balance should never appear against a hot address from an exchange's perspective, as they have no guarantee they will be able to spend those funds.
