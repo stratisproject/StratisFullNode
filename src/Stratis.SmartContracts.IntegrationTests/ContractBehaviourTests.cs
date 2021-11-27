@@ -272,7 +272,7 @@ namespace Stratis.SmartContracts.IntegrationTests
 
             NBitcoin.Block lastBlock = this.node1.GetLastBlock();
 
-            // Create a log in a local call
+            // Create a log in a local call.
             var parameters = new object[]
             {
                 recipientResponse.NewContractAddress.ToAddress(this.node1.CoreNode.FullNode.Network)
