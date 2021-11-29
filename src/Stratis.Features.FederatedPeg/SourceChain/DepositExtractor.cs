@@ -1,6 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using NBitcoin;
+using NLog;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Features.FederatedPeg.Conversion;
@@ -10,26 +13,75 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 {
     public sealed class DepositExtractor : IDepositExtractor
     {
-        // Conversion transaction deposits smaller than this threshold will be ignored. Denominated in STRAX.
-        public const decimal ConversionTransactionMinimum = 90_000;
-
-        private readonly Script depositScript;
+        private readonly IConversionRequestRepository conversionRequestRepository;
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly Network network;
         private readonly IOpReturnDataReader opReturnDataReader;
+        private readonly ILogger logger;
 
-        public DepositExtractor(IFederatedPegSettings federatedPegSettings, Network network, IOpReturnDataReader opReturnDataReader)
+        private readonly List<uint256> depositsBeingProcessedWithinMaturingWindow;
+
+        public DepositExtractor(IConversionRequestRepository conversionRequestRepository, IFederatedPegSettings federatedPegSettings, Network network, IOpReturnDataReader opReturnDataReader)
         {
-            this.depositScript = federatedPegSettings.MultiSigRedeemScript.PaymentScript;
+            this.conversionRequestRepository = conversionRequestRepository;
             this.federatedPegSettings = federatedPegSettings;
             this.network = network;
             this.opReturnDataReader = opReturnDataReader;
+
+            this.depositsBeingProcessedWithinMaturingWindow = new List<uint256>();
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
-        /// <inheritdoc />
-        public IReadOnlyList<IDeposit> ExtractDepositsFromBlock(Block block, int blockHeight, DepositRetrievalType[] depositRetrievalTypes)
+        private static Dictionary<string, List<IDeposit>> DepositsToInject = new Dictionary<string, List<IDeposit>>()
         {
-            var deposits = new List<IDeposit>();
+            { "CirrusRegTest", new List<IDeposit> {
+                new Deposit(
+                    0x1 /* Tx of deposit being redone */, DepositRetrievalType.Small, new Money(10, MoneyUnit.BTC),
+                    "qZc3WCqj8dipxUau1q18rT6EMBN6LRZ44A", DestinationChain.STRAX, 85, 0)
+                }
+            },
+
+            { "CirrusTest", new List<IDeposit> {
+                new Deposit(
+                    uint256.Parse("7691bf9838ebdede6db0cb466d93c1941d13894536dc3a5db8289ad04b28d12c"), DepositRetrievalType.Small, new Money(20, MoneyUnit.BTC),
+                    "qeyK7poxBE1wy8H24a7AcpLySCsfiqAo6A",DestinationChain.STRAX, 2_178_200, 0)
+                }
+            },
+
+            { "CirrusMain", new List<IDeposit> {
+                new Deposit(
+                    uint256.Parse("6179ee3332348948641210e2c9358a41aa8aaf2924d783e52bc4cec47deef495") /* Tx of deposit being redone */, DepositRetrievalType.Normal,
+                    new Money(239, MoneyUnit.BTC), "XNrgftud4ExFL7dXEHjPPx3JX22qvFy39v",DestinationChain.STRAX, 2_450_000, 0),
+                new Deposit(
+                    uint256.Parse("b8417bdbe7690609b2fff47d6d8b39bed69993df6656d7e10197c141bdacdd90") /* Tx of deposit being redone */, DepositRetrievalType.Normal,
+                    new Money(640, MoneyUnit.BTC), "XCDeD5URnSbExLsuVYu7yufpbmb6KvaX8D", DestinationChain.STRAX, 2_450_000, 0),
+                new Deposit(
+                    uint256.Parse("375ed4f028d3ef32397641a0e307e1705fc3f8ba76fa776ce33fff53f52b0e1c") /* Tx of deposit being redone */, DepositRetrievalType.Large,
+                    new Money(1649, MoneyUnit.BTC), "XCrHzx5AUnNChCj8MP9j82X3Y7gLAtULtj",DestinationChain.STRAX, 2_450_000, 0),
+                }
+            }
+        };
+
+        /// <inheritdoc />
+        public async Task<IReadOnlyList<IDeposit>> ExtractDepositsFromBlock(Block block, int blockHeight, Dictionary<DepositRetrievalType, int> confirmationsByRetrievalType)
+        {
+            List<IDeposit> deposits;
+
+            if (DepositsToInject.TryGetValue(this.network.Name, out List<IDeposit> depositsList))
+                deposits = depositsList.Where(d => d.BlockNumber == blockHeight).ToList();
+            else
+                deposits = new List<IDeposit>();
+
+            // Only the sidechain interacts with burn requests from the multisig contract.
+            if (!this.federatedPegSettings.IsMainChain)
+                ProcessInterFluxBurnRequests(deposits, blockHeight, confirmationsByRetrievalType);
+
+            foreach (IDeposit deposit in deposits)
+            {
+                ((Deposit)deposit).BlockHash = block.GetHash();
+            }
+
+            DepositRetrievalType[] retrievalTypes = confirmationsByRetrievalType.Keys.ToArray();
 
             // If it's an empty block (i.e. only the coinbase transaction is present), there's no deposits inside.
             if (block.Transactions.Count > 1)
@@ -38,12 +90,12 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
                 foreach (Transaction transaction in block.Transactions)
                 {
-                    IDeposit deposit = this.ExtractDepositFromTransaction(transaction, blockHeight, blockHash);
+                    IDeposit deposit = await this.ExtractDepositFromTransaction(transaction, blockHeight, blockHash).ConfigureAwait(false);
 
                     if (deposit == null)
                         continue;
 
-                    if (depositRetrievalTypes.Any(t => t == deposit.RetrievalType))
+                    if (retrievalTypes.Any(t => t == deposit.RetrievalType))
                         deposits.Add(deposit);
                 }
             }
@@ -51,8 +103,113 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             return deposits;
         }
 
+        /// <summary>
+        /// If there are any burn requests scheduled at the given block height, add them to the list of deposits.
+        /// </summary>
+        /// <param name="deposits">Add burn requests to this list of deposits.</param>
+        /// <param name="inspectForDepositsAtHeight">The block height to inspect.</param>
+        /// <param name="confirmationsByRetrievalType">The various retrieval types and their required confirmations.</param>
+        private void ProcessInterFluxBurnRequests(List<IDeposit> deposits, int inspectForDepositsAtHeight, Dictionary<DepositRetrievalType, int> confirmationsByRetrievalType)
+        {
+            List<ConversionRequest> burnRequests = this.conversionRequestRepository.GetAllBurn(true);
+
+            if (burnRequests == null)
+                return;
+
+            foreach (ConversionRequest burnRequest in burnRequests.Where(b => inspectForDepositsAtHeight >= b.BlockHeight))
+            {
+                if (inspectForDepositsAtHeight == burnRequest.BlockHeight)
+                {
+                    this.logger.Info($"Processing burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' for {new Money(burnRequest.Amount)} STRAX at height {inspectForDepositsAtHeight}.");
+
+                    Deposit deposit = CreateDeposit(burnRequest, inspectForDepositsAtHeight);
+                    if (deposit == null)
+                        continue;
+
+                    deposits.Add(deposit);
+
+                    // It shouldn't be in here but just check anyway.
+                    if (!this.depositsBeingProcessedWithinMaturingWindow.Contains(deposit.Id))
+                        this.depositsBeingProcessedWithinMaturingWindow.Add(deposit.Id);
+
+                    continue;
+                }
+
+                if (inspectForDepositsAtHeight > burnRequest.BlockHeight)
+                {
+                    DepositRetrievalType retrievalType = DetermineDepositRetrievalType(Money.Satoshis(burnRequest.Amount));
+                    var requiredConfirmations = confirmationsByRetrievalType[retrievalType];
+
+                    // If the inspection height is now equal to the burn request's processing height plus
+                    // the required confirmations, set it to processed.
+                    if (inspectForDepositsAtHeight == burnRequest.BlockHeight + requiredConfirmations)
+                    {
+                        burnRequest.Processed = true;
+                        burnRequest.RequestStatus = ConversionRequestStatus.Processed;
+
+                        this.conversionRequestRepository.Save(burnRequest);
+
+                        this.logger.Info($"Marking burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' as processed at height {inspectForDepositsAtHeight}.");
+
+                        continue;
+                    }
+
+                    // If the deposit is still not processed and the inspection height is within the
+                    // request's processing height plus the required confirmations, add it to the set of deposits.
+                    // This could have happened if the node restarted whilst the deposit was maturing.
+                    if (inspectForDepositsAtHeight < burnRequest.BlockHeight + requiredConfirmations)
+                    {
+                        Deposit deposit = CreateDeposit(burnRequest, inspectForDepositsAtHeight);
+                        if (deposit == null)
+                            continue;
+
+                        if (this.depositsBeingProcessedWithinMaturingWindow.Contains(deposit.Id))
+                        {
+                            this.logger.Debug($"Burn request '{burnRequest.RequestId}' is already being processed within the maturity window.");
+                            continue;
+                        }
+
+                        deposits.Add(deposit);
+
+                        this.depositsBeingProcessedWithinMaturingWindow.Add(deposit.Id);
+
+                        this.logger.Info($"Re-injecting burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' that was processed at {burnRequest.BlockHeight} and will mature at {burnRequest.BlockHeight + requiredConfirmations}.");
+
+                        continue;
+                    }
+                }
+            }
+        }
+
+        private Deposit CreateDeposit(ConversionRequest burnRequest, int inspectForDepositsAtHeight)
+        {
+            // We use the transaction ID from the Ethereum chain as the request ID for the withdrawal.
+            // To parse it into a uint256 we need to trim the leading hex marker from the string.
+            uint256 depositId;
+            try
+            {
+                depositId = new uint256(burnRequest.RequestId.Replace("0x", ""));
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+
+            DepositRetrievalType depositRetrievalType = DetermineDepositRetrievalType(Money.Satoshis(burnRequest.Amount));
+            var deposit = new Deposit(
+                depositId,
+                depositRetrievalType,
+                Money.Satoshis(burnRequest.Amount),
+                burnRequest.DestinationAddress,
+                DestinationChain.STRAX,
+                inspectForDepositsAtHeight,
+                0);
+
+            return deposit;
+        }
+
         /// <inheritdoc />
-        public IDeposit ExtractDepositFromTransaction(Transaction transaction, int blockHeight, uint256 blockHash)
+        public async Task<IDeposit> ExtractDepositFromTransaction(Transaction transaction, int blockHeight, uint256 blockHash)
         {
             // If there are no deposits to the multsig (i.e. cross chain transfers) do nothing.
             if (!DepositValidationHelper.TryGetDepositsToMultisig(this.network, transaction, FederatedPegSettings.CrossChainTransferMinimum, out List<TxOut> depositsToMultisig))
@@ -68,8 +225,13 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
             if (conversionTransaction)
             {
-                if (amount < Money.Coins(ConversionTransactionMinimum))
+                if (this.federatedPegSettings.IsMainChain && amount < DepositValidationHelper.ConversionTransactionMinimum)
+                {
+                    this.logger.Warn($"Ignoring conversion transaction '{transaction.GetHash()}' with amount {amount} which is below the threshold of {DepositValidationHelper.ConversionTransactionMinimum}.");
                     return null;
+                }
+
+                this.logger.Info("Received conversion deposit transaction '{0}' for an amount of {1}.", transaction.GetHash(), amount);
 
                 if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
                     depositRetrievalType = DepositRetrievalType.ConversionLarge;
@@ -82,16 +244,24 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             {
                 if (targetAddress == this.network.CirrusRewardDummyAddress)
                     depositRetrievalType = DepositRetrievalType.Distribution;
-                else if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
-                    depositRetrievalType = DepositRetrievalType.Large;
-                else if (amount > this.federatedPegSettings.SmallDepositThresholdAmount)
-                    depositRetrievalType = DepositRetrievalType.Normal;
                 else
-                    depositRetrievalType = DepositRetrievalType.Small;
+                {
+                    depositRetrievalType = DetermineDepositRetrievalType(amount);
+                }
             }
 
-
             return new Deposit(transaction.GetHash(), depositRetrievalType, amount, targetAddress, (DestinationChain)targetChain, blockHeight, blockHash);
+        }
+
+        private DepositRetrievalType DetermineDepositRetrievalType(Money amount)
+        {
+            if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
+                return DepositRetrievalType.Large;
+
+            if (amount > this.federatedPegSettings.SmallDepositThresholdAmount)
+                return DepositRetrievalType.Normal;
+
+            return DepositRetrievalType.Small;
         }
     }
 }

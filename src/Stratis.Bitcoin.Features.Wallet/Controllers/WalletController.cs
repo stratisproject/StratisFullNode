@@ -442,10 +442,17 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public async Task<IActionResult> BuildInterFluxTransaction([FromBody] BuildInterFluxTransactionRequest request)
+        public async Task<IActionResult> BuildInterFluxTransactionAsync([FromBody] BuildInterFluxTransactionRequest request)
         {
             if (request.DestinationChain != (int)DestinationChain.ETH)
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Invalid destination chain", "Only InterFlux transactions to the Ethereum chain are currently supported.");
+
+            foreach (var recipient in request.Recipients)
+            {
+                Money amountToCheck = recipient.Amount;
+                if (amountToCheck < DepositValidationHelper.ConversionTransactionMinimum)
+                    return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Invalid conversion amount", $"InterFlux transactions are required to be a minimum of {DepositValidationHelper.ConversionTransactionMinimum}.");
+            }
 
             request.OpReturnData = InterFluxOpReturnEncoder.Encode((DestinationChain)request.DestinationChain, request.DestinationAddress);
 
@@ -840,7 +847,6 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
             return await this.Execute(request, cancellationToken,
                 async (req, token) => this.Json(await this.walletService.SplitCoins(req, token)));
         }
-
 
         /// <summary>Splits and distributes UTXOs across wallet addresses</summary>
         /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>

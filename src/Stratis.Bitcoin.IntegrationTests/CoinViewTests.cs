@@ -55,7 +55,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 chained = this.MakeNext(this.MakeNext(genesisChainedHeader, ctx.Network), ctx.Network);
                 ctx.Coindb.SaveChanges(new List<UnspentOutput>(), new HashHeightPair(previous), new HashHeightPair(chained));
                 Assert.Equal(chained.HashBlock, ctx.Coindb.GetTipHash().Hash);
-                ctx.ReloadPersistentCoinView(network);
+                ctx.ReloadPersistentCoinView(chained);
                 Assert.Equal(chained.HashBlock, ctx.Coindb.GetTipHash().Hash);
                 Assert.NotNull(ctx.Coindb.FetchCoins(new[] { new OutPoint(genesis.Transactions[0], 0) }).UnspentOutputs.Values.FirstOrDefault().Coins);
                 Assert.Null(ctx.Coindb.FetchCoins(new[] { new OutPoint() }).UnspentOutputs.Values.FirstOrDefault().Coins);

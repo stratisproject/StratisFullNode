@@ -17,7 +17,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
     {
         private readonly ChainIndexer chainIndexer;
         private readonly IFederationManager federationManager;
-        private readonly IIdleFederationMembersKicker idleFederationMembersKicker;
+        private readonly IFederationHistory federationHistory;
         private readonly ILogger logger;
         private readonly Network network;
         private readonly IPoAMiner poaMiner;
@@ -29,13 +29,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             IFederationManager federationManager,
             VotingManager votingManager,
             Network network,
-            IIdleFederationMembersKicker idleFederationMembersKicker,
+            IFederationHistory federationHistory,
             IPoAMiner poAMiner,
             ReconstructFederationService reconstructFederationService)
         {
             this.chainIndexer = chainIndexer;
             this.federationManager = federationManager;
-            this.idleFederationMembersKicker = idleFederationMembersKicker;
+            this.federationHistory = federationHistory;
             this.network = network;
             this.poaMiner = poAMiner;
             this.reconstructFederationService = reconstructFederationService;
@@ -48,6 +48,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// Signals the node to rebuild the federation via cleabning and rebuilding executed polls.
         /// This will be done via writing a flag to the .conf file so that on startup it be executed.
         /// </summary>
+        /// <returns>See response codes</returns>
+        /// <response code="200">If the reconstruct flag has been set.</response>
+        /// <response code="400">Unexpected exception occurred</response>
         [Route("reconstruct")]
         [HttpPut]
         [ProducesResponseType((int)HttpStatusCode.OK)]
@@ -89,9 +92,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     PubKey = this.federationManager.CurrentFederationKey.PubKey.ToHex()
                 };
 
-                federationMemberModel.FederationSize = this.federationManager.GetFederationMembers().Count;
+                ChainedHeader chainTip = this.chainIndexer.Tip;
+                federationMemberModel.FederationSize = this.federationHistory.GetFederationForBlock(chainTip).Count;
 
-                KeyValuePair<PubKey, uint> lastActive = this.idleFederationMembersKicker.GetFederationMembersByLastActiveTime().FirstOrDefault(x => x.Key == this.federationManager.CurrentFederationKey.PubKey);
+                KeyValuePair<IFederationMember, uint> lastActive = this.federationHistory.GetFederationMembersByLastActiveTime().FirstOrDefault(x => x.Key.PubKey == this.federationManager.CurrentFederationKey.PubKey);
                 if (lastActive.Key != null)
                 {
                     federationMemberModel.LastActiveTime = new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(lastActive.Value);
@@ -118,10 +122,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     federationMemberModel.MemberWillStartMiningAtBlockHeight = poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength;
                     federationMemberModel.MemberWillStartEarningRewardsEstimateHeight = federationMemberModel.MemberWillStartMiningAtBlockHeight + 480;
 
-                    if (this.chainIndexer.Height > poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength)
+                    if (chainTip.Height > poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength)
                         federationMemberModel.PollWillFinishInBlocks = 0;
                     else
-                        federationMemberModel.PollWillFinishInBlocks = (poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength) - this.chainIndexer.Tip.Height;
+                        federationMemberModel.PollWillFinishInBlocks = (poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength) - chainTip.Height;
                 }
 
                 // Has the poll executed?
@@ -161,19 +165,79 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 var federationMemberModels = new List<FederationMemberModel>();
 
                 // Get their last active times.
-                ConcurrentDictionary<PubKey, uint> activeTimes = this.idleFederationMembersKicker.GetFederationMembersByLastActiveTime();
+                ConcurrentDictionary<IFederationMember, uint> activeTimes = this.federationHistory.GetFederationMembersByLastActiveTime();
                 foreach (IFederationMember federationMember in federationMembers)
                 {
                     federationMemberModels.Add(new FederationMemberModel()
                     {
                         PubKey = federationMember.PubKey.ToHex(),
                         CollateralAmount = (federationMember as CollateralFederationMember).CollateralAmount.ToUnit(MoneyUnit.BTC),
-                        LastActiveTime = new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(activeTimes.FirstOrDefault(a => a.Key == federationMember.PubKey).Value),
-                        PeriodOfInActivity = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(activeTimes.FirstOrDefault(a => a.Key == federationMember.PubKey).Value)
+                        LastActiveTime = new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(activeTimes.FirstOrDefault(a => a.Key.PubKey == federationMember.PubKey).Value),
+                        PeriodOfInActivity = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(activeTimes.FirstOrDefault(a => a.Key.PubKey == federationMember.PubKey).Value)
                     });
                 }
 
                 return Json(federationMemberModels);
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Retrieves the pubkey of the federation member that produced a block at the specified height.
+        /// </summary>
+        /// <param name="blockHeight">Block height at which to retrieve pubkey from.</param>
+        /// <returns>Pubkey of federation member at specified height</returns>
+        /// <response code="200">Returns pubkey of miner at block height</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route("mineratheight")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult GetPubkeyAtHeight([FromQuery(Name = "blockHeight")] int blockHeight)
+        {
+            try
+            {
+                ChainedHeader chainedHeader = this.chainIndexer.GetHeader(blockHeight);
+                PubKey pubKey = this.federationHistory.GetFederationMemberForBlock(chainedHeader)?.PubKey;
+
+                return Json(pubKey);
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Retrieves federation members at the given height.
+        /// </summary>
+        /// <param name="blockHeight">Block height at which to retrieve federation membership.</param>
+        /// <returns>Federation membership at the given height</returns>
+        /// <response code="200">Returns a list of pubkeys representing the federation membership at the given block height.</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route("federationatheight")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult GetFederationAtHeight([FromQuery(Name = "blockHeight")] int blockHeight)
+        {
+            try
+            {
+                ChainedHeader chainedHeader = this.chainIndexer.GetHeader(blockHeight);
+                List<IFederationMember> federationMembers = this.federationHistory.GetFederationForBlock(chainedHeader);
+                List<PubKey> federationPubKeys = new List<PubKey>();
+
+                foreach (IFederationMember federationMember in federationMembers)
+                {
+                    federationPubKeys.Add(federationMember.PubKey);
+                }
+
+                return Json(federationPubKeys);
             }
             catch (Exception e)
             {

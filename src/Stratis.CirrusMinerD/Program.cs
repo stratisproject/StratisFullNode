@@ -13,6 +13,7 @@ using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.Notifications;
 using Stratis.Bitcoin.Features.RPC;
+using Stratis.Bitcoin.Features.SignalR;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
@@ -107,7 +108,7 @@ namespace Stratis.CirrusMinerD
 
         private static IFullNode BuildDevCirrusMiningNode(string[] args)
         {
-            string[] devModeArgs = new[] { "-bootstrap=1", "-dbtype=rocksdb", "-defaultwalletname=cirrusdev", "-defaultwalletpassword=password" }.Concat(args).ToArray();
+            string[] devModeArgs = new[] { "-bootstrap=1", "-defaultwalletname=cirrusdev", "-defaultwalletpassword=password" }.Concat(args).ToArray();
             var network = new CirrusDev();
 
             var nodeSettings = new NodeSettings(network, protocolVersion: ProtocolVersion.CIRRUS_VERSION, args: devModeArgs)
@@ -135,6 +136,10 @@ namespace Stratis.CirrusMinerD
                 })
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()
+                .AddSignalR(options =>
+                {
+                    DaemonConfiguration.ConfigureSignalRForCirrus(options);
+                })
                 .Build();
 
             return node;

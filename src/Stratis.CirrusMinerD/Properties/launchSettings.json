@@ -2,7 +2,7 @@
   "profiles": {
     "Stratis.CirrusMinerD": {
       "commandName": "Project",
-      "commandLineArgs": "-txindex=1"
+      "commandLineArgs": "-devmode=miner"
     },
     "Stratis.CirrusMinerD TestNet": {
       "commandName": "Project",

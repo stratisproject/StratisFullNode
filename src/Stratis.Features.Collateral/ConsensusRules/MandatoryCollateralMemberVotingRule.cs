@@ -37,7 +37,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
                 .Where(p => p.VotingData.Key == VoteKey.AddFederationMember
                     && p.PollStartBlockData != null
                     && p.PollStartBlockData.Height <= context.ValidationContext.ChainedHeaderToValidate.Height
-                    && p.PubKeysHexVotedInFavor.Any(pk => pk == this.federationManager.CurrentFederationKey.PubKey.ToHex())).ToList();
+                    && p.PubKeysHexVotedInFavor.Any(pk => pk.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex())).ToList();
 
             // Exit if there aren't any.
             if (!pendingPolls.Any())
@@ -45,7 +45,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
 
             // Ignore any polls that the miner has already voted on.
             PubKey blockMiner = this.federationHistory.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate).PubKey;
-            pendingPolls = pendingPolls.Where(p => !p.PubKeysHexVotedInFavor.Any(pk => pk == blockMiner.ToHex())).ToList();
+            pendingPolls = pendingPolls.Where(p => !p.PubKeysHexVotedInFavor.Any(pk => pk.PubKey == blockMiner.ToHex())).ToList();
 
             // Exit if there is nothing remaining.
             if (!pendingPolls.Any())

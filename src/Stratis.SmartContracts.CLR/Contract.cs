@@ -130,7 +130,17 @@ namespace Stratis.SmartContracts.CLR
             MethodInfo methodToInvoke = this.Type.GetMethod(call.Name, types);
 
             if (methodToInvoke == null)
-                return ContractInvocationResult.Failure(ContractInvocationErrorType.MethodDoesNotExist);
+            {
+                // Check if a method with this name exists but the args are incorrect
+                var methodExists = this.Type.GetMethods().Any(m => m.Name == call.Name);
+
+                if (!methodExists)
+                {
+                    return ContractInvocationResult.Failure(ContractInvocationErrorType.MethodDoesNotExist);
+                }
+
+                return ContractInvocationResult.Failure(ContractInvocationErrorType.ParameterTypesDontMatch);
+            }
 
             // This should not happen without setting the appropriate binding flags
             if (methodToInvoke.IsConstructor)

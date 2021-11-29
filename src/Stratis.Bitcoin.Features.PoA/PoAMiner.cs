@@ -74,21 +74,21 @@ namespace Stratis.Bitcoin.Features.PoA
 
         protected readonly IFederationManager federationManager;
 
+        protected readonly IFederationHistory federationHistory;
+
         private readonly IIntegrityValidator integrityValidator;
 
         private readonly IIdleFederationMembersKicker idleFederationMembersKicker;
-
-        private Task miningTask;
-
-        private IAsyncLoop miningStatisticsLoop;
-
-        private string miningStatisticsLog;
 
         private readonly INodeLifetime nodeLifetime;
 
         private readonly NodeSettings nodeSettings;
 
-        private MiningStatisticsModel miningStatistics;
+        private IAsyncLoop miningStatisticsLoop;
+
+        private string miningStatisticsLog;
+
+        private readonly MiningStatisticsModel miningStatistics;
 
         private readonly IWalletManager walletManager;
 
@@ -99,6 +99,8 @@ namespace Stratis.Bitcoin.Features.PoA
         private readonly PoASettings poaSettings;
 
         private readonly IAsyncProvider asyncProvider;
+
+        private Task miningTask;
 
         private Script walletScriptPubKey;
 
@@ -114,6 +116,7 @@ namespace Stratis.Bitcoin.Features.PoA
             IConnectionManager connectionManager,
             PoABlockHeaderValidator poaHeaderValidator,
             IFederationManager federationManager,
+            IFederationHistory federationHistory,
             IIntegrityValidator integrityValidator,
             IWalletManager walletManager,
             INodeStats nodeStats,
@@ -132,6 +135,7 @@ namespace Stratis.Bitcoin.Features.PoA
             this.connectionManager = connectionManager;
             this.poaHeaderValidator = poaHeaderValidator;
             this.federationManager = federationManager;
+            this.federationHistory = federationHistory;
             this.integrityValidator = integrityValidator;
             this.walletManager = walletManager;
             this.votingManager = votingManager;
@@ -159,7 +163,6 @@ namespace Stratis.Bitcoin.Features.PoA
                 this.asyncProvider.RegisterTask($"{nameof(PoAMiner)}.{nameof(this.miningTask)}", this.miningTask);
             }
 
-            // Initialize the interop polling loop, to check for interop contract requests.
             this.miningStatisticsLoop = this.asyncProvider.CreateAndRunAsyncLoop(nameof(this.miningStatisticsLoop), (cancellation) =>
             {
                 try
@@ -202,12 +205,7 @@ namespace Stratis.Bitcoin.Features.PoA
             int pubKeyTakeCharacters = 5;
             int hitCount = 0;
 
-            // If the node is in DevMode just use the genesis members via the federation manager.
-            List<IFederationMember> modifiedFederation;
-            if (this.nodeSettings.DevMode != null)
-                modifiedFederation = this.federationManager.GetFederationMembers();
-            else
-                modifiedFederation = this.votingManager?.GetModifiedFederation(currentHeader) ?? this.federationManager.GetFederationMembers();
+            List<IFederationMember> modifiedFederation = this.federationHistory.GetFederationForBlock(currentHeader);
 
             int maxDepth = modifiedFederation.Count;
 
@@ -238,10 +236,7 @@ namespace Stratis.Bitcoin.Features.PoA
                     currentHeader = currentHeader.Previous;
                     hitCount++;
 
-                    if (this.nodeSettings.DevMode != null)
-                        modifiedFederation = this.federationManager.GetFederationMembers();
-                    else
-                        modifiedFederation = this.votingManager?.GetModifiedFederation(currentHeader) ?? this.federationManager.GetFederationMembers();
+                    modifiedFederation = this.federationHistory.GetFederationForBlock(currentHeader);
 
                     if (pubKey == this.federationManager.CurrentFederationKey?.PubKey)
                         this.miningStatistics.ProducedBlockInLastRound = true;

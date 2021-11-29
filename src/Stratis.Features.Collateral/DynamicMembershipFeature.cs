@@ -6,6 +6,7 @@ using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Features.Collateral.MempoolRules;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.Collateral.ConsensusRules;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.PoA.Voting;
 
@@ -31,7 +32,7 @@ namespace Stratis.Features.Collateral
             if (options.VotingEnabled)
             {
                 if (options.AutoKickIdleMembers)
-                    await this.joinFederationRequestMonitor.InitializeAsync();
+                    await this.joinFederationRequestMonitor.InitializeAsync().ConfigureAwait(false);
             }
         }
 
@@ -49,6 +50,9 @@ namespace Stratis.Features.Collateral
         public static IFullNodeBuilder AddDynamicMemberhip(this IFullNodeBuilder fullNodeBuilder)
         {
             Guard.Assert(fullNodeBuilder.Network.Consensus.ConsensusFactory is CollateralPoAConsensusFactory);
+
+            if (!fullNodeBuilder.Network.Consensus.ConsensusRules.FullValidationRules.Contains(typeof(VotingRequestFullValidationRule)))
+                fullNodeBuilder.Network.Consensus.ConsensusRules.FullValidationRules.Add(typeof(VotingRequestFullValidationRule));
 
             if (!fullNodeBuilder.Network.Consensus.MempoolRules.Contains(typeof(VotingRequestValidationRule)))
                 fullNodeBuilder.Network.Consensus.MempoolRules.Add(typeof(VotingRequestValidationRule));

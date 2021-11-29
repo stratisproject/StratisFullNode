@@ -66,6 +66,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common
 
         public static (bool Passed, string Message) AreNodesSyncedMessage(CoreNode node1, CoreNode node2, bool ignoreMempool = false)
         {
+            // TODO: This does not check mempool equivalence, so this method actually behaves differently in tests involving bitcoind!
             if (node1.runner is BitcoinCoreRunner || node2.runner is BitcoinCoreRunner)
             {
                 return (node1.CreateRPCClient().GetBestBlockHash() == node2.CreateRPCClient().GetBestBlockHash(), "[BEST_BLOCK_HASH_DOES_MATCH]");
@@ -107,6 +108,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Common
 
         public static bool IsNodeSynced(CoreNode node)
         {
+            // TODO: Need test for bitcoin runner too?
+
             // If the node is at genesis it is considered synced.
             if (node.FullNode.ChainIndexer.Tip.Height == 0)
                 return true;
@@ -505,7 +508,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common
             return total == amount;
         }
 
-        public static void SendCoins(CoreNode miner, CoreNode sender, CoreNode[] receivers, Money amount, List<OutPoint> outPoints= null, int? utxoCount = 1)
+        public static void SendCoins(CoreNode miner, CoreNode sender, CoreNode[] receivers, Money amount, List<OutPoint> outPoints = null, int? utxoCount = 1)
         {
             var recipients = new List<Recipient>(receivers.Length);
 
@@ -535,7 +538,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common
             //    TestBase.WaitLoop(() => CheckWalletBalance(receiver, amount));
         }
 
-        private static TransactionBuildContext CreateContext(Network network, WalletAccountReference accountReference, string password, List<Recipient> recipients, FeeType feeType, int minConfirmations, List<OutPoint> outPoints = null)
+        private static TransactionBuildContext CreateContext(Network network, WalletAccountReference accountReference, string password, List<Recipient> recipients, FeeType feeType, int minConfirmations, List<OutPoint> outPoints)
         {
             return new TransactionBuildContext(network)
             {
