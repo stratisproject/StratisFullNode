@@ -140,7 +140,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
 
             foreach (List<Transaction> txList in blocks.Select(x => x.Transactions))
             {
-                foreach (Transaction transaction in txList.Where(x => !x.IsCoinBase && !x.IsCoinStake))
+                foreach (Transaction transaction in txList)
                 {
                     for (int i = 0; i < transaction.Outputs.Count; i++)
                     {
