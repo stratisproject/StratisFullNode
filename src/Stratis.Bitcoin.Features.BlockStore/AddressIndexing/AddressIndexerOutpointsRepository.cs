@@ -17,11 +17,11 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         /// <summary>Represents the output collection.</summary>
         /// <remarks>Should be protected by <see cref="LockObject"/></remarks>
-        private readonly LiteCollection<OutPointData> addressIndexerOutPointData;
+        private readonly ILiteCollection<OutPointData> addressIndexerOutPointData;
 
         /// <summary>Represents the rewind data collection.</summary>
         /// <remarks>Should be protected by <see cref="LockObject"/></remarks>
-        private readonly LiteCollection<AddressIndexerRewindData> addressIndexerRewindData;
+        private readonly ILiteCollection<AddressIndexerRewindData> addressIndexerRewindData;
 
         private readonly ILogger logger;
 
@@ -118,8 +118,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         {
             lock (this.LockObject)
             {
-                int purgedCount = this.addressIndexerRewindData.Delete(x => x.BlockHeight < height);
-                this.logger.LogInformation("Purged {0} rewind data items.", purgedCount);
+                this.logger.LogInformation("AddressIndexer: started purging rewind data items.");
+                int purgedCount = this.addressIndexerRewindData.DeleteMany(x => x.BlockHeight < height);
+                this.logger.LogInformation("AddressIndexer: Purged {0} rewind data items.", purgedCount);
             }
         }
 
