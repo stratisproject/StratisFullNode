@@ -13,7 +13,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
     {
         private const string DbAddressDataKey = "AddrData";
 
-        private readonly LiteCollection<AddressIndexerData> addressIndexerDataCollection;
+        private readonly ILiteCollection<AddressIndexerData> addressIndexerDataCollection;
 
         private readonly ILogger logger;
 

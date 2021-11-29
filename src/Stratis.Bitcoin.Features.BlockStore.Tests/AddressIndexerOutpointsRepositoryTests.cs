@@ -20,8 +20,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
         public AddressIndexerOutpointsRepositoryTests()
         {
-            FileMode fileMode = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? FileMode.Exclusive : FileMode.Shared;
-            var db = new LiteDatabase(new ConnectionString() { Filename = this.RandomString(20) + ".litedb", Mode = fileMode });
+            var db = new LiteDatabase(new ConnectionString() { Filename = this.RandomString(20) + ".litedb" });
 
             this.repository = new AddressIndexerOutpointsRepository(db, new ExtendedLoggerFactory(), this.maxItems);
         }
