@@ -119,7 +119,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         private DateTime lastFlushTime;
 
-        private const int PurgeIntervalSeconds = 60;
+        private const int PurgeIntervalSeconds = 120;
 
         /// <summary>Last time rewind data was purged.</summary>
         private DateTime lastPurgeTime;
