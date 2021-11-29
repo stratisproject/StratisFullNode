@@ -121,6 +121,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
             AddressIndexerData addressBalances = balancesResult.BalancesData.First();
 
             List<AddressBalanceChange> deposits = addressBalances.BalanceChanges.Where(x => x.Deposited).ToList();
+            
             long totalDeposited = deposits.Sum(x => x.Satoshi);
             long totalWithdrawn = addressBalances.BalanceChanges.Where(x => !x.Deposited).Sum(x => x.Satoshi);
 
@@ -140,7 +141,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
 
             foreach (List<Transaction> txList in blocks.Select(x => x.Transactions))
             {
-                foreach (Transaction transaction in txList.Where(x => !x.IsCoinBase && !x.IsCoinStake))
+                foreach (Transaction transaction in txList)
                 {
                     for (int i = 0; i < transaction.Outputs.Count; i++)
                     {
@@ -160,6 +161,8 @@ namespace Stratis.Features.Unity3dApi.Controllers
                 UTXOs = new List<UTXOModel>()
             };
 
+            Money totalM = Money.Zero;
+
             foreach (KeyValuePair<OutPoint, UnspentOutput> unspentOutput in fetchCoinsResponse.UnspentOutputs)
             {
                 if (unspentOutput.Value.Coins == null)
@@ -168,8 +171,13 @@ namespace Stratis.Features.Unity3dApi.Controllers
                 OutPoint outPoint = unspentOutput.Key;
                 Money value = unspentOutput.Value.Coins.TxOut.Value;
 
+                totalM += value;
+
                 response.UTXOs.Add(new UTXOModel(outPoint, value));
             }
+
+            if (totalM != balanceSat)
+                this.logger.LogError(string.Format("Should be {0}, is: {1}", new Money(balanceSat), totalM));
 
             return response;
         }
