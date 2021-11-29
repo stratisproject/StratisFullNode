@@ -124,7 +124,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                 {
                     this.addressIndexerRewindData.Delete(itemsToPurge[i].BlockHash);
 
-                    if (i % 100 == 0)
+                    if (i % 500 == 0)
                         this.logger.LogInformation("Purging {0}/{1} rewind data items.", i, itemsToPurge.Count());
                 }
             }
