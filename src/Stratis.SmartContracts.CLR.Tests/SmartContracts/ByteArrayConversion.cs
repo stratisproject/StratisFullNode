@@ -21,14 +21,14 @@ public class ByteArrayConversion : SmartContract
     // Note: Use The Serializer/Converter property on SmartContract instead.
     public static ulong BytesToULong(byte[] value)
     {
-        return (ulong) value[0] 
-            | (ulong)(value[1] << 8) 
-            | (ulong)(value[2] << 16) 
-            | (ulong)(value[3] << 24) 
-            | (ulong)(value[4] << 32)
-            | (ulong)(value[5] << 40)
-            | (ulong)(value[6] << 48)
-            | (ulong)(value[7] << 56);
+        return (ulong)value[0] 
+            | ((ulong)value[1] << 8) 
+            | ((ulong)value[2] << 16) 
+            | ((ulong)value[3] << 24) 
+            | ((ulong)value[4] << 32)
+            | ((ulong)value[5] << 40)
+            | ((ulong)value[6] << 48)
+            | ((ulong)value[7] << 56);
     }
 
     // Note: Use The Serializer/Converter property on SmartContract instead.
