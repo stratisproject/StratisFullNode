@@ -121,7 +121,6 @@ namespace Stratis.Features.Unity3dApi.Controllers
             AddressIndexerData addressBalances = balancesResult.BalancesData.First();
 
             List<AddressBalanceChange> deposits = addressBalances.BalanceChanges.Where(x => x.Deposited).ToList();
-            
             long totalDeposited = deposits.Sum(x => x.Satoshi);
             long totalWithdrawn = addressBalances.BalanceChanges.Where(x => !x.Deposited).Sum(x => x.Satoshi);
 
@@ -170,7 +169,6 @@ namespace Stratis.Features.Unity3dApi.Controllers
 
                 OutPoint outPoint = unspentOutput.Key;
                 Money value = unspentOutput.Value.Coins.TxOut.Value;
-
                 totalM += value;
 
                 response.UTXOs.Add(new UTXOModel(outPoint, value));
