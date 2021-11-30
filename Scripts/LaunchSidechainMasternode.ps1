@@ -658,30 +658,16 @@ if ( ( Test-Connection -TargetName 127.0.0.1 -TCPPort $mainChainAPIPort ) -and (
 
 ""
 #Launching Masternode Dashboard
-<#
-Set-Location $stratisMasternodeDashboardCloneDir
-if ( $NodeType -eq "50K" )
+
+Set-Location $stratisMasternodeDashboardCloneDir\src\StratisMasternodeDashboard
+Write-Host (Get-TimeStamp) "Starting Stratis Masternode Dashboard" -ForegroundColor Cyan
+$Clean = Start-Process dotnet.exe -ArgumentList "clean" -PassThru
+While ( $Clean.HasExited -ne $true ) 
 {
-    Write-Host (Get-TimeStamp) "Starting Stratis Masternode Dashboard (50K Mode)" -ForegroundColor Cyan
-    $Clean = Start-Process dotnet.exe -ArgumentList "clean" -PassThru
-    While ( $Clean.HasExited -ne $true )  
-    {
-        Write-Host (Get-TimeStamp) "Cleaning Stratis Masternode Dashboard..." -ForegroundColor Yellow
-        Start-Sleep 3
-    }
-    Start-Process dotnet.exe -ArgumentList "run -c Release -- --nodetype 50K --mainchainport $mainChainAPIPort --sidechainport $sideChainAPIPort --env mainnet" -WindowStyle Hidden
+    Write-Host (Get-TimeStamp) "Cleaning Stratis Masternode Dashboard..." -ForegroundColor Yellow
+    Start-Sleep 3
 }
-    Else
-    {
-        Write-Host (Get-TimeStamp) "Starting Stratis Masternode Dashboard (10K Mode)" -ForegroundColor Cyan
-        $Clean = Start-Process dotnet.exe -ArgumentList "clean" -PassThru
-        While ( $Clean.HasExited -ne $true ) 
-        {
-            Write-Host (Get-TimeStamp) "Cleaning Stratis Masternode Dashboard..." -ForegroundColor Yellow
-            Start-Sleep 3
-        }
-        Start-Process dotnet.exe -ArgumentList "run -c Release --nodetype 10K --mainchainport $mainChainAPIPort --sidechainport $sideChainAPIPort --env mainnet" -WindowStyle Hidden
-    }
+Start-Process dotnet.exe -ArgumentList "run -c Release --nodetype 10K --mainchainport $mainChainAPIPort --sidechainport $sideChainAPIPort --env mainnet --sdadaocontractaddress CbtYboKjnk7rhNbEFzn94UZikde36h6TCb" -WindowStyle Hidden
 
 While ( -not ( Test-Connection -TargetName 127.0.0.1 -TCPPort 37000 -ErrorAction SilentlyContinue ) )
 {
@@ -691,7 +677,7 @@ While ( -not ( Test-Connection -TargetName 127.0.0.1 -TCPPort 37000 -ErrorAction
 
 Start-Process http://localhost:37000
 Write-Host (Get-TimeStamp) "SUCCESS: Stratis Masternode Dashboard launched" -ForegroundColor Green
-#>
+
 
 Exit
 
@@ -699,8 +685,8 @@ Exit
 # SIG # Begin signature block
 # MIIO+gYJKoZIhvcNAQcCoIIO6zCCDucCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUC8xDiA6yoOjBAg3qXGurZz7P
-# Q4+gggxCMIIFfjCCBGagAwIBAgIQCrk836uc/wPyOiuycqPb5zANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUKaD/9ZgeiLnN1S2dNh1kla8R
+# 6+agggxCMIIFfjCCBGagAwIBAgIQCrk836uc/wPyOiuycqPb5zANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTIxMDQyMjAwMDAwMFoXDTI0MDcxOTIzNTk1
@@ -770,11 +756,11 @@ Exit
 # ZXJ0LmNvbTErMCkGA1UEAxMiRGlnaUNlcnQgRVYgQ29kZSBTaWduaW5nIENBIChT
 # SEEyKQIQCrk836uc/wPyOiuycqPb5zAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIB
 # DDEKMAigAoAAoQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEE
-# AYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUF1zPCPT0rdJl
-# PV5+s7QjwoaN0kMwDQYJKoZIhvcNAQEBBQAEggEATpxAiDBy6diLO7w04R3nC2IJ
-# OFoScSFa5WX+RV8caNixMmNNrSR4CVL4Nms+FDvHgkQCx6DeT2j+s6eSu7HrN52x
-# EnxAh3B3nbIzhpLNkMmUyD6Y9/GWUgxwaseAI02kwH2flE66FFCH67cIFinODPzE
-# G8AWIapxeyl6uMSY6vgPbfzI97KKlQpAGKf0Owm+zXuIDC+8nmJsC1dujFgjBYhw
-# yq2Isiv3rkFrQdTu9ewr1QgrjNlUiSqzTGFgvupyVjDe6c8QcF1yNgrZMXdghurC
-# Hidj7vx+2kMaqPeytzoaPwvJTC2dF2CcGW8EkYG5c8Itj805N/vEiEGJQpE0yw==
+# AYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUkP7Si8d9vDff
+# 3+tldb/iyUwdMV8wDQYJKoZIhvcNAQEBBQAEggEAea4dGX+MKROuC4k6xw1xTiY3
+# 9+6zU76dSjlcQ3WwHYY9KIDY6wpCeKVRpDwQ0Bnru0dNp47QsN47OuY6ldKK0kw8
+# oIwZ5dMcUWJC8UqBXse3xlHRnjvRu1keVHsqlBtQoQACRzZ4aapRcNTmCwjFqNsC
+# AuRhE+GdbduwLOZLbDhFHiwLOJQHFCzodDI3Iu3u8SVQlxrPXWqHUtcDHv9JPJzH
+# 37kQhgc1d5RvklmIXFifdZXZ20EF9QzoIt6tjMw/Ql4YTFT8sAx08HPNWnbisR87
+# jJHuyoPJ/9EH/4kJBgm/8mr6/53NgynGhG+gQV52bE1ye4lZA+MHUKI5tkMOew==
 # SIG # End signature block
