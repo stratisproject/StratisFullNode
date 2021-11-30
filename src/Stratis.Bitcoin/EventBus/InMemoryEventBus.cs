@@ -67,26 +67,6 @@ namespace Stratis.Bitcoin.EventBus
         }
 
         /// <inheritdoc />
-        public SubscriptionToken Subscribe(Type eventType, Func<EventBase, Task> handler)
-        {
-            if (handler == null)
-                throw new ArgumentNullException(nameof(handler));
-
-            lock (this.subscriptionsLock)
-            {
-                if (!this.subscriptions.ContainsKey(eventType))
-                {
-                    this.subscriptions.Add(eventType, new List<ISubscription>());
-                }
-
-                var subscriptionToken = new SubscriptionToken(this, eventType);
-                this.subscriptions[eventType].Add(new Subscription(handler, subscriptionToken));
-
-                return subscriptionToken;
-            }
-        }
-
-        /// <inheritdoc />
         public SubscriptionToken Subscribe<TEvent>(Action<TEvent> handler) where TEvent : EventBase
         {
             if (handler == null)
