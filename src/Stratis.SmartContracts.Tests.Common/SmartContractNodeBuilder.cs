@@ -50,7 +50,7 @@ namespace Stratis.SmartContracts.Tests.Common
             return CreateNode(new StratisSmartContractNode(this.GetNextDataFolderName(), network), "stratis.conf");
         }
 
-        public static SmartContractNodeBuilder Create(object caller, [CallerMemberName] string callingMethod = null)
+        public static new SmartContractNodeBuilder Create(object caller, [CallerMemberName] string callingMethod = null)
         {
             string testFolderPath = TestBase.CreateTestDir(caller, callingMethod);
             var builder = new SmartContractNodeBuilder(testFolderPath);

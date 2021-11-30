@@ -20,6 +20,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Rules
         {
         }
 
+        /// <inheritdoc/>
         /// <remarks>Also see <see cref="StraxCoinviewRule"/></remarks>>
         public override void CheckTransaction(MempoolValidationContext context)
         {
