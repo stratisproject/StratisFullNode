@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using RocksDbSharp;
 using Stratis.Bitcoin.Configuration;
@@ -22,25 +24,33 @@ namespace Stratis.Bitcoin.Persistence.KeyValueStores
         }
 
         /// <inheritdoc />
-        public void SaveBytes(string key, byte[] bytes)
+        public void SaveBytes(string key, byte[] bytes, bool overWrite = false)
         {
             byte[] keyBytes = Encoding.ASCII.GetBytes(key);
+
+            if (overWrite)
+            {
+                byte[] row = this.rocksdb.Get(keyBytes);
+                if (row != null)
+                    this.rocksdb.Remove(keyBytes);
+            }
+
             this.rocksdb.Put(keyBytes, bytes);
         }
 
         /// <inheritdoc />
-        public void SaveValue<T>(string key, T value)
+        public void SaveValue<T>(string key, T value, bool overWrite = false)
         {
-            this.SaveBytes(key, this.dataStoreSerializer.Serialize(value));
+            this.SaveBytes(key, this.dataStoreSerializer.Serialize(value), overWrite);
         }
 
         /// <inheritdoc />
-        public void SaveValueJson<T>(string key, T value)
+        public void SaveValueJson<T>(string key, T value, bool overWrite = false)
         {
             string json = Serializer.ToString(value);
             byte[] jsonBytes = Encoding.ASCII.GetBytes(json);
 
-            this.SaveBytes(key, jsonBytes);
+            this.SaveBytes(key, jsonBytes, overWrite);
         }
 
         /// <inheritdoc />
@@ -80,6 +90,12 @@ namespace Stratis.Bitcoin.Persistence.KeyValueStores
             T value = Serializer.ToObject<T>(json);
 
             return value;
+        }
+
+        /// <inheritdoc />
+        public List<T> GetAllAsJson<T>()
+        {
+            throw new NotImplementedException();
         }
 
         /// <inheritdoc />

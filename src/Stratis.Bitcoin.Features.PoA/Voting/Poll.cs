@@ -5,12 +5,25 @@ using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.PoA.Voting
 {
+    public class Vote : IBitcoinSerializable
+    {
+        public string PubKey;
+        public int Height;
+
+        /// <inheritdoc />
+        public void ReadWrite(BitcoinStream stream)
+        {
+            stream.ReadWrite(ref this.PubKey);
+            stream.ReadWrite(ref this.Height);
+        }
+    }
+
     /// <summary>Information about active poll.</summary>
     public class Poll : IBitcoinSerializable
     {
         public Poll()
         {
-            this.PubKeysHexVotedInFavor = new List<string>();
+            this.PubKeysHexVotedInFavor = new List<Vote>();
         }
 
         /// <summary>
@@ -18,6 +31,35 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <c>false</c> in case majority of fed members voted in favor and result of the poll was scheduled to be applied after max reorg blocks are mined.
         /// </summary>
         public bool IsPending => this.PollVotedInFavorBlockData == null;
+
+        /// <summary><c>true</c> if poll has expired; <c>false</c> otherwise.</summary>
+        /// <remarks><para>A poll is flagged as "Expired" by setting <see cref="Poll.PollVotedInFavorBlockData.Height"/> to zero.</para>
+        /// <para>The hash field is set to non-zero to avoid the whole field being deserialized as null. See <see cref="Poll.ReadWrite"/>.</para></remarks>
+        public bool IsExpired
+        {
+            get
+            {
+                return this.PollVotedInFavorBlockData != null && this.PollVotedInFavorBlockData.Height == 0;
+            }
+
+            set
+            {
+                if (!value)
+                {
+                    if (this.PollVotedInFavorBlockData != null)
+                    {
+                        Guard.Assert(this.IsExpired);
+                        this.PollVotedInFavorBlockData = null;
+                    }
+                    return;
+                }
+
+                this.PollVotedInFavorBlockData = new HashHeightPair(1 /* A non-zero value */, 0);
+            }
+        }
+
+        /// <summary><c>true</c> if poll has been approved; <c>false</c> otherwise.</summary>
+        public bool IsApproved => this.PollVotedInFavorBlockData != null && this.PollVotedInFavorBlockData.Height != 0;
 
         /// <summary><c>true</c> if poll wasn't executed yet; <c>false</c> otherwise.</summary>
         public bool IsExecuted => this.PollExecutedBlockData != null;
@@ -36,7 +78,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         public HashHeightPair PollExecutedBlockData;
 
         /// <summary>List of fed member's public keys that voted in favor.</summary>
-        public List<string> PubKeysHexVotedInFavor;
+        public List<Vote> PubKeysHexVotedInFavor;
 
         /// <inheritdoc />
         public void ReadWrite(BitcoinStream stream)
@@ -49,16 +91,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             if (stream.Serializing)
             {
-                string[] arr = this.PubKeysHexVotedInFavor.ToArray();
-
-                stream.ReadWrite(ref arr);
+                stream.ReadWrite(ref this.PubKeysHexVotedInFavor);
             }
             else
             {
-                string[] arr = null;
-                stream.ReadWrite(ref arr);
-
-                this.PubKeysHexVotedInFavor = arr.ToList();
+                stream.ReadWrite(ref this.PubKeysHexVotedInFavor);
 
                 if (this.PollExecutedBlockData.Hash == uint256.Zero)
                     this.PollExecutedBlockData = null;
@@ -79,6 +116,18 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                    $"{nameof(this.PollVotedInFavorBlockData)}:{this.PollVotedInFavorBlockData?.ToString() ?? "null"}, " +
                    $"{nameof(this.PollExecutedBlockData)}:{this.PollExecutedBlockData?.ToString() ?? "null"}, " +
                    $"{nameof(this.PubKeysHexVotedInFavor)}:{string.Join(" ", this.PubKeysHexVotedInFavor)}";
+        }
+
+        public override int GetHashCode()
+        {
+            return this.VotingData.GetHashCode() ^ this.PollStartBlockData.Height;
+        }
+
+        public override bool Equals(object obj)
+        {
+            // Only compare enough fields to determine if uniqueness constraints are violated.
+            // I.e. this method could be used to determine if two polls require different ids.
+            return ((Poll)obj).VotingData == this.VotingData && ((Poll)obj).PollStartBlockData.Height == this.PollStartBlockData.Height;
         }
     }
 
@@ -114,7 +163,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.PollStartBlockDataHeight = poll.PollStartBlockData?.Height;
             this.PollExecutedBlockDataHash = poll.PollExecutedBlockData?.Hash;
             this.PollExecutedBlockDataHeight = poll.PollExecutedBlockData?.Height;
-            this.PubKeysHexVotedInFavor = poll.PubKeysHexVotedInFavor;
+            this.PubKeysHexVotedInFavor = poll.PubKeysHexVotedInFavor.Select(v => v.PubKey).ToList();
             this.VotingDataString = executor.ConvertToString(poll.VotingData);
         }
     }

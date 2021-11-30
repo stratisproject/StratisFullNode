@@ -48,6 +48,8 @@ namespace Stratis.Sidechains.Networks
 
             this.CirrusRewardDummyAddress = "PDpvfcpPm9cjQEoxWzQUL699N8dPaf8qML";
 
+            this.ConversionTransactionFeeDistributionDummyAddress = "PTCPsLQoF3WNoH1qXMy5PouquiXQKp7WBV";
+
             var consensusFactory = new SmartContractPoAConsensusFactory();
 
             // Create the genesis block.
@@ -88,7 +90,10 @@ namespace Stratis.Sidechains.Networks
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
                 autoKickIdleMembers: true
-            );
+            )
+            {
+                PollExpiryBlocks = 10
+            };
 
             var buriedDeployments = new BuriedDeploymentsArray
             {

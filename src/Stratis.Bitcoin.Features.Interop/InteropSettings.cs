@@ -10,10 +10,19 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public BNBInteropSettings BNBSettings { get; set; }
 
+        /// <summary> If this value is set, enable the override originator logic.</summary>
+        public bool OverrideOriginatorEnabled { get; set; }
+
+        /// <summary> If this value is set, override this node as the originator.</summary>
+        public bool OverrideOriginator { get; set; }
+
         public InteropSettings(NodeSettings nodeSettings)
         {
             this.ETHSettings = new ETHInteropSettings(nodeSettings);
             this.BNBSettings = new BNBInteropSettings(nodeSettings);
+
+            this.OverrideOriginatorEnabled = nodeSettings.ConfigReader.GetOrDefault("overrideoriginatorenabled", false);
+            this.OverrideOriginator = nodeSettings.ConfigReader.GetOrDefault("overrideoriginator", false);
         }
 
         public ETHInteropSettings GetSettingsByChain(DestinationChain chain)
@@ -37,6 +46,10 @@ namespace Stratis.Bitcoin.Features.Interop
     public class ETHInteropSettings
     {
         public bool InteropEnabled { get; set; }
+
+        /// <summary>The amount of nodes that needs to agree on conversion transaction before it is released.</summary>
+        public int MultisigWalletQuorum { get; set; }
+        private const string MultisigWalletContractQuorumKey = "ethereummultisigwalletquorum";
 
         /// <summary>This should be set to the address of the multisig wallet contract deployed on the Ethereum blockchain.</summary>
         public string MultisigWalletAddress { get; set; }
@@ -86,6 +99,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.InteropContractCirrusAddress = nodeSettings.ConfigReader.GetOrDefault(this.GetSettingsPrefix() + "interopcontractcirrusaddress", "");
             this.InteropContractAddress = nodeSettings.ConfigReader.GetOrDefault(this.GetSettingsPrefix() + "interopcontractaddress", "");
 
+            this.MultisigWalletQuorum = nodeSettings.ConfigReader.GetOrDefault(MultisigWalletContractQuorumKey, 6);
             this.MultisigWalletAddress = nodeSettings.ConfigReader.GetOrDefault(multisigWalletContractAddressKey, "");
             this.WrappedStraxContractAddress = nodeSettings.ConfigReader.GetOrDefault(wrappedStraxContractAddressKey, "");
             this.ClientUrl = nodeSettings.ConfigReader.GetOrDefault(clientUrlKey, "http://localhost:8545");
@@ -105,6 +119,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 throw new Exception($"Cannot initialize interoperability feature without -{clientUrlKey} specified.");
         }
 
+        /// <summary>Prefix that determines which chain the setting are for.</summary>
         protected virtual string GetSettingsPrefix()
         {
             return "eth_";

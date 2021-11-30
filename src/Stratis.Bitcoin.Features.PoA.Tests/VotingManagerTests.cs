@@ -53,10 +53,11 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             };
 
             int votesRequired = (this.federationManager.GetFederationMembers().Count / 2) + 1;
+            ChainedHeaderBlock[] blocks = GetBlocksWithVotingData(votesRequired, votingData, new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().GetHash(), 0));
 
             for (int i = 0; i < votesRequired; i++)
             {
-                this.TriggerOnBlockConnected(this.CreateBlockWithVotingData(new List<VotingData>() { votingData }, i + 1));
+                this.TriggerOnBlockConnected(blocks[i]);
             }
 
             Assert.Single(this.votingManager.GetApprovedPolls());
@@ -75,16 +76,18 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             int votesRequired = (this.federationManager.GetFederationMembers().Count / 2) + 1;
 
+            ChainedHeaderBlock[] blocks = GetBlocksWithVotingData(votesRequired + 1, votingData, new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().GetHash(), 0));
+
             for (int i = 0; i < votesRequired; i++)
             {
-                this.TriggerOnBlockConnected(this.CreateBlockWithVotingData(new List<VotingData>() { votingData }, i + 1));
+                this.TriggerOnBlockConnected(blocks[i]);
             }
 
             Assert.Single(this.votingManager.GetApprovedPolls());
             Assert.Empty(this.votingManager.GetPendingPolls());
 
             // Now that poll is complete, add another vote for it.
-            ChainedHeaderBlock blockToDisconnect = this.CreateBlockWithVotingData(new List<VotingData>() { votingData }, votesRequired + 1);
+            ChainedHeaderBlock blockToDisconnect = blocks[votesRequired];
             this.TriggerOnBlockConnected(blockToDisconnect);
 
             // Now we have 1 finished and 1 pending for the same data.
@@ -111,10 +114,100 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             int votesRequired = (this.federationManager.GetFederationMembers().Count / 2) + 1;
 
+            ChainedHeaderBlock[] blocks = GetBlocksWithVotingRequest(votesRequired, votingRequest, new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().GetHash(), 0));
+
             for (int i = 0; i < votesRequired; i++)
             {
-                this.TriggerOnBlockConnected(this.CreateBlockWithVotingRequest(votingRequest, i + 1));
+                this.TriggerOnBlockConnected(blocks[i]);
             }
+        }
+
+        [Fact]
+        public void CanExpireAndUnExpirePollViaBlockDisconnected()
+        {
+            // Create add federation member vote.
+            var votingData = new VotingData()
+            {
+                Key = VoteKey.AddFederationMember,
+                Data = new Key().PubKey.ToBytes()
+            };
+
+            // Create a single pending poll.
+            ChainedHeaderBlock[] blocks = GetBlocksWithVotingData(1, votingData, new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().GetHash(), 0));
+            this.TriggerOnBlockConnected(blocks[0]);
+            Assert.Single(this.votingManager.GetPendingPolls());
+
+            // Advance the chain so that the poll expires.
+            blocks = PoaTestHelper.GetEmptyBlocks(this.ChainIndexer, this.network, 10);
+
+            for (int i = 0; i < blocks.Length; i++)
+            {
+                this.TriggerOnBlockConnected(blocks[i]);
+            }
+
+            // Assert that the poll expired.
+            Assert.Single(this.votingManager.GetExpiredPolls());
+
+            // Fake a rewind via block disconnected (this will generally happen via a re-org)
+            this.TriggerOnBlockDisconnected(blocks[9]);
+
+            // Assert that the poll was "un-expired".
+            Assert.Single(this.votingManager.GetPendingPolls());
+        }
+
+        [Fact]
+        public void CanExpireAndUnExpirePollViaNodeRewind()
+        {
+            // Create add federation member vote.
+            var votingData = new VotingData()
+            {
+                Key = VoteKey.AddFederationMember,
+                Data = new Key().PubKey.ToBytes()
+            };
+
+            // Create a single pending poll.
+            ChainedHeaderBlock[] blocks = GetBlocksWithVotingData(1, votingData, new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().GetHash(), 0));
+            this.TriggerOnBlockConnected(blocks[0]);
+            Assert.Single(this.votingManager.GetPendingPolls());
+
+            // Advance the chain so that the poll expires.
+            blocks = PoaTestHelper.GetEmptyBlocks(this.ChainIndexer, this.network, 10);
+            for (int i = 0; i < blocks.Length; i++)
+            {
+                this.TriggerOnBlockConnected(blocks[i]);
+            }
+
+            // Assert that the poll expired.
+            Assert.Single(this.votingManager.GetExpiredPolls());
+
+            // Fake a rewind via setting the node's tip back (this will generally happen via the api/node/rewind call)
+            this.ChainIndexer.Remove(this.ChainIndexer.Tip);
+
+            // Re-initialize the voting manager
+            this.votingManager.Initialize(this.federationHistory);
+
+            // Assert that the poll was "un-expired".
+            Assert.Single(this.votingManager.GetPendingPolls());
+        }
+
+        private void TriggerOnBlockConnected(ChainedHeaderBlock block)
+        {
+            this.signals.Publish(new BlockConnected(block));
+        }
+
+        private void TriggerOnBlockDisconnected(ChainedHeaderBlock block)
+        {
+            this.signals.Publish(new BlockDisconnected(block));
+        }
+
+        private ChainedHeaderBlock[] GetBlocksWithVotingData(int count, VotingData votingData, ChainedHeader previous)
+        {
+            return PoaTestHelper.GetBlocks(count, this.ChainIndexer, i => this.CreateBlockWithVotingData(new List<VotingData>() { votingData }, i + 1), previous);
+        }
+
+        private ChainedHeaderBlock[] GetBlocksWithVotingRequest(int count, JoinFederationRequest votingRequest, ChainedHeader previous)
+        {
+            return PoaTestHelper.GetBlocks(count, this.ChainIndexer, i => this.CreateBlockWithVotingRequest(votingRequest, i + 1), previous);
         }
 
         private ChainedHeaderBlock CreateBlockWithVotingRequest(JoinFederationRequest votingRequest, int height)
@@ -129,47 +222,24 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             Transaction tx = this.network.CreateTransaction();
             tx.AddOutput(Money.COIN, votingRequestOutputScript);
 
-            Block block = new Block();
-            block.Transactions.Add(tx);
-
-            block.Header.Time = (uint)(height * (this.network.ConsensusOptions as PoAConsensusOptions).TargetSpacingSeconds);
-
-            block.UpdateMerkleRoot();
-            block.GetHash();
+            Block block = PoaTestHelper.CreateBlock(this.network, tx, height);
 
             return new ChainedHeaderBlock(block, new ChainedHeader(block.Header, block.GetHash(), height));
         }
 
         private ChainedHeaderBlock CreateBlockWithVotingData(List<VotingData> data, int height)
         {
-            var tx = new Transaction();
-
             var votingData = new List<byte>(VotingDataEncoder.VotingOutputPrefixBytes);
             votingData.AddRange(this.encoder.Encode(data));
 
             var votingOutputScript = new Script(OpcodeType.OP_RETURN, Op.GetPushOp(votingData.ToArray()));
 
+            Transaction tx = this.network.CreateTransaction();
             tx.AddOutput(Money.COIN, votingOutputScript);
 
-            Block block = new Block();
-            block.Transactions.Add(tx);
-
-            block.Header.Time = (uint)(height * (this.network.ConsensusOptions as PoAConsensusOptions).TargetSpacingSeconds);
-
-            block.UpdateMerkleRoot();
-            block.GetHash();
+            Block block = PoaTestHelper.CreateBlock(this.network, tx, height);
 
             return new ChainedHeaderBlock(block, new ChainedHeader(block.Header, block.GetHash(), height));
-        }
-
-        private void TriggerOnBlockConnected(ChainedHeaderBlock block)
-        {
-            this.signals.Publish(new BlockConnected(block));
-        }
-
-        private void TriggerOnBlockDisconnected(ChainedHeaderBlock block)
-        {
-            this.signals.Publish(new BlockDisconnected(block));
         }
     }
 }

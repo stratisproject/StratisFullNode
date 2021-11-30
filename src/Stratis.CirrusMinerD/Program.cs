@@ -108,7 +108,7 @@ namespace Stratis.CirrusMinerD
 
         private static IFullNode BuildDevCirrusMiningNode(string[] args)
         {
-            string[] devModeArgs = new[] { "-bootstrap=1", "-dbtype=rocksdb", "-defaultwalletname=cirrusdev", "-defaultwalletpassword=password" }.Concat(args).ToArray();
+            string[] devModeArgs = new[] { "-bootstrap=1", "-defaultwalletname=cirrusdev", "-defaultwalletpassword=password" }.Concat(args).ToArray();
             var network = new CirrusDev();
 
             var nodeSettings = new NodeSettings(network, protocolVersion: ProtocolVersion.CIRRUS_VERSION, args: devModeArgs)

@@ -175,7 +175,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
                 return null;
             }
 
-            this.logger.Info($"Reward distribution transaction built; sending {builtTransaction.TotalOut} to federation '{this.network.Federations.GetOnlyFederation().MultisigScript.PaymentScript}'.");
+            this.logger.Info($"Reward distribution transaction '{builtTransaction.GetHash()}' built; sending {builtTransaction.TotalOut} to federation '{this.network.Federations.GetOnlyFederation().MultisigScript.PaymentScript}'.");
             return builtTransaction;
         }
 
@@ -210,6 +210,14 @@ namespace Stratis.Features.FederatedPeg.Distribution
             // Check if the current block is after reward batching activation height.
             if (blockConnected.ConnectedBlock.ChainedHeader.Height >= this.network.RewardClaimerBatchActivationHeight)
             {
+                // Check if the block connected height is equal or below the last distribution height.
+                // This is could happen due to a reorg and therefore we do nothing.
+                if (blockConnected.ConnectedBlock.ChainedHeader.Height <= (this.lastDistributionHeight + 1))
+                {
+                    this.logger.Info($"Reward claiming skipped as block window already processed; Block connected at {blockConnected.ConnectedBlock.ChainedHeader.Height}; Last distribution at {this.lastDistributionHeight}.");
+                    return;
+                }
+
                 // Check if the reward claimer should be triggered.
                 if (blockConnected.ConnectedBlock.ChainedHeader.Height > this.network.RewardClaimerBatchActivationHeight &&
                     blockConnected.ConnectedBlock.ChainedHeader.Height % this.network.RewardClaimerBlockInterval == 0)

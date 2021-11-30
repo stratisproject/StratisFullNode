@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.Connection;
@@ -195,9 +194,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         public IActionResult Sync([FromBody] HashModel model)
         {
             if (!this.ModelState.IsValid)
-            {
-                return BuildErrorResponse(this.ModelState);
-            }
+                return ModelStateErrors.BuildErrorResponse(this.ModelState);
 
             ChainedHeader block = this.chainIndexer.GetHeader(uint256.Parse(model.Hash));
 
@@ -318,19 +315,6 @@ namespace Stratis.Features.FederatedPeg.Controllers
                 this.logger.Error("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
-        }
-
-        /// <summary>
-        /// Builds an <see cref="IActionResult"/> containing errors contained in the <see cref="ControllerBase.ModelState"/>.
-        /// </summary>
-        /// <returns>A result containing the errors.</returns>
-        private static IActionResult BuildErrorResponse(ModelStateDictionary modelState)
-        {
-            List<ModelError> errors = modelState.Values.SelectMany(e => e.Errors).ToList();
-            return ErrorHelpers.BuildErrorResponse(
-                HttpStatusCode.BadRequest,
-                string.Join(Environment.NewLine, errors.Select(m => m.ErrorMessage)),
-                string.Join(Environment.NewLine, errors.Select(m => m.Exception?.Message)));
         }
     }
 }

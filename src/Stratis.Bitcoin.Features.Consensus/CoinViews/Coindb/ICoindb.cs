@@ -9,10 +9,9 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
     /// </summary>
     public interface ICoindb
     {
-        /// <summary>
-        /// Initialize the coindb.
-        /// </summary>
-        void Initialize();
+        /// <summary> Initialize the coin database.</summary>
+        /// <param name="chainTip">The current chain's tip.</param>
+        void Initialize(ChainedHeader chainTip);
 
         /// <summary>
         /// Retrieves the block hash of the current tip of the coinview.
@@ -63,6 +62,14 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// </summary>
         /// <param name="height">The height of the block.</param>
         RewindData GetRewindData(int height);
+
+        /// <summary>Gets the minimum rewind height.</summary>
+        /// <returns>
+        /// <para>
+        /// The minimum rewind height or -1 if rewind is not possible.
+        /// </para>
+        /// </returns>
+        int GetMinRewindHeight();
     }
 
     public interface IStakedb : ICoindb

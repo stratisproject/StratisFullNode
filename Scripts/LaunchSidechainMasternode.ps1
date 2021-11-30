@@ -123,6 +123,15 @@ function Get-BlockStoreStatus
     $BlockStoreStatus.state
 }
 
+
+function Get-PollsRepositoryTip
+{
+    $PollsRepoHeightRequest = Invoke-WebRequest -Uri http://localhost:$API/api/Voting/polls/tip
+    $PollsRepoHeight = ConvertFrom-Json $PollsRepoHeightRequest
+    $LocalPollsRepoHeight = $PollsRepoHeight.tipHeightPercentage
+    $LocalPollsRepoHeight
+}
+
 function Shutdown-Dashboard
 {
     Write-Host "Shutting down Stratis Masternode Dashboard..." -ForegroundColor Yellow
@@ -352,7 +361,7 @@ if ( $NodeType -eq "50K" )
     #Launching GETH
     $API = $gethAPIPort
     Write-Host (Get-TimeStamp) "Starting GETH Masternode" -ForegroundColor Cyan
-    $StartNode = Start-Process 'geth.exe' -ArgumentList "--syncmode fast --rpc --rpccorsdomain=* --rpcapi web3,eth,debug,personal,net --datadir=$ethDataDir" -PassThru
+    $StartNode = Start-Process 'geth.exe' -ArgumentList "--syncmode fast --http --http.corsdomain=* --http.api web3,eth,debug,personal,net --datadir=$ethDataDir" -PassThru
 
     While ( -not ( Test-Connection -TargetName 127.0.0.1 -TCPPort $API ) ) 
     {
@@ -527,13 +536,23 @@ While ( ( Get-BlockStoreStatus ) -ne "Initialized" )
     }
 }
 
-#Wait for IBD
+#Wait for Polls Repo Rebuild
+$pollsTip = Get-PollsRepositoryTip
+While ( $pollsTip -ne 100 )
+{
+    Write-Host (Get-TimeStamp) "Upgrading the Poll Store: $pollsTip %" -ForegroundColor Yellow
+    Start-Sleep 10
+    $pollsTip = Get-PollsRepositoryTip
+}
+
+#Wait for Peers
 While ( ( Get-MaxHeight ) -eq $null ) 
 {
 Write-Host (Get-TimeStamp) "Waiting for Peers..." -ForegroundColor Yellow
 Start-Sleep 10
 }
 
+#Wait for IBD
 While ( ( Get-MaxHeight ) -gt ( Get-LocalHeight ) ) 
 {
     $a = Get-MaxHeight
@@ -685,8 +704,8 @@ Exit
 # SIG # Begin signature block
 # MIIO+gYJKoZIhvcNAQcCoIIO6zCCDucCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUKaD/9ZgeiLnN1S2dNh1kla8R
-# 6+agggxCMIIFfjCCBGagAwIBAgIQCrk836uc/wPyOiuycqPb5zANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU6SkKvZm9lMqG1hK5IeK0CnGd
+# rJOgggxCMIIFfjCCBGagAwIBAgIQCrk836uc/wPyOiuycqPb5zANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTIxMDQyMjAwMDAwMFoXDTI0MDcxOTIzNTk1
@@ -756,11 +775,11 @@ Exit
 # ZXJ0LmNvbTErMCkGA1UEAxMiRGlnaUNlcnQgRVYgQ29kZSBTaWduaW5nIENBIChT
 # SEEyKQIQCrk836uc/wPyOiuycqPb5zAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIB
 # DDEKMAigAoAAoQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEE
-# AYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUkP7Si8d9vDff
-# 3+tldb/iyUwdMV8wDQYJKoZIhvcNAQEBBQAEggEAea4dGX+MKROuC4k6xw1xTiY3
-# 9+6zU76dSjlcQ3WwHYY9KIDY6wpCeKVRpDwQ0Bnru0dNp47QsN47OuY6ldKK0kw8
-# oIwZ5dMcUWJC8UqBXse3xlHRnjvRu1keVHsqlBtQoQACRzZ4aapRcNTmCwjFqNsC
-# AuRhE+GdbduwLOZLbDhFHiwLOJQHFCzodDI3Iu3u8SVQlxrPXWqHUtcDHv9JPJzH
-# 37kQhgc1d5RvklmIXFifdZXZ20EF9QzoIt6tjMw/Ql4YTFT8sAx08HPNWnbisR87
-# jJHuyoPJ/9EH/4kJBgm/8mr6/53NgynGhG+gQV52bE1ye4lZA+MHUKI5tkMOew==
+# AYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUK3D6We+cF1CI
+# mVNcrocg5rY6WMQwDQYJKoZIhvcNAQEBBQAEggEAIL5pQjErOqJs4uEObjXQAd8j
+# SoVlUDGvL50BcAkRkjCoHzJvIn1uKHWgX+DqLBDfS8MifM8xyEIKIr4Bi4IcTj01
+# zWNgp6atroXxDKyC9mx1hYB+fjTq8ozYd7sV6JoEJRV8ZOobGv4gr30tNskpvPuY
+# jV+kZT4ZsLk+YDrE+zKo0nV/+aH1Z82MBRQ6YsTo9GYANBW5ZOW0K2cRkptiOCFl
+# uznDsuY8dF4TxE0REDsmsSyBIp1uH7l4qpfUdKsd3LF8fT1FmyQiVZdSSlCGOYQn
+# 6u9Lnvjwuwfa5sH+3e8QBaPMEPvBThSsxkQDVawoHpGiXEM+xbSgtP9KAxDl2w==
 # SIG # End signature block

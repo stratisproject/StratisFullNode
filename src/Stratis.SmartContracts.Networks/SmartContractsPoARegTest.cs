@@ -21,8 +21,6 @@ namespace Stratis.SmartContracts.Networks
     /// </summary>
     public class SmartContractsPoARegTest : PoANetwork
     {
-        public Key[] FederationKeys { get; private set; }
-
         public SmartContractsPoARegTest()
         {
             this.Name = "SmartContractsPoARegTest";
@@ -68,7 +66,10 @@ namespace Stratis.SmartContracts.Networks
                 targetSpacingSeconds: 60,
                 votingEnabled: true,
                 autoKickIdleMembers: false
-            );
+            )
+            {
+                PollExpiryBlocks = 450
+            };
 
             var buriedDeployments = new BuriedDeploymentsArray
             {

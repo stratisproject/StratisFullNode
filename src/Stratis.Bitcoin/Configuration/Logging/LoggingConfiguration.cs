@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging.Console;
 using NLog;
 using NLog.Config;
 using NLog.Extensions.Logging;
+using NLog.LayoutRenderers;
 using NLog.Targets;
 using NLog.Targets.Wrappers;
 using Stratis.Bitcoin.Configuration.Settings;
@@ -34,8 +35,7 @@ namespace Stratis.Bitcoin.Configuration.Logging
                     .AddFilter("Default", LogLevel.Information)
                     .AddFilter("System", LogLevel.Warning)
                     .AddFilter("Microsoft", LogLevel.Warning)
-                    .AddFilter("Microsoft.AspNetCore", LogLevel.Error)
-                    .AddConsole();
+                    .AddFilter("Microsoft.AspNetCore", LogLevel.Error);
             }
             );
         }
@@ -51,8 +51,7 @@ namespace Stratis.Bitcoin.Configuration.Logging
                     .AddFilter("Default", LogLevel.Information)
                     .AddFilter("System", LogLevel.Warning)
                     .AddFilter("Microsoft", LogLevel.Warning)
-                    .AddFilter("Microsoft.AspNetCore", LogLevel.Error)
-                    .AddConsole();
+                    .AddFilter("Microsoft.AspNetCore", LogLevel.Error);
 
                 string configPath = Path.Combine(dataFolder.RootPath, LoggingConfiguration.NLogConfigFileName);
                 if (File.Exists(configPath))
@@ -192,6 +191,27 @@ namespace Stratis.Bitcoin.Configuration.Logging
             }
 
             LogManager.Configuration.LoggingRules.Remove(nullPreInitRule);
+
+            LayoutRenderer.Register("message", (logEvent) => ((logEvent.Parameters == null) ? logEvent.Message : string.Format(logEvent.Message, logEvent.Parameters)).Replace("\n", "\n\t"));
+
+            var consoleTarget = new ColoredConsoleTarget
+            {
+                Name = "console",
+                Layout = "[${level:lowercase=true}]\t${logger}\n\t${message}",
+                AutoFlush = true,
+            };
+            
+            consoleTarget.RowHighlightingRules.Add(new ConsoleRowHighlightingRule("level == LogLevel.Info", ConsoleOutputColor.Gray, ConsoleOutputColor.Black));
+            consoleTarget.RowHighlightingRules.Add(new ConsoleRowHighlightingRule("level == LogLevel.Warn", ConsoleOutputColor.Gray, ConsoleOutputColor.Black));
+            consoleTarget.RowHighlightingRules.Add(new ConsoleRowHighlightingRule("level == LogLevel.Error", ConsoleOutputColor.Gray, ConsoleOutputColor.Black));
+            consoleTarget.WordHighlightingRules.Add(new ConsoleWordHighlightingRule("[info]", ConsoleOutputColor.DarkGreen, ConsoleOutputColor.Black));
+            consoleTarget.WordHighlightingRules.Add(new ConsoleWordHighlightingRule("[warn]", ConsoleOutputColor.Black, ConsoleOutputColor.Yellow));
+            consoleTarget.WordHighlightingRules.Add(new ConsoleWordHighlightingRule("[error]", ConsoleOutputColor.Black, ConsoleOutputColor.Red));
+
+            LogManager.Configuration.AddTarget(consoleTarget);
+
+            // Logging level for console is always Info.
+            LogManager.Configuration.LoggingRules.Add(new LoggingRule($"{nameof(Stratis)}.*", NLog.LogLevel.Info, consoleTarget));
 
             // Configure main file target, configured using command line or node configuration file settings.
             var mainTarget = new FileTarget
