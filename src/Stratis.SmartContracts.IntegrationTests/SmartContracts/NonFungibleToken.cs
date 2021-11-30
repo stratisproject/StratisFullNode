@@ -36,6 +36,9 @@ public class StratisCollectible : SmartContract
     /// <summary>
     /// Note that this does not check the receiver is able to use the token (in case they are a contract without the necessary interface)
     /// </summary>
+    /// <param name="from">The source address of the token.</param>
+    /// <param name="to">The target address for the token.</param>
+    /// <param name="tokenId">The id of the token to transfer.</param>
     public void TransferFrom(Address from, Address to, ulong tokenId)
     {
         Assert(Message.Value == 0); // Don't want to lose any funds
@@ -60,7 +63,7 @@ public class StratisCollectible : SmartContract
         SetBalance(from, BalanceOf(from) - 1);
     }
 
-    public struct Transfer
+    public new struct Transfer
     {
         [Index]
         public ulong TokenId;
@@ -71,5 +74,4 @@ public class StratisCollectible : SmartContract
         [Index]
         public Address To;
     }
-
 }

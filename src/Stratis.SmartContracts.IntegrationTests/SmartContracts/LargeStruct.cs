@@ -8,7 +8,7 @@ public class F : SmartContract
 {
     public F(ISmartContractState state) : base(state)
     {
-        var s = new S();
+        _ = new S();
     }
     struct S
     {
