@@ -338,7 +338,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
                 this.IndexerTip = nextHeader;
             }
-
+            
             this.SaveAll();
         }
 
@@ -546,6 +546,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
             if (!compact)
             {
+                this.addressIndexRepository.AddOrUpdate(indexData.Address, indexData, indexData.BalanceChanges.Count + 1);
+
                 this.logger.LogTrace("(-)[TOO_FEW_CHANGE_RECORDS]");
                 return;
             }
