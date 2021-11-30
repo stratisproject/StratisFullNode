@@ -8,6 +8,7 @@ using CSharpFunctionalExtensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Newtonsoft.Json;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
@@ -17,11 +18,14 @@ using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
+using Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Controllers;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Bitcoin.Utilities.JsonErrors;
+using Stratis.Bitcoin.Utilities.ModelStateErrors;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Caching;
 using Stratis.SmartContracts.CLR.Compilation;
@@ -496,19 +500,62 @@ namespace Stratis.Features.Unity3dApi.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public LocalExecutionResult LocalCallSmartContractTransaction([FromBody] LocalCallContractRequest request)
+        public IActionResult LocalCallSmartContractTransaction([FromBody] LocalCallContractRequest request)
         {
+            if (!this.ModelState.IsValid)
+                return ModelStateErrors.BuildErrorResponse(this.ModelState);
+
             // Rewrite the method name to a property name
             this.RewritePropertyGetterName(request);
 
-            ContractTxData txData = this.smartContractTransactionService.BuildLocalCallTxData(request);
+            try
+            {
+                ContractTxData txData = this.smartContractTransactionService.BuildLocalCallTxData(request);
 
-            ulong height = request.BlockHeight.HasValue ? request.BlockHeight.Value : (ulong)this.chainIndexer.Height;
+                ulong height = request.BlockHeight.HasValue ? request.BlockHeight.Value : (ulong)this.chainIndexer.Height;
 
-            ILocalExecutionResult result = this.localExecutor.Execute(height, request.Sender?.ToUint160(this.network) ?? new uint160(),
-                string.IsNullOrWhiteSpace(request.Amount) ? (Money)request.Amount : 0, txData);
+                ILocalExecutionResult result = this.localExecutor.Execute(
+                    height,
+                    request.Sender?.ToUint160(this.network) ?? new uint160(),
+                    string.IsNullOrWhiteSpace(request.Amount) ? (Money)request.Amount : 0,
+                    txData);
 
-            return result as LocalExecutionResult;
+                return this.Json(result, new JsonSerializerSettings
+                {
+                    ContractResolver = new ContractParametersContractResolver(this.network)
+                });
+            }
+            catch (MethodParameterStringSerializerException e)
+            {
+                return this.Json(ErrorHelpers.BuildErrorResponse(HttpStatusCode.InternalServerError, e.Message,
+                    "Error deserializing method parameters"));
+            }
+        }
+
+        /// <summary>
+        /// Searches a smart contract's receipts for those which match a specific event. The SmartContract.Log() function
+        /// is capable of storing C# structs, and structs are used to store information about different events occurring 
+        /// on the smart contract. For example, a "TransferLog" struct could contain "From" and "To" fields and be used to log
+        /// when a smart contract makes a transfer of funds from one wallet to another. The log entries are held inside the smart contract,
+        /// indexed using the name of the struct, and are linked to individual transaction receipts.
+        /// Therefore, it is possible to return a smart contract's transaction receipts
+        /// which match a specific event (as defined by the struct name).  
+        /// </summary>
+        /// 
+        /// <param name="contractAddress">The contract address from which events were raised.</param>
+        /// <param name="eventName">The name of the event raised.</param>
+        /// <param name="topics">The topics to search. All specified topics must be present.</param>
+        /// <param name="fromBlock">The block number from which to start searching.</param>
+        /// <param name="toBlock">The block number where searching finishes.</param>
+        /// 
+        /// <returns>A list of receipts for transactions relating to a specific smart contract and a specific event in that smart contract.</returns>
+        [Route("api/[controller]/receipt-search")]
+        [HttpGet]
+        public async Task<List<ReceiptResponse>> ReceiptSearchAPI([FromQuery] string contractAddress, [FromQuery] string eventName, [FromQuery] List<string> topics = null, [FromQuery] int fromBlock = 0, [FromQuery] int? toBlock = null)
+        {
+            List<ReceiptResponse> result = this.smartContractTransactionService.ReceiptSearch(contractAddress, eventName, topics, fromBlock, toBlock);
+
+            return result;
         }
 
         /// <summary>

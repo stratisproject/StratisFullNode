@@ -95,6 +95,11 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             }
         }
 
+        public int GetMinRewindHeight()
+        {
+            throw new NotImplementedException();
+        }
+
         public HashHeightPair Rewind()
         {
             throw new NotImplementedException();
@@ -105,7 +110,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             throw new NotImplementedException();
         }
 
-        public void Initialize()
+        public void Initialize(ChainedHeader chainTip = null)
         {
         }
     }

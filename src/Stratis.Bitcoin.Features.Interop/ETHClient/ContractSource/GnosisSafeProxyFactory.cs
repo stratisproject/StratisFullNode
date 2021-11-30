@@ -4,7 +4,7 @@ using Nethereum.Contracts;
 using Nethereum.RPC.Eth.DTOs;
 using Nethereum.Web3;
 
-namespace Stratis.Bitcoin.Features.Interop.ETHClient.ContractSource
+namespace Stratis.Bitcoin.Features.Interop.EthereumClient.ContractSource
 {
     public class GnosisSafeProxyFactoryDeployment : ContractDeploymentMessage
     {
