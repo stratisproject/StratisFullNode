@@ -75,7 +75,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
 
             // Open a connection to a new DB and create if not found
             var options = new Options { CreateIfMissing = true, IsInternalDebugLoggerEnabled = true };
-            this.leveldb = new DB(options, folder);
+            this.leveldb = new DB(options, databaseFolder);
             this.locker = new object();
 
             this.network = network;
