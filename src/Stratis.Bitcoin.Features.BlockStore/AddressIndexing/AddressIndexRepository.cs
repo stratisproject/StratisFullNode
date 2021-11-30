@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using LiteDB;
 using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.Controllers.Models;
@@ -21,7 +22,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         {
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.addressIndexerDataCollection = db.GetCollection<AddressIndexerData>(DbAddressDataKey);
-            this.addressIndexerDataCollection.EnsureIndex("BalanceChangedHeightIndex", "$.BalanceChanges[*].BalanceChangedHeight", false);
+            this.addressIndexerDataCollection.EnsureIndex(x => x.BalanceChanges, false);
         }
 
         /// <summary>Retrieves address data, either the cached version if it exists, or directly from the underlying database.
@@ -56,9 +57,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         public List<string> GetAddressesHigherThanHeight(int height)
         {
             this.SaveAllItems();
-
-            // Need to specify index name explicitly so that it gets used for the query.
-            IEnumerable<AddressIndexerData> affectedAddresses = this.addressIndexerDataCollection.Find(Query.GT("BalanceChangedHeightIndex", height));
+            
+            IEnumerable<AddressIndexerData> affectedAddresses = this.addressIndexerDataCollection
+                .Find(x => x.BalanceChanges.Select(x => x.BalanceChangedHeight).Any(y => y > height));
 
             // Per LiteDb documentation:
             // "Returning an IEnumerable your code still connected to datafile.
