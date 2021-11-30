@@ -20,6 +20,7 @@ using Stratis.Bitcoin.Features.BlockStore.Models;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Utilities;
+using FileMode = LiteDB.FileMode;
 using Script = NBitcoin.Script;
 
 namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
@@ -89,7 +90,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         private LiteDatabase db;
 
-        private ILiteCollection<AddressIndexerTipData> tipDataStore;
+        private LiteCollection<AddressIndexerTipData> tipDataStore;
 
         /// <summary>A mapping between addresses and their balance changes.</summary>
         /// <remarks>All access should be protected by <see cref="lockObject"/>.</remarks>
@@ -118,7 +119,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         private DateTime lastFlushTime;
 
-        private const int PurgeIntervalSeconds = 120;
+        private const int PurgeIntervalSeconds = 60;
 
         /// <summary>Last time rewind data was purged.</summary>
         private DateTime lastPurgeTime;
@@ -191,8 +192,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             }
 
             string dbPath = Path.Combine(this.dataFolder.RootPath, AddressIndexerDatabaseFilename);
-            
-            this.db = new LiteDatabase(new ConnectionString() { Filename = dbPath });
+
+            FileMode fileMode = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? FileMode.Exclusive : FileMode.Shared;
+            this.db = new LiteDatabase(new ConnectionString() { Filename = dbPath, Mode = fileMode });
 
             this.addressIndexRepository = new AddressIndexRepository(this.db, this.loggerFactory);
 
