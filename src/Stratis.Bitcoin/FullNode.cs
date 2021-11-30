@@ -326,6 +326,12 @@ namespace Stratis.Bitcoin
             if (this.nodeRunningLock != null)
                 this.nodeRunningLock.UnlockNodeFolder();
 
+            if (this.DataFolder.ScheduledChainDeletion)
+            {
+                this.logger.LogInformation("Deleting chain state data directories.");
+                this.DataFolder.DeleteChainDirectories();
+            }
+
             this.State = FullNodeState.Disposed;
         }
     }

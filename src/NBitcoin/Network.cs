@@ -457,6 +457,11 @@ namespace NBitcoin
         public string CirrusRewardDummyAddress { get; protected set; }
 
         /// <summary>
+        /// This is used for conversion transaction fee distribution transactions.
+        /// </summary>
+        public string ConversionTransactionFeeDistributionDummyAddress { get; protected set; }
+
+        /// <summary>
         /// The height at which reward batching will be activated.
         /// </summary>
         public int RewardClaimerBatchActivationHeight { get; set; }

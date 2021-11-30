@@ -11,10 +11,13 @@ using Stratis.Bitcoin;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers;
+using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Tests.Common;
+using Stratis.Features.Collateral.CounterChain;
+using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Events;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
@@ -583,7 +586,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         }
 
         [Fact(Skip = "Requires main chain user to be running.")]
-        public void DoTest()
+        public async Task DoTest()
         {
             var transactionRequest = new BuildTransactionRequest()
             {
@@ -603,10 +606,10 @@ namespace Stratis.Features.FederatedPeg.Tests
                 "http://127.0.0.1:38221/api/wallet/build-transaction", transactionRequest);
 
             var transaction = new PosTransaction(model.Hex);
-
-            var reader = new OpReturnDataReader(CirrusNetwork.NetworksSelector.Testnet());
-            var extractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
-            IDeposit deposit = extractor.ExtractDepositFromTransaction(transaction, 2, 1);
+            var counterChainNetwork = new CounterChainNetworkWrapper(CirrusNetwork.NetworksSelector.Testnet());
+            var reader = new OpReturnDataReader(counterChainNetwork.CounterChainNetwork);
+            var extractor = new DepositExtractor(Substitute.For<IConversionRequestRepository>(), this.federatedPegSettings, this.network, reader);
+            IDeposit deposit = await extractor.ExtractDepositFromTransaction(transaction, 2, 1);
 
             Assert.NotNull(deposit);
             Assert.Equal(transaction.GetHash(), deposit.Id);

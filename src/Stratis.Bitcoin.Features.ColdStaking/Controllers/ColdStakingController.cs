@@ -23,25 +23,33 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
     public class ColdStakingController : Controller
     {
         public ColdStakingManager ColdStakingManager { get; private set; }
+        
         private readonly IWalletTransactionHandler walletTransactionHandler;
+        private readonly IWalletFeePolicy walletFeePolicy;
+        private readonly IBroadcasterManager broadcasterManager;
 
-        /// <summary>Instance logger.</summary>
         private readonly ILogger logger;
 
         public ColdStakingController(
             ILoggerFactory loggerFactory,
             IWalletManager walletManager,
-            IWalletTransactionHandler walletTransactionHandler)
+            IWalletTransactionHandler walletTransactionHandler,
+            IWalletFeePolicy walletFeePolicy,
+            IBroadcasterManager broadcasterManager)
         {
             Guard.NotNull(loggerFactory, nameof(loggerFactory));
             Guard.NotNull(walletManager, nameof(walletManager));
             Guard.NotNull(walletTransactionHandler, nameof(walletTransactionHandler));
+            Guard.NotNull(walletFeePolicy, nameof(walletFeePolicy));
+            Guard.NotNull(broadcasterManager, nameof(broadcasterManager));
 
             this.ColdStakingManager = walletManager as ColdStakingManager;
             Guard.NotNull(this.ColdStakingManager, nameof(this.ColdStakingManager));
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.walletTransactionHandler = walletTransactionHandler;
+            this.walletFeePolicy = walletFeePolicy;
+            this.broadcasterManager = broadcasterManager;
         }
 
         /// <summary>
@@ -581,6 +589,46 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
                 this.logger.LogTrace("(-):'{0}'", estimatedFee);
 
                 return this.Json(estimatedFee);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                this.logger.LogTrace("(-)[ERROR]");
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        [Route("retrieve-filtered-utxos")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult RetrieveFilteredUtxos([FromBody] RetrieveFilteredUtxosRequest request)
+        {
+            Guard.NotNull(request, nameof(request));
+
+            // Checks the request is valid.
+            if (!this.ModelState.IsValid)
+            {
+                this.logger.LogTrace("(-)[MODEL_STATE_INVALID]");
+                return ModelStateErrors.BuildErrorResponse(this.ModelState);
+            }
+
+            try
+            {
+                FeeRate feeRate = this.walletFeePolicy.GetFeeRate(FeeType.High.ToConfirmations());
+
+                List<Transaction> retrievalTransactions = this.ColdStakingManager.RetrieveFilteredUtxos(request.WalletName, request.WalletPassword, request.Hex, feeRate, request.WalletAccount);
+
+                if (request.Broadcast)
+                {
+                    foreach (Transaction transaction in retrievalTransactions)
+                    {
+                        this.broadcasterManager.BroadcastTransactionAsync(transaction);
+                    }
+                }
+
+                return this.Json(retrievalTransactions.Select(t => t.ToHex()));
             }
             catch (Exception e)
             {

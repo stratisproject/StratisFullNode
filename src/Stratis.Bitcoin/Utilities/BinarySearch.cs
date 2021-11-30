@@ -4,22 +4,28 @@ namespace Stratis.Bitcoin.Utilities
 {
     public class BinarySearch
     {
-        private static T BinaryFindFirst<T>(T[] array, Func<T, bool?> func, int first, int length)
+        /// <summary>
+        /// Finds the first index in a range which evaluates to <c>true</c> when <paramref name="func"/> is applied to it.
+        /// The range should strictly contain zero or more indexes for which <paramref name="func"/> evaluates to <c>false</c>
+        /// optionally followed by indexes that evalates to <c>true</c>. The range may contain some indexes that evaluate to <c>null</c>.
+        /// </summary>
+        /// <returns>The first index that evaluate to <c>true</c>. Returns <c>null</c> if no such index is found.</returns>
+        public static int BinaryFindFirst(Func<int, bool?> func, int first, int length)
         {
             // If the last item does not fit the criteria then don't bother looking any further.
-            bool? res = (length >= 1) ? func(array[first + length - 1]) : false;
+            bool? res = (length >= 1) ? func(first + length - 1) : false;
             if (res == false)
-                return default;
+                return -1;
 
             // If there is only one item left then it determines the outcome.
             if (length == 1)
-                return (res == true) ? array[first] : default;
+                return (res == true) ? first : -1;
 
             // Otherwise split the array in two and search each half.
             int pivot = length / 2;
-            var result = BinaryFindFirst(array, func, first, pivot);
-            if (result == null)
-                return BinaryFindFirst(array, func, first + pivot, length - pivot);
+            var result = BinaryFindFirst(func, first, pivot);
+            if (result == -1)
+                return BinaryFindFirst(func, first + pivot, length - pivot);
             return result;
         }
 
@@ -32,7 +38,12 @@ namespace Stratis.Bitcoin.Utilities
         public static T BinaryFindFirst<T>(T[] array, Func<T, bool?> func)
         {
             Guard.Assert(default(T) == null);
-            return BinaryFindFirst<T>(array, func, 0, array.Length);
+
+            int pos = BinaryFindFirst(index => func(array[index]), 0, array.Length);
+            if (pos < 0)
+                return default(T);
+
+            return array[pos];
         }
     }
 }

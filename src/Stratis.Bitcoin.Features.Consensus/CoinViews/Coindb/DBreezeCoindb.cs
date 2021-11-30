@@ -65,7 +65,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 300);
         }
 
-        public void Initialize()
+        public void Initialize(ChainedHeader chainTip)
         {
             Block genesis = this.network.GetGenesis();
 
@@ -238,6 +238,22 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 transaction.SynchronizeTables("BlockHash", "Coins", "Rewind");
                 Row<int, byte[]> row = transaction.Select<int, byte[]>("Rewind", height);
                 return row.Exists ? this.dBreezeSerializer.Deserialize<RewindData>(row.Value) : null;
+            }
+        }
+
+        /// <inheritdoc />
+        public int GetMinRewindHeight()
+        {
+            using (DBreeze.Transactions.Transaction transaction = this.CreateTransaction())
+            {
+                Row<int, byte[]> row = transaction.SelectForward<int, byte[]>("Rewind").FirstOrDefault();
+
+                if (!row.Exists)
+                {
+                    return -1;
+                }
+
+                return row.Key;
             }
         }
 

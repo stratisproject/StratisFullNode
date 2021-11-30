@@ -4,6 +4,7 @@ using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.BlockStore;
+using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.Interop;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Notifications;
@@ -59,6 +60,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
                 .UseApi()
                 .UseMempool()
                 .AddRPC()
+                .AddExternalApi()
                 .AddSmartContracts(options =>
                 {
                     options.UseReflectionExecutor();

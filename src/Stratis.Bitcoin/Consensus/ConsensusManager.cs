@@ -14,6 +14,7 @@ using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus.PerformanceCounters.ConsensusManager;
 using Stratis.Bitcoin.Consensus.ValidationResults;
 using Stratis.Bitcoin.Consensus.Validators;
+using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.P2P.Peer;
@@ -905,9 +906,12 @@ namespace Stratis.Bitcoin.Consensus
             {
                 var badPeers = new List<int>();
 
-                lock (this.peerLock)
+                if (!validationContext.InsufficientHeaderInformation)
                 {
-                    badPeers = this.chainedHeaderTree.PartialOrFullValidationFailed(blockToConnect.ChainedHeader);
+                    lock (this.peerLock)
+                    {
+                        badPeers = this.chainedHeaderTree.PartialOrFullValidationFailed(blockToConnect.ChainedHeader);
+                    }
                 }
 
                 var failureResult = new ConnectBlocksResult(false)
@@ -1478,7 +1482,9 @@ namespace Stratis.Bitcoin.Consensus
         [NoTrace]
         private void AddBenchStats(StringBuilder benchLog)
         {
-            benchLog.AppendLine(this.performanceCounter.TakeSnapshot().ToString());
+            benchLog.Append(this.performanceCounter.TakeSnapshot().ToString());
+            benchLog.AppendLine();
+            benchLog.AppendLine(((InMemoryEventBus)this.signals).GetPerformanceCounter().TakeSnapshot().GetEventStats(typeof(BlockConnected)));
         }
 
         [NoTrace]

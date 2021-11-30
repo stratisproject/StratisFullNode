@@ -23,7 +23,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         private readonly object locker;
         private readonly ILogger logger;
         private readonly Network network;
-        private readonly RocksDb rocksDb;
+        private RocksDb rocksDb;
 
         /// <inheritdoc />
         public HashHeightPair TipHashHeight { get; private set; }
@@ -57,9 +57,6 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
             this.dataFolder = dataFolder;
             Directory.CreateDirectory(dataFolder);
 
-            var dbOptions = new DbOptions().SetCreateIfMissing(true);
-            this.rocksDb = RocksDb.Open(dbOptions, this.dataFolder);
-
             this.locker = new object();
             this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
@@ -70,6 +67,9 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         {
             Task task = Task.Run(() =>
             {
+                var dbOptions = new DbOptions().SetCreateIfMissing(true);
+                this.rocksDb = RocksDb.Open(dbOptions, this.dataFolder);
+
                 this.TipHashHeight = this.GetTipHash();
 
                 if (this.TipHashHeight != null)
