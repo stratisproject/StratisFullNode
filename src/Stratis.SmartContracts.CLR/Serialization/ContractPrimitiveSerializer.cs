@@ -141,7 +141,7 @@ namespace Stratis.SmartContracts.CLR.Serialization
 
         public object Deserialize(Type type, byte[] stream)
         {
-            if (stream == null || stream.Length == 0)
+            if (stream == null)
                 return null;
 
             return Type.GetTypeCode(type) switch
