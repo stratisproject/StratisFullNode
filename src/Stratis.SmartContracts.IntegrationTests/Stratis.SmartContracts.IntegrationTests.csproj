@@ -138,9 +138,6 @@
     <Compile Update="SmartContracts\NonDeterministicContract.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Compile>
-    <Compile Update="SmartContracts\NonFungibleToken.cs">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Compile>
     <Compile Update="SmartContracts\PrivateMethod.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
      </Compile>
