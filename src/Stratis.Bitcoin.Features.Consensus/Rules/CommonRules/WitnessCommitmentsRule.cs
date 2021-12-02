@@ -27,6 +27,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         /// <summary>
         /// Validation of the witness commitment if its found.
         /// </summary>
+        /// <param name="context">The <see cref="RuleContext"/> including the block to validate.</param>
+        /// <param name="network">The nwetwork to validate the commitment for.</param>
+        /// <returns>The asynchronous task.</returns>
         public Task ValidateWitnessCommitment(RuleContext context, Network network)
         { 
             if (context.SkipValidation)
@@ -114,6 +117,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         /// <summary>
         /// Gets commitment in the last coinbase transaction output with SegWit flag.
         /// </summary>
+        /// <param name="network">The network context.</param>
         /// <param name="block">Block which coinbase transaction's outputs will be checked for SegWit flags.</param>
         /// <returns>
         /// <c>null</c> if no SegWit flags were found.
@@ -154,6 +158,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         /// <summary>
         /// Clear all witness commitments from the block.
         /// </summary>
+        /// <param name="network">The network context.</param>
+        /// <param name="block">The block to clear commitments from.</param>
         public static void ClearWitnessCommitment(Network network, Block block)
         {
             if (network.Consensus.IsProofOfStake && network.Consensus.PosEmptyCoinbase)
@@ -185,6 +191,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         /// <summary>
         /// Create a witness commitment based from the given block.
         /// </summary>
+        /// <param name="network">The network context.</param>
+        /// <param name="block">The block to create commitments in.</param>
         public static void CreateWitnessCommitment(Network network, Block block)
         {
             var wtxidCoinbase = new byte[32];       // The wtxid of the coinbase transaction is defined as to be 0x0000....0000.

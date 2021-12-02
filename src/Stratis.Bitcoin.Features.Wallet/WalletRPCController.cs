@@ -126,8 +126,6 @@ namespace Stratis.Bitcoin.Features.Wallet
         [ActionDescription("Sends money to an address. Requires wallet to be unlocked using walletpassphrase.")]
         public async Task<uint256> SendToAddressAsync(BitcoinAddress address, decimal amount, string commentTx, string commentDest)
         {
-            WalletAccountReference account = this.GetWalletAccountReference();
-
             TransactionBuildContext context = new TransactionBuildContext(this.FullNode.Network)
             {
                 AccountReference = this.GetWalletAccountReference(),
@@ -154,7 +152,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
         [ActionName("fundrawtransaction")]
         [ActionDescription("Add inputs to a transaction until it has enough in value to meet its out value. Note that signing is performed separately.")]
-        public async Task<FundRawTransactionResponse> FundRawTransactionAsync(string rawHex, FundRawTransactionOptions options = null, bool? isWitness = null)
+        public Task<FundRawTransactionResponse> FundRawTransactionAsync(string rawHex, FundRawTransactionOptions options = null, bool? isWitness = null)
         {
             try
             {
@@ -300,12 +298,12 @@ namespace Stratis.Bitcoin.Features.Wallet
                     }
                 }
 
-                return new FundRawTransactionResponse()
+                return Task.FromResult(new FundRawTransactionResponse()
                 {
                     ChangePos = foundChange,
                     Fee = context.TransactionFee,
                     Transaction = rawTx
-                };
+                });
             }
             catch (SecurityException)
             {
@@ -325,7 +323,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <returns>The hex format of the transaction once it has been signed.</returns>
         [ActionName("signrawtransaction")]
         [ActionDescription("Sign inputs for raw transaction. Requires all affected wallets to be unlocked using walletpassphrase.")]
-        public async Task<SignRawTransactionResponse> SignRawTransactionAsync(string rawHex)
+        public Task<SignRawTransactionResponse> SignRawTransactionAsync(string rawHex)
         {
             try
             {
@@ -372,11 +370,11 @@ namespace Stratis.Bitcoin.Features.Wallet
                 builder.AddKeys(signingKeys.ToArray());
                 builder.SignTransactionInPlace(rawTx);
 
-                return new SignRawTransactionResponse()
+                return Task.FromResult(new SignRawTransactionResponse()
                 {
                     Transaction = rawTx,
                     Complete = true
-                };
+                });
             }
             catch (SecurityException)
             {
@@ -461,10 +459,11 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// Uses the default wallet if specified, or the first wallet found.
         /// </summary>
         /// <param name="txid">Identifier of the transaction to find.</param>
+        /// <param name="include_watchonly">Set to <c>true</c> to search the watch-only account.</param>
         /// <returns>Transaction information.</returns>
         [ActionName("gettransaction")]
         [ActionDescription("Get detailed information about an in-wallet transaction.")]
-        public async Task<object> GetTransaction(string txid, bool include_watchonly = false)
+        public Task<object> GetTransaction(string txid, bool include_watchonly = false)
         {
             if (!uint256.TryParse(txid, out uint256 trxid))
                 throw new ArgumentException(nameof(txid));
@@ -473,7 +472,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             {
                 WalletHistoryModel history = GetWatchOnlyTransaction(trxid);
                 if ((history?.AccountsHistoryModel?.FirstOrDefault()?.TransactionsHistory?.Count ?? 0) != 0)
-                    return history;
+                    return Task.FromResult<object>(history);
             }
 
             // First check the regular wallet accounts.
@@ -637,13 +636,15 @@ namespace Stratis.Bitcoin.Features.Wallet
             model.Amount = model.Details.Sum(d => d.Amount);
             model.Fee = model.Details.FirstOrDefault(d => d.Category == GetTransactionDetailsCategoryModel.Send)?.Fee;
 
-            return model;
+            return Task.FromResult<object>(model);
         }
 
 
         /// <summary>
         /// We get the details via the wallet service's history method.
         /// </summary>
+        /// <param name="trxid">The hash of the transaction to get.</param>
+        /// <returns>See <see cref="WalletHistoryModel"/>.</returns>
         private WalletHistoryModel GetWatchOnlyTransaction(uint256 trxid)
         {
             var accountReference = this.GetWatchOnlyWalletAccountReference();
@@ -760,30 +761,41 @@ namespace Stratis.Bitcoin.Features.Wallet
                 JsonConvert.DeserializeObject<List<string>>(addressesJson).ForEach(i => addresses.Add(BitcoinAddress.Create(i, this.FullNode.Network)));
             }
 
-            WalletAccountReference accountReference = this.GetWalletAccountReference();
-            IEnumerable<UnspentOutputReference> spendableTransactions = this.walletManager.GetSpendableTransactionsInAccount(accountReference, minConfirmations);
-
+            string walletName = this.GetWallet();
+            var accounts = this.walletManager.GetAccounts(walletName, Wallet.AllAccounts);
             var unspentCoins = new List<UnspentCoinModel>();
-            foreach (var spendableTx in spendableTransactions)
+
+            foreach (var account in accounts)
             {
-                if (spendableTx.Confirmations <= maxConfirmations)
+                // The intention here is to filter out cold staking accounts. The watch only account can be included.
+                if (!account.IsNormalAccount() && account.Name != Wallet.WatchOnlyAccountName)
+                    continue;
+
+                WalletAccountReference accountReference = new WalletAccountReference(walletName, account.Name);
+            
+                IEnumerable<UnspentOutputReference> spendableTransactions = this.walletManager.GetSpendableTransactionsInAccount(accountReference, minConfirmations);
+
+                foreach (var spendableTx in spendableTransactions)
                 {
-                    if (!addresses.Any() || addresses.Contains(BitcoinAddress.Create(spendableTx.Address.Address, this.FullNode.Network)))
+                    if (spendableTx.Confirmations > maxConfirmations)
+                        continue;
+
+                    if (addresses.Any() && !addresses.Contains(BitcoinAddress.Create(spendableTx.Address.Address, this.FullNode.Network)))
+                        continue;
+
+                    unspentCoins.Add(new UnspentCoinModel()
                     {
-                        unspentCoins.Add(new UnspentCoinModel()
-                        {
-                            Account = accountReference.AccountName,
-                            Address = spendableTx.Address.Address,
-                            Id = spendableTx.Transaction.Id,
-                            Index = spendableTx.Transaction.Index,
-                            Amount = spendableTx.Transaction.Amount,
-                            ScriptPubKeyHex = spendableTx.Transaction.ScriptPubKey.ToHex(),
-                            RedeemScriptHex = null, // TODO: Currently don't support P2SH wallet addresses, review if we do.
-                            Confirmations = spendableTx.Confirmations,
-                            IsSpendable = !spendableTx.Transaction.IsSpent(),
-                            IsSolvable = !spendableTx.Transaction.IsSpent() // If it's spendable we assume it's solvable.
-                        });
-                    }
+                        Account = accountReference.AccountName,
+                        Address = spendableTx.Address.Address,
+                        Id = spendableTx.Transaction.Id,
+                        Index = spendableTx.Transaction.Index,
+                        Amount = spendableTx.Transaction.Amount,
+                        ScriptPubKeyHex = spendableTx.Transaction.ScriptPubKey.ToHex(),
+                        RedeemScriptHex = null, // TODO: Currently don't support P2SH wallet addresses, review if we do.
+                        Confirmations = spendableTx.Confirmations,
+                        IsSpendable = (!spendableTx.Transaction.IsSpent()) && (spendableTx.Account.Name != Wallet.WatchOnlyAccountName),
+                        IsSolvable = (!spendableTx.Transaction.IsSpent()) && (spendableTx.Account.Name != Wallet.WatchOnlyAccountName) // If it's spendable we assume it's solvable.
+                    });
                 }
             }
 
@@ -931,11 +943,10 @@ namespace Stratis.Bitcoin.Features.Wallet
         }
 
         /// <summary>
-        /// Gets the first account from the "default" wallet if it is specified,
-        /// otherwise returns the first available account in the existing wallets.
+        /// Gets the name of the wallet currently associated with RPC. This can be changed via the 'setwallet' RPC command.
         /// </summary>
-        /// <returns>Reference to the default wallet account, or the first available if no default wallet is specified.</returns>
-        private WalletAccountReference GetWalletAccountReference()
+        /// <returns>The active wallet name.</returns>
+        private string GetWallet()
         {
             string walletName = null;
 
@@ -958,6 +969,18 @@ namespace Stratis.Bitcoin.Features.Wallet
             if (walletName == null)
                 throw new RPCServerException(RPCErrorCode.RPC_INVALID_REQUEST, "No wallet found");
 
+            return walletName;
+        }
+
+        /// <summary>
+        /// Gets the first account from the "default" wallet if it is specified,
+        /// otherwise returns the first available account in the existing wallets.
+        /// </summary>
+        /// <returns>Reference to the default wallet account, or the first available if no default wallet is specified.</returns>
+        private WalletAccountReference GetWalletAccountReference()
+        {
+            string walletName = GetWallet();
+
             HdAccount account = this.walletManager.GetAccounts(walletName).FirstOrDefault();
 
             if (account == null)
@@ -973,23 +996,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <returns>Reference to the default wallet watch only account, or the first available if no default wallet is specified.</returns>
         private WalletAccountReference GetWatchOnlyWalletAccountReference()
         {
-            string walletName = null;
-
-            if (string.IsNullOrWhiteSpace(WalletRPCController.CurrentWalletName))
-            {
-                if (this.walletSettings.IsDefaultWalletEnabled())
-                    walletName = this.walletManager.GetWalletsNames().FirstOrDefault(w => w == this.walletSettings.DefaultWalletName);
-                else
-                {
-                    // TODO: Support multi wallet like core by mapping passed RPC credentials to a wallet/account
-                    walletName = this.walletManager.GetWalletsNames().FirstOrDefault();
-                }
-            }
-            else
-            {
-                // Read the wallet name from the class instance.
-                walletName = WalletRPCController.CurrentWalletName;
-            }
+            string walletName = GetWallet();
 
             if (walletName == null)
                 throw new RPCServerException(RPCErrorCode.RPC_INVALID_REQUEST, "No wallet found");

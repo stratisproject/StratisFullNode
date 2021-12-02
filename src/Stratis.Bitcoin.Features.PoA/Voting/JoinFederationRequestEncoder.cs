@@ -18,7 +18,9 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
             this.logger = LogManager.GetCurrentClassLogger();
         }
 
-        /// <summary>Encodes voting request data.</summary>
+        /// <summary>Encodes voting request data as an array of bytes.</summary>
+        /// <param name="votingRequestData">See <see cref="JoinFederationRequest"/>.</param>
+        /// <returns>An array of bytes encoding the voting request.</returns>
         public byte[] Encode(JoinFederationRequest votingRequestData)
         {
             using (var memoryStream = new MemoryStream())
@@ -32,8 +34,10 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
             }
         }
 
-        /// <summary>Decodes the voting request.</summary>
+        /// <summary>Decodes a voting request that had previously been encoded as an array of bytes.</summary>
         /// <exception cref="PoAConsensusErrors.VotingDataInvalidFormat">Thrown in case voting data format is invalid.</exception>
+        /// <param name="votingRequestDataBytes">An array of bytes encoding the voting request.</param>
+        /// <returns>The <see cref="JoinFederationRequest"/>.</returns>
         public JoinFederationRequest Decode(byte[] votingRequestDataBytes)
         {
             try

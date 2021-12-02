@@ -52,7 +52,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         {
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GenerateMnemonic();
+            IActionResult result = await controller.GenerateMnemonicAsync();
 
             var viewResult = Assert.IsType<JsonResult>(result);
 
@@ -71,7 +71,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         {
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GenerateMnemonic(wordCount: 24);
+            IActionResult result = await controller.GenerateMnemonicAsync(wordCount: 24);
 
             var viewResult = Assert.IsType<JsonResult>(result);
 
@@ -94,7 +94,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             var controller = this.GetWalletController();
             var wordList = (Wordlist)WordLists[language].GetValue(null, null);
 
-            IActionResult result = await controller.GenerateMnemonic(language);
+            IActionResult result = await controller.GenerateMnemonicAsync(language);
 
             var viewResult = Assert.IsType<JsonResult>(result);
 
@@ -110,7 +110,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         {
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GenerateMnemonic("invalidlanguage");
+            IActionResult result = await controller.GenerateMnemonicAsync("invalidlanguage");
 
             var errorResult = Assert.IsType<ErrorResult>(result);
             var errorResponse = Assert.IsType<ErrorResponse>(errorResult.Value);
@@ -138,7 +138,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.Create(new WalletCreationRequest
+            IActionResult result = await controller.CreateAsync(new WalletCreationRequest
             {
                 Name = "myName",
                 Password = "",
@@ -158,7 +158,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             controller.ModelState.AddModelError("Name", "Name cannot be empty.");
 
-            IActionResult result = await controller.Create(new WalletCreationRequest
+            IActionResult result = await controller.CreateAsync(new WalletCreationRequest
             {
                 Name = "",
                 Password = "",
@@ -189,7 +189,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.Create(new WalletCreationRequest
+            IActionResult result = await controller.CreateAsync(new WalletCreationRequest
             {
                 Name = "myName",
                 Password = "",
@@ -221,7 +221,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.Create(new WalletCreationRequest
+            IActionResult result = await controller.CreateAsync(new WalletCreationRequest
             {
                 Name = "myName",
                 Password = "",
@@ -260,7 +260,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.Recover(new WalletRecoveryRequest
+            IActionResult result = await controller.RecoverAsync(new WalletRecoveryRequest
             {
                 Name = "myWallet",
                 Password = "",
@@ -277,6 +277,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         /// and the user recovers a new wallet at height X + Y.
         /// The wallet should continue syncing from X without jumpoing forward.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task RecoverWalletWithDatedAfterCurrentSyncHeightDoesNotMoveSyncHeightAsync()
         {
@@ -303,7 +304,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.Recover(new WalletRecoveryRequest
+            IActionResult result = await controller.RecoverAsync(new WalletRecoveryRequest
             {
                 Name = "myWallet",
                 Password = "",
@@ -324,7 +325,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             controller.ModelState.AddModelError("Password", "A password is required.");
 
-            IActionResult result = await controller.Recover(new WalletRecoveryRequest
+            IActionResult result = await controller.RecoverAsync(new WalletRecoveryRequest
             {
                 Name = "myWallet",
                 Password = "",
@@ -355,7 +356,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.Recover(new WalletRecoveryRequest
+            IActionResult result = await controller.RecoverAsync(new WalletRecoveryRequest
             {
                 Name = "myWallet",
                 Password = "",
@@ -385,7 +386,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.Recover(new WalletRecoveryRequest
+            IActionResult result = await controller.RecoverAsync(new WalletRecoveryRequest
             {
                 Name = "myWallet",
                 Password = "",
@@ -416,7 +417,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.Recover(new WalletRecoveryRequest
+            IActionResult result = await controller.RecoverAsync(new WalletRecoveryRequest
             {
                 Name = "myWallet",
                 Password = "",
@@ -473,7 +474,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.RecoverViaExtPubKey(new WalletExtPubRecoveryRequest
+            IActionResult result = await controller.RecoverViaExtPubKeyAsync(new WalletExtPubRecoveryRequest
             {
                 Name = walletName,
                 ExtPubKey = extPubKey,
@@ -522,7 +523,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.RecoverViaExtPubKey(new WalletExtPubRecoveryRequest
+            IActionResult result = await controller.RecoverViaExtPubKeyAsync(new WalletExtPubRecoveryRequest
             {
                 Name = walletName,
                 ExtPubKey = extPubKey,
@@ -549,7 +550,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.Load(new WalletLoadRequest
+            IActionResult result = await controller.LoadAsync(new WalletLoadRequest
             {
                 Name = "myWallet",
                 Password = ""
@@ -567,7 +568,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             controller.ModelState.AddModelError("Password", "A password is required.");
 
-            IActionResult result = await controller.Load(new WalletLoadRequest
+            IActionResult result = await controller.LoadAsync(new WalletLoadRequest
             {
                 Name = "myWallet",
                 Password = ""
@@ -591,7 +592,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.Load(new WalletLoadRequest
+            IActionResult result = await controller.LoadAsync(new WalletLoadRequest
             {
                 Name = "myName",
                 Password = ""
@@ -617,7 +618,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.Load(new WalletLoadRequest
+            IActionResult result = await controller.LoadAsync(new WalletLoadRequest
             {
                 Name = "myName",
                 Password = ""
@@ -643,7 +644,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.Load(new WalletLoadRequest
+            IActionResult result = await controller.LoadAsync(new WalletLoadRequest
             {
                 Name = "myName",
                 Password = ""
@@ -847,7 +848,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetBalance(new WalletBalanceRequest
+            IActionResult result = await controller.GetBalanceAsync(new WalletBalanceRequest
             {
                 WalletName = "myWallet"
             });
@@ -876,7 +877,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task WalletSyncFromDateReturnsOK()
+        public async Task WalletSyncFromDateReturnsOKAsync()
         {
             string walletName = "myWallet";
             DateTime syncDate = DateTime.Now.Subtract(new TimeSpan(1)).Date;
@@ -888,7 +889,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.SyncFromDate(new WalletSyncRequest
+            IActionResult result = await controller.SyncFromDateAsync(new WalletSyncRequest
             {
                 WalletName = walletName,
                 Date = DateTime.Now.Subtract(new TimeSpan(1)).Date
@@ -897,11 +898,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             var viewResult = Assert.IsType<OkResult>(result);
             mockWalletSyncManager.Verify();
             Assert.NotNull(viewResult);
-            Assert.NotNull(viewResult.StatusCode == (int)HttpStatusCode.OK);
+            Assert.Equal((int)HttpStatusCode.OK, viewResult.StatusCode);
         }
 
         [Fact]
-        public async Task WalletSyncAllReturnsOK()
+        public async Task WalletSyncAllReturnsOKAsync()
         {
             string walletName = "myWallet";
 
@@ -912,7 +913,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.SyncFromDate(new WalletSyncRequest
+            IActionResult result = await controller.SyncFromDateAsync(new WalletSyncRequest
             {
                 WalletName = walletName,
                 All = true
@@ -921,11 +922,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             var viewResult = Assert.IsType<OkResult>(result);
             mockWalletSyncManager.Verify();
             Assert.NotNull(viewResult);
-            Assert.NotNull(viewResult.StatusCode == (int)HttpStatusCode.OK);
+            Assert.Equal((int)HttpStatusCode.OK, viewResult.StatusCode);
         }
 
         [Fact]
-        public async Task GetBalanceWithEmptyListOfAccountsReturnsWalletBalanceModel()
+        public async Task GetBalanceWithEmptyListOfAccountsReturnsWalletBalanceModelAsync()
         {
             var accounts = new List<HdAccount>();
             var mockWalletManager = new Mock<IWalletManager>();
@@ -934,7 +935,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetBalance(new WalletBalanceRequest
+            IActionResult result = await controller.GetBalanceAsync(new WalletBalanceRequest
             {
                 WalletName = "myWallet",
                 AccountName = null
@@ -948,12 +949,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task GetBalanceWithInvalidValidModelStateReturnsBadRequest()
+        public async Task GetBalanceWithInvalidValidModelStateReturnsBadRequestAsync()
         {
             var controller = this.GetWalletController();
 
             controller.ModelState.AddModelError("WalletName", "A walletname is required.");
-            IActionResult result = await controller.GetBalance(new WalletBalanceRequest
+            IActionResult result = await controller.GetBalanceAsync(new WalletBalanceRequest
             {
                 WalletName = ""
             });
@@ -968,7 +969,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task GetBalanceWithExceptionReturnsBadRequest()
+        public async Task GetBalanceWithExceptionReturnsBadRequestAsync()
         {
             var mockWalletManager = this.ConfigureMock<IWalletManager>();
             mockWalletManager.Setup(m => m.GetBalances("myWallet", WalletManager.DefaultAccount, It.IsAny<int>()))
@@ -976,7 +977,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetBalance(new WalletBalanceRequest
+            IActionResult result = await controller.GetBalanceAsync(new WalletBalanceRequest
             {
                 WalletName = "myWallet"
             });
@@ -992,7 +993,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task GetAddressBalanceWithValidModelStateReturnsAddressBalanceModel()
+        public async Task GetAddressBalanceWithValidModelStateReturnsAddressBalanceModelAsync()
         {
             HdAccount account = WalletTestsHelpers.CreateAccount("account 1");
             HdAddress accountAddress = WalletTestsHelpers.CreateAddress(true);
@@ -1011,7 +1012,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetReceivedByAddress(new ReceivedByAddressRequest
+            IActionResult result = await controller.GetReceivedByAddressAsync(new ReceivedByAddressRequest
             {
                 Address = accountAddress.Address
             });
@@ -1027,7 +1028,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task GetAddressBalanceWithExceptionReturnsBadRequest()
+        public async Task GetAddressBalanceWithExceptionReturnsBadRequestAsync()
         {
             var mockWalletManager = this.ConfigureMock<IWalletManager>();
             mockWalletManager.Setup(m => m.GetAddressBalance("MyAddress"))
@@ -1035,7 +1036,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetReceivedByAddress(new ReceivedByAddressRequest
+            IActionResult result = await controller.GetReceivedByAddressAsync(new ReceivedByAddressRequest
             {
                 Address = "MyAddress"
             });
@@ -1051,12 +1052,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task GetAddressBalanceWithInvalidModelStateReturnsBadRequest()
+        public async Task GetAddressBalanceWithInvalidModelStateReturnsBadRequestAsync()
         {
             var controller = this.GetWalletController();
 
             controller.ModelState.AddModelError("Address", "An address is required.");
-            IActionResult result = await controller.GetReceivedByAddress(new ReceivedByAddressRequest
+            IActionResult result = await controller.GetReceivedByAddressAsync(new ReceivedByAddressRequest
             {
                 Address = ""
             });
@@ -1071,7 +1072,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task BuildTransactionWithValidRequestAllowingUnconfirmedReturnsWalletBuildTransactionModel()
+        public async Task BuildTransactionWithValidRequestAllowingUnconfirmedReturnsWalletBuildTransactionModelAsync()
         {
             var mockWalletTransactionHandler = this.ConfigureMock<IWalletTransactionHandler>();
 
@@ -1082,7 +1083,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.BuildTransaction(new BuildTransactionRequest
+            IActionResult result = await controller.BuildTransactionAsync(new BuildTransactionRequest
             {
                 AccountName = "Account 1",
                 AllowUnconfirmed = true,
@@ -1108,7 +1109,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task BuildTransactionWithCustomFeeAmountAndFeeTypeReturnsWalletBuildTransactionModelWithFeeAmount()
+        public async Task BuildTransactionWithCustomFeeAmountAndFeeTypeReturnsWalletBuildTransactionModelWithFeeAmountAsync()
         {
             var key = new Key();
             this.ConfigureMock<IWalletTransactionHandler>(mock =>
@@ -1120,7 +1121,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.BuildTransaction(new BuildTransactionRequest
+            IActionResult result = await controller.BuildTransactionAsync(new BuildTransactionRequest
             {
                 AccountName = "Account 1",
                 AllowUnconfirmed = true,
@@ -1147,7 +1148,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
         [Fact]
         public async Task
-            BuildTransactionWithCustomFeeAmountAndNoFeeTypeReturnsWalletBuildTransactionModelWithFeeAmount()
+            BuildTransactionWithCustomFeeAmountAndNoFeeTypeReturnsWalletBuildTransactionModelWithFeeAmountAsync()
         {
             var key = new Key();
             this.ConfigureMock<IWalletTransactionHandler>(mock =>
@@ -1159,7 +1160,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.BuildTransaction(new BuildTransactionRequest
+            IActionResult result = await controller.BuildTransactionAsync(new BuildTransactionRequest
             {
                 AccountName = "Account 1",
                 AllowUnconfirmed = true,
@@ -1184,7 +1185,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task BuildTransactionWithValidRequestNotAllowingUnconfirmedReturnsWalletBuildTransactionModel()
+        public async Task BuildTransactionWithValidRequestNotAllowingUnconfirmedReturnsWalletBuildTransactionModelAsync()
         {
             var key = new Key();
             var sentTrx = new Transaction();
@@ -1196,7 +1197,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.BuildTransaction(new BuildTransactionRequest
+            IActionResult result = await controller.BuildTransactionAsync(new BuildTransactionRequest
             {
                 AccountName = "Account 1",
                 AllowUnconfirmed = false,
@@ -1222,7 +1223,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task BuildTransactionWithChangeAddressReturnsWalletBuildTransactionModel()
+        public async Task BuildTransactionWithChangeAddressReturnsWalletBuildTransactionModelAsync()
         {
             string walletName = "myWallet";
 
@@ -1245,7 +1246,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.BuildTransaction(new BuildTransactionRequest
+            IActionResult result = await controller.BuildTransactionAsync(new BuildTransactionRequest
             {
                 AccountName = "Account 0",
                 Recipients = new List<RecipientModel>() { new RecipientModel() { Amount = "1.0", DestinationAddress = new Key().PubKey.Hash.GetAddress(this.Network).ToString() } },
@@ -1265,7 +1266,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task BuildTransactionWithChangeAddressNotInWalletReturnsBadRequest()
+        public async Task BuildTransactionWithChangeAddressNotInWalletReturnsBadRequestAsync()
         {
             string walletName = "myWallet";
 
@@ -1281,7 +1282,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.BuildTransaction(new BuildTransactionRequest
+            IActionResult result = await controller.BuildTransactionAsync(new BuildTransactionRequest
             {
                 AccountName = "Account 0",
                 Recipients = new List<RecipientModel>() { new RecipientModel() { Amount = "1.0", DestinationAddress = new Key().PubKey.Hash.GetAddress(this.Network).ToString() } },
@@ -1303,7 +1304,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task BuildTransactionWithChangeAddressAccountNotInWalletReturnsBadRequest()
+        public async Task BuildTransactionWithChangeAddressAccountNotInWalletReturnsBadRequestAsync()
         {
             string walletName = "myWallet";
 
@@ -1319,7 +1320,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.BuildTransaction(new BuildTransactionRequest
+            IActionResult result = await controller.BuildTransactionAsync(new BuildTransactionRequest
             {
                 AccountName = "Account 0",
                 Recipients = new List<RecipientModel>() { new RecipientModel() { Amount = "1.0", DestinationAddress = new Key().PubKey.Hash.GetAddress(this.Network).ToString() } },
@@ -1341,12 +1342,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task BuildTransactionWithInvalidModelStateReturnsBadRequest()
+        public async Task BuildTransactionWithInvalidModelStateReturnsBadRequestAsync()
         {
             var controller = this.GetWalletController();
 
             controller.ModelState.AddModelError("WalletName", "A walletname is required.");
-            IActionResult result = await controller.BuildTransaction(new BuildTransactionRequest
+            IActionResult result = await controller.BuildTransactionAsync(new BuildTransactionRequest
             {
                 WalletName = ""
             });
@@ -1361,7 +1362,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task BuildTransactionWithExceptionReturnsBadRequest()
+        public async Task BuildTransactionWithExceptionReturnsBadRequestAsync()
         {
             var key = new Key();
             this.ConfigureMock<IWalletTransactionHandler>(mock =>
@@ -1372,7 +1373,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.BuildTransaction(new BuildTransactionRequest
+            IActionResult result = await controller.BuildTransactionAsync(new BuildTransactionRequest
             {
                 AccountName = "Account 1",
                 AllowUnconfirmed = false,
@@ -1400,7 +1401,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task SendTransactionSuccessfulReturnsWalletSendTransactionModelResponse()
+        public async Task SendTransactionSuccessfulReturnsWalletSendTransactionModelResponseAsync()
         {
             string transactionHex =
                 "010000000189c041f79aac3aa7e7a72804a9a55cd9eceba41a0586640f602eb9823540ce89010000006b483045022100ab9597b37cb8796aefa30b207abb248c8003d4d153076997e375b0daf4f9f7050220546397fee1cefe54c49210ea653e9e61fb88adf51b68d2c04ad6d2b46ddf97a30121035cc9de1f233469dad8a3bbd1e61b699a7dd8e0d8370c6f3b1f2a16167da83546ffffffff02f6400a00000000001976a914accf603142aaa5e22dc82500d3e187caf712f11588ac3cf61700000000001976a91467872601dda216fbf4cab7891a03ebace87d8e7488ac00000000";
@@ -1417,7 +1418,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.SendTransaction(new SendTransactionRequest(transactionHex));
+            IActionResult result = await controller.SendTransactionAsync(new SendTransactionRequest(transactionHex));
 
             var viewResult = Assert.IsType<JsonResult>(result);
             var model = viewResult.Value as WalletSendTransactionModel;
@@ -1441,7 +1442,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.SendTransaction(new SendTransactionRequest(new uint256(15555).ToString()));
+            IActionResult result = await controller.SendTransactionAsync(new SendTransactionRequest(new uint256(15555).ToString()));
 
             var errorResult = Assert.IsType<ErrorResult>(result);
             var errorResponse = Assert.IsType<ErrorResponse>(errorResult.Value);
@@ -1453,12 +1454,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task SendTransactionWithInvalidModelStateReturnsBadRequest()
+        public async Task SendTransactionWithInvalidModelStateReturnsBadRequestAsync()
         {
             var controller = this.GetWalletController();
 
             controller.ModelState.AddModelError("Hex", "Hex required.");
-            IActionResult result = await controller.SendTransaction(new SendTransactionRequest(""));
+            IActionResult result = await controller.SendTransactionAsync(new SendTransactionRequest(""));
 
             var errorResult = Assert.IsType<ErrorResult>(result);
             var errorResponse = Assert.IsType<ErrorResponse>(errorResult.Value);
@@ -1470,9 +1471,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task ListWalletFilesWithExistingWalletFilesReturnsWalletFileModel()
+        public async Task ListWalletFilesWithExistingWalletFilesReturnsWalletFileModelAsync()
         {
-            string walletPath = "walletPath";
             var walletManager = this.ConfigureMock<IWalletManager>();
             walletManager.Setup(m => m.GetWalletsNames())
                 .Returns(new[] { "wallet1.wallet.json", "wallet2.wallet.json" });
@@ -1481,7 +1481,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.ListWallets();
+            IActionResult result = await controller.ListWalletsAsync();
 
             var viewResult = Assert.IsType<JsonResult>(result);
             var model = viewResult.Value as WalletInfoModel;
@@ -1493,7 +1493,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task ListWalletFilesWithoutExistingWalletFilesReturnsWalletFileModel()
+        public async Task ListWalletFilesWithoutExistingWalletFilesReturnsWalletFileModelAsync()
         {
             var walletManager = this.ConfigureMock<IWalletManager>();
 
@@ -1502,7 +1502,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.ListWallets();
+            IActionResult result = await controller.ListWalletsAsync();
 
             var viewResult = Assert.IsType<JsonResult>(result);
             var model = viewResult.Value as WalletInfoModel;
@@ -1512,7 +1512,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task ListWalletFilesWithExceptionReturnsBadRequest()
+        public async Task ListWalletFilesWithExceptionReturnsBadRequestAsync()
         {
             var walletManager = this.ConfigureMock<IWalletManager>();
             walletManager.Setup(m => m.GetWalletsNames())
@@ -1520,7 +1520,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.ListWallets();
+            IActionResult result = await controller.ListWalletsAsync();
 
             var errorResult = Assert.IsType<ErrorResult>(result);
             var errorResponse = Assert.IsType<ErrorResponse>(errorResult.Value);
@@ -1532,7 +1532,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task CreateNewAccountWithValidModelReturnsAccountName()
+        public async Task CreateNewAccountWithValidModelReturnsAccountNameAsync()
         {
             var mockWalletManager = this.ConfigureMock<IWalletManager>();
             mockWalletManager.Setup(m => m.GetUnusedAccount("myWallet", "test"))
@@ -1540,7 +1540,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.CreateNewAccount(new GetUnusedAccountModel
+            IActionResult result = await controller.CreateNewAccountAsync(new GetUnusedAccountModel
             {
                 WalletName = "myWallet",
                 Password = "test"
@@ -1551,7 +1551,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task CreateNewAccountWithInvalidValidModelReturnsBadRequest()
+        public async Task CreateNewAccountWithInvalidValidModelReturnsBadRequestAsync()
         {
             var mockWalletManager = new Mock<IWalletManager>();
 
@@ -1559,7 +1559,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             controller.ModelState.AddModelError("Password", "A password is required.");
 
-            IActionResult result = await controller.CreateNewAccount(new GetUnusedAccountModel
+            IActionResult result = await controller.CreateNewAccountAsync(new GetUnusedAccountModel
             {
                 WalletName = "myWallet",
                 Password = ""
@@ -1575,7 +1575,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task CreateNewAccountWithExceptionReturnsBadRequest()
+        public async Task CreateNewAccountWithExceptionReturnsBadRequestAsync()
         {
             var mockWalletManager = this.ConfigureMock<IWalletManager>();
             mockWalletManager.Setup(m => m.GetUnusedAccount("myWallet", "test"))
@@ -1583,7 +1583,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.CreateNewAccount(new GetUnusedAccountModel
+            IActionResult result = await controller.CreateNewAccountAsync(new GetUnusedAccountModel
             {
                 WalletName = "myWallet",
                 Password = "test"
@@ -1600,7 +1600,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task ListAccountsWithValidModelStateReturnsAccounts()
+        public async Task ListAccountsWithValidModelStateReturnsAccountsAsync()
         {
             string walletName = "wallet 1";
             Wallet wallet = WalletTestsHelpers.CreateWallet(walletName);
@@ -1614,7 +1614,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.ListAccounts(new ListAccountsModel
+            IActionResult result = await controller.ListAccountsAsync(new ListAccountsModel
             {
                 WalletName = "wallet 1"
             });
@@ -1629,13 +1629,13 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task ListAccountsWithInvalidModelReturnsBadRequest()
+        public async Task ListAccountsWithInvalidModelReturnsBadRequestAsync()
         {
             var controller = this.GetWalletController();
 
             controller.ModelState.AddModelError("WalletName", "A wallet name is required.");
 
-            IActionResult result = await controller.ListAccounts(new ListAccountsModel
+            IActionResult result = await controller.ListAccountsAsync(new ListAccountsModel
             {
                 WalletName = ""
             });
@@ -1650,7 +1650,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task ListAccountsWithExceptionReturnsBadRequest()
+        public async Task ListAccountsWithExceptionReturnsBadRequestAsync()
         {
             var mockWalletManager = this.ConfigureMock<IWalletManager>();
             mockWalletManager.Setup(m => m.GetAccounts("wallet 0"))
@@ -1658,7 +1658,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.ListAccounts(new ListAccountsModel
+            IActionResult result = await controller.ListAccountsAsync(new ListAccountsModel
             {
                 WalletName = "wallet 0",
             });
@@ -1674,7 +1674,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task GetUnusedAddressWithValidModelReturnsUnusedAddress()
+        public async Task GetUnusedAddressWithValidModelReturnsUnusedAddressAsync()
         {
             HdAddress address = WalletTestsHelpers.CreateAddress();
             var mockWalletManager = this.ConfigureMock<IWalletManager>();
@@ -1683,7 +1683,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetUnusedAddress(new GetUnusedAddressModel
+            IActionResult result = await controller.GetUnusedAddressAsync(new GetUnusedAddressModel
             {
                 WalletName = "myWallet",
                 AccountName = "Account 1"
@@ -1694,13 +1694,13 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task GetUnusedAddressWithInvalidValidModelReturnsBadRequest()
+        public async Task GetUnusedAddressWithInvalidValidModelReturnsBadRequestAsync()
         {
             var controller = this.GetWalletController();
 
             controller.ModelState.AddModelError("AccountName", "An account name is required.");
 
-            IActionResult result = await controller.GetUnusedAddress(new GetUnusedAddressModel
+            IActionResult result = await controller.GetUnusedAddressAsync(new GetUnusedAddressModel
             {
                 WalletName = "myWallet",
                 AccountName = ""
@@ -1716,7 +1716,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task GetUnusedAddressWithExceptionReturnsBadRequest()
+        public async Task GetUnusedAddressWithExceptionReturnsBadRequestAsync()
         {
             var mockWalletManager = this.ConfigureMock<IWalletManager>();
             mockWalletManager.Setup(m => m.GetUnusedAddress(new WalletAccountReference("myWallet", "Account 1")))
@@ -1724,7 +1724,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetUnusedAddress(new GetUnusedAddressModel
+            IActionResult result = await controller.GetUnusedAddressAsync(new GetUnusedAddressModel
             {
                 WalletName = "myWallet",
                 AccountName = "Account 1"
@@ -1741,7 +1741,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task GetAllAddressesWithValidModelReturnsAllAddresses()
+        public async Task GetAllAddressesWithValidModelReturnsAllAddressesAsync()
         {
             string walletName = "myWallet";
 
@@ -1787,7 +1787,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetAllAddresses(new GetAllAddressesModel
+            IActionResult result = await controller.GetAllAddressesAsync(new GetAllAddressesModel
             { WalletName = "myWallet", AccountName = "Account 0" });
 
             var viewResult = Assert.IsType<JsonResult>(result);
@@ -1824,13 +1824,13 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task GetMaximumBalanceWithValidModelStateReturnsMaximumBalance()
+        public async Task GetMaximumBalanceWithValidModelStateReturnsMaximumBalanceAsync()
         {
             var controller = this.GetWalletController();
 
             controller.ModelState.AddModelError("Error in model", "There was an error in the model.");
 
-            IActionResult result = await controller.GetMaximumSpendableBalance(new WalletMaximumBalanceRequest
+            IActionResult result = await controller.GetMaximumSpendableBalanceAsync(new WalletMaximumBalanceRequest
             {
                 WalletName = "myWallet",
                 AccountName = "account 1",
@@ -1849,7 +1849,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task GetMaximumBalanceSuccessfullyReturnsMaximumBalanceAndFee()
+        public async Task GetMaximumBalanceSuccessfullyReturnsMaximumBalanceAndFeeAsync()
         {
             var mockWalletTransactionHandler = this.ConfigureMock<IWalletTransactionHandler>();
             mockWalletTransactionHandler
@@ -1858,7 +1858,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetMaximumSpendableBalance(new WalletMaximumBalanceRequest
+            IActionResult result = await controller.GetMaximumSpendableBalanceAsync(new WalletMaximumBalanceRequest
             {
                 WalletName = "myWallet",
                 AccountName = "account 1",
@@ -1875,7 +1875,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task GetMaximumBalanceWithExceptionReturnsBadRequest()
+        public async Task GetMaximumBalanceWithExceptionReturnsBadRequestAsync()
         {
             var mockWalletTransactionHandler = this.ConfigureMock<IWalletTransactionHandler>();
             mockWalletTransactionHandler
@@ -1884,7 +1884,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetMaximumSpendableBalance(new WalletMaximumBalanceRequest
+            IActionResult result = await controller.GetMaximumSpendableBalanceAsync(new WalletMaximumBalanceRequest
             {
                 WalletName = "myWallet",
                 AccountName = "account 1",
@@ -1900,7 +1900,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task GetTransactionFeeEstimateWithValidRequestReturnsFee()
+        public async Task GetTransactionFeeEstimateWithValidRequestReturnsFeeAsync()
         {
             var mockWalletManager = this.ConfigureMock<IWalletManager>();
             var mockWalletTransactionHandler = this.ConfigureMock<IWalletTransactionHandler>();
@@ -1911,7 +1911,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetTransactionFeeEstimate(new TxFeeEstimateRequest
+            IActionResult result = await controller.GetTransactionFeeEstimateAsync(new TxFeeEstimateRequest
             {
                 AccountName = "Account 1",
                 Recipients = new List<RecipientModel>
@@ -1934,7 +1934,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task RemoveAllTransactionsWithSyncEnabledSyncsAfterRemoval()
+        public async Task RemoveAllTransactionsWithSyncEnabledSyncsAfterRemovalAsync()
         {
             // Arrange.
             string walletName = "wallet1";
@@ -1963,7 +1963,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             };
 
             // Act.
-            IActionResult result = await controller.RemoveTransactions(requestModel);
+            IActionResult result = await controller.RemoveTransactionsAsync(requestModel);
 
             // Assert.
             walletManager.VerifyAll();
@@ -1979,7 +1979,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task RemoveAllTransactionsWithSyncDisabledDoesNotSyncAfterRemoval()
+        public async Task RemoveAllTransactionsWithSyncDisabledDoesNotSyncAfterRemovalAsync()
         {
             // Arrange.
             string walletName = "wallet1";
@@ -2004,7 +2004,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             };
 
             // Act.
-            IActionResult result = await controller.RemoveTransactions(requestModel);
+            IActionResult result = await controller.RemoveTransactionsAsync(requestModel);
 
             // Assert.
             walletManager.VerifyAll();
@@ -2020,7 +2020,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task RemoveTransactionsWithIdsRemovesAllTransactionsByIds()
+        public async Task RemoveTransactionsWithIdsRemovesAllTransactionsByIdsAsync()
         {
             // Arrange.
             string walletName = "wallet1";
@@ -2048,7 +2048,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             };
 
             // Act.
-            IActionResult result = await controller.RemoveTransactions(requestModel);
+            IActionResult result = await controller.RemoveTransactionsAsync(requestModel);
 
             // Assert.
             walletManager.VerifyAll();

@@ -533,14 +533,14 @@ namespace Stratis.Bitcoin.IntegrationTests.API
             var walletTransactionModel = (WalletBuildTransactionModel)(transactionResult as JsonResult)?.Value;
             this.transaction = this.firstStratisPowApiNode.FullNode.Network.CreateTransaction(walletTransactionModel.Hex);
             await this.firstStratisPowApiNode.FullNode.NodeController<WalletController>()
-                .SendTransaction(new SendTransactionRequest(walletTransactionModel.Hex));
+                .SendTransactionAsync(new SendTransactionRequest(walletTransactionModel.Hex));
         }
 
         private async Task<IActionResult> BuildTransaction()
         {
             IActionResult transactionResult = await this.firstStratisPowApiNode.FullNode
                 .NodeController<WalletController>()
-                .BuildTransaction(new BuildTransactionRequest
+                .BuildTransactionAsync(new BuildTransactionRequest
                 {
                     AccountName = WalletAccountName,
                     AllowUnconfirmed = true,

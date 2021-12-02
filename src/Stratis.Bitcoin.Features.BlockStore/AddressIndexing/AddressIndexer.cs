@@ -40,6 +40,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         /// <summary>Returns verbose balances data.</summary>
         /// <param name="addresses">The set of addresses that will be queried.</param>
+        /// <returns>See <see cref="VerboseAddressBalancesResult"/>.</returns>
         VerboseAddressBalancesResult GetAddressIndexerState(string[] addresses);
 
         IFullNodeFeature InitializingFeature { set; }
@@ -139,6 +140,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         /// </summary>
         public const int SyncBuffer = 50;
 
+        // Compaction removes info that is used by unity sdk to get UTXOs. Therefore this feature is disabled.
+        public const bool CompactionEnabled = false;
+
         public IFullNodeFeature InitializingFeature { get; set; }
 
         public AddressIndexer(StoreSettings storeSettings, DataFolder dataFolder, ILoggerFactory loggerFactory, Network network, INodeStats nodeStats,
@@ -168,7 +172,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             this.compactionTriggerDistance = maxReorgLength * 2 + SyncBuffer + 1000;
         }
 
-        /// <summary>Returns maxReorg of <see cref="FallBackMaxReorg"/> in case maxReorg is <c>0</c>.</summary>
+        /// <summary>Gets the maxReorg of <see cref="FallBackMaxReorg"/> in case maxReorg is <c>0</c>.</summary>
+        /// <param name="network">The network to get the value for.</param>
+        /// <returns>Returns the maxReorg or <see cref="FallBackMaxReorg"/> value.</returns>
         public static int GetMaxReorgOrFallbackMaxReorg(Network network)
         {
             int maxReorgLength = network.Consensus.MaxReorgLength == 0 ? FallBackMaxReorg : (int)network.Consensus.MaxReorgLength;
@@ -332,7 +338,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
                 this.IndexerTip = nextHeader;
             }
-
+            
             this.SaveAll();
         }
 
@@ -390,7 +396,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         private void AddInlineStats(StringBuilder benchLog)
         {
             benchLog.AppendLine("AddressIndexer Height".PadRight(LoggingConfiguration.ColumnLength) + $": {this.IndexerTip.Height}".PadRight(9) +
-                                "AddressCache%: " + this.addressIndexRepository.GetLoadPercentage().ToString().PadRight(8) +
+                                " AddressCache%: " + this.addressIndexRepository.GetLoadPercentage().ToString().PadRight(8) +
                                 "OutPointCache%: " + this.outpointsRepository.GetLoadPercentage().ToString().PadRight(8) +
                                 $"Ms/block: {Math.Round(this.averageTimePerBlock.Average, 2)}");
         }
@@ -430,8 +436,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             // Process inputs.
             var inputs = new List<TxIn>();
 
-            // Collect all inputs excluding coinbases.
-            foreach (TxInList inputsCollection in block.Transactions.Where(x => !x.IsCoinBase).Select(x => x.Inputs))
+            // Collect all inputs.
+            foreach (TxInList inputsCollection in block.Transactions.Select(x => x.Inputs))
                 inputs.AddRange(inputsCollection);
 
             lock (this.lockObject)
@@ -441,6 +447,10 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                 foreach (TxIn input in inputs)
                 {
                     OutPoint consumedOutput = input.PrevOut;
+
+                    // Ignore coinbase.
+                    if (consumedOutput.Hash == uint256.Zero)
+                        continue;
 
                     if (!this.outpointsRepository.TryGetOutPointData(consumedOutput, out OutPointData consumedOutputData))
                     {
@@ -503,7 +513,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                 }
 
                 // Remove outpoints that were consumed.
-                foreach (OutPoint consumedOutPoint in inputs.Select(x => x.PrevOut))
+                foreach (OutPoint consumedOutPoint in inputs.Where(x => x.PrevOut.Hash != uint256.Zero).Select(x => x.PrevOut))
                     this.outpointsRepository.RemoveOutPointData(consumedOutPoint);
             }
 
@@ -531,11 +541,13 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             // Anything less than that should be compacted.
             int heightThreshold = this.consensusManager.Tip.Height - this.compactionTriggerDistance;
 
-            bool compact = (indexData.BalanceChanges.Count > CompactingThreshold) &&
+            bool compact = CompactionEnabled && (indexData.BalanceChanges.Count > CompactingThreshold) &&
                            (indexData.BalanceChanges[1].BalanceChangedHeight < heightThreshold);
 
             if (!compact)
             {
+                this.addressIndexRepository.AddOrUpdate(indexData.Address, indexData, indexData.BalanceChanges.Count + 1);
+
                 this.logger.LogTrace("(-)[TOO_FEW_CHANGE_RECORDS]");
                 return;
             }

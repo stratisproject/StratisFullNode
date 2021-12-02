@@ -74,8 +74,7 @@ namespace Stratis.Bitcoin.Tests.Base
                     foreach (ChainedHeader block in blocks)
                     {
                         batch.Put(1, BitConverter.GetBytes(block.Height),
-                            new ChainRepository.ChainRepositoryData()
-                            { Hash = block.HashBlock, Work = block.ChainWorkBytes }
+                            new ChainRepository.ChainRepositoryData(block.HashBlock, block.ChainWorkBytes)
                                 .ToBytes(this.Network.Consensus.ConsensusFactory));
 
                         ConsensusFactory consensusFactory = KnownNetworks.StraxRegTest.Consensus.ConsensusFactory;

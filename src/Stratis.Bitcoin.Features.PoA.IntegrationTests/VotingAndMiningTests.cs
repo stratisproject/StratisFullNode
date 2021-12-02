@@ -393,7 +393,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
 
                 Assert.True(context.TransactionBuilder.Verify(trx, out _));
 
-                await nodeA.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(trx.ToHex()));
+                await nodeA.FullNode.NodeController<WalletController>().SendTransactionAsync(new SendTransactionRequest(trx.ToHex()));
 
                 TestBase.WaitLoop(() => nodeA.CreateRPCClient().GetRawMempool().Length == 1 && nodeB.CreateRPCClient().GetRawMempool().Length == 1);
 
@@ -451,7 +451,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
                 var encoder = new JoinFederationRequestEncoder();
                 JoinFederationRequestResult result = JoinFederationRequestBuilder.BuildTransaction(nodeA.FullNode.WalletTransactionHandler(), this.poaNetwork, request, encoder, walletName, walletAccount, walletPassword);
 
-                await nodeA.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(result.Transaction.ToHex()));
+                await nodeA.FullNode.NodeController<WalletController>().SendTransactionAsync(new SendTransactionRequest(result.Transaction.ToHex()));
 
                 TestBase.WaitLoop(() => nodeA.CreateRPCClient().GetRawMempool().Length == 1 && nodeB.CreateRPCClient().GetRawMempool().Length == 1);
 

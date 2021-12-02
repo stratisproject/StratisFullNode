@@ -281,8 +281,26 @@ namespace Stratis.Bitcoin.Controllers.Models
         /// <param name="network">The network where the transaction was conducted.</param>
         public ScriptPubKey(NBitcoin.Script script, Network network) : base(script)
         {
-            var destinations = new List<TxDestination> { script.GetDestination(network) };
             this.Type = this.GetScriptType(script.FindTemplate(network));
+
+            // To avoid modifying the very low-level GetDestination logic, check for a cold staking script first.
+            // The decision to show the cold pubkey's address in the 'addresses' list is based on the following:
+            // 1. It seems more intuitive from a user's perspective that their balance will appear against this address.
+            // 2. A balance should never appear against a hot address from an exchange's perspective, as they have no guarantee they will be able to spend those funds.
+            // It is also presumed that it is preferable to show an address rather than not, as a block explorer would then have to show only a relatively meaningless raw script as the output's destination.
+            // Another considered alternative was to show both addresses, but with a modified version byte. The underlying pubkey hashes would be the same, but the resulting addresses would be visually distinct from regular P2PKH.
+            // This may have caused user confusion, however, as the modified addresses would not look like those they used to configure the cold staking setup, making searching for them on a block explorer more difficult.
+            if (script.IsScriptType(ScriptType.ColdStaking))
+            {
+                var coldPubKeyHash = new KeyId(script.ToBytes(true).SafeSubarray(28, 20));
+
+                this.ReqSigs = 1;
+                this.Addresses = new List<string> { coldPubKeyHash.GetAddress(network).ToString() };
+
+                return;
+            }
+
+            var destinations = new List<TxDestination> { script.GetDestination(network) };
 
             if (destinations[0] == null)
             {
@@ -328,6 +346,7 @@ namespace Stratis.Bitcoin.Controllers.Models
         {
             if (template == null)
                 return "nonstandard";
+
             switch (template.Type)
             {
                 case TxOutType.TX_PUBKEY:

@@ -101,6 +101,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// <summary>
         /// Recording deposits when the wallet UTXOs are sufficient succeeds with deterministic transactions.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task StoringDepositsWhenWalletBalanceSufficientSucceedsWithDeterministicTransactionsAsync()
         {
@@ -249,6 +250,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// <summary>
         /// Recording deposits when the wallet UTXOs are sufficient succeeds with deterministic transactions.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task StoringDepositsWhenWalletBalanceInSufficientSucceedsWithSuspendStatusAsync()
         {
@@ -370,6 +372,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// <summary>
         /// Test that if one transaction is set to suspended then all following transactions will be too to maintain deterministic order.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task SetAllAfterSuspendedToSuspendedAsync()
         {
@@ -433,7 +436,8 @@ namespace Stratis.Features.FederatedPeg.Tests
 
         /// <summary>
         /// Tests whether the store merges signatures as expected.
-        /// </summary>
+        /// </summary
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task StoreMergesSignaturesAsExpectedAsync()
         {
@@ -530,6 +534,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// <summary>
         /// Check that partial transactions present in the store cause partial transaction requests made to peers.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task StoredPartialTransactionsTriggerSignatureRequestAsync()
         {
@@ -586,7 +591,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         }
 
         [Fact(Skip = "Requires main chain user to be running.")]
-        public async Task DoTest()
+        public async Task DoTestAsync()
         {
             var transactionRequest = new BuildTransactionRequest()
             {
@@ -634,6 +639,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// Simulates the behaviour if someone were to come on the network and broadcast their own <see cref="RequestPartialTransactionPayload"/> message
         /// with bogus information.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task AttemptFederationInvalidWithdrawalAsync()
         {
@@ -708,6 +714,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// <summary>
         /// Recording deposits when the wallet UTXOs are sufficient succeeds with deterministic transactions.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task StoringDepositsAfterRewindIsPrecededByClearingInvalidTransientsAndSettingNextMatureDepositHeightCorrectlyAsync()
         {
@@ -797,6 +804,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// Test demonstrates what happens when there is a reorg. Specifically, that no FullySigned transactions are maintained,
         /// even though we previously tried to do so.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ReorgSetsAllInProgressToSuspendedAsync()
         {
@@ -1194,6 +1202,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// <summary>
         /// Recording deposits when the target is our multisig is ignored, but a different multisig is allowed.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task StoringDepositsWhenTargetIsMultisigIsIgnoredIffOurMultisigAsync()
         {

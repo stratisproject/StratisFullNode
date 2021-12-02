@@ -79,7 +79,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly DBreezeSerializer dBreezeSerializer;
         private readonly IFederationWalletManager federationWalletManager;
         private readonly Network network;
-        private readonly INodeStats nodeStats;
         private readonly IFederatedPegSettings settings;
         private readonly ISignals signals;
         private readonly IStateRepositoryRoot stateRepositoryRoot;
@@ -110,7 +109,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             Guard.NotNull(withdrawalTransactionBuilder, nameof(withdrawalTransactionBuilder));
 
             this.network = network;
-            this.nodeStats = nodeStats;
             this.chainIndexer = chainIndexer;
             this.blockRepository = blockRepository;
             this.federationWalletManager = federationWalletManager;
@@ -747,6 +745,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// identified in the blocks.
         /// </summary>
         /// <param name="blocks">The blocks used to update the store. Must be sorted by ascending height leading up to the new tip.</param>
+        /// <param name="chainedHeadersSnapshot">The chained headers corresponding to the blocks.</param>
         private void Put(List<Block> blocks, Dictionary<uint256, ChainedHeader> chainedHeadersSnapshot)
         {
             if (blocks.Count == 0)

@@ -130,6 +130,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
         /// Continuously dequeues items from <see cref="blocksToAnnounce"/> and sends
         /// them  to the peers after the timer runs out or if the last item is a tip.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         private async Task DequeueContinuouslyAsync()
         {
             var batch = new List<ChainedHeader>();
@@ -186,6 +187,8 @@ namespace Stratis.Bitcoin.Features.BlockStore
         /// <summary>
         /// A method that relays blocks found in <see cref="batch"/> to connected peers on the network.
         /// </summary>
+        /// <param name="batch">The batch containing the blocks to relay.</param>
+        /// <returns>The asynchronous task.</returns>
         /// <remarks>
         /// <para>
         /// The list <see cref="batch"/> contains hashes of blocks that were validated by the consensus rules.

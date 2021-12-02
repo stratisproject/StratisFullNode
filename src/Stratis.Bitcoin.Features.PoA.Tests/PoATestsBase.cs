@@ -33,7 +33,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         protected readonly PoABlockHeaderValidator poaHeaderValidator;
         protected readonly ISlotsManager slotsManager;
         protected readonly ConsensusSettings consensusSettings;
-        public readonly ChainIndexer ChainIndexer;
+        protected readonly ChainIndexer ChainIndexer;
         protected readonly IFederationManager federationManager;
         protected readonly IFederationHistory federationHistory;
         protected readonly VotingManager votingManager;
@@ -59,7 +59,10 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             (this.federationManager, this.federationHistory) = CreateFederationManager(this, this.network, this.loggerFactory, this.signals);
 
-            this.slotsManager = new SlotsManager(this.network, this.federationManager, this.ChainIndexer, this.loggerFactory);
+            this.chainIndexerMock = new Mock<ChainIndexer>();
+            var header = new BlockHeader();
+            this.chainIndexerMock.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
+            this.slotsManager = new SlotsManager(this.network, this.federationManager, this.chainIndexerMock.Object, this.loggerFactory);
 
             this.poaHeaderValidator = new PoABlockHeaderValidator(this.loggerFactory);
             this.asyncProvider = new AsyncProvider(this.loggerFactory, this.signals);
@@ -69,7 +72,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             this.resultExecutorMock = new Mock<IPollResultExecutor>();
 
             this.votingManager = new VotingManager(this.federationManager, this.resultExecutorMock.Object, new NodeStats(dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), dataFolder,
-                this.dBreezeSerializer, this.signals, this.network, this.ChainIndexer, null);
+                this.dBreezeSerializer, this.signals, this.network, this.chainIndexerMock.Object, null);
 
             this.votingManager.Initialize(this.federationHistory);
 
@@ -188,8 +191,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
                 federationMemberMaxIdleTimeSeconds: baseOptions.FederationMemberMaxIdleTimeSeconds
             )
             {
-                PollExpiryBlocks = 10,
-                Release1100ActivationHeight = 10
+                PollExpiryBlocks = 450
             };
 
             this.Consensus.SetPrivatePropertyValue(nameof(this.Consensus.MaxReorgLength), (uint)5);

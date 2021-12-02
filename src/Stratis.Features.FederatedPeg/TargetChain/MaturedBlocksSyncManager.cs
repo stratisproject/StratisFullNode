@@ -28,6 +28,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
     public interface IMaturedBlocksSyncManager : IDisposable
     {
         /// <summary>Starts requesting blocks from another chain.</summary>
+        /// <returns>The asynchronous task.</returns>
         Task StartAsync();
     }
 
