@@ -46,6 +46,8 @@ namespace Stratis.Sidechains.Networks
 
             this.CirrusRewardDummyAddress = "PDpvfcpPm9cjQEoxWzQUL699N8dPaf8qML";
 
+            this.ConversionTransactionFeeDistributionDummyAddress = "PTCPsLQoF3WNoH1qXMy5PouquiXQKp7WBV";
+
             var consensusFactory = new SmartContractCollateralPoAConsensusFactory();
 
             // Create the genesis block.
@@ -83,6 +85,9 @@ namespace Stratis.Sidechains.Networks
             var newFederationKeys = this.FederationMnemonics.Take(2).Concat(newFederationMemberMnemonics).Select(m => m.DeriveExtKey().PrivateKey).ToList();
             var newFederationPubKeys = newFederationKeys.Select(k => k.PubKey).ToList();
 
+            // The height at which the following list of members apply.
+            this.MultisigMinersApplicabilityHeight = 0;
+
             // Mining keys!
             this.StraxMiningMultisigMembers = newFederationPubKeys;
 
@@ -102,8 +107,10 @@ namespace Stratis.Sidechains.Networks
                 genesisFederationMembers: genesisFederationMembers,
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
-                autoKickIdleMembers: true
-            );
+                autoKickIdleMembers: true)
+            {
+                PollExpiryBlocks = 450 // 2 hours
+            };
 
             var buriedDeployments = new BuriedDeploymentsArray
             {

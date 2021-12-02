@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -24,6 +27,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
         public const string GetBlock = "block";
         public const string GetBlockCount = "getblockcount";
         public const string GetUtxoSet = "getutxoset";
+        public const string GetUtxoSetForAddress = "getutxosetforaddress";
         public const string GetLastBalanceDecreaseTransaction = "getlastbalanceupdatetransaction";
     }
 
@@ -53,6 +57,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
 
         private readonly IStakeChain stakeChain;
 
+        private readonly IScriptAddressReader scriptAddressReader;
+
         public BlockStoreController(
             Network network,
             ILoggerFactory loggerFactory,
@@ -61,6 +67,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
             ChainIndexer chainIndexer,
             IAddressIndexer addressIndexer,
             IUtxoIndexer utxoIndexer,
+            IScriptAddressReader scriptAddressReader,
             IStakeChain stakeChain = null)
         {
             Guard.NotNull(network, nameof(network));
@@ -75,6 +82,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
             this.chainState = chainState;
             this.chainIndexer = chainIndexer;
             this.utxoIndexer = utxoIndexer;
+            this.scriptAddressReader = scriptAddressReader;
             this.stakeChain = stakeChain;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
         }
@@ -281,6 +289,64 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
                 }
 
                 return this.Json(outputs);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>Provides verbose balance data of the given addresses.</summary>
+        /// <param name="address">The address to query for unspent outputs.</param>
+        /// <returns>A result object containing the UTXOs.</returns>
+        /// <response code="200">Returns the UTXO set for a particular address at the current chain tip height.</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route(BlockStoreRouteEndPoint.GetUtxoSetForAddress)]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult GetUtxoSetForAddress(string address)
+        {
+            // Get coinview at current height (SLOW)
+            var coinView = this.utxoIndexer.GetCoinviewAtHeight(this.chainIndexer.Height);
+
+            var utxos = new ConcurrentBag<UtxoModel>();
+
+            // Get utxos for this address
+            try
+            {
+                // Fine to do this in parallel because we don't care about the order
+                Parallel.ForEach(coinView.UnspentOutputs, (utxo) =>
+                {
+                    var tx = coinView.Transactions[utxo.Hash];
+
+                    // Get the actual output
+                    var output = tx.Outputs[utxo.N];
+
+                    var destinationAddress = this.scriptAddressReader.GetAddressFromScriptPubKey(this.network, output.ScriptPubKey);
+
+                    if (destinationAddress != address)
+                        return;
+
+                    var utxoModel = new UtxoModel()
+                    {
+                        TxId = utxo.Hash,
+                        Index = utxo.N,
+                        ScriptPubKey = output.ScriptPubKey,
+                        Value = output.Value
+                    };
+
+                    utxos.Add(utxoModel);
+                });
+
+                var balance = new Money(utxos.Sum(u => u.Value)).ToUnit(MoneyUnit.BTC);
+
+                return this.Json(new
+                {
+                    balance,
+                    utxos
+                });
             }
             catch (Exception e)
             {

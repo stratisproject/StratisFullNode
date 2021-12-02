@@ -20,10 +20,16 @@ namespace Stratis.Bitcoin.Features.Interop.Models
         [JsonProperty(PropertyName = "destinationAddress")]
         public string DestinationAddress { get; set; }
 
+        [JsonProperty(PropertyName = "destinationChain")]
+        public string DestinationChain { get; set; }
+
         [JsonProperty(PropertyName = "amount")]
         public ulong Amount { get; set; }
 
         [JsonProperty(PropertyName = "processed")]
         public bool Processed { get; set; }
+
+        [JsonProperty(PropertyName = "status")]
+        public string Status { get; set; }
     }
 }

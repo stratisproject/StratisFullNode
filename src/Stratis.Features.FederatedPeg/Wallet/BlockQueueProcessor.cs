@@ -53,7 +53,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
 
             this.logger.Debug("Block '{0}' queued for processing. Queue size changed to {1} bytes.", block.GetHash(), currentBlockQueueSize);
 
-            await this.callback(block, cancellationToken);
+            await this.callback(block, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>

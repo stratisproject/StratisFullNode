@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Stratis.Bitcoin.EventBus.PerformanceCounters.InMemoryEventBus;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.EventBus
@@ -27,6 +28,9 @@ namespace Stratis.Bitcoin.EventBus
         /// </summary>
         private readonly object subscriptionsLock = new object();
 
+        /// <inheritdoc cref="InMemoryEventBusPerformanceCounter"/>
+        private readonly InMemoryEventBusPerformanceCounter performanceCounter;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryEventBus"/> class.
         /// </summary>
@@ -39,6 +43,7 @@ namespace Stratis.Bitcoin.EventBus
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.subscriptionErrorHandler = subscriptionErrorHandler ?? new DefaultSubscriptionErrorHandler(loggerFactory);
             this.subscriptions = new Dictionary<Type, List<ISubscription>>();
+            this.performanceCounter = new InMemoryEventBusPerformanceCounter();
         }
 
         /// <inheritdoc />
@@ -117,18 +122,30 @@ namespace Stratis.Bitcoin.EventBus
                     allSubscriptions = this.subscriptions[typeof(TEvent)].ToList();
             }
 
+            if (allSubscriptions.Count == 0)
+                return;
+
             for (var index = 0; index < allSubscriptions.Count; index++)
             {
                 var subscription = allSubscriptions[index];
-                try
+
+                using (this.performanceCounter.MeasureEventExecutionTime<TEvent>(subscription))
                 {
-                    subscription.Publish(@event);
-                }
-                catch (Exception ex)
-                {
-                    this.subscriptionErrorHandler?.Handle(@event, ex, subscription);
+                    try
+                    {
+                        subscription.Publish(@event);
+                    }
+                    catch (Exception ex)
+                    {
+                        this.subscriptionErrorHandler?.Handle(@event, ex, subscription);
+                    }
                 }
             }
+        }
+
+        public InMemoryEventBusPerformanceCounter GetPerformanceCounter()
+        {
+            return this.performanceCounter;
         }
     }
 }

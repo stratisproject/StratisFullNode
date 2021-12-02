@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Text;
 using System.Threading.Tasks;
 using NBitcoin.DataEncoders;
 using Nethereum.ABI.FunctionEncoding.Attributes;
@@ -75,8 +76,87 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         public BigInteger TransactionId { get; set; }
     }
 
+    [FunctionOutput]
+    public class ConfirmationsDTO : IFunctionOutputDTO
+    {
+        [Parameter("bool", "confirmed", 1)]
+        public bool Confirmed { get; set; }
+    }
+
+    [Function("confirmations", typeof(ConfirmationsDTO))]
+    public class ConfirmationsFunction : FunctionMessage
+    {
+        [Parameter("uint256", "transactionId", 1)]
+        public BigInteger TransactionId { get; set; }
+
+        [Parameter("address", "address", 1)]
+        public string Address { get; set; }
+    }
+
+    [FunctionOutput]
+    public class TransactionDTO : IFunctionOutputDTO
+    {
+        /// <summary>
+        /// The destination the multisig transaction will be sent to once it is executed.
+        /// For our implementation this is almost always the wSTRAX ERC20 contract.
+        /// </summary>
+        [Parameter("address", "destination", 1)]
+        public string Destination { get; set; }
+
+        /// <summary>
+        /// Often zero for contract calls involving the multisig wallet contract.
+        /// This does not contain the actual amount of wSTRAX being transacted, that is encoded inside the data field.
+        /// </summary>
+        [Parameter("uint256", "value", 2)]
+        public BigInteger Value { get; set; }
+
+        /// <summary>
+        /// The ABI-encoded data of the multisig transaction.
+        /// Typically this begins with the identifier of the contract call to be executed (e.g. transfer()), followed by zero or more parameters.
+        /// </summary>
+        [Parameter("bytes", "data", 3)]
+        public byte[] Data { get; set; }
+
+        /// <summary>
+        /// Indicates whether the multisig transaction has reached its confirmation threshold and thus been executed.
+        /// The actual execution typically appears as an internal transaction within a confirmTransaction() contract call.
+        /// </summary>
+        [Parameter("bool", "executed", 4)]
+        public bool Executed { get; set; }
+    }
+
+    public class MultisigTransactionIdentifiers
+    {
+        /// <summary>
+        /// The hash of the Ethereum transaction containing the multisig contract call.
+        /// </summary>
+        public string TransactionHash { get; set; }
+
+        /// <summary>
+        /// The related multisig contract transaction ID.
+        /// </summary>
+        public BigInteger TransactionId { get; set; }
+    }
+
+    [Function("transactions", typeof(TransactionDTO))]
+    public class TransactionsFunction : FunctionMessage
+    {
+        /// <summary>
+        /// The numeric transaction identifier, i.e. the key of the transactions mapping dictionary.
+        /// </summary>
+        [Parameter("uint256", "transactionId", 1)]
+        public BigInteger TransactionId { get; set; }
+    }
+
     public class MultisigWallet
     {
+        /// <summary>
+        /// Deploys a new instance of the multisig wallet contract.
+        /// </summary>
+        /// <param name="web3">The web3 interface instance to use.</param>
+        /// <param name="owners">An array of owner account strings e.g. 0xaabbccdd...</param>
+        /// <param name="required">The number of confirmations needed for a multisig transaction to be executed.</param>
+        /// <returns>The contract address of the deployed contract.</returns>
         public static async Task<string> DeployContractAsync(Web3 web3, string[] owners, uint required)
         {
             var deploymentMessage = new MultisigWalletDeployment()
@@ -92,6 +172,12 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
             return contractAddress;
         }
 
+        /// <summary>
+        /// Retrieves the current owners of the multisig contract.
+        /// </summary>
+        /// <param name="web3">The web3 interface instance to use.</param>
+        /// <param name="contractAddress">The address of the deployed multisig wallet contract.</param>
+        /// <returns>A list of owner accounts represented as strings.</returns>
         public static async Task<List<string>> GetOwnersAsync(Web3 web3, string contractAddress)
         {
             var getOwnersFunctionMessage = new GetOwnersFunction()
@@ -104,7 +190,51 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
             return owners;
         }
 
-        public static async Task<BigInteger> SubmitTransactionAsync(Web3 web3, string contractAddress, string destination, BigInteger value, string data, BigInteger gas, BigInteger gasPrice)
+        /// <summary>
+        /// Checks whether the given transaction identified by the transactionId has been confirmed by the given address.
+        /// </summary>
+        /// <param name="web3">The web3 interface instance to use.</param>
+        /// <param name="contractAddress">The address of the deployed multisig wallet contract.</param>
+        /// <param name="transactionId">The multisig wallet transaction identifier.</param>
+        /// <param name="address">The address to check the transaction's confirmation status with.</param>
+        /// <returns>An object containing the boolean confirmation state.</returns>
+        public static async Task<ConfirmationsDTO> AddressConfirmedTransactionAsync(Web3 web3, string contractAddress, BigInteger transactionId, string address)
+        {
+            ContractHandler handler = web3.Eth.GetContractHandler(contractAddress);
+
+            return await handler.QueryDeserializingToObjectAsync<ConfirmationsFunction, ConfirmationsDTO>(new ConfirmationsFunction() { TransactionId = transactionId, Address = address }).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Gets a transaction out of the transactions mapping on the contract and decodes it.
+        /// </summary>
+        /// <param name="web3">The web3 interface instance to use.</param>
+        /// <param name="contractAddress">The address of the deployed multisig wallet contract.</param>
+        /// <param name="transactionId">The multisig wallet transaction identifier.</param>
+        /// <returns>A decoded transaction object.</returns>
+        public static async Task<TransactionDTO> GetTransactionAsync(Web3 web3, string contractAddress, BigInteger transactionId)
+        {
+            ContractHandler handler = web3.Eth.GetContractHandler(contractAddress);
+
+            return await handler.QueryDeserializingToObjectAsync<TransactionsFunction, TransactionDTO>(new TransactionsFunction() { TransactionId = transactionId }).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Gets a transaction out of the transactions mapping on the contract without decoding it.
+        /// </summary>
+        /// <param name="web3">The web3 interface instance to use.</param>
+        /// <param name="contractAddress">The address of the deployed multisig wallet contract.</param>
+        /// <param name="transactionId">The multisig wallet transaction identifier.</param>
+        /// <returns>The transaction data in hex format. No decoding is applied.</returns>
+        public static async Task<string> GetRawTransactionAsync(Web3 web3, string contractAddress, BigInteger transactionId)
+        {
+            ContractHandler handler = web3.Eth.GetContractHandler(contractAddress);
+            byte[] rawTransaction = await handler.QueryRawAsync<TransactionsFunction>(new TransactionsFunction() { TransactionId = transactionId }).ConfigureAwait(false);
+
+            return Encoders.Hex.EncodeData(rawTransaction);
+        }
+
+        public static async Task<MultisigTransactionIdentifiers> SubmitTransactionAsync(Web3 web3, string contractAddress, string destination, BigInteger value, string data, BigInteger gas, BigInteger gasPrice)
         {
             IContractTransactionHandler<SubmitTransactionFunction> submitHandler = web3.Eth.GetContractTransactionHandler<SubmitTransactionFunction>();
             
@@ -122,9 +252,9 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
             // Use -1 as an error indicator.
             if (submission == null)
-                return BigInteger.MinusOne;
+                return new MultisigTransactionIdentifiers() { TransactionId = BigInteger.MinusOne };
 
-            return submission.Event.TransactionId;
+            return new MultisigTransactionIdentifiers() { TransactionHash = submitTransactionReceipt.TransactionHash, TransactionId = submission.Event.TransactionId };
         }
 
         public static async Task<string> ConfirmTransactionAsync(Web3 web3, string contractAddress, BigInteger transactionId, BigInteger gas, BigInteger gasPrice)

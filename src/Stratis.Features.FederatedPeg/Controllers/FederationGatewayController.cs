@@ -24,12 +24,14 @@ namespace Stratis.Features.FederatedPeg.Controllers
 {
     public static class FederationGatewayRouteEndPoint
     {
+        public const string DeleteSuspended = "transfers/deletesuspended";
         public const string GetMaturedBlockDeposits = "deposits";
         public const string GetFederationInfo = "info";
         public const string GetFederationMemberInfo = "member/info";
         public const string FederationMemberIpAdd = "member/ip/add";
         public const string FederationMemberIpRemove = "member/ip/remove";
         public const string FederationMemberIpReplace = "member/ip/replace";
+        public const string GetTransferByDepositIdEndpoint = "transfer";
         public const string GetTransfersPartialEndpoint = "transfer/pending";
         public const string GetTransfersFullySignedEndpoint = "transfer/fullysigned";
         public const string VerifyPartialTransactionEndpoint = "transfer/verify";
@@ -95,7 +97,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult GetMaturedBlockDeposits([FromQuery(Name = "blockHeight")] int blockHeight)
+        public async Task<IActionResult> GetMaturedBlockDepositsAsync([FromQuery(Name = "blockHeight")] int blockHeight)
         {
             if (!this.ModelState.IsValid)
             {
@@ -105,7 +107,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
 
             try
             {
-                SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = this.maturedBlocksProvider.RetrieveDeposits(blockHeight);
+                SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = await this.maturedBlocksProvider.RetrieveDepositsAsync(blockHeight).ConfigureAwait(false);
                 return this.Json(depositsResult);
             }
             catch (Exception e)
@@ -125,7 +127,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             ICrossChainTransfer[] transfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Partial }, false, false).ToArray();
 
             CrossChainTransferModel[] transactions = transfers
-                .Where(t => t.DepositTransactionId.ToString().StartsWith(depositId) && (t.PartialTransaction == null || t.PartialTransaction.GetHash().ToString().StartsWith(transactionId)))
+                .Where(t => ((string.IsNullOrEmpty(depositId) && string.IsNullOrEmpty(transactionId)) || (t.DepositTransactionId.ToString().StartsWith(depositId) && (t.PartialTransaction == null || t.PartialTransaction.GetHash().ToString().StartsWith(transactionId)))))
                 .Select(t => new CrossChainTransferModel()
                 {
                     DepositAmount = t.DepositAmount,
@@ -148,7 +150,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             ICrossChainTransfer[] transfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.FullySigned }, false, false).ToArray();
 
             CrossChainTransferModel[] transactions = transfers
-                .Where(t => t.DepositTransactionId.ToString().StartsWith(depositId) && (t.PartialTransaction == null || t.PartialTransaction.GetHash().ToString().StartsWith(transactionId)))
+                .Where(t => (string.IsNullOrEmpty(depositId) && string.IsNullOrEmpty(transactionId)) || (t.DepositTransactionId.ToString().StartsWith(depositId) && (t.PartialTransaction == null || t.PartialTransaction.GetHash().ToString().StartsWith(transactionId))))
                 .Select(t => new CrossChainTransferModel()
                 {
                     DepositAmount = t.DepositAmount,
@@ -159,6 +161,33 @@ namespace Stratis.Features.FederatedPeg.Controllers
                 }).ToArray();
 
             return this.Json(transactions);
+        }
+
+        [Route(FederationGatewayRouteEndPoint.GetTransferByDepositIdEndpoint)]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public async Task<IActionResult> GetTransferByDepositIdAsync([FromQuery(Name = "depositId")] string depositId)
+        {
+            if (!uint256.TryParse(depositId, out uint256 parsed))
+                return this.Json($"{depositId} is not a valid deposit id.");
+
+            ICrossChainTransfer[] transfers = await this.crossChainTransferStore.GetAsync(new[] { parsed }, false);
+
+            if (transfers != null && transfers[0] == null)
+                return this.Json($"{depositId} does not exist.");
+
+            var model = new CrossChainTransferModel()
+            {
+                DepositAmount = transfers[0].DepositAmount,
+                DepositId = transfers[0].DepositTransactionId,
+                DepositHeight = transfers[0].DepositHeight,
+                Transaction = new TransactionVerboseModel(transfers[0].PartialTransaction, this.network),
+                TransferStatus = transfers[0].Status.ToString(),
+            };
+
+            return this.Json(model);
         }
 
         /// <summary>
@@ -380,12 +409,28 @@ namespace Stratis.Features.FederatedPeg.Controllers
             if (!uint256.TryParse(depositIdTransactionId, out uint256 id))
                 return this.Json("Invalid deposit transaction id");
 
-            ICrossChainTransfer[] transfers = await this.crossChainTransferStore.GetAsync(new[] { id }, false);
+            ICrossChainTransfer[] transfers = await this.crossChainTransferStore.GetAsync(new[] { id }, false).ConfigureAwait(false);
 
             if (transfers != null && transfers.Any())
                 return this.Json(this.federationWalletManager.ValidateTransaction(transfers[0].PartialTransaction, true));
 
             return this.Json($"{depositIdTransactionId} does not exist.");
+        }
+
+        [Route(FederationGatewayRouteEndPoint.DeleteSuspended)]
+        [HttpDelete]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult DeleteSuspendedTransfers()
+        {
+            if (this.network.IsTest() || this.network.IsRegTest())
+            {
+                var result = this.crossChainTransferStore.DeleteSuspendedTransfers();
+                return this.Json($"{result} suspended transfers has been removed.");
+            }
+
+            return this.Json($"Deleting suspended transfers is only available on test networks.");
         }
     }
 }

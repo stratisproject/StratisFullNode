@@ -53,7 +53,7 @@ namespace Stratis.Bitcoin.Consensus.PerformanceCounters.Rules
                 {
                     if (rule.CalledTimes == 0)
                     {
-                        builder.AppendLine($"    {rule.RuleName.PadRight(50, '-')}{("No Samples").PadRight(12, '-')}");
+                        builder.AppendLine($"    {rule.RuleName.PadRight(60, '-')}{("No Samples").PadRight(12, '-')}");
                         continue;
                     }
 
@@ -62,7 +62,7 @@ namespace Stratis.Bitcoin.Consensus.PerformanceCounters.Rules
                     // % from average execution time for the group.
                     double percentage = Math.Round((avgExecutionTimeMs / avgGroupExecutionTimeMs) * 100.0);
 
-                    builder.AppendLine($"    {rule.RuleName.PadRight(50, '-')}{(avgExecutionTimeMs + " ms").PadRight(12, '-')}{percentage} %");
+                    builder.AppendLine($"    {rule.RuleName.PadRight(60, '-')}{(avgExecutionTimeMs + " ms").PadRight(12, '-')}{percentage} %");
                 }
 
                 builder.AppendLine();
