@@ -188,7 +188,8 @@ While ( ( Get-MaxHeight ) -eq $null )
 While ( ( Get-MaxHeight ) -gt ( Get-LocalIndexerHeight ) ) 
 {
     $a = Get-MaxHeight
-    $b = Get-LocalIndexerHeight 
+    $b = Get-LocalIndexerHeight
+    $c = $a - $b
     [int]$percentage = $b / $a * 100
     ""
     Write-Host (Get-TimeStamp) "$percentage% Synced" -ForegroundColor Cyan
