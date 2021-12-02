@@ -255,7 +255,7 @@ namespace Stratis.SmartContracts.IntegrationTests
 
             Assert.False(result.Revert);
             Assert.Equal(nameof(LocalCallTests.CalledLog), result.Logs[0].Log.Event);
-            Assert.Equal(nameof(LocalCallTests.CreateLog), result.Logs[0].Log.Name);
+            Assert.Equal(nameof(LocalCallTests.CreateLog), result.Logs[0].Log.Data["Name"]);
 
             result = this.node2.CallContractMethodLocally(nameof(LocalCallTests.CreateTransfer), preResponse.NewContractAddress, 0);
 
