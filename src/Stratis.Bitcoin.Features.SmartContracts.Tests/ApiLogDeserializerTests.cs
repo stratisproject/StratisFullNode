@@ -54,14 +54,14 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
             var serializer = new ApiLogDeserializer(primitiveSerializer, network, Mock.Of<IStateRepositoryRoot>(), Mock.Of<IContractAssemblyCache>());
             dynamic deserializedLog = serializer.DeserializeLogData(testBytes, typeof(TestLog));
 
-            Assert.Equal(testStruct.Id, deserializedLog.Id);
-            Assert.Equal(testStruct.Name, deserializedLog.Name);
-            Assert.Equal(testStruct.Data, deserializedLog.Data);
-            Assert.True(testStruct.Datas.SequenceEqual((byte[])deserializedLog.Datas));
-            Assert.Equal(testStruct.Truth, deserializedLog.Truth);
-            Assert.Equal(testStruct.Address.ToUint160().ToBase58Address(network), deserializedLog.Address);
-            Assert.Equal(testStruct.Value128.ToString(), deserializedLog.Value128.ToString());
-            Assert.Equal(testStruct.Value256.ToString(), deserializedLog.Value256.ToString());
+            Assert.Equal(testStruct.Id, deserializedLog.Data.Id);
+            Assert.Equal(testStruct.Name, deserializedLog.Data.Name);
+            Assert.Equal(testStruct.Data, deserializedLog.Data.Data);
+            Assert.True(testStruct.Datas.SequenceEqual((byte[])deserializedLog.Data.Datas));
+            Assert.Equal(testStruct.Truth, deserializedLog.Data.Truth);
+            Assert.Equal(testStruct.Address.ToUint160().ToBase58Address(network), deserializedLog.Data.Address);
+            Assert.Equal(testStruct.Value128.ToString(), deserializedLog.Data.Value128.ToString());
+            Assert.Equal(testStruct.Value256.ToString(), deserializedLog.Data.Value256.ToString());
         }
 
         [Fact]
@@ -104,11 +104,11 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
 
             var serializer = new ApiLogDeserializer(primitiveSerializer, network, stateRoot.Object, assemblyCache.Object);
 
-            var responses = serializer.MapLogResponses(logs);
+            List<SmartContracts.Models.LogResponse> responses = serializer.MapLogResponses(logs);
 
             // Verify that we deserialized the logs correctly.
-            Assert.Equal(testStruct0.Name, ((dynamic)responses[0].Log).Name);
-            Assert.Equal(testStruct1.Name, ((dynamic)responses[1].Log).Name);
+            Assert.Equal(testStruct0.Name, ((dynamic)responses[0].Log.Data).Name);
+            Assert.Equal(testStruct1.Name, ((dynamic)responses[1].Log.Data).Name);
 
             // Verify that we got the code for both log assemblies.
             stateRoot.Verify(s => s.GetCodeHash(logs[0].Address), Times.Once);
