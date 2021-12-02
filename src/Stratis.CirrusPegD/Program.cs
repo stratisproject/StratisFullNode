@@ -11,6 +11,7 @@ using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.Consensus;
+using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.Interop;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Miner;
@@ -134,6 +135,7 @@ namespace Stratis.CirrusPegD
                     options.UseReflectionExecutor();
                     options.UsePoAWhitelistedContracts();
                 })
+                .AddExternalApi()
                 .AddInteroperability()
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()

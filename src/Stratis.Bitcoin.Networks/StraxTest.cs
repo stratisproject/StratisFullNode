@@ -38,6 +38,8 @@ namespace Stratis.Bitcoin.Networks
             this.RewardClaimerBatchActivationHeight = 166200;
             this.RewardClaimerBlockInterval = 100;
 
+            this.ConversionTransactionFeeDistributionDummyAddress = "tUAzRBe1CaKaZnrxWPLVv7F4owHHKXAtbj";
+
             var consensusFactory = new PosConsensusFactory();
 
             // Create the genesis block.
@@ -151,6 +153,8 @@ namespace Stratis.Bitcoin.Networks
                 { 250_000, new CheckpointInfo(new uint256("0x60752fc5cf4e326e4b7fa44992affa30abb5dfdd52680f84db390d158237e24d"), new uint256("0x6f07cc332ef049b2f7fd06ff0c5883830c85d9e5ca965c39a3a2c97cf1bfe92d")) },
                 { 350_000, new CheckpointInfo(new uint256("0xc409b84bfd525550b535c64ca4d1becb1663b369e86c0d8af5b346b3b7f951b8"), new uint256("0x1dc8e7fd11a833a722c0b0c48db8a5eec10074fbf3066618e09e5662f6ff2113")) },
                 { 500_000, new CheckpointInfo(new uint256("0xda5da5c0ac8f34e89d6d308e1a046e98e46080941670e327d9eb84dc859d153f"), new uint256("0x1f73717627345bdc6d7b9b521dcea85df2586208a6d3a90fcd2efd16dcf9c591")) },
+                { 650_000, new CheckpointInfo(new uint256("0x50b2ddb88c5efe942d8bf6a07bed996f44b3b663df0f77d5d88ad1adba48329b"), new uint256("0xb507c86a412b9e50d0bed3be52a9042c2dbaca6653ff6ccb3e2e355c24c73a70")) },
+                { 750_000, new CheckpointInfo(new uint256("0x592842f3e5af517b0ce6f451f6b61738a6dea1007ccbaab39f22878de8de78dc"), new uint256("0x6ee053737f80a3a5173c10a507b1d1ea2ec9f6fa6be07b2b9d26558e4622f4a4")) },
             };
 
             this.Bech32Encoders = new Bech32Encoder[2];

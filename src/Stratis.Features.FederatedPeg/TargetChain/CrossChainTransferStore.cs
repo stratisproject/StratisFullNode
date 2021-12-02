@@ -35,7 +35,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <summary>
         /// Maximum number of partial transactions.
         /// </summary>
-        public const int MaximumPartialTransactions = 5;
+        public const int MaximumPartialTransactions = 100;
 
         /// <summary>This table contains the cross-chain transfer information.</summary>
         private const string transferTableName = "Transfers";
@@ -402,7 +402,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     if (maturedBlockDeposits.Count == 0 || maturedBlockDeposits.First().BlockInfo.BlockHeight != this.NextMatureDepositHeight)
                     {
-                        this.logger.Debug("(-)[NO_VIABLE_BLOCKS]:true");
+                        this.logger.Debug($"No viable blocks to process; {nameof(maturedBlockDeposits)}={maturedBlockDeposits.Count};{nameof(this.NextMatureDepositHeight)}={this.NextMatureDepositHeight}");
                         return new RecordLatestMatureDepositsResult().Succeeded();
                     }
 
@@ -494,12 +494,14 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                                     if (invalidRecipient)
                                     {
+                                        this.logger.Info("Invalid recipient.");
+
                                         status = CrossChainTransferStatus.Rejected;
                                     }
                                     else if ((tracker.Count(t => t.Value == CrossChainTransferStatus.Partial) + this.depositsIdsByStatus[CrossChainTransferStatus.Partial].Count) >= this.settings.MaximumPartialTransactionThreshold)
                                     {
                                         haveSuspendedTransfers = true;
-                                        this.logger.Info($"Partial transaction limit of {this.settings.MaximumPartialTransactionThreshold} reached, processing of deposits will continue once the partial transaction count falls below this value.");
+                                        this.logger.Warn($"Partial transaction limit of {this.settings.MaximumPartialTransactionThreshold} reached, processing of deposits will continue once the partial transaction count falls below this value.");
                                     }
                                     else
                                     {
@@ -512,7 +514,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                                             if (!this.ValidateTransaction(transaction))
                                             {
-                                                this.logger.Debug("Suspending transfer for deposit '{0}' to retry invalid transaction later.", deposit.Id);
+                                                this.logger.Info("Suspending transfer for deposit '{0}' to retry invalid transaction later.", deposit.Id);
 
                                                 this.federationWalletManager.RemoveWithdrawalTransactions(deposit.Id);
                                                 haveSuspendedTransfers = true;
@@ -526,9 +528,14 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                         }
                                         else
                                         {
+                                            this.logger.Info("Unable to build withdrawal transaction, suspending.");
                                             haveSuspendedTransfers = true;
                                         }
                                     }
+                                }
+                                else
+                                {
+                                    this.logger.Info("Suspended flag set: '{0}'", deposit);
                                 }
 
                                 if (transfers[i] == null || transaction == null)
@@ -567,9 +574,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                     // Ensure we get called for a retry by NOT advancing the chain A tip if the block
                                     // contained any suspended transfers.
                                     if (!haveSuspendedTransfers)
-                                    {
                                         this.SaveNextMatureHeight(dbreezeTransaction, this.NextMatureDepositHeight + 1);
-                                    }
 
                                     dbreezeTransaction.Commit();
                                     this.UpdateLookups(tracker);
@@ -1006,8 +1011,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                             // responsible for cleaning transactions past max reorg.
                             // Doing this from the federation wallet manager could mean transactions
                             // are cleaned before they are processed by the CCTS (which means they will
-                            // be wrongly added back.
-                            if (this.federationWalletManager.CleanTransactionsPastMaxReorg(this.TipHashAndHeight.Height))
+                            // be wrongly added back).
+                            if (this.federationWalletManager.IsSyncedWithChain() && this.federationWalletManager.CleanTransactionsPastMaxReorg(this.TipHashAndHeight.Height))
                                 this.federationWalletManager.SaveWallet();
 
                             return true;
@@ -1488,13 +1493,36 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             }
         }
 
-
         /// <inheritdoc />
         public List<WithdrawalModel> GetCompletedWithdrawals(int transfersToDisplay)
         {
             HashSet<uint256> depositIds = this.depositsIdsByStatus[CrossChainTransferStatus.SeenInBlock];
             ICrossChainTransfer[] transfers = this.Get(depositIds.ToArray()).Where(t => t != null).ToArray();
             return this.withdrawalHistoryProvider.GetHistory(transfers, transfersToDisplay);
+        }
+
+        /// <inheritdoc />
+        public int DeleteSuspendedTransfers()
+        {
+            HashSet<uint256> depositIds = this.depositsIdsByStatus[CrossChainTransferStatus.Suspended];
+            ICrossChainTransfer[] transfers = this.Get(depositIds.ToArray()).Where(t => t != null).ToArray();
+
+            using (DBreeze.Transactions.Transaction dbreezeTransaction = this.DBreeze.GetTransaction())
+            {
+                dbreezeTransaction.SynchronizeTables(transferTableName, commonTableName);
+                dbreezeTransaction.ValuesLazyLoadingIsOn = false;
+
+                foreach (ICrossChainTransfer transfer in transfers)
+                {
+                    this.DeleteTransfer(dbreezeTransaction, transfer);
+                    this.depositsIdsByStatus[CrossChainTransferStatus.Suspended].Clear();
+                    this.logger.Debug($"Suspended transfer with deposit id '{transfer.DepositTransactionId}' deleted.");
+                }
+
+                dbreezeTransaction.Commit();
+            }
+
+            return transfers.Count();
         }
 
         /// <inheritdoc />

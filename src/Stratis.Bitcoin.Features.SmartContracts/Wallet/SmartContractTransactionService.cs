@@ -2,15 +2,20 @@
 using System.Collections.Generic;
 using System.Linq;
 using CSharpFunctionalExtensions;
+using Microsoft.AspNetCore.Mvc;
 using NBitcoin;
+using Stratis.Bitcoin.Controllers;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Features.Wallet.Services;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.SmartContracts.CLR;
+using Stratis.SmartContracts.CLR.Caching;
 using Stratis.SmartContracts.CLR.Serialization;
 using Stratis.SmartContracts.Core;
+using Stratis.SmartContracts.Core.Receipts;
 using Stratis.SmartContracts.Core.State;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
@@ -38,6 +43,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         private readonly IStateRepositoryRoot stateRoot;
         private readonly IReserveUtxoService reserveUtxoService;
 
+        private readonly IBlockStore blockStore;
+        private readonly ChainIndexer chainIndexer;
+        private readonly IContractPrimitiveSerializer primitiveSerializer;
+        private readonly IContractAssemblyCache contractAssemblyCache;
+        private readonly IReceiptRepository receiptRepository;
+
         public SmartContractTransactionService(
             Network network,
             IWalletManager walletManager,
@@ -46,7 +57,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             ICallDataSerializer callDataSerializer,
             IAddressGenerator addressGenerator,
             IStateRepositoryRoot stateRoot,
-            IReserveUtxoService reserveUtxoService
+            IReserveUtxoService reserveUtxoService,
+            IBlockStore blockStore,
+            ChainIndexer chainIndexer,
+            IContractPrimitiveSerializer primitiveSerializer,
+            IContractAssemblyCache contractAssemblyCache,
+            IReceiptRepository receiptRepository
             )
         {
             this.network = network;
@@ -57,6 +73,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             this.addressGenerator = addressGenerator;
             this.stateRoot = stateRoot;
             this.reserveUtxoService = reserveUtxoService;
+
+            this.blockStore = blockStore;
+            this.chainIndexer = chainIndexer;
+            this.primitiveSerializer = primitiveSerializer;
+            this.contractAssemblyCache = contractAssemblyCache;
+            this.receiptRepository = receiptRepository;
         }
 
         public EstimateFeeResult EstimateFee(ScTxFeeEstimateRequest request)
@@ -348,6 +370,41 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             }
 
             return new ContractTxData(ReflectionVirtualMachine.VmVersion, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasPrice, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasLimit, contractAddress, request.MethodName);
+        }
+        
+        /// <inheritdoc />
+        public List<ReceiptResponse> ReceiptSearch(string contractAddress, string eventName, List<string> topics = null, int fromBlock = 0, int? toBlock = null)
+        {
+            uint160 address = contractAddress.ToUint160(this.network);
+
+            byte[] contractCode = this.stateRoot.GetCode(address);
+
+            if (contractCode == null || !contractCode.Any())
+            {
+                return null;
+            }
+
+            IEnumerable<byte[]> topicsBytes = topics != null ? topics.Where(topic => topic != null).Select(t => t.HexToByteArray()) : new List<byte[]>();
+
+
+            var deserializer = new ApiLogDeserializer(this.primitiveSerializer, this.network, this.stateRoot, this.contractAssemblyCache);
+
+            var receiptSearcher = new ReceiptSearcher(this.chainIndexer, this.blockStore, this.receiptRepository, this.network);
+
+            List<Receipt> receipts = receiptSearcher.SearchReceipts(contractAddress, eventName, fromBlock, toBlock, topicsBytes);
+
+            var result = new List<ReceiptResponse>();
+
+            foreach (Receipt receipt in receipts)
+            {
+                List<LogResponse> logResponses = deserializer.MapLogResponses(receipt.Logs);
+
+                var receiptResponse = new ReceiptResponse(receipt, logResponses, this.network);
+
+                result.Add(receiptResponse);
+            }
+
+            return result;
         }
 
         private bool CheckBalance(string address)

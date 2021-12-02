@@ -156,6 +156,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
 
     public class WalletTransactionCountRequest : RequestModel
     {
+        public WalletTransactionCountRequest()
+        {
+            this.AccountName = WalletManager.DefaultAccount;
+        }
+
         /// <summary>
         /// The name of the wallet to query transaction count for.
         /// </summary>
@@ -920,6 +925,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
 
         [Required(ErrorMessage = "A password is required.")]
         public string WalletPassword { get; set; }
+
+        /// <summary>
+        /// If this is set, only one address will be distributed to. The address has to be present in the wallet.
+        /// <remarks>Takes precedence over the <see cref="ReuseAddresses"/> and <see cref="UseChangeAddresses"/> settings. Cannot be used with <see cref="UseUniqueAddressPerUtxo"/>.</remarks>
+        /// </summary>
+        public string SingleDestinationAddress { get; set; }
 
         [DefaultValue(false)]
         public bool UseUniqueAddressPerUtxo { get; set; }

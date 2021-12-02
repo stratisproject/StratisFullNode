@@ -18,15 +18,16 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
     /// </summary>
     public class LevelDbProvenBlockHeaderRepository : IProvenBlockHeaderRepository
     {
+        /// <summary> Path the to the database.</summary>
+        private readonly string databaseFolder;
+
         /// <summary>
         /// Instance logger.
         /// </summary>
         private readonly ILogger logger;
 
-        /// <summary>
-        /// Access to database.
-        /// </summary>
-        private readonly DB leveldb;
+        /// <summary> Access to the database.</summary>
+        private DB leveldb;
 
         private readonly object locker;
 
@@ -57,23 +58,21 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         /// Initializes a new instance of the object.
         /// </summary>
         /// <param name="network">Specification of the network the node runs on - RegTest/TestNet/MainNet.</param>
-        /// <param name="folder"><see cref="LevelDbProvenBlockHeaderRepository"/> folder path to the DBreeze database files.</param>
+        /// <param name="databaseFolder"><see cref="LevelDbProvenBlockHeaderRepository"/> folder path to the DBreeze database files.</param>
         /// <param name="loggerFactory">Factory to create a logger for this type.</param>
         /// <param name="dBreezeSerializer">The serializer to use for <see cref="IBitcoinSerializable"/> objects.</param>
-        public LevelDbProvenBlockHeaderRepository(Network network, string folder, ILoggerFactory loggerFactory,
+        public LevelDbProvenBlockHeaderRepository(Network network, string databaseFolder, ILoggerFactory loggerFactory,
             DBreezeSerializer dBreezeSerializer)
         {
             Guard.NotNull(network, nameof(network));
-            Guard.NotNull(folder, nameof(folder));
+
+            this.databaseFolder = databaseFolder;
             this.dBreezeSerializer = dBreezeSerializer;
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
 
-            Directory.CreateDirectory(folder);
+            Directory.CreateDirectory(databaseFolder);
 
-            // Open a connection to a new DB and create if not found
-            var options = new Options { CreateIfMissing = true };
-            this.leveldb = new DB(options, folder);
             this.locker = new object();
 
             this.network = network;
@@ -84,6 +83,10 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         {
             Task task = Task.Run(() =>
             {
+                // Open a connection to a new DB and create if not found
+                var options = new Options { CreateIfMissing = true };
+                this.leveldb = new DB(options, this.databaseFolder);
+
                 this.TipHashHeight = this.GetTipHash();
 
                 if (this.TipHashHeight != null)

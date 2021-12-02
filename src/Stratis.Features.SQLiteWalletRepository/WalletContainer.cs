@@ -60,16 +60,17 @@ namespace Stratis.Features.SQLiteWalletRepository
             this.Conn = conn;
         }
 
-        internal bool WriteLockWait(bool dontWait = false)
+        internal bool WriteLockWait(bool wait = true, int timeoutSeconds = 120)
         {
             // Only take the write lock if there are no readers.
             while (true)
             {
-                this.LockUpdateWallet.Wait();
+                if (!this.LockUpdateWallet.Wait(wait, timeoutSeconds))
+                    return false;
                 if (this.ReaderCount == 0)
                     return true;
                 this.LockUpdateWallet.Release();
-                if (dontWait)
+                if (!wait)
                     return false;
                 Thread.Sleep(100);
             }

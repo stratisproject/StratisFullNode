@@ -50,7 +50,6 @@ namespace Stratis.Bitcoin.Consensus.PerformanceCounters.ConsensusManager
             builder.AppendLine($"Block connection (FV excluding rewind): {this.ConnectBlockFV.GetAvgExecutionTimeMs()} ms");
             builder.AppendLine($"Block connected signal: {this.BlockConnectedSignal.GetAvgExecutionTimeMs()} ms");
             builder.AppendLine($"Block disconnected signal: {this.BlockDisconnectedSignal.GetAvgExecutionTimeMs()} ms");
-            builder.AppendLine();
 
             return builder.ToString();
         }

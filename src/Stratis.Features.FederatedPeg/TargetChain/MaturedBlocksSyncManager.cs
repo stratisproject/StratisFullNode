@@ -5,10 +5,13 @@ using System.Threading.Tasks;
 using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Features.ExternalApi;
+using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Controllers;
 using Stratis.Features.FederatedPeg.Conversion;
+using Stratis.Features.FederatedPeg.Coordination;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
 using Stratis.Features.FederatedPeg.SourceChain;
@@ -34,19 +37,19 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly IAsyncProvider asyncProvider;
         private readonly ICrossChainTransferStore crossChainTransferStore;
         private readonly IFederationGatewayClient federationGatewayClient;
+        private readonly IFederatedPegSettings federatedPegSettings;
         private readonly IFederationWalletManager federationWalletManager;
         private readonly IInitialBlockDownloadState initialBlockDownloadState;
         private readonly ILogger logger;
         private readonly INodeLifetime nodeLifetime;
         private readonly IConversionRequestRepository conversionRequestRepository;
         private readonly ChainIndexer chainIndexer;
+        private readonly IExternalApiPoller externalApiPoller;
+        private readonly IConversionRequestFeeService conversionRequestFeeService;
+        private readonly Network network;
+        private readonly IFederationManager federationManager;
 
         private IAsyncLoop requestDepositsTask;
-
-        /// <summary>
-        /// If the federation wallet tip is within this amount of blocks from the chain's tip, consider it synced.
-        /// </summary>
-        private const int FederationWalletTipSyncBuffer = 10;
 
         /// <summary>When we are fully synced we stop asking for more blocks for this amount of time.</summary>
         private const int RefreshDelaySeconds = 10;
@@ -63,16 +66,28 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             IInitialBlockDownloadState initialBlockDownloadState,
             INodeLifetime nodeLifetime,
             IConversionRequestRepository conversionRequestRepository,
-            ChainIndexer chainIndexer)
+            ChainIndexer chainIndexer,
+            Network network,
+            IFederatedPegSettings federatedPegSettings,
+            IFederationManager federationManager = null,
+            IExternalApiPoller externalApiPoller = null,
+            IConversionRequestFeeService conversionRequestFeeService = null)
         {
             this.asyncProvider = asyncProvider;
             this.chainIndexer = chainIndexer;
             this.conversionRequestRepository = conversionRequestRepository;
             this.crossChainTransferStore = crossChainTransferStore;
             this.federationGatewayClient = federationGatewayClient;
+            this.federatedPegSettings = federatedPegSettings;
             this.federationWalletManager = federationWalletManager;
             this.initialBlockDownloadState = initialBlockDownloadState;
             this.nodeLifetime = nodeLifetime;
+            this.conversionRequestRepository = conversionRequestRepository;
+            this.chainIndexer = chainIndexer;
+            this.externalApiPoller = externalApiPoller;
+            this.conversionRequestFeeService = conversionRequestFeeService;
+            this.network = network;
+            this.federationManager = federationManager;
 
             this.logger = LogManager.GetCurrentClassLogger();
         }
@@ -102,7 +117,14 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <returns><c>true</c> if delay between next time we should ask for blocks is required; <c>false</c> otherwise.</returns>
         protected async Task<bool> SyncDepositsAsync()
         {
-            // First ensure that we the node is out of IBD.
+            // First ensure that the federation wallet is active.
+            if (!this.federationWalletManager.IsFederationWalletActive())
+            {
+                this.logger.Info("The CCTS will start processing deposits once the federation wallet has been activated.");
+                return true;
+            }
+
+            // Then ensure that the node is out of IBD.
             if (this.initialBlockDownloadState.IsInitialBlockDownload())
             {
                 this.logger.Info("The CCTS will start processing deposits once the node is out of IBD.");
@@ -110,11 +132,13 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             }
 
             // Then ensure that the federation wallet is synced with the chain.
-            if (this.federationWalletManager.WalletTipHeight < this.chainIndexer.Tip.Height - FederationWalletTipSyncBuffer)
+            if (!this.federationWalletManager.IsSyncedWithChain())
             {
                 this.logger.Info($"The CCTS will start processing deposits once the federation wallet is synced with the chain; height {this.federationWalletManager.WalletTipHeight}");
                 return true;
             }
+
+            this.logger.Info($"Requesting deposits from counterchain node.");
 
             SerializableResult<List<MaturedBlockDepositsModel>> matureBlockDeposits = await this.federationGatewayClient.GetMaturedBlockDepositsAsync(this.crossChainTransferStore.NextMatureDepositHeight, this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
 
@@ -130,7 +154,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 return true;
             }
 
-            return await ProcessMatureBlockDepositsAsync(matureBlockDeposits);
+            return await ProcessMatureBlockDepositsAsync(matureBlockDeposits).ConfigureAwait(false);
         }
 
         private async Task<bool> ProcessMatureBlockDepositsAsync(SerializableResult<List<MaturedBlockDepositsModel>> matureBlockDeposits)
@@ -147,80 +171,173 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 return true;
             }
 
+            this.logger.Info("Processing {0} matured blocks.", matureBlockDeposits.Value.Count);
+
             // Filter out conversion transactions & also log what we've received for diagnostic purposes.
             foreach (MaturedBlockDepositsModel maturedBlockDeposit in matureBlockDeposits.Value)
             {
-                foreach (IDeposit conversionTransaction in maturedBlockDeposit.Deposits.Where(d =>
-                    d.RetrievalType == DepositRetrievalType.ConversionSmall ||
-                    d.RetrievalType == DepositRetrievalType.ConversionNormal ||
-                    d.RetrievalType == DepositRetrievalType.ConversionLarge))
+                var tempDepositList = new List<IDeposit>();
+
+                if (maturedBlockDeposit.Deposits.Count > 0)
+                    this.logger.Debug("Matured deposit count for block {0} height {1}: {2}.", maturedBlockDeposit.BlockInfo.BlockHash, maturedBlockDeposit.BlockInfo.BlockHeight, maturedBlockDeposit.Deposits.Count);
+
+                foreach (IDeposit potentialConversionTransaction in maturedBlockDeposit.Deposits)
                 {
-                    this.logger.Info("Conversion mint transaction " + conversionTransaction + " received in matured blocks.");
-
-                    if (this.conversionRequestRepository.Get(conversionTransaction.Id.ToString()) != null)
+                    // If this is not a conversion transaction then add it immediately to the temporary list.
+                    if (potentialConversionTransaction.RetrievalType != DepositRetrievalType.ConversionSmall &&
+                        potentialConversionTransaction.RetrievalType != DepositRetrievalType.ConversionNormal &&
+                        potentialConversionTransaction.RetrievalType != DepositRetrievalType.ConversionLarge)
                     {
-                        this.logger.Info("Conversion mint transaction " + conversionTransaction + " already exists, ignoring.");
-
+                        tempDepositList.Add(potentialConversionTransaction);
                         continue;
                     }
 
-                    // Get the first block on this chain that has a timestamp after the deposit's block time on the counterchain.
-                    // This is so that we can assign a block height that the deposit 'arrived' on the sidechain.
-                    // TODO: This can probably be made more efficient than looping every time. 
-                    ChainedHeader header = this.chainIndexer.Tip;
-                    bool found = false;
-
-                    while (true)
+                    if (this.federatedPegSettings.IsMainChain)
                     {
-                        if (header == this.chainIndexer.Genesis)
-                        {
-                            break;
-                        }
-
-                        if (header.Previous.Header.Time <= maturedBlockDeposit.BlockInfo.BlockTime)
-                        {
-                            found = true;
-
-                            break;
-                        }
-
-                        header = header.Previous;
-                    }
-
-                    if (!found)
-                    {
+                        this.logger.Warn("Conversion transactions do not get actioned by the main chain.");
                         continue;
                     }
 
-                    this.conversionRequestRepository.Save(new ConversionRequest()
+                    var interFluxV2MainChainActivationHeight = ((PoAConsensusOptions)this.network.Consensus.Options).InterFluxV2MainChainActivationHeight;
+                    if (interFluxV2MainChainActivationHeight != 0 && maturedBlockDeposit.BlockInfo.BlockHeight < interFluxV2MainChainActivationHeight)
                     {
-                        RequestId = conversionTransaction.Id.ToString(),
-                        RequestType = ConversionRequestType.Mint,
-                        Processed = false,
-                        RequestStatus = ConversionRequestStatus.Unprocessed,
-                        // We do NOT convert to wei here yet. That is done when the minting transaction is submitted on the Ethereum network.
-                        Amount = (ulong)conversionTransaction.Amount.Satoshi,
-                        BlockHeight = header.Height,
-                        DestinationAddress = conversionTransaction.TargetAddress,
-                        DestinationChain = conversionTransaction.TargetChain
-                    });
+                        this.logger.Warn("Conversion transactions '{0}' will not be processed below the main chain activation height of {1}.", potentialConversionTransaction.Id, interFluxV2MainChainActivationHeight);
+                        continue;
+                    }
+
+                    this.logger.Info("Conversion transaction '{0}' received.", potentialConversionTransaction.Id);
+
+                    ChainedHeader applicableHeader = null;
+                    bool conversionExists = false;
+                    if (this.conversionRequestRepository.Get(potentialConversionTransaction.Id.ToString()) != null)
+                    {
+                        this.logger.Warn("Conversion transaction '{0}' already exists, ignoring.", potentialConversionTransaction.Id);
+                        conversionExists = true;
+                    }
+                    else
+                    {
+                        // This should ony happen if the conversion does't exist yet.
+                        if (!FindApplicableConversionRequestHeader(maturedBlockDeposit, potentialConversionTransaction, out applicableHeader))
+                            continue;
+                    }
+
+                    InteropConversionRequestFee interopConversionRequestFee = await this.conversionRequestFeeService.AgreeFeeForConversionRequestAsync(potentialConversionTransaction.Id.ToString(), maturedBlockDeposit.BlockInfo.BlockHeight).ConfigureAwait(false);
+
+                    // If a dynamic fee could not be determined, create a fallback fee.
+                    if (interopConversionRequestFee == null ||
+                        (interopConversionRequestFee != null && interopConversionRequestFee.State != InteropFeeState.AgreeanceConcluded))
+                    {
+                        interopConversionRequestFee.Amount = ConversionRequestFeeService.FallBackFee;
+                        this.logger.Warn($"A dynamic fee for conversion request '{potentialConversionTransaction.Id}' could not be determined, using a fixed fee of {ConversionRequestFeeService.FallBackFee} STRAX.");
+                    }
+
+                    if (Money.Satoshis(interopConversionRequestFee.Amount) >= potentialConversionTransaction.Amount)
+                    {
+                        this.logger.Warn("Conversion transaction '{0}' is no longer large enough to cover the fee.", potentialConversionTransaction.Id);
+                        continue;
+                    }
+
+                    // We insert the fee distribution as a deposit to be processed, albeit with a special address.
+                    // Deposits with this address as their destination will be distributed between the multisig members.
+                    // Note that it will be actioned immediately as a matured deposit.
+                    this.logger.Info("Adding conversion fee distribution for transaction '{0}' to deposit list.", potentialConversionTransaction.Id);
+
+                    // Instead of being a conversion deposit, the fee distribution is translated to its non-conversion equivalent.
+                    DepositRetrievalType depositType = DepositRetrievalType.Small;
+
+                    switch (potentialConversionTransaction.RetrievalType)
+                    {
+                        case DepositRetrievalType.ConversionSmall:
+                            depositType = DepositRetrievalType.Small;
+                            break;
+                        case DepositRetrievalType.ConversionNormal:
+                            depositType = DepositRetrievalType.Normal;
+                            break;
+                        case DepositRetrievalType.ConversionLarge:
+                            depositType = DepositRetrievalType.Large;
+                            break;
+                    }
+
+                    tempDepositList.Add(new Deposit(potentialConversionTransaction.Id,
+                        depositType,
+                        Money.Satoshis(interopConversionRequestFee.Amount),
+                        this.network.ConversionTransactionFeeDistributionDummyAddress,
+                        potentialConversionTransaction.TargetChain,
+                        potentialConversionTransaction.BlockNumber,
+                        potentialConversionTransaction.BlockHash));
+
+                    if (!conversionExists)
+                    {
+                        this.logger.Debug("Adding conversion request for transaction '{0}' to repository.", potentialConversionTransaction.Id);
+
+                        this.conversionRequestRepository.Save(new ConversionRequest()
+                        {
+                            RequestId = potentialConversionTransaction.Id.ToString(),
+                            RequestType = ConversionRequestType.Mint,
+                            Processed = false,
+                            RequestStatus = ConversionRequestStatus.Unprocessed,
+                            // We do NOT convert to wei here yet. That is done when the minting transaction is submitted on the Ethereum network.
+                            Amount = (ulong)(potentialConversionTransaction.Amount - Money.Satoshis(interopConversionRequestFee.Amount)).Satoshi,
+                            BlockHeight = applicableHeader.Height,
+                            DestinationAddress = potentialConversionTransaction.TargetAddress,
+                            DestinationChain = potentialConversionTransaction.TargetChain
+                        });
+                    }
                 }
 
-                // Order all other transactions in the block deterministically.
-                maturedBlockDeposit.Deposits = maturedBlockDeposit.Deposits.Where(d =>
-                    d.RetrievalType != DepositRetrievalType.ConversionSmall &&
-                    d.RetrievalType != DepositRetrievalType.ConversionNormal &&
-                    d.RetrievalType != DepositRetrievalType.ConversionLarge).OrderBy(x => x.Id, Comparer<uint256>.Create(DeterministicCoinOrdering.CompareUint256)).ToList();
+                maturedBlockDeposit.Deposits = tempDepositList.AsReadOnly();
+
+                // Order all non-conversion deposit transactions in the block deterministically.
+                maturedBlockDeposit.Deposits = maturedBlockDeposit.Deposits.OrderBy(x => x.Id, Comparer<uint256>.Create(DeterministicCoinOrdering.CompareUint256)).ToList();
 
                 foreach (IDeposit deposit in maturedBlockDeposit.Deposits)
                 {
-                    this.logger.Trace(deposit.ToString());
+                    this.logger.Debug("Deposit matured: {0}", deposit.ToString());
                 }
             }
 
             // If we received a portion of blocks we can ask for a new portion without any delay.
             RecordLatestMatureDepositsResult result = await this.crossChainTransferStore.RecordLatestMatureDepositsAsync(matureBlockDeposits.Value).ConfigureAwait(false);
             return !result.MatureDepositRecorded;
+        }
+
+        /// <summary>
+        /// Get the first block on this chain that has a timestamp after the deposit's block time on the counterchain.
+        /// This is so that we can assign a block height that the deposit 'arrived' on the sidechain.
+        /// TODO: This can probably be made more efficient than looping every time. 
+        /// </summary>
+        /// <param name="maturedBlockDeposit">The matured block deposit's block time to check against.</param>
+        /// <param name="potentialConversionTransaction">The conversion transaction we are currently working with.</param>
+        /// <param name="chainedHeader">The chained header to use.</param>
+        /// <returns><c>true</c> if found.</returns>
+        private bool FindApplicableConversionRequestHeader(MaturedBlockDepositsModel maturedBlockDeposit, IDeposit potentialConversionTransaction, out ChainedHeader chainedHeader)
+        {
+            chainedHeader = this.chainIndexer.Tip;
+
+            bool found = false;
+
+            this.logger.Debug($"Finding applicable header for deposit with block time '{maturedBlockDeposit.BlockInfo.BlockTime}'; chain tip '{this.chainIndexer.Tip}'.");
+
+            while (true)
+            {
+                if (chainedHeader == this.chainIndexer.Genesis)
+                    break;
+
+                if (chainedHeader.Previous.Header.Time <= maturedBlockDeposit.BlockInfo.BlockTime)
+                {
+                    found = true;
+                    break;
+                }
+
+                chainedHeader = chainedHeader.Previous;
+            }
+
+            if (!found)
+                this.logger.Warn("Unable to determine timestamp for conversion transaction '{0}', ignoring.", potentialConversionTransaction.Id);
+
+            this.logger.Debug($"Applicable header selected '{chainedHeader}'");
+
+            return found;
         }
 
         /// <inheritdoc />

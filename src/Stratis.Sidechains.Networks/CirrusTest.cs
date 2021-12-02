@@ -44,6 +44,8 @@ namespace Stratis.Sidechains.Networks
 
             this.CirrusRewardDummyAddress = "tGXZrZiU44fx3SQj8tAQ3Zexy2VuELZtoh";
 
+            this.ConversionTransactionFeeDistributionDummyAddress = "tUAzRBe1CaKaZnrxWPLVv7F4owHHKXAtbj";
+
             var consensusFactory = new SmartContractCollateralPoAConsensusFactory();
 
             // Create the genesis block.
@@ -95,6 +97,9 @@ namespace Stratis.Sidechains.Networks
             // Register the new set of federation members.
             this.Federations.RegisterFederation(new Federation(straxFederationTransactionSigningKeys));
 
+            // The height at which the following list of members apply.
+            this.MultisigMinersApplicabilityHeight = 1873798;
+
             // Set the list of Strax Era mining keys.
             this.StraxMiningMultisigMembers = new List<PubKey>()
             {
@@ -120,9 +125,12 @@ namespace Stratis.Sidechains.Networks
                 federationMemberMaxIdleTimeSeconds: 60 * 60 * 3 // 3 Hours
             )
             {
+                InterFluxV2MainChainActivationHeight = 500_000,
                 EnforceMinProtocolVersionAtBlockHeight = 505900, // setting the value to zero makes the functionality inactive
                 EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
-                VotingManagerV2ActivationHeight = 1_999_500
+                VotingManagerV2ActivationHeight = 1_999_500,
+                Release1100ActivationHeight = 2_796_000,
+                PollExpiryBlocks = 450 // 2 hours
             };
 
             var buriedDeployments = new BuriedDeploymentsArray
@@ -217,6 +225,8 @@ namespace Stratis.Sidechains.Networks
                 { 1_900_000, new CheckpointInfo(new uint256("0xd413f3aed50f4a1a4580e7c506223a605e222849da9649ca6d43ad7aac5c5af5")) },
                 { 2_050_000, new CheckpointInfo(new uint256("0x543511cdefc38ee4fc272872543427cf08c6406ab602799b47138e418aa195fc")) },
                 { 2_300_000, new CheckpointInfo(new uint256("0x8e189e0c38cb55c795276d13cc7f6d9c6825eb85324f38ec94a9d4df5d5b5938")) },
+                { 2_600_000, new CheckpointInfo(new uint256("0x272a6bd353d794bdbf0ebfe2846fb45ed63bc0073202fcfbbd0d6820bf2370c4")) },
+                { 2_800_000, new CheckpointInfo(new uint256("0xec789f5b9dec0245b3c81fe9279b403dd233dfb4f4361a18386152c66f88cb87")) },
             };
 
             this.DNSSeeds = new List<DNSSeedData>
