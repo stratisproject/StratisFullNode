@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
+using CSharpFunctionalExtensions;
 using NBitcoin;
 using Stratis.SmartContracts.CLR.Serialization;
 using Stratis.SmartContracts.Networks;
@@ -31,8 +32,8 @@ namespace Stratis.SmartContracts.CLR.Tests
             );
 
             var contractTxData = new ContractTxData(1, 1, (RuntimeObserver.Gas)5000, contractExecutionCode, signatures: new[] { Convert.ToBase64String(new byte[] { 1, 2, 3 }), Convert.ToBase64String(new byte[] { 7, 8, 9 }) });
-            var callDataResult = this.Serializer.Deserialize(this.Serializer.Serialize(contractTxData));
-            var callData = callDataResult.Value;
+            Result<ContractTxData> callDataResult = this.Serializer.Deserialize(this.Serializer.Serialize(contractTxData));
+            ContractTxData callData = callDataResult.Value;
 
             Assert.True((bool) callDataResult.IsSuccess);
             Assert.Equal(1, callData.VmVersion);
@@ -73,8 +74,8 @@ namespace Stratis.SmartContracts.CLR.Tests
 
             var contractTxData = new ContractTxData(1, 1, (RuntimeObserver.Gas)5000, contractExecutionCode, methodParameters);
 
-            var callDataResult = this.Serializer.Deserialize(this.Serializer.Serialize(contractTxData));
-            var callData = callDataResult.Value;
+            Result<ContractTxData> callDataResult = this.Serializer.Deserialize(this.Serializer.Serialize(contractTxData));
+            ContractTxData callData = callDataResult.Value;
 
             Assert.True((bool) callDataResult.IsSuccess);
             Assert.Equal(contractTxData.VmVersion, callData.VmVersion);
@@ -106,8 +107,8 @@ namespace Stratis.SmartContracts.CLR.Tests
         {          
             var contractTxData = new ContractTxData(1, 1, (RuntimeObserver.Gas)5000, 100, "Execute");
 
-            var callDataResult = this.Serializer.Deserialize(this.Serializer.Serialize(contractTxData));
-            var callData = callDataResult.Value;
+            Result<ContractTxData> callDataResult = this.Serializer.Deserialize(this.Serializer.Serialize(contractTxData));
+            ContractTxData callData = callDataResult.Value;
 
             Assert.True((bool) callDataResult.IsSuccess);
             Assert.Equal(contractTxData.VmVersion, callData.VmVersion);
@@ -135,8 +136,8 @@ namespace Stratis.SmartContracts.CLR.Tests
             };
 
             var contractTxData = new ContractTxData(1, 1, (RuntimeObserver.Gas)5000, 100, "Execute", methodParameters);
-            var callDataResult = this.Serializer.Deserialize(this.Serializer.Serialize(contractTxData));
-            var callData = callDataResult.Value;
+            Result<ContractTxData> callDataResult = this.Serializer.Deserialize(this.Serializer.Serialize(contractTxData));
+            ContractTxData callData = callDataResult.Value;
 
             Assert.True((bool) callDataResult.IsSuccess);
 

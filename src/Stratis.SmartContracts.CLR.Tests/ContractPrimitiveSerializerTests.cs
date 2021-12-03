@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Text;
 using NBitcoin;
 using Newtonsoft.Json;
@@ -155,6 +156,21 @@ namespace Stratis.SmartContracts.CLR.Tests
             testStruct.NullInt = 6;
             serialized = this.serializer.Serialize(testStruct);
             Assert.ThrowsAny<Exception>(() => this.serializer.Deserialize<ContainsNullInt>(serialized));
+        }
+
+        [Fact]
+        public void Deserialize_Empty_String()
+        {
+            var empty = this.serializer.Serialize(string.Empty);
+            Assert.Equal(string.Empty, this.serializer.Deserialize(typeof(string), empty));
+        }
+
+        [Fact]
+        public void Deserialize_Empty_Byte_Array()
+        {
+            var emptyByte = new byte[0];
+            var empty = this.serializer.Serialize(emptyByte);
+            Assert.True(emptyByte.SequenceEqual(this.serializer.Deserialize<byte[]>(empty)));
         }
 
         private TestValueType NewTestValueType()
