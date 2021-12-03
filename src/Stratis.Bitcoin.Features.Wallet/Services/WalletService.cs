@@ -945,7 +945,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             }, cancellationToken);
         }
 
-        public async Task<List<string>> Sweep(SweepRequest request, CancellationToken cancellationToken)
+        public async Task<SweepResponse> Sweep(SweepRequest request, CancellationToken cancellationToken)
         {
             // Build the set of scriptPubKeys to look for.
             var scriptList = new HashSet<Script>();
@@ -969,14 +969,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
             return await Task.Run(() =>
             {
-                var coinView = this.utxoIndexer.GetCoinviewAtHeight(this.chainIndexer.Height);
+                ReconstructedCoinviewContext coinView = this.utxoIndexer.GetCoinviewAtHeight(this.chainIndexer.Height);
 
                 var builder = new TransactionBuilder(this.network);
 
-                var sweepTransactions = new List<string>();
+                var sweepResponse = new SweepResponse();
 
                 Money total = 0;
-                int currentOutputCount = 0;
+                int currentInputCount = 0;
 
                 foreach (OutPoint outPoint in coinView.UnspentOutputs)
                 {
@@ -989,50 +989,38 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                         continue;
                     }
 
-                    // Add the UTXO as an input to the sweeping transaction.
+                    // Add the UTXO as a potential input to the sweeping transaction.
                     builder.AddCoins(new Coin(outPoint, txOut));
                     builder.AddKeys(new[] { keyMap[txOut.ScriptPubKey] });
 
-                    currentOutputCount++;
+                    currentInputCount++;
                     total += txOut.Value;
 
-                    // Not many wallets will have this many inputs, but we have to ensure that the resulting transactions are
-                    // small enough to be broadcast without standardness problems.
-                    // Since there is only 1 output the size of the inputs is the only consideration.
-                    if (total == 0 || currentOutputCount < 500)
+                    if (total == 0)
+                    {
                         continue;
+                    }
 
-                    BitcoinAddress destination = BitcoinAddress.Create(request.DestinationAddress, this.network);
+                    // If we reach a high total input count, we'll finalize the transaction and start building another one.
+                    // TODO: Should check the actual transaction size instead of the number of inputs, although for most generic transactions 500 inputs' signatures won't exceed the max size 
+                    if (currentInputCount > 500)
+                    {
+                        PrepareTransaction(request.DestinationAddress, ref builder, total, sweepResponse);
 
-                    builder.Send(destination, total);
-
-                    // Cause the last destination to pay the fee, as we have no other funds to pay fees with.
-                    builder.SubtractFees();
-
-                    FeeRate feeRate = this.walletFeePolicy.GetFeeRate(FeeType.High.ToConfirmations());
-                    builder.SendEstimatedFees(feeRate);
-
-                    Transaction sweepTransaction = builder.BuildTransaction(true);
-
-                    TransactionPolicyError[] errors = builder.Check(sweepTransaction);
-
-                    // TODO: Perhaps return a model with an errors property to inform the user
-                    if (errors.Length == 0)
-                        sweepTransactions.Add(sweepTransaction.ToHex());
-
-                    // Reset the builder and related state, as we are now creating a fresh transaction.
-                    builder = new TransactionBuilder(this.network);
-
-                    currentOutputCount = 0;
-                    total = 0;
+                        currentInputCount = 0;
+                        total = 0;
+                    }
                 }
 
-                if (sweepTransactions.Count == 0)
-                    return sweepTransactions;
+                // If there was a total of less than 500 inputs, or leftovers, we'll prepare the transaction.
+                if (currentInputCount > 0)
+                {
+                    PrepareTransaction(request.DestinationAddress, ref builder, total, sweepResponse);
+                }
 
                 if (request.Broadcast)
                 {
-                    foreach (string sweepTransaction in sweepTransactions)
+                    foreach (string sweepTransaction in sweepResponse.Transactions)
                     {
                         Transaction toBroadcast = this.network.CreateTransaction(sweepTransaction);
 
@@ -1040,8 +1028,40 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                     }
                 }
 
-                return sweepTransactions;
+                return sweepResponse;
             }, cancellationToken);
+        }
+
+        private void PrepareTransaction(string destAddress, ref TransactionBuilder builder, Money total, SweepResponse response)
+        {
+            BitcoinAddress destination = BitcoinAddress.Create(destAddress, this.network);
+
+            builder.Send(destination, total);
+
+            // Cause the last destination to pay the fee, as we have no other funds to pay fees with.
+            builder.SubtractFees();
+
+            FeeRate feeRate = this.walletFeePolicy.GetFeeRate(FeeType.High.ToConfirmations());
+            builder.SendEstimatedFees(feeRate);
+
+            Transaction sweepTransaction = builder.BuildTransaction(true);
+
+            TransactionPolicyError[] errors = builder.Check(sweepTransaction);
+            
+            if (errors.Length == 0)
+            {
+                response.Transactions.Add(sweepTransaction.ToHex());
+            }
+            else
+            {
+                foreach (TransactionPolicyError error in errors)
+                {
+                    response.Errors.Add(error.ToString());
+                }
+            }
+
+            // Reset the builder and related state, as we are now creating a fresh transaction.
+            builder = new TransactionBuilder(this.network);
         }
 
         public async Task<BuildOfflineSignResponse> BuildOfflineSignRequest(BuildOfflineSignRequest request, CancellationToken cancellationToken)

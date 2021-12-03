@@ -1030,6 +1030,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         [Required(ErrorMessage = "A destination address is required.")]
         public string DestinationAddress { get; set; }
 
+        /// <summary>
+        /// Indicates whether or not the built sweep transaction(s) should automatically be broadcast to the network.
+        /// </summary>
         public bool Broadcast { get; set; }
     }
 
