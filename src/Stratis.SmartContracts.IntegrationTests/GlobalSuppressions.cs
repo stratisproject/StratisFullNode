@@ -7,3 +7,5 @@ using System.Diagnostics.CodeAnalysis;
 
 [assembly: SuppressMessage("Style", "IDE0009:Member access should be qualified.", Justification = "<Pending>", Scope = "type", Target = "~T:StratisCollectible")]
 [assembly: SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1611:Element parameters must be documented", Justification = "<Pending>", Scope = "type", Target = "~T:StratisCollectible")]
+[assembly: SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1615:Element return value must be documented", Justification = "Temporary", Scope = "namespaceanddescendants", Target = "~N:Stratis.SmartContracts.IntegrationTests")]
+[assembly: SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1611:The documentation for parameter is missing", Justification = "Temporary", Scope = "namespaceanddescendants", Target = "~N:Stratis.SmartContracts.IntegrationTests")]

@@ -256,7 +256,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
                         this.cachedCoinView,
                         chainState,
                         new InvalidBlockHashStore(dateTimeProvider),
-                        new NodeStats(dateTimeProvider, NodeSettings.Default(network), new Mock<IVersionProvider>().Object),
+                        new NodeStats(dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object),
                         asyncProvider,
                         consensusRulesContainer)
                     .SetupRulesEngineParent();
