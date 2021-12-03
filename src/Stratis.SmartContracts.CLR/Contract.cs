@@ -89,24 +89,31 @@ namespace Stratis.SmartContracts.CLR
         /// <inheritdoc />
         public IContractInvocationResult InvokeConstructor(IReadOnlyList<object> parameters)
         {
-            // If it's a constructor we need to append the ISmartContractState to the start of the parameters array
-            object[] invokeParams = { this.State };
+            try
+            {
+                // If it's a constructor we need to append the ISmartContractState to the start of the parameters array
+                object[] invokeParams = { this.State };
 
-            if (parameters != null)
-                invokeParams = invokeParams.Concat(parameters).ToArray();
+                if (parameters != null)
+                    invokeParams = invokeParams.Concat(parameters).ToArray();
 
-            Type[] types = invokeParams.Select(p => p.GetType()).ToArray();
+                Type[] types = invokeParams.Select(p => p.GetType()).ToArray();
 
-            ConstructorInfo methodToInvoke = this.Type.GetConstructor(types);
+                ConstructorInfo methodToInvoke = this.Type.GetConstructor(types);
 
-            if (methodToInvoke == null)
-                return ContractInvocationResult.Failure(ContractInvocationErrorType.MethodDoesNotExist);
+                if (methodToInvoke == null)
+                    return ContractInvocationResult.Failure(ContractInvocationErrorType.MethodDoesNotExist);
 
-            IContractInvocationResult result = this.InvokeInternal(methodToInvoke, invokeParams);
+                IContractInvocationResult result = this.InvokeInternal(methodToInvoke, invokeParams);
 
-            this.initialized = result.IsSuccess;
+                this.initialized = result.IsSuccess;
 
-            return result;
+                return result;
+            }
+            catch (Exception)
+            {
+                return ContractInvocationResult.Failure(ContractInvocationErrorType.ParameterTypesDontMatch);
+            }
         }
 
         /// <inheritdoc />

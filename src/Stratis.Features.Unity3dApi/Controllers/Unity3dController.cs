@@ -121,7 +121,6 @@ namespace Stratis.Features.Unity3dApi.Controllers
             AddressIndexerData addressBalances = balancesResult.BalancesData.First();
 
             List<AddressBalanceChange> deposits = addressBalances.BalanceChanges.Where(x => x.Deposited).ToList();
-            
             long totalDeposited = deposits.Sum(x => x.Satoshi);
             long totalWithdrawn = addressBalances.BalanceChanges.Where(x => !x.Deposited).Sum(x => x.Satoshi);
 
@@ -170,7 +169,6 @@ namespace Stratis.Features.Unity3dApi.Controllers
 
                 OutPoint outPoint = unspentOutput.Key;
                 Money value = unspentOutput.Value.Coins.TxOut.Value;
-
                 totalM += value;
 
                 response.UTXOs.Add(new UTXOModel(outPoint, value));
@@ -310,7 +308,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.Forbidden)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public async Task<IActionResult> SendTransaction([FromBody] SendTransactionRequest request,
+        public async Task<IActionResult> SendTransactionAsync([FromBody] SendTransactionRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
             return await this.walletController.SendTransactionAsync(request, cancellationToken).ConfigureAwait(false);
@@ -369,7 +367,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
 
             if (result.IsValid)
             {
-                var scriptPubKey = BitcoinAddress.Create(address, this.network).ScriptPubKey;
+                NBitcoin.Script scriptPubKey = BitcoinAddress.Create(address, this.network).ScriptPubKey;
                 result.ScriptPubKey = scriptPubKey.ToHex();
                 result.IsWitness = scriptPubKey.IsWitness(this.network);
             }
@@ -517,6 +515,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// </summary> 
         /// <param name="request">An object containing the necessary parameters to build the transaction.</param> 
         /// <results>The result of the local call to the smart contract method.</results>
+        /// <returns>The <see cref="IActionResult"/>.</returns>
         /// <response code="200">Returns call response</response>
         /// <response code="400">Invalid request</response>
         /// <response code="500">Unable to deserialize method parameters</response>
@@ -622,6 +621,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// <summary>
         /// If the call is to a property, rewrites the method name to the getter method's name.
         /// </summary>
+        /// <param name="request">See <see cref="LocalCallContractRequest"/>.</param>
         private void RewritePropertyGetterName(LocalCallContractRequest request)
         {
             // Don't rewrite if there are params

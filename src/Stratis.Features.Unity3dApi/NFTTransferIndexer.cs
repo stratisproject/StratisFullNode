@@ -14,6 +14,7 @@ using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
+using FileMode = LiteDB.FileMode;
 
 namespace Stratis.Features.Unity3dApi
 {
@@ -51,7 +52,7 @@ namespace Stratis.Features.Unity3dApi
         private readonly ISmartContractTransactionService smartContractTransactionService;
 
         private LiteDatabase db;
-        private ILiteCollection<NFTContractModel> NFTContractCollection;
+        private LiteCollection<NFTContractModel> NFTContractCollection;
         private CancellationTokenSource cancellation;
         private Task indexingTask;
         
@@ -73,8 +74,9 @@ namespace Stratis.Features.Unity3dApi
                 throw new Exception("NFTTransferIndexer already initialized!");
 
             string dbPath = Path.Combine(this.dataFolder.RootPath, DatabaseFilename);
-            
-            this.db = new LiteDatabase(new ConnectionString() { Filename = dbPath });
+
+            FileMode fileMode = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? FileMode.Exclusive : FileMode.Shared;
+            this.db = new LiteDatabase(new ConnectionString() { Filename = dbPath, Mode = fileMode });
             this.NFTContractCollection = this.db.GetCollection<NFTContractModel>(DbOwnedNFTsKey);
 
             this.indexingTask = Task.Run(async () => await this.IndexNFTsContinuouslyAsync().ConfigureAwait(false));
