@@ -136,11 +136,11 @@ namespace Stratis.SmartContracts.Core.Tests.Receipts
         }
 
         /// <summary>
-        /// Ensures 2 receipts and all their properties are equal.
+        /// Ensures that two receipts and all their properties are equal.
         /// </summary>
         /// <param name="receipt1">The first receipt to compare.</param>
         /// <param name="receipt2">The second receipt to compare.</param>
-        private static void TestStorageReceiptEquality(Receipt receipt1, Receipt receipt2)
+        internal static void TestStorageReceiptEquality(Receipt receipt1, Receipt receipt2)
         {
             Assert.Equal(receipt1.PostState, receipt2.PostState);
             Assert.Equal(receipt1.GasUsed, receipt2.GasUsed);
