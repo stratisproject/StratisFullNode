@@ -10,6 +10,7 @@
 
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DocumentationFile>bin\Debug\netcoreapp3.1\Stratis.Bitcoin.Features.SmartContracts.xml</DocumentationFile>
+    <NoWarn>1701;1702;1591;1572;1573</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CSharpFunctionalExtensions" Version="1.10.0" />

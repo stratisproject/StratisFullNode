@@ -121,9 +121,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         /// The function can be used to query the balance at a smart contract account address
         /// supplied by /api/SmartContractWallet/account-addresses.
         /// </summary>
-        ///
-        /// <param name="walletName">The address at which to retrieve the balance.</param>
-        /// 
+        /// <param name="address">The address at which to retrieve the balance.</param>
         /// <returns>The balance at a specific wallet address in STRAT (or the sidechain coin).</returns>
         /// <response code="200">Returns address balance</response>
         [Route("address-balance")]
@@ -147,8 +145,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         /// a list of all smart contract interactions for a wallet will be returned.
         /// </summary>
         ///
-        /// <param name="walletName">The name of the wallet holding the address.</param>
-        /// <param name="address">The address to retrieve the history for.</param>
+        /// <param name="request">See <see cref="GetHistoryRequest"/>.</param>
         /// <returns>A list of smart contract create and call transaction items as well as transaction items at a specific wallet address.</returns>
         /// <response code="200">Returns transaction history</response>
         /// <response code="400">Invalid request or unexpected exception occurred</response>
@@ -230,7 +227,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
                     transactionItems.Add(result);
                 }
 
-                return this.Json(transactionItems.OrderByDescending(x => x.BlockHeight ?? Int32.MaxValue));
+                return this.Json(transactionItems.OrderByDescending(x => x.BlockHeight ?? int.MaxValue));
             }
             catch (Exception e)
             {
