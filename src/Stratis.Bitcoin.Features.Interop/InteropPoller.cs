@@ -487,6 +487,8 @@ namespace Stratis.Bitcoin.Features.Interop
                         }
                     case ConversionRequestStatus.OriginatorSubmitting:
                         {
+                            this.logger.Info($"Originator checking confirmation count of transaction '{request.ExternalChainTxHash}' '({request.ExternalChainTxEventId})' to ensure submission.");
+
                             (BigInteger confirmationCount, string blockHash) = await this.ethClientProvider.GetClientForChain(request.DestinationChain).GetConfirmationsAsync(request.ExternalChainTxHash).ConfigureAwait(false);
                             this.logger.Info($"Originator confirming transaction id '{request.ExternalChainTxHash}' '({request.ExternalChainTxEventId})' before broadcasting; confirmations: {confirmationCount}; Block Hash {blockHash}.");
 

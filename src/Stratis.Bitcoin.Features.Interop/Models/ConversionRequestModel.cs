@@ -31,5 +31,11 @@ namespace Stratis.Bitcoin.Features.Interop.Models
 
         [JsonProperty(PropertyName = "status")]
         public string Status { get; set; }
+
+        [JsonProperty(PropertyName = "externalChainTxHash")]
+        public string ExternalChainTxHash { get; set; }
+
+        [JsonProperty(PropertyName = "externalChainTxEventId")]
+        public string ExternalChainTxEventId { get; set; }
     }
 }

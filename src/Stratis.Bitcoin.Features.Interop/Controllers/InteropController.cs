@@ -74,6 +74,8 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                         Amount = request.Amount,
                         Processed = request.Processed,
                         Status = request.RequestStatus.ToString(),
+                        ExternalChainTxHash = request.ExternalChainTxHash,
+                        ExternalChainTxEventId = request.ExternalChainTxEventId,
                     });
                 }
 
@@ -114,6 +116,8 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                         Amount = request.Amount,
                         Processed = request.Processed,
                         Status = request.RequestStatus.ToString(),
+                        ExternalChainTxHash = request.ExternalChainTxHash,
+                        ExternalChainTxEventId = request.ExternalChainTxEventId,
                     });
                 }
 
