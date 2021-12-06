@@ -7,6 +7,9 @@ using NLog;
 
 namespace Stratis.Bitcoin.Features.SignalR
 {
+    /// <summary>
+    /// SignalR message.
+    /// </summary>
     public class SignalRMessageArgs
     {
         public string Target { get; set; }
@@ -40,7 +43,8 @@ namespace Stratis.Bitcoin.Features.SignalR
             return base.OnDisconnectedAsync(exception);
         }
 
-        /// <summary>Called using reflection from SignalR</summary> 
+        /// <summary>Called using reflection from SignalR</summary>
+        /// <param name="message">See <see cref="SignalRMessageArgs"/>.</param>
         public void SendMessage(SignalRMessageArgs message)
         {
             try

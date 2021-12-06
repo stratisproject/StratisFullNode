@@ -108,6 +108,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
         /// the cold staking setup using a cold staking address obtained from the cold wallet node.
         /// Success is determined by whether the balance in the cold wallet increases.
         /// </description>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         [Trait("Unstable", "True")]
         public async Task WalletCanMineWithColdWalletCoinsAsync()

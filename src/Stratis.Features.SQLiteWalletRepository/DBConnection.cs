@@ -301,7 +301,7 @@ namespace Stratis.Features.SQLiteWalletRepository
             var addresses = new List<HDAddress>();
             int addressIndex = HDAddress.GetAddressCount(this.SQLiteConnection, account.WalletId, account.AccountIndex, addressType);
             
-            IEnumerable<HdAddress> existingAddresses = this.Repository.GetAccountAddresses(accountReference, addressType, Int32.MaxValue);
+            IEnumerable<HdAddress> existingAddresses = this.Repository.GetAccountAddresses(accountReference, addressType, int.MaxValue);
 
             var existingPubKeys = new HashSet<PubKey>();
 
