@@ -413,7 +413,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
                 returnedAddressUint160 = ((Address)result.Return).ToUint160();
                 Assert.Equal(receiverAddressUint160, returnedAddressUint160);
 
-                IList<ReceiptResponse> receipts = node1.GetReceipts(response.NewContractAddress, "Transfer");
+                IList<ReceiptResponse> receipts = node1.GetReceipts(response.NewContractAddress, "Transfer2");
                 Assert.Single(receipts);
             }
         }
