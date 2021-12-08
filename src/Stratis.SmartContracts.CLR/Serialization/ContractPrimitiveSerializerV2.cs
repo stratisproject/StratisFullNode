@@ -12,13 +12,15 @@ namespace Stratis.SmartContracts.CLR.Serialization
     /// <summary>
     /// This class serializes and deserializes specific data types
     /// when persisting items inside a smart contract.
+    /// 
+    /// V1 returns empty strings rather than nulls.
     /// </summary>
     [NoTrace]
-    public class ContractPrimitiveSerializer : IContractPrimitiveSerializer
+    public class ContractPrimitiveSerializerV2 : IContractPrimitiveSerializer
     {
         private readonly Network network;
 
-        public ContractPrimitiveSerializer(Network network)
+        public ContractPrimitiveSerializerV2(Network network)
         {
             this.network = network;
         }
@@ -144,6 +146,11 @@ namespace Stratis.SmartContracts.CLR.Serialization
             if (stream == null)
                 return null;
 
+            return DeserializeBytes(type, stream);
+        }
+
+        protected object DeserializeBytes(Type type, byte[] stream)
+        {
             return Type.GetTypeCode(type) switch
             {
                 TypeCode.Byte => stream[0],
