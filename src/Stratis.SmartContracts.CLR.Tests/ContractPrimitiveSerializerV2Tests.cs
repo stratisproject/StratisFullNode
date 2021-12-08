@@ -10,15 +10,15 @@ using Xunit;
 
 namespace Stratis.SmartContracts.CLR.Tests
 {
-    public class ContractPrimitiveSerializerTests
+    public class ContractPrimitiveSerializerV2Tests
     {
-        private readonly ContractPrimitiveSerializer serializer;
+        private readonly IContractPrimitiveSerializer serializer;
         private readonly Network network;
 
-        public ContractPrimitiveSerializerTests()
+        public ContractPrimitiveSerializerV2Tests()
         {
             this.network = new SmartContractsRegTest();
-            this.serializer = new ContractPrimitiveSerializer(this.network);
+            this.serializer = new ContractPrimitiveSerializerV2(this.network);
         }
 
         [Fact]
