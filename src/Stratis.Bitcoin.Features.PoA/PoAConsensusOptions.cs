@@ -61,6 +61,12 @@ namespace Stratis.Bitcoin.Features.PoA
         /// </summary>
         public int PollExpiryBlocks { get; set; }
 
+        /// <summary>
+        /// Defines when V2 of the contract serializer will be used.
+        /// I.e if tip <= ContractSerializerV2ActivationHeight, V1 will be used
+        /// </summary>
+        public int ContractSerializerV2ActivationHeight { get; set; }
+
         /// <summary>Initializes values for networks that use block size rules.</summary>
         public PoAConsensusOptions(
             uint maxBlockBaseSize,
