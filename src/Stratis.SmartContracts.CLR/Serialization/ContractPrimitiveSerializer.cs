@@ -1,12 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Text;
 using NBitcoin;
-using Nethereum.RLP;
-using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.PoA;
-using Stratis.SmartContracts.CLR.Exceptions;
 using TracerAttributes;
 
 namespace Stratis.SmartContracts.CLR.Serialization
@@ -32,9 +26,7 @@ namespace Stratis.SmartContracts.CLR.Serialization
 
         public override object Deserialize(Type type, byte[] stream)
         {
-            var v2ActivationHeight = (this.network.Consensus.Options as PoAConsensusOptions).ContractSerializerV2ActivationHeight;
-
-            if (this.chainIndexer.Tip.Height <= v2ActivationHeight)
+            if (this.network.Consensus.Options is PoAConsensusOptions poaConsensusOptions && this.chainIndexer.Tip.Height <= poaConsensusOptions.ContractSerializerV2ActivationHeight)
                 return this.serializerV1.Deserialize(type, stream);
 
             return base.Deserialize(type, stream);
