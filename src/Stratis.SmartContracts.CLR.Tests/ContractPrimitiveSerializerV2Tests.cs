@@ -173,6 +173,13 @@ namespace Stratis.SmartContracts.CLR.Tests
             Assert.True(emptyByte.SequenceEqual(this.serializer.Deserialize<byte[]>(empty)));
         }
 
+        [Fact]
+        public void Test_ReferenceType_Serialization()
+        {
+            Assert.Equal("", this.serializer.Deserialize(typeof(string), this.serializer.Serialize("")));
+            Assert.Equal(new byte[0], this.serializer.Deserialize(typeof(byte[]), this.serializer.Serialize(new byte[0])));
+        }
+
         private TestValueType NewTestValueType()
         {
             var instance = new TestValueType();
