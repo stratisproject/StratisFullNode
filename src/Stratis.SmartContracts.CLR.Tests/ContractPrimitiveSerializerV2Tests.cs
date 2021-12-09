@@ -10,15 +10,15 @@ using Xunit;
 
 namespace Stratis.SmartContracts.CLR.Tests
 {
-    public class ContractPrimitiveSerializerTests
+    public class ContractPrimitiveSerializerV2Tests
     {
-        private readonly ContractPrimitiveSerializer serializer;
+        private readonly IContractPrimitiveSerializer serializer;
         private readonly Network network;
 
-        public ContractPrimitiveSerializerTests()
+        public ContractPrimitiveSerializerV2Tests()
         {
             this.network = new SmartContractsRegTest();
-            this.serializer = new ContractPrimitiveSerializer(this.network);
+            this.serializer = new ContractPrimitiveSerializerV2(this.network);
         }
 
         [Fact]
@@ -171,6 +171,13 @@ namespace Stratis.SmartContracts.CLR.Tests
             var emptyByte = new byte[0];
             var empty = this.serializer.Serialize(emptyByte);
             Assert.True(emptyByte.SequenceEqual(this.serializer.Deserialize<byte[]>(empty)));
+        }
+
+        [Fact]
+        public void Test_ReferenceType_Serialization()
+        {
+            Assert.Equal("", this.serializer.Deserialize(typeof(string), this.serializer.Serialize("")));
+            Assert.Equal(new byte[0], this.serializer.Deserialize(typeof(byte[]), this.serializer.Serialize(new byte[0])));
         }
 
         private TestValueType NewTestValueType()

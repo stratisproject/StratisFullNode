@@ -28,7 +28,7 @@ namespace Stratis.SmartContracts.CLR.Tests.Logs
         [Fact]
         public void RawLog_With_Null_Value_Serializes()
         {
-            var serializer = new ContractPrimitiveSerializer(new SmartContractsPoARegTest());
+            var serializer = new ContractPrimitiveSerializerV2(new SmartContractsPoARegTest());
             var exampleLog = new Example(null, 0);
 
             var rawLog = new RawLog(uint160.One, exampleLog);
