@@ -24,7 +24,7 @@ namespace Stratis.SmartContracts.IntegrationTests
             this.mockChain = fixture.Chain;
             this.node1 = this.mockChain.Nodes[0];
             this.node2 = this.mockChain.Nodes[1];
-            this.serializer = new ContractPrimitiveSerializer(this.node1.CoreNode.FullNode.Network);
+            this.serializer = new ContractPrimitiveSerializerV2(this.node1.CoreNode.FullNode.Network);
         }
 
         [Retry]

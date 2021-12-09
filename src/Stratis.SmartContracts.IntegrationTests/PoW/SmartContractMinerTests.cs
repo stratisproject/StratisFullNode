@@ -340,13 +340,13 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
 
                 this.AddressGenerator = new AddressGenerator();
                 this.assemblyLoader = new ContractAssemblyLoader();
-                this.callDataSerializer = new CallDataSerializer(new ContractPrimitiveSerializer(this.network));
+                this.callDataSerializer = new CallDataSerializer(new ContractPrimitiveSerializerV2(this.network));
                 this.moduleDefinitionReader = new ContractModuleDefinitionReader();
                 this.contractCache = new ContractAssemblyCache();
                 this.reflectionVirtualMachine = new ReflectionVirtualMachine(this.validator, this.loggerFactory, this.assemblyLoader, this.moduleDefinitionReader, this.contractCache);
                 this.stateProcessor = new StateProcessor(this.reflectionVirtualMachine, this.AddressGenerator);
                 this.internalTxExecutorFactory = new InternalExecutorFactory(this.loggerFactory, this.stateProcessor);
-                this.primitiveSerializer = new ContractPrimitiveSerializer(this.network);
+                this.primitiveSerializer = new ContractPrimitiveSerializerV2(this.network);
                 this.serializer = new Serializer(this.primitiveSerializer);
                 this.smartContractStateFactory = new SmartContractStateFactory(this.primitiveSerializer, this.internalTxExecutorFactory, this.serializer);
                 this.stateFactory = new StateFactory(this.smartContractStateFactory);
@@ -924,7 +924,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
             byte[] receiveInvoked = context.StateRoot.GetStorageValue(receiveContractAddress2, Encoding.UTF8.GetBytes("ReceiveInvoked"));
             byte[] fundsReceived = context.StateRoot.GetStorageValue(receiveContractAddress2, Encoding.UTF8.GetBytes("ReceivedFunds"));
 
-            var serializer = new ContractPrimitiveSerializer(context.network);
+            var serializer = new ContractPrimitiveSerializerV2(context.network);
 
             Assert.NotNull(receiveInvoked);
             Assert.NotNull(fundsReceived);
