@@ -8,8 +8,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using LiteDB;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NLog;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration;
@@ -58,7 +58,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         private readonly INodeStats nodeStats;
 
-        private readonly ILogger logger;
+        private readonly NLog.ILogger logger;
 
         private readonly DataFolder dataFolder;
 
@@ -83,7 +83,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         /// </summary>
         private const int DelayTimeMs = 2000;
 
-        private const int CompactingThreshold = 50;
+        private const int CompactionThreshold = 8000;
+
+        private const int CompactionAmount = CompactionThreshold / 2;
 
         /// <summary>Max distance between consensus and indexer tip to consider indexer synced.</summary>
         private const int ConsiderSyncedMaxDistance = 10;
@@ -104,9 +106,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         private readonly object lockObject;
 
         private readonly CancellationTokenSource cancellation;
-
-        private readonly ILoggerFactory loggerFactory;
-
+        
         private readonly ChainIndexer chainIndexer;
 
         private readonly AverageCalculator averageTimePerBlock;
@@ -139,13 +139,10 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         /// We assume that nodes usually don't have view that is different from other nodes by that constant of blocks.
         /// </summary>
         public const int SyncBuffer = 50;
-
-        // Compaction removes info that is used by unity sdk to get UTXOs. Therefore this feature is disabled.
-        public const bool CompactionEnabled = false;
-
+        
         public IFullNodeFeature InitializingFeature { get; set; }
 
-        public AddressIndexer(StoreSettings storeSettings, DataFolder dataFolder, ILoggerFactory loggerFactory, Network network, INodeStats nodeStats,
+        public AddressIndexer(StoreSettings storeSettings, DataFolder dataFolder, Network network, INodeStats nodeStats,
             IConsensusManager consensusManager, IAsyncProvider asyncProvider, ChainIndexer chainIndexer, IDateTimeProvider dateTimeProvider, IUtxoIndexer utxoIndexer)
         {
             this.storeSettings = storeSettings;
@@ -156,7 +153,6 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             this.asyncProvider = asyncProvider;
             this.dateTimeProvider = dateTimeProvider;
             this.utxoIndexer = utxoIndexer;
-            this.loggerFactory = loggerFactory;
             this.scriptAddressReader = new ScriptAddressReader();
 
             this.lockObject = new object();
@@ -164,7 +160,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             this.lastFlushTime = this.dateTimeProvider.GetUtcNow();
             this.cancellation = new CancellationTokenSource();
             this.chainIndexer = chainIndexer;
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
 
             this.averageTimePerBlock = new AverageCalculator(200);
             int maxReorgLength = GetMaxReorgOrFallbackMaxReorg(this.network);
@@ -187,7 +183,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             // The transaction index is needed in the event of a reorg.
             if (!this.storeSettings.AddressIndex)
             {
-                this.logger.LogTrace("(-)[DISABLED]");
+                this.logger.Trace("(-)[DISABLED]");
                 return;
             }
 
@@ -196,9 +192,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             FileMode fileMode = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? FileMode.Exclusive : FileMode.Shared;
             this.db = new LiteDatabase(new ConnectionString() { Filename = dbPath, Mode = fileMode });
 
-            this.addressIndexRepository = new AddressIndexRepository(this.db, this.loggerFactory);
+            this.addressIndexRepository = new AddressIndexRepository(this.db);
 
-            this.logger.LogDebug("Address indexing is enabled.");
+            this.logger.Debug("Address indexing is enabled.");
 
             this.tipDataStore = this.db.GetCollection<AddressIndexerTipData>(DbTipDataKey);
 
@@ -206,7 +202,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             {
                 AddressIndexerTipData tipData = this.tipDataStore.FindAll().FirstOrDefault();
 
-                this.logger.LogDebug("Tip data: '{0}'.", tipData == null ? "null" : tipData.ToString());
+                this.logger.Debug("Tip data: '{0}'.", tipData == null ? "null" : tipData.ToString());
 
                 this.IndexerTip = tipData == null ? this.chainIndexer.Genesis : this.consensusManager.Tip.FindAncestorOrSelf(new uint256(tipData.TipHashBytes));
 
@@ -222,11 +218,11 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                 }
             }
 
-            this.outpointsRepository = new AddressIndexerOutpointsRepository(this.db, this.loggerFactory);
+            this.outpointsRepository = new AddressIndexerOutpointsRepository(this.db);
 
             this.RewindAndSave(this.IndexerTip);
 
-            this.logger.LogDebug("Indexer initialized at '{0}'.", this.IndexerTip);
+            this.logger.Debug("Indexer initialized at '{0}'.", this.IndexerTip);
 
             this.indexingTask = Task.Run(async () => await this.IndexAddressesContinuouslyAsync().ConfigureAwait(false));
 
@@ -243,23 +239,26 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             {
                 if (this.dateTimeProvider.GetUtcNow() - this.lastFlushTime > this.flushChangesInterval)
                 {
-                    this.logger.LogDebug("Flushing changes.");
+                    this.logger.Debug("Flushing changes.");
 
                     this.SaveAll();
 
                     this.lastFlushTime = this.dateTimeProvider.GetUtcNow();
 
-                    this.logger.LogDebug("Flush completed.");
+                    this.logger.Debug("Flush completed.");
                 }
 
                 if (this.cancellation.IsCancellationRequested)
+                {
+                    this.logger.Debug("Cancelled loop.");
                     break;
+                }
 
                 ChainedHeader nextHeader = this.consensusManager.Tip.GetAncestor(this.IndexerTip.Height + 1);
 
                 if (nextHeader == null)
                 {
-                    this.logger.LogDebug("Next header wasn't found. Waiting.");
+                    this.logger.Debug("Next header wasn't found. Waiting.");
 
                     try
                     {
@@ -276,7 +275,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                 {
                     ChainedHeader lastCommonHeader = nextHeader.FindFork(this.IndexerTip);
 
-                    this.logger.LogDebug("Reorganization detected. Rewinding till '{0}'.", lastCommonHeader);
+                    this.logger.Debug("Reorganization detected. Rewinding till '{0}'.", lastCommonHeader);
 
                     this.RewindAndSave(lastCommonHeader);
 
@@ -295,7 +294,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
                 if (blockToProcess == null)
                 {
-                    this.logger.LogDebug("Next block wasn't found. Waiting.");
+                    this.logger.Debug("Next block wasn't found. Waiting.");
 
                     try
                     {
@@ -323,7 +322,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
                 if (!success)
                 {
-                    this.logger.LogDebug("Failed to process next block. Waiting.");
+                    this.logger.Debug("Failed to process next block. Waiting.");
 
                     try
                     {
@@ -358,7 +357,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                     indexData.BalanceChanges.RemoveAll(x => x.BalanceChangedHeight > rewindToHeader.Height);
                 }
 
-                this.logger.LogDebug("Rewinding changes for {0} addresses.", affectedAddresses.Count);
+                this.logger.Debug("Rewinding changes for {0} addresses.", affectedAddresses.Count);
 
                 // Rewind all the way back to the fork point.
                 this.outpointsRepository.RewindDataAboveHeight(rewindToHeader.Height);
@@ -371,11 +370,14 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         private void SaveAll()
         {
-            this.logger.LogDebug("Saving address indexer.");
+            this.logger.Debug("Saving address indexer.");
 
             lock (this.lockObject)
             {
+                this.logger.Debug("Saving addr indexer repo.");
                 this.addressIndexRepository.SaveAllItems();
+
+                this.logger.Debug("Saving outpoints repo.");
                 this.outpointsRepository.SaveAllItems();
 
                 AddressIndexerTipData tipData = this.tipDataStore.FindAll().FirstOrDefault();
@@ -386,11 +388,13 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                 tipData.Height = this.IndexerTip.Height;
                 tipData.TipHashBytes = this.IndexerTip.HashBlock.ToBytes();
 
+                this.logger.Debug("Saving tip data.");
+
                 this.tipDataStore.Upsert(tipData);
                 this.lastSavedHeight = this.IndexerTip.Height;
             }
 
-            this.logger.LogDebug("Address indexer saved.");
+            this.logger.Debug("Address indexer saved.");
         }
 
         private void AddInlineStats(StringBuilder benchLog)
@@ -407,6 +411,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         /// <returns><c>true</c> if block was sucessfully processed.</returns>
         private bool ProcessBlock(Block block, ChainedHeader header)
         {
+            this.logger.Trace("Processing block " + header.ToString());
+
             lock (this.lockObject)
             {
                 // Record outpoints.
@@ -454,8 +460,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
                     if (!this.outpointsRepository.TryGetOutPointData(consumedOutput, out OutPointData consumedOutputData))
                     {
-                        this.logger.LogError("Missing outpoint data for {0}.", consumedOutput);
-                        this.logger.LogTrace("(-)[MISSING_OUTPOINTS_DATA]");
+                        this.logger.Error("Missing outpoint data for {0}.", consumedOutput);
+                        this.logger.Trace("(-)[MISSING_OUTPOINTS_DATA]");
                         throw new Exception($"Missing outpoint data for {consumedOutput}");
                     }
 
@@ -517,6 +523,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                     this.outpointsRepository.RemoveOutPointData(consumedOutPoint);
             }
 
+            this.logger.Trace("Block processed.");
             return true;
         }
 
@@ -541,18 +548,17 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             // Anything less than that should be compacted.
             int heightThreshold = this.consensusManager.Tip.Height - this.compactionTriggerDistance;
 
-            bool compact = CompactionEnabled && (indexData.BalanceChanges.Count > CompactingThreshold) &&
-                           (indexData.BalanceChanges[1].BalanceChangedHeight < heightThreshold);
+            bool compact = (indexData.BalanceChanges.Count > CompactionThreshold) && (indexData.BalanceChanges[1].BalanceChangedHeight < heightThreshold);
 
             if (!compact)
             {
                 this.addressIndexRepository.AddOrUpdate(indexData.Address, indexData, indexData.BalanceChanges.Count + 1);
 
-                this.logger.LogTrace("(-)[TOO_FEW_CHANGE_RECORDS]");
+                this.logger.Trace("(-)[TOO_FEW_CHANGE_RECORDS]");
                 return;
             }
 
-            var compacted = new List<AddressBalanceChange>(CompactingThreshold / 2)
+            var compacted = new List<AddressBalanceChange>(CompactionThreshold / 2)
             {
                 new AddressBalanceChange()
                 {
@@ -562,18 +568,20 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                 }
             };
 
-            foreach (AddressBalanceChange change in indexData.BalanceChanges)
+            for (int i = 0; i < indexData.BalanceChanges.Count; i++)
             {
-                if (change.BalanceChangedHeight < heightThreshold)
+                AddressBalanceChange change = indexData.BalanceChanges[i];
+
+                if ((change.BalanceChangedHeight) < heightThreshold && i < CompactionAmount)
                 {
-                    this.logger.LogDebug("Balance change: {0} was selected for compaction. Compacted balance now: {1}.", change, compacted[0].Satoshi);
+                    this.logger.Debug("Balance change: {0} was selected for compaction. Compacted balance now: {1}.", change, compacted[0].Satoshi);
 
                     if (change.Deposited)
                         compacted[0].Satoshi += change.Satoshi;
                     else
                         compacted[0].Satoshi -= change.Satoshi;
 
-                    this.logger.LogDebug("New compacted balance: {0}.", compacted[0].Satoshi);
+                    this.logger.Debug("New compacted balance: {0}.", compacted[0].Satoshi);
                 }
                 else
                     compacted.Add(change);
@@ -612,7 +620,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
                     long balance = indexData.BalanceChanges.Where(x => x.BalanceChangedHeight <= maxAllowedHeight).CalculateBalance();
 
-                    this.logger.LogDebug("Address: {0}, balance: {1}.", address, balance);
+                    this.logger.Debug("Address: {0}, balance: {1}.", address, balance);
                     result.Balances.Add(new AddressBalanceResult(address, new Money(balance)));
                 }
 
@@ -727,13 +735,13 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         {
             if (this.addressIndexRepository == null)
             {
-                this.logger.LogTrace("(-)[NOT_INITIALIZED]");
+                this.logger.Trace("(-)[NOT_INITIALIZED]");
                 return (false, "Address indexer is not initialized.");
             }
 
             if (!this.IsSynced())
             {
-                this.logger.LogTrace("(-)[NOT_SYNCED]");
+                this.logger.Trace("(-)[NOT_SYNCED]");
                 return (false, "Address indexer is not synced.");
             }
 
@@ -743,11 +751,15 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         /// <inheritdoc/>
         public void Dispose()
         {
+            this.logger.Debug("Disposing.");
+
             this.cancellation.Cancel();
 
             this.indexingTask?.GetAwaiter().GetResult();
 
             this.db?.Dispose();
+
+            this.logger.Debug("Disposed.");
         }
     }
 }
