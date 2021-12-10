@@ -8,7 +8,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using LiteDB;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.AsyncWork;
@@ -84,7 +83,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         /// </summary>
         private const int DelayTimeMs = 2000;
 
-        private const int CompactingThreshold = 50;
+        private const int CompactionThreshold = 8000;
+
+        private const int CompactionAmount = CompactionThreshold / 2;
 
         /// <summary>Max distance between consensus and indexer tip to consider indexer synced.</summary>
         private const int ConsiderSyncedMaxDistance = 10;
@@ -138,10 +139,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         /// We assume that nodes usually don't have view that is different from other nodes by that constant of blocks.
         /// </summary>
         public const int SyncBuffer = 50;
-
-        // Compaction removes info that is used by unity sdk to get UTXOs. Therefore this feature is disabled.
-        public const bool CompactionEnabled = false;
-
+        
         public IFullNodeFeature InitializingFeature { get; set; }
 
         public AddressIndexer(StoreSettings storeSettings, DataFolder dataFolder, Network network, INodeStats nodeStats,
@@ -413,7 +411,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         /// <returns><c>true</c> if block was sucessfully processed.</returns>
         private bool ProcessBlock(Block block, ChainedHeader header)
         {
-            this.logger.Debug("Processing block " + header.ToString());
+            this.logger.Trace("Processing block " + header.ToString());
 
             lock (this.lockObject)
             {
@@ -525,7 +523,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                     this.outpointsRepository.RemoveOutPointData(consumedOutPoint);
             }
 
-            this.logger.Debug("Block processed.");
+            this.logger.Trace("Block processed.");
             return true;
         }
 
@@ -550,8 +548,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             // Anything less than that should be compacted.
             int heightThreshold = this.consensusManager.Tip.Height - this.compactionTriggerDistance;
 
-            bool compact = CompactionEnabled && (indexData.BalanceChanges.Count > CompactingThreshold) &&
-                           (indexData.BalanceChanges[1].BalanceChangedHeight < heightThreshold);
+            bool compact = (indexData.BalanceChanges.Count > CompactionThreshold) && (indexData.BalanceChanges[1].BalanceChangedHeight < heightThreshold);
 
             if (!compact)
             {
@@ -561,7 +558,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                 return;
             }
 
-            var compacted = new List<AddressBalanceChange>(CompactingThreshold / 2)
+            var compacted = new List<AddressBalanceChange>(CompactionThreshold / 2)
             {
                 new AddressBalanceChange()
                 {
@@ -571,9 +568,11 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                 }
             };
 
-            foreach (AddressBalanceChange change in indexData.BalanceChanges)
+            for (int i = 0; i < indexData.BalanceChanges.Count; i++)
             {
-                if (change.BalanceChangedHeight < heightThreshold)
+                AddressBalanceChange change = indexData.BalanceChanges[i];
+
+                if ((change.BalanceChangedHeight) < heightThreshold && i < CompactionAmount)
                 {
                     this.logger.Debug("Balance change: {0} was selected for compaction. Compacted balance now: {1}.", change, compacted[0].Satoshi);
 

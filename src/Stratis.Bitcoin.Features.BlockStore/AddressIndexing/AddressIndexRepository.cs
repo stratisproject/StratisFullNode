@@ -84,8 +84,10 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
                 this.logger.Debug("Saving {0} dirty items.", dirtyItems.Length);
 
-                this.addressIndexerDataCollection.Upsert(dirtyItems.Select(x => x.Value));
+                List<AddressIndexerData> toUpsert = dirtyItems.Select(x => x.Value).ToList();
 
+                this.addressIndexerDataCollection.Upsert(toUpsert);
+                
                 foreach (CacheItem dirtyItem in dirtyItems)
                     dirtyItem.Dirty = false;
 
