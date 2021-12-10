@@ -98,7 +98,8 @@ namespace Stratis.SmartContracts.CLR.Local
                 GasConsumed = result.GasConsumed,
                 Return = result.Success?.ExecutionResult,
                 InternalTransfers = newState.InternalTransfers.ToList(),
-                Logs = newState.GetLogs(this.contractPrimitiveSerializer)
+                Logs = newState.GetLogs(this.contractPrimitiveSerializer),
+                StateRoot = newState.ContractState
             };
 
             return executionResult;
