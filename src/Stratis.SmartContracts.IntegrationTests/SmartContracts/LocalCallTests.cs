@@ -17,6 +17,11 @@ public class LocalCallTests : SmartContract
         Transfer(Address.Zero, 1);
     }
 
+    public bool Return()
+    {
+        return true;
+    }
+
     public struct CalledLog
     {
         public string Name;

@@ -18,7 +18,6 @@ using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Compilation;
-using Stratis.SmartContracts.CLR.Local;
 using Stratis.SmartContracts.CLR.Serialization;
 using Stratis.SmartContracts.Core;
 using Stratis.SmartContracts.Networks;
@@ -388,7 +387,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
                     this.methodParameterStringSerializer.Serialize(1uL)
                 };
 
-                ILocalExecutionResult result = node1.CallContractMethodLocally("OwnerOf", response.NewContractAddress, 0, parameters);
+                LocalExecutionResponse result = node1.CallContractMethodLocally("OwnerOf", response.NewContractAddress, 0, parameters);
                 uint160 senderAddressUint160 = node1.MinerAddress.Address.ToUint160(node1.CoreNode.FullNode.Network);
                 uint160 returnedAddressUint160 = ((Address)result.Return).ToUint160();
                 Assert.Equal(senderAddressUint160, returnedAddressUint160);

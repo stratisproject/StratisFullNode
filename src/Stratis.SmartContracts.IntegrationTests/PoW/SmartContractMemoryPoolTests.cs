@@ -47,7 +47,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
             {
                 var stratisNodeSync = builder.CreateSmartContractPowNode().WithWallet().Start();
 
-                var callDataSerializer = new CallDataSerializer(new ContractPrimitiveSerializer(stratisNodeSync.FullNode.Network));
+                var callDataSerializer = new CallDataSerializer(new ContractPrimitiveSerializerV2(stratisNodeSync.FullNode.Network));
 
                 TestHelper.MineBlocks(stratisNodeSync, 2); // coinbase maturity = 0 for this network
 

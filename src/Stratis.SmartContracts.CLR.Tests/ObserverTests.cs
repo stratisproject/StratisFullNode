@@ -117,7 +117,7 @@ namespace Stratis.SmartContracts.CLR.Tests
             var getBalance = new Func<ulong>(() => Balance);
             var persistentState = new TestPersistentState();
             var network = new SmartContractsRegTest();
-            var serializer = new ContractPrimitiveSerializer(network);
+            var serializer = new ContractPrimitiveSerializerV2(network);
             this.state = new SmartContractState(
                 new Block(1, this.TestAddress),
                 new Message(this.TestAddress, this.TestAddress, 0),
