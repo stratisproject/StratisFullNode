@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using LiteDB;
 using Microsoft.Extensions.Logging;
+using NLog;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Utilities;
 
@@ -15,11 +16,11 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         private readonly LiteCollection<AddressIndexerData> addressIndexerDataCollection;
 
-        private readonly ILogger logger;
+        private readonly NLog.ILogger logger;
 
-        public AddressIndexRepository(LiteDatabase db, ILoggerFactory loggerFactory, int maxBalanceChangesToKeep = 50_000) : base(maxBalanceChangesToKeep)
+        public AddressIndexRepository(LiteDatabase db, int maxBalanceChangesToKeep = 50_000) : base(maxBalanceChangesToKeep)
         {
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
             this.addressIndexerDataCollection = db.GetCollection<AddressIndexerData>(DbAddressDataKey);
             this.addressIndexerDataCollection.EnsureIndex("BalanceChangedHeightIndex", "$.BalanceChanges[*].BalanceChangedHeight", false);
         }
@@ -31,7 +32,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         {
             if (!this.TryGetValue(address, out AddressIndexerData data))
             {
-                this.logger.LogDebug("Not found in cache.");
+                this.logger.Debug("Not found in cache.");
                 data = this.addressIndexerDataCollection.FindById(address) ?? new AddressIndexerData() { Address = address, BalanceChanges = new List<AddressBalanceChange>() };
             }
 
@@ -80,10 +81,17 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             lock (this.LockObject)
             {
                 CacheItem[] dirtyItems = this.Keys.Where(x => x.Dirty).ToArray();
-                this.addressIndexerDataCollection.Upsert(dirtyItems.Select(x => x.Value));
 
+                this.logger.Debug("Saving {0} dirty items.", dirtyItems.Length);
+
+                List<AddressIndexerData> toUpsert = dirtyItems.Select(x => x.Value).ToList();
+
+                this.addressIndexerDataCollection.Upsert(toUpsert);
+                
                 foreach (CacheItem dirtyItem in dirtyItems)
                     dirtyItem.Dirty = false;
+
+                this.logger.Debug("Saved dirty items.");
             }
         }
     }

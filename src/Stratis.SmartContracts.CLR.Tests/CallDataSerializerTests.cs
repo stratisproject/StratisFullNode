@@ -11,7 +11,7 @@ namespace Stratis.SmartContracts.CLR.Tests
 {
     public sealed class CallDataSerializerTests
     {
-        public ICallDataSerializer Serializer = new CallDataSerializer(new ContractPrimitiveSerializer(new SmartContractsRegTest()));
+        public ICallDataSerializer Serializer = new CallDataSerializer(new ContractPrimitiveSerializerV2(new SmartContractsRegTest()));
 
         [Fact]
         public void SmartContract_CanSerialize_OP_CREATECONTRACT_WithoutMethodParameters()

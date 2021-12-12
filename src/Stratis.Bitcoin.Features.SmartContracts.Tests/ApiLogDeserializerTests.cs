@@ -35,7 +35,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
         public void Deserialize_Basic_Log_Success()
         {
             var network = new SmartContractsRegTest();
-            var primitiveSerializer = new ContractPrimitiveSerializer(network);
+            var primitiveSerializer = new ContractPrimitiveSerializerV2(network);
 
             var testStruct = new TestLog
             {
@@ -68,7 +68,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
         public void Deserialize_Logs_With_Different_Addresses_From_Cache()
         {
             var network = new SmartContractsRegTest();
-            var primitiveSerializer = new ContractPrimitiveSerializer(network);
+            var primitiveSerializer = new ContractPrimitiveSerializerV2(network);
 
             var testStruct0 = new TestLog
             {
@@ -119,7 +119,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
         public void MapTransferInfo_Success()
         {
             var network = new SmartContractsRegTest();
-            var primitiveSerializer = new ContractPrimitiveSerializer(network);
+            var primitiveSerializer = new ContractPrimitiveSerializerV2(network);
 
             var stateRoot = new Mock<IStateRepositoryRoot>();
             stateRoot.Setup(r => r.GetCodeHash(It.IsAny<uint160>())).Returns(uint256.Zero.ToBytes());

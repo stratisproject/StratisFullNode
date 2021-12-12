@@ -124,6 +124,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Miners
         /// <summary>
         /// Returns a snapshot of the current transactions by coin type in the first wallet.
         /// </summary>
+        /// <param name="node">See <see cref="CoreNode"/>.</param>
         /// <returns>A list of TransactionData.</returns>
         private List<TransactionData> GetTransactionsSnapshot(CoreNode node)
         {

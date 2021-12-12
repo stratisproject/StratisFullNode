@@ -52,7 +52,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             var utxoIndexerMock = new Mock<IUtxoIndexer>();
 
-            this.addressIndexer = new AddressIndexer(storeSettings, dataFolder, new ExtendedLoggerFactory(), this.network, stats.Object,
+            this.addressIndexer = new AddressIndexer(storeSettings, dataFolder, this.network, stats.Object,
                 this.consensusManagerMock.Object, this.asyncProviderMock.Object, indexer, new DateTimeProvider(), utxoIndexerMock.Object);
 
             this.genesisHeader = new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().Header.GetHash(), 0);
@@ -182,7 +182,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             FileMode fileMode = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? FileMode.Exclusive : FileMode.Shared;
 
             var database = new LiteDatabase(new ConnectionString() { Filename = dbPath, Mode = fileMode });
-            var cache = new AddressIndexerOutpointsRepository(database, new ExtendedLoggerFactory());
+            var cache = new AddressIndexerOutpointsRepository(database);
 
             var outPoint = new OutPoint(uint256.Parse("0000af9ab2c8660481328d0444cf167dfd31f24ca2dbba8e5e963a2434cffa93"), 0);
 
@@ -205,7 +205,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             FileMode fileMode = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? FileMode.Exclusive : FileMode.Shared;
 
             var database = new LiteDatabase(new ConnectionString() { Filename = dbPath, Mode = fileMode });
-            var cache = new AddressIndexerOutpointsRepository(database, new ExtendedLoggerFactory());
+            var cache = new AddressIndexerOutpointsRepository(database);
 
             Assert.False(cache.TryGetOutPointData(new OutPoint(uint256.Parse("0000af9ab2c8660481328d0444cf167dfd31f24ca2dbba8e5e963a2434cffa93"), 1), out OutPointData retrieved));
             Assert.Null(retrieved);
@@ -220,7 +220,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             FileMode fileMode = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? FileMode.Exclusive : FileMode.Shared;
 
             var database = new LiteDatabase(new ConnectionString() { Filename = dbPath, Mode = fileMode });
-            var cache = new AddressIndexerOutpointsRepository(database, new ExtendedLoggerFactory(), 2);
+            var cache = new AddressIndexerOutpointsRepository(database, 2);
 
             Assert.Equal(0, cache.Count);
             Assert.Equal(0, database.GetCollection<OutPointData>(CollectionName).Count());
@@ -271,7 +271,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             FileMode fileMode = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? FileMode.Exclusive : FileMode.Shared;
 
             var database = new LiteDatabase(new ConnectionString() { Filename = dbPath, Mode = fileMode });
-            var cache = new AddressIndexRepository(database, new ExtendedLoggerFactory());
+            var cache = new AddressIndexRepository(database);
 
             string address = "xyz";
             var balanceChanges = new List<AddressBalanceChange>();
@@ -300,7 +300,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             FileMode fileMode = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? FileMode.Exclusive : FileMode.Shared;
 
             var database = new LiteDatabase(new ConnectionString() { Filename = dbPath, Mode = fileMode });
-            var cache = new AddressIndexRepository(database, new ExtendedLoggerFactory());
+            var cache = new AddressIndexRepository(database);
 
             AddressIndexerData retrieved = cache.GetOrCreateAddress("xyz");
 
@@ -319,7 +319,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             FileMode fileMode = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? FileMode.Exclusive : FileMode.Shared;
 
             var database = new LiteDatabase(new ConnectionString() { Filename = dbPath, Mode = fileMode });
-            var cache = new AddressIndexRepository(database, new ExtendedLoggerFactory(), 4);
+            var cache = new AddressIndexRepository(database, 4);
 
             // Recall, each index entry counts as 1 and each balance change associated with it is an additional 1.
             Assert.Equal(0, database.GetCollection<AddressIndexerData>(CollectionName).Count());
