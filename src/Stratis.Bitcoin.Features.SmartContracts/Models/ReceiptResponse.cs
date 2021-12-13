@@ -46,7 +46,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Models
         public string[] Topics { get; }
         public string Data { get; }
 
-        public object Log { get; set; }
+        public LogData Log { get; set; }
 
         public LogResponse(Log log, Network network)
         {
@@ -54,5 +54,43 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Models
             this.Topics = log.Topics.Select(x => x.ToHexString()).ToArray();
             this.Data = log.Data.ToHexString();
         }
+    }
+
+    public class LogData
+    {
+        public LogData(string eventName, IDictionary<string, object> data)
+        {
+            this.@Event = eventName;
+
+            this.Data = data;
+        }
+
+        public string Event { get; }
+
+        public IDictionary<string, object> Data { get; }
+    }
+
+    public class LocalExecutionResponse
+    {
+        public IReadOnlyList<TransferResponse> InternalTransfers { get; set; }
+
+        public Stratis.SmartContracts.RuntimeObserver.Gas GasConsumed { get; set; }
+
+        public bool Revert { get; set; }
+
+        public ContractErrorMessage ErrorMessage { get; set; }
+
+        public object Return { get; set; }
+
+        public IReadOnlyList<LogResponse> Logs { get; set; }
+    }
+
+    public class TransferResponse
+    {
+        public string From { get; set; }
+
+        public string To { get; set; }
+
+        public ulong Value { get; set; }
     }
 }

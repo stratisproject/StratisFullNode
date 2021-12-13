@@ -40,7 +40,7 @@ namespace Stratis.SmartContracts.CLR.Tests
             this.KeyEncodingStrategy = BasicKeyEncodingStrategy.Default;
             this.LoggerFactory = ExtendedLoggerFactory.Create();
             this.State = new StateRepositoryRoot(new NoDeleteSource<byte[], byte[]>(new MemoryDictionarySource()));
-            this.ContractPrimitiveSerializer = new ContractPrimitiveSerializer(this.Network);
+            this.ContractPrimitiveSerializer = new ContractPrimitiveSerializerV2(this.Network);
             this.Serializer = new Serializer(this.ContractPrimitiveSerializer);
             this.AddressGenerator = new AddressGenerator();
             this.Validator = new SmartContractValidator();

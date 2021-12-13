@@ -12,7 +12,7 @@ namespace Stratis.SmartContracts.CLR.Tests
     public class MethodParameterByteSerializerTests
     {
         public static Network Network = new SmartContractsPoARegTest();
-        public IMethodParameterSerializer Serializer = new MethodParameterByteSerializer(new ContractPrimitiveSerializer(Network));
+        public IMethodParameterSerializer Serializer = new MethodParameterByteSerializer(new ContractPrimitiveSerializerV2(Network));
 
         [Theory]
         [MemberData(nameof(GetData), parameters: 1)]
@@ -74,14 +74,15 @@ namespace Stratis.SmartContracts.CLR.Tests
             Assert.ThrowsAny<Exception>(() => this.Serializer.Deserialize(new byte[] { 0x00, 0x11, 0x22, 0x33 }));
         }
 
-
         public static IEnumerable<object[]> GetData(int numTests)
         {
             yield return new object[] { true }; // MethodParameterDataType.Bool
             yield return new object[] { (byte)1 }; // MethodParameterDataType.Byte
             yield return new object[] { Encoding.UTF8.GetBytes("test") }; // MethodParameterDataType.ByteArray
+            yield return new object[] { new byte[0] { } }; // MethodParameterDataType.ByteArray
             yield return new object[] { 's' }; // MethodParameterDataType.Char
             yield return new object[] { "test" }; // MethodParameterDataType.String
+            yield return new object[] { string.Empty }; // MethodParameterDataType.String
             yield return new object[] { (uint)36 }; // MethodParameterDataType.UInt
             yield return new object[] { (ulong)29 }; // MethodParameterDataType.ULong
             yield return new object[] { "0x0000000000000000000000000000000000000001".HexToAddress() }; // MethodParameterDataType.Address
