@@ -149,7 +149,7 @@ namespace Stratis.Features.Unity3dApi
                         List<ReceiptResponse> receipts = this.smartContractTransactionService.ReceiptSearch(
                             contractAddr, "TransferLog", null, currentContract.LastUpdatedBlock + 1, null);
 
-                        if (receipts == null)
+                        if ((receipts == null) || (receipts.Count == 0))
                             continue;
 
                         int lastReceiptHeight = 0;
@@ -162,15 +162,16 @@ namespace Stratis.Features.Unity3dApi
 
                         foreach (ReceiptResponse receiptRes in receipts)
                         {
-                            string jsonLog = JsonConvert.SerializeObject(receiptRes.Logs.First().Log);
-                            
-                            TransferLog infoObj = JsonConvert.DeserializeObject<TransferLog>(jsonLog);
-                            transferLogs.Add(infoObj);
+                            LogData log = receiptRes.Logs.First().Log;
+                            string jsonLog = JsonConvert.SerializeObject(log);
+
+                            TransferLogRoot infoObj = JsonConvert.DeserializeObject<TransferLogRoot>(jsonLog);
+                            transferLogs.Add(infoObj.Data);
                         }
                     
                         foreach (TransferLog transferInfo in transferLogs)
                         {
-                            if (currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.From))
+                            if ((transferInfo.From != null) && currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.From))
                             {
                                 currentContract.OwnedIDsByAddress[transferInfo.From].Remove(transferInfo.TokenId);
 
@@ -228,15 +229,22 @@ namespace Stratis.Features.Unity3dApi
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.4.3.0 (Newtonsoft.Json v11.0.0.0)")]
+    public partial class TransferLogRoot
+    {
+        public string Event { get; set; }
+        public TransferLog Data { get; set; }
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.4.3.0 (Newtonsoft.Json v11.0.0.0)")]
     public partial class TransferLog
     {
-        [JsonProperty("from", Required = Required.DisallowNull, NullValueHandling = NullValueHandling.Ignore)]
+        [JsonProperty("From", Required = Required.DisallowNull, NullValueHandling = NullValueHandling.Ignore)]
         public string From { get; set; }
 
-        [JsonProperty("to", Required = Required.DisallowNull, NullValueHandling = NullValueHandling.Ignore)]
+        [JsonProperty("To", Required = Required.DisallowNull, NullValueHandling = NullValueHandling.Ignore)]
         public string To { get; set; }
 
-        [JsonProperty("tokenId", Required = Required.DisallowNull, NullValueHandling = NullValueHandling.Ignore)]
+        [JsonProperty("TokenId", Required = Required.DisallowNull, NullValueHandling = NullValueHandling.Ignore)]
         public long TokenId { get; set; }
     }
 }
