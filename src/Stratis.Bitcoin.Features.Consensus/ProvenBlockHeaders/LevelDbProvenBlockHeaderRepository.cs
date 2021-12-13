@@ -86,9 +86,6 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         {
             Task task = Task.Run(() =>
             {
-                // Open a connection to a new DB and create if not found
-                var options = new Options { CreateIfMissing = true };
-                this.leveldb = new DB(options, this.databaseFolder);
 
                 this.TipHashHeight = this.GetTipHash();
 
