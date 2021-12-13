@@ -259,7 +259,7 @@ namespace Stratis.SmartContracts.CLR.Tests
         {
             const string test = "1";
 
-            var testSerializer = new Serializer(new ContractPrimitiveSerializer(new SmartContractsPoARegTest()));
+            var testSerializer = new Serializer(new ContractPrimitiveSerializerV2(new SmartContractsPoARegTest()));
 
             byte[] bytes = testSerializer.Serialize(test);
 

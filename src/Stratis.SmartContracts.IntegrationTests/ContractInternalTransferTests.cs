@@ -656,7 +656,7 @@ namespace Stratis.SmartContracts.IntegrationTests
             // Contract doesn't maintain any balance
             Assert.Equal((ulong)0, this.node1.GetContractBalance(preResponse.NewContractAddress));
 
-            ILocalExecutionResult result = this.node1.CallContractMethodLocally("GetBalance", preResponse.NewContractAddress, 0, parameters);
+            LocalExecutionResponse result = this.node1.CallContractMethodLocally("GetBalance", preResponse.NewContractAddress, 0, parameters);
             Assert.Equal(totalSupply, result.Return);
 
             // Receipt is correct
