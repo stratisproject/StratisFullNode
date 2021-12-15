@@ -292,7 +292,7 @@ namespace Stratis.SmartContracts.Tests.Common.MockChain
             return (BuildCallContractTransactionResponse)response.Value;
         }
 
-        public ILocalExecutionResult CallContractMethodLocally(
+        public LocalExecutionResponse CallContractMethodLocally(
             string methodName,
             string contractAddress,
             decimal amount,
@@ -312,7 +312,7 @@ namespace Stratis.SmartContracts.Tests.Common.MockChain
                 Sender = sender ?? this.MinerAddress.Address
             };
             JsonResult response = (JsonResult)this.smartContractsController.LocalCallSmartContractTransaction(request);
-            return (ILocalExecutionResult)response.Value;
+            return (LocalExecutionResponse)response.Value;
         }
 
         /// <summary>
