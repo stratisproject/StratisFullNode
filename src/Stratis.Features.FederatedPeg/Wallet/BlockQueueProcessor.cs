@@ -2,8 +2,8 @@
 using System.Threading;
 using System.Threading.Tasks;
 using NBitcoin;
-using NLog;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Utilities;
 

@@ -3,7 +3,7 @@ using System.Linq;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using NBitcoin;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;

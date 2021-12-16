@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.Extensions;
 

@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -28,7 +28,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         {
             this.loggerFactory = Substitute.For<ILoggerFactory>();
             this.logger = Substitute.For<ILogger>();
-            this.loggerFactory.CreateLogger(null).ReturnsForAnyArgs(this.logger);
+            this.loggerFactory.CreateLogger().ReturnsForAnyArgs(this.logger);
             this.store = Substitute.For<ICrossChainTransferStore>();
             this.asyncProvider = Substitute.For<IAsyncProvider>();
             this.nodeLifetime = Substitute.For<INodeLifetime>();

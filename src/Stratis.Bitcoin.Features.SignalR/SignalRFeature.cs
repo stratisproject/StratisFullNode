@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
@@ -23,7 +22,7 @@ namespace Stratis.Bitcoin.Features.SignalR
         private readonly IEnumerable<IClientEventBroadcaster> eventBroadcasters;
         private readonly IEventsSubscriptionService eventsSubscriptionService;
         private IWebHost webHost;
-        private readonly ILogger<SignalRFeature> logger;
+        private readonly ILogger logger;
 
         public SignalRFeature(
             FullNode fullNode,

@@ -6,8 +6,8 @@ using DBreeze;
 using DBreeze.DataTypes;
 using DBreeze.Utils;
 using NBitcoin;
-using NLog;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.PoA.Voting

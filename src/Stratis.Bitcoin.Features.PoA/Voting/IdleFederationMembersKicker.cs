@@ -1,7 +1,7 @@
 ﻿using System;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Utilities;

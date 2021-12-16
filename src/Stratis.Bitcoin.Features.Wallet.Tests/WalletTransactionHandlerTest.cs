@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using DBreeze.Utils;
 using FluentAssertions;
-using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
 using NBitcoin.Policy;

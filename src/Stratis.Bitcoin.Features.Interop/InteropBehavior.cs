@@ -2,7 +2,7 @@
 using System.Numerics;
 using System.Threading.Tasks;
 using NBitcoin;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
 using Stratis.Bitcoin.Features.Interop.Payloads;
 using Stratis.Bitcoin.Features.PoA;

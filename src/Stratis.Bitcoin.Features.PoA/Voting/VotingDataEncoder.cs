@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using NBitcoin;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 
 namespace Stratis.Bitcoin.Features.PoA.Voting
 {

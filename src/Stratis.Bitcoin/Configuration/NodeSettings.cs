@@ -4,7 +4,6 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Networks;
 using NBitcoin.Protocol;

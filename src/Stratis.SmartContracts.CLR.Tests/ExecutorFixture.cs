@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using CSharpFunctionalExtensions;
-using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.SmartContracts.CLR.ResultProcessors;
 using Stratis.SmartContracts.CLR.Serialization;
 using Stratis.SmartContracts.Core;

@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Base.Deployments.Models;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers;
 using Stratis.Bitcoin.Utilities;

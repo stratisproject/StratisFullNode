@@ -12,7 +12,6 @@ using NLog.LayoutRenderers;
 using NLog.Targets;
 using NLog.Targets.Wrappers;
 using Stratis.Bitcoin.Configuration.Settings;
-using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace Stratis.Bitcoin.Configuration.Logging
 {
@@ -29,6 +28,8 @@ namespace Stratis.Bitcoin.Configuration.Logging
 
         public static ILoggerFactory Create()
         {
+            return new LoggerFactory();
+            /*
             return Create(builder =>
             {
                 builder
@@ -38,11 +39,15 @@ namespace Stratis.Bitcoin.Configuration.Logging
                     .AddFilter("Microsoft.AspNetCore", LogLevel.Error);
             }
             );
+            */
         }
 
         /// <summary>Loads the NLog.config file from the <see cref="DataFolder"/>, if it exists.</summary>
         public static ILoggerFactory Create(LogSettings settings, DataFolder dataFolder)
         {
+            return new LoggerFactory();
+
+            /*
             return Create(builder =>
             {
                 LoggingConfiguration.ConfigureConsoleFilters(builder, settings);
@@ -59,6 +64,7 @@ namespace Stratis.Bitcoin.Configuration.Logging
                 else
                     builder.AddNLog();
             });
+            */
         }
     }
 
@@ -131,17 +137,6 @@ namespace Stratis.Bitcoin.Configuration.Logging
             LogManager.ConfigurationReloaded += NLogConfigurationReloaded;
         }
 
-        /// <summary>Loads the NLog.config file from the <see cref="DataFolder"/>, if it exists.</summary>
-        public static void LoadNLogConfiguration(this ILoggerFactory loggerFactory, DataFolder dataFolder)
-        {
-            if (dataFolder == null)
-                return;
-
-            string configPath = Path.Combine(dataFolder.RootPath, NLogConfigFileName);
-            if (File.Exists(configPath))
-                loggerFactory.ConfigureNLog(configPath);
-        }
-
         /// <summary>
         /// Event handler to be called when logging <see cref="NLog.LogManager.Configuration"/> gets reloaded.
         /// </summary>
@@ -192,7 +187,10 @@ namespace Stratis.Bitcoin.Configuration.Logging
 
             LogManager.Configuration.LoggingRules.Remove(nullPreInitRule);
 
-            LayoutRenderer.Register("message", (logEvent) => ((logEvent.Parameters == null) ? logEvent.Message : string.Format(logEvent.Message, logEvent.Parameters)).Replace("\n", "\n\t"));
+            LayoutRenderer.Register("message", (logEvent) =>
+            {
+                return ((logEvent.Parameters == null) ? logEvent.Message : string.Format(logEvent.Message, logEvent.Parameters)).Replace("\n", "\n\t");
+            });
 
             var consoleTarget = new ColoredConsoleTarget
             {

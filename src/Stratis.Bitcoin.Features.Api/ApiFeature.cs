@@ -3,10 +3,10 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
+using Stratis.Bitcoin.Configuration.Logging;
 
 namespace Stratis.Bitcoin.Features.Api
 {

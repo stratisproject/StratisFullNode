@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using NBitcoin;
-using NLog;
 using TracerAttributes;
+using Stratis.Bitcoin.Configuration.Logging;
 
 namespace Stratis.Bitcoin
 {

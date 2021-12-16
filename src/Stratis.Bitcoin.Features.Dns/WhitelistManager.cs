@@ -4,7 +4,7 @@ using System.Linq;
 using System.Net;
 using DNS.Protocol;
 using DNS.Protocol.ResourceRecords;
-using Microsoft.Extensions.Logging;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.P2P;

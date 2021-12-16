@@ -9,7 +9,6 @@ using DBreeze;
 using DBreeze.DataTypes;
 using DBreeze.Utils;
 using NBitcoin;
-using NLog;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.BlockStore;

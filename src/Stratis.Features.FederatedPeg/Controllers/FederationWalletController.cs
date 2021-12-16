@@ -5,7 +5,7 @@ using System.Net;
 using System.Threading;
 using Microsoft.AspNetCore.Mvc;
 using NBitcoin;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Models;

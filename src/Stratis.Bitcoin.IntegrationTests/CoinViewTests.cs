@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using DBreeze.DataTypes;
-using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
 using NBitcoin.Crypto;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus;

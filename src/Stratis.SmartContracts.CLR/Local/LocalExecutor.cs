@@ -1,12 +1,8 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using Microsoft.Extensions.Logging;
+﻿using System.Linq;
 using NBitcoin;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.SmartContracts.CLR.Serialization;
-using Stratis.SmartContracts.Core;
-using Stratis.SmartContracts.Core.Receipts;
 using Stratis.SmartContracts.Core.State;
-using Stratis.SmartContracts.RuntimeObserver;
 
 namespace Stratis.SmartContracts.CLR.Local
 {

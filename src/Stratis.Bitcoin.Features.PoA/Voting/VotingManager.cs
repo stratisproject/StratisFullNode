@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using ConcurrentCollections;
 using NBitcoin;
-using NLog;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.EventBus;

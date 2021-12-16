@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using NLog;
 using Stratis.Bitcoin.Builder.Feature;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;

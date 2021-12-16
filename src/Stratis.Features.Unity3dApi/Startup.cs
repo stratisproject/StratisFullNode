@@ -6,9 +6,9 @@ using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Versioning;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Stratis.Bitcoin;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.Api;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using Swashbuckle.AspNetCore.SwaggerUI;
@@ -38,6 +38,7 @@ namespace Stratis.Features.Unity3dApi
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            /*
             services.AddLogging(
                 loggingBuilder =>
                 {
@@ -45,6 +46,7 @@ namespace Stratis.Features.Unity3dApi
                     loggingBuilder.AddConsole();
                     loggingBuilder.AddDebug();
                 });
+            */
 
             // Add service and create Policy to allow Cross-Origin Requests
             services.AddCors

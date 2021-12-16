@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.Extensions.Logging;
+using Stratis.Bitcoin.Configuration.Logging;
 
 namespace Stratis.Bitcoin.Features.Api
 {

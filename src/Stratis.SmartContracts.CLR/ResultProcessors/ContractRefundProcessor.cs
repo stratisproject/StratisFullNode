@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
-using NBitcoin;
+﻿using NBitcoin;
+using Stratis.Bitcoin.Configuration.Logging;
 
 namespace Stratis.SmartContracts.CLR.ResultProcessors
 {

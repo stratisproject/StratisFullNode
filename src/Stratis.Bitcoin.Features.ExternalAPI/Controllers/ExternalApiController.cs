@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 

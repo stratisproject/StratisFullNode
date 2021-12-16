@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Net.Http;
 using System.Net.Sockets;
-using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.ExternalApi.ApiClients;
 using Stratis.Bitcoin.Utilities;
 

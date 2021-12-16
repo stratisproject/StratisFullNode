@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Microsoft.Extensions.Logging;
 using Moq;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Bitcoin.Configuration.Logging;
 using Xunit;
 
 namespace Stratis.Bitcoin.Tests.Utilities

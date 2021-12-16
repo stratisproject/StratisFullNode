@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using NBitcoin.Rules;
+using Stratis.Bitcoin.Configuration.Logging;
 using TracerAttributes;
 
 namespace Stratis.Bitcoin.Consensus.Rules

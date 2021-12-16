@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.Wallet.Services;
 using Stratis.Bitcoin.Utilities;
 

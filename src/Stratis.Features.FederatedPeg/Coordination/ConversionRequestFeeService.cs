@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using NBitcoin;
 using Newtonsoft.Json;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Utilities;

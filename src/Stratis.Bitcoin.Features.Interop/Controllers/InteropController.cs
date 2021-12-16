@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using NBitcoin;
 using NBitcoin.DataEncoders;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
 using Stratis.Bitcoin.Features.Interop.Models;
 using Stratis.Bitcoin.Features.PoA;

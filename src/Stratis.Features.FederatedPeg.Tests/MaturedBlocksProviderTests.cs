@@ -3,11 +3,11 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NSubstitute;
 using NSubstitute.Core;
 using Stratis.Bitcoin;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Networks;
@@ -45,7 +45,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         {
             this.loggerFactory = Substitute.For<ILoggerFactory>();
             this.logger = Substitute.For<ILogger>();
-            this.loggerFactory.CreateLogger(null).ReturnsForAnyArgs(this.logger);
+            this.loggerFactory.CreateLogger().ReturnsForAnyArgs(this.logger);
             this.conversionRequestRepository = Substitute.For<IConversionRequestRepository>();
             this.consensusManager = Substitute.For<IConsensusManager>();
             this.network = new CirrusRegTest();

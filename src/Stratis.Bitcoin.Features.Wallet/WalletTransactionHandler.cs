@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Policy;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Services;
 using Stratis.Bitcoin.Utilities;

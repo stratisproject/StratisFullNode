@@ -3,8 +3,8 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using NSubstitute;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Controllers;
 using Stratis.Features.PoA.Collateral.CounterChain;
 using Xunit;
@@ -23,7 +23,7 @@ namespace Stratis.Features.FederatedPeg.Tests.RestClientsTests
         {
             this.loggerFactory = Substitute.For<ILoggerFactory>();
             this.logger = Substitute.For<ILogger>();
-            this.loggerFactory.CreateLogger(null).ReturnsForAnyArgs(this.logger);
+            this.loggerFactory.CreateLogger().ReturnsForAnyArgs(this.logger);
             this.httpClientFactory = new Bitcoin.Controllers.HttpClientFactory();
         }
 

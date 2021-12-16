@@ -1,5 +1,5 @@
 ﻿using System;
-using Microsoft.Extensions.Logging;
+using Stratis.Bitcoin.Configuration.Logging;
 using TracerAttributes;
 
 namespace Stratis.Bitcoin.Utilities
@@ -67,7 +67,7 @@ namespace Stratis.Bitcoin.Utilities
         {
             return this.logger.IsEnabled(logLevel);
         }
-
+        
         /// <inheritdoc />
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
         {

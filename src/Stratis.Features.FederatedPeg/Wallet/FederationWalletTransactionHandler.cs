@@ -5,7 +5,7 @@ using System.Security;
 using Microsoft.Extensions.Caching.Memory;
 using NBitcoin;
 using NBitcoin.Policy;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Utilities;

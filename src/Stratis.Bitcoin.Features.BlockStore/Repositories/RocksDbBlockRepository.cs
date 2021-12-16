@@ -6,9 +6,9 @@ using System.Text;
 using System.Threading;
 using DBreeze.Utils;
 using NBitcoin;
-using NLog;
 using RocksDbSharp;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Utilities;
 

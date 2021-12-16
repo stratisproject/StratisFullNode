@@ -1,6 +1,6 @@
 ﻿using System.Linq;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
 

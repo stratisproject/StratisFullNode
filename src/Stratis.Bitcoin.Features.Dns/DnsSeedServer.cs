@@ -10,9 +10,9 @@ using DNS.Client;
 using DNS.Protocol;
 using DNS.Protocol.ResourceRecords;
 using DNS.Protocol.Utils;
-using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.Dns

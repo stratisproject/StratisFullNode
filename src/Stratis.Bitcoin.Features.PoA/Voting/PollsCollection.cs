@@ -1,6 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.PoA.Voting

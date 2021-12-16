@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Text;
 using CSharpFunctionalExtensions;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.SmartContracts.CLR.Caching;
 using Stratis.SmartContracts.CLR.Compilation;
 using Stratis.SmartContracts.CLR.Exceptions;

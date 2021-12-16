@@ -2,10 +2,10 @@
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Newtonsoft.Json;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;

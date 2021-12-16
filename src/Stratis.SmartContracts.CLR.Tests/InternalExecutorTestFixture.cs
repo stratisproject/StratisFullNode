@@ -1,6 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
-using Moq;
+﻿using Moq;
 using NBitcoin;
+using Stratis.Bitcoin.Configuration.Logging;
 
 namespace Stratis.SmartContracts.CLR.Tests
 {

@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading.Tasks;
 using NBitcoin;
 using NBitcoin.Policy;
-using NLog;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
