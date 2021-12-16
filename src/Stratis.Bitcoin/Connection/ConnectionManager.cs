@@ -528,7 +528,7 @@ namespace Stratis.Bitcoin.Connection
 
             if (existingConnection != null)
             {
-                this.logger.LogDebug("{0} is already connected.");
+                this.logger.LogDebug("{0} is already connected.", ipEndpoint);
                 return existingConnection;
             }
 
