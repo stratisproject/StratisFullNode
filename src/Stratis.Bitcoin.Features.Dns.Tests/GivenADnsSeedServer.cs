@@ -252,14 +252,17 @@ namespace Stratis.Bitcoin.Features.Dns.Tests
 
             var logger = new Mock<ILogger>(MockBehavior.Loose);
             bool receivedSocketException = false;
+            var source = new CancellationTokenSource(30000);
             logger
                 .Setup(f => f.Log(It.IsAny<LogLevel>(), It.IsAny<EventId>(), It.IsAny<It.IsAnyType>(), It.IsAny<Exception>(), (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()))
                 .Callback(new InvocationAction(invocation =>
                 {
-                    if (!receivedSocketException && (LogLevel)invocation.Arguments[0] == LogLevel.Error)
+                    if (!receivedSocketException && (LogLevel)invocation.Arguments[0] == LogLevel.Error && invocation.Arguments[4] is Func<object[], Exception, string> func)
                     {
                         // Not yet set, check trace message
-                        receivedSocketException = invocation.Arguments[2].ToString().StartsWith("Socket exception");
+                        receivedSocketException = func.Invoke((object[])invocation.Arguments[2], (Exception)invocation.Arguments[3]).Contains("Socket exception");
+                        if (receivedSocketException)
+                            source.Cancel();
                     }
                 }));
             var loggerFactory = new Mock<ILoggerFactory>();
@@ -268,7 +271,6 @@ namespace Stratis.Bitcoin.Features.Dns.Tests
             IDateTimeProvider dateTimeProvider = new Mock<IDateTimeProvider>().Object;
 
             // Act.
-            var source = new CancellationTokenSource(2000);
             var server = new DnsSeedServer(udpClient.Object, masterFile.Object, asyncProvider, nodeLifetime, loggerFactory.Object, dateTimeProvider, dnsSettings, dataFolder);
 
             try
@@ -317,21 +319,26 @@ namespace Stratis.Bitcoin.Features.Dns.Tests
             bool receivedRequest = false;
 
             bool receivedBadRequest = false;
+            var source = new CancellationTokenSource(30000);
 
             logger
                 .Setup(f => f.Log(It.IsAny<LogLevel>(), It.IsAny<EventId>(), It.IsAny<It.IsAnyType>(), It.IsAny<Exception>(), (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()))
                 .Callback(new InvocationAction(invocation =>
                 {
-                    if (!receivedRequest && (LogLevel)invocation.Arguments[0] == LogLevel.Debug)
+                    if (!receivedRequest && (LogLevel)invocation.Arguments[0] == LogLevel.Debug && invocation.Arguments[4] is Func<object[], Exception, string> func)
                     {
                         // Not yet set, check trace message
-                        receivedRequest = invocation.Arguments[2].ToString().StartsWith("DNS request received");
+                        receivedRequest = func.Invoke((object[])invocation.Arguments[2], (Exception)invocation.Arguments[3]).Contains("DNS request received");
+                        if (receivedRequest)
+                            source.Cancel();
                     }
 
-                    if (!receivedBadRequest && (LogLevel)invocation.Arguments[0] == LogLevel.Warning)
+                    if (!receivedBadRequest && (LogLevel)invocation.Arguments[0] == LogLevel.Warning && invocation.Arguments[4] is Func<object[], Exception, string> func2)
                     {
                         // Not yet set, check trace message
-                        receivedBadRequest = invocation.Arguments[2].ToString().StartsWith("Failed to process DNS request");
+                        receivedBadRequest = func2.Invoke((object[])invocation.Arguments[2], (Exception)invocation.Arguments[3]).Contains("Failed to process DNS request");
+                        if (receivedBadRequest)
+                            source.Cancel();
                     }
                 }));
             var loggerFactory = new Mock<ILoggerFactory>();
@@ -340,7 +347,6 @@ namespace Stratis.Bitcoin.Features.Dns.Tests
             IDateTimeProvider dateTimeProvider = new Mock<IDateTimeProvider>().Object;
 
             // Act.
-            var source = new CancellationTokenSource(2000);
             var server = new DnsSeedServer(udpClient.Object, masterFile.Object, asyncProvider, nodeLifetime, loggerFactory.Object, dateTimeProvider, dnsSettings, dataFolder);
 
             try
@@ -390,14 +396,18 @@ namespace Stratis.Bitcoin.Features.Dns.Tests
 
             var logger = new Mock<ILogger>();
             bool receivedRequest = false;
+            var source = new CancellationTokenSource(30000);
+
             logger
                 .Setup(f => f.Log(It.IsAny<LogLevel>(), It.IsAny<EventId>(), It.IsAny<It.IsAnyType>(), It.IsAny<Exception>(), (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()))
                 .Callback(new InvocationAction(invocation =>
                 {
-                    if (!receivedRequest && (LogLevel)invocation.Arguments[0] == LogLevel.Debug)
+                    if (!receivedRequest && (LogLevel)invocation.Arguments[0] == LogLevel.Debug && invocation.Arguments[4] is Func<object[], Exception, string> func)
                     {
                         // Not yet set, check trace message
-                        receivedRequest = invocation.Arguments[2].ToString().StartsWith("DNS request received");
+                        receivedRequest = func.Invoke((object[])invocation.Arguments[2], (Exception)invocation.Arguments[3]).Contains("DNS request received");
+                        if (receivedRequest)
+                            source.Cancel();
                     }
                 }));
             var loggerFactory = new Mock<ILoggerFactory>();
@@ -406,7 +416,6 @@ namespace Stratis.Bitcoin.Features.Dns.Tests
             IDateTimeProvider dateTimeProvider = new Mock<IDateTimeProvider>().Object;
 
             // Act.
-            var source = new CancellationTokenSource(2000);
             var server = new DnsSeedServer(udpClient.Object, masterFile.Object, asyncProvider, nodeLifetime, loggerFactory.Object, dateTimeProvider, dnsSettings, dataFolder);
 
             try
@@ -546,7 +555,7 @@ namespace Stratis.Bitcoin.Features.Dns.Tests
             var masterFile = new Mock<IMasterFile>();
             masterFile.Setup(m => m.Get(It.IsAny<Question>())).Returns(new List<IResourceRecord>());
 
-            var source = new CancellationTokenSource(5000);
+            var source = new CancellationTokenSource(30000);
             var nodeLifetime = new Mock<INodeLifetime>();
             nodeLifetime.Setup(n => n.ApplicationStopping).Returns(source.Token);
 
@@ -556,10 +565,12 @@ namespace Stratis.Bitcoin.Features.Dns.Tests
                 .Setup(f => f.Log(It.IsAny<LogLevel>(), It.IsAny<EventId>(), It.IsAny<It.IsAnyType>(), It.IsAny<Exception>(), (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()))
                 .Callback(new InvocationAction(invocation =>
                 {
-                    if (!startedLoop && (LogLevel)invocation.Arguments[0] == LogLevel.Information)
+                    if (!startedLoop && (LogLevel)invocation.Arguments[0] == LogLevel.Information && invocation.Arguments[4] is Func<object[], Exception, string> func)
                     {
                         // Not yet set, check trace message
-                        startedLoop = invocation.Arguments[2].ToString().Contains("DNS Metrics");
+                        startedLoop = func.Invoke((object[])invocation.Arguments[2], (Exception)invocation.Arguments[3]).Contains("DNS Metrics");
+                        if (startedLoop)
+                            source.Cancel();
                     }
                 }));
             var loggerFactory = new Mock<ILoggerFactory>();

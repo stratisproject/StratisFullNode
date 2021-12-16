@@ -6,42 +6,42 @@ namespace Stratis.Bitcoin.Configuration.Logging
     {
         public static void Debug(this ILogger logger, string message, params object[] args)
         {
-            logger.Log(LogLevel.Debug, new EventId(0), args, null, (s, e) => string.Format(message, s));
+            logger.Log(LogLevel.Debug, null, args, null, (s, e) => string.Format(message, s));
         }
 
         public static void Info(this ILogger logger, string message, params object[] args)
         {
-            logger.Log(LogLevel.Information, new EventId(0), args, null, (s, e) => string.Format(message, s));
+            logger.Log(LogLevel.Information, null, args, null, (s, e) => string.Format(message, s));
         }
 
         public static void Trace(this ILogger logger, string message, params object[] args)
         {
-            logger.Log(LogLevel.Trace, new EventId(0), args, null, (s, e) => string.Format(message, s));
+            logger.Log(LogLevel.Trace, null, args, null, (s, e) => string.Format(message, s));
         }
 
         public static void Warn(this ILogger logger, string message, params object[] args)
         {
-            logger.Log(LogLevel.Warning, new EventId(0), args, null, (s, e) => string.Format(message, s));
+            logger.Log(LogLevel.Warning, null, args, null, (s, e) => string.Format(message, s));
         }
 
         public static void Warn(this ILogger logger, Exception e, string message, params object[] args)
         {
-            logger.Log(LogLevel.Warning, new EventId(0), args, e, (s, e) => string.Format(message, s));
+            logger.Log(LogLevel.Warning, null, args, e, (s, e) => string.Format(message, s));
         }
 
         public static void Error(this ILogger logger, string message, params object[] args)
         {
-            logger.Log(LogLevel.Error, new EventId(0), args, null, (s, e) => string.Format(message, s));
+            logger.Log(LogLevel.Error, null, args, null, (s, e) => string.Format(message, s));
         }
 
         public static void Error(this ILogger logger, Exception e, string message, params object[] args)
         {
-            logger.Log(LogLevel.Error, new EventId(0), args, e, (s, e) => string.Format(message, s));
+            logger.Log(LogLevel.Error, null, args, e, (s, e) => string.Format(message, s));
         }
 
         public static void Fatal(this ILogger logger, string message, params object[] args)
         {
-            logger.Log(LogLevel.Critical, new EventId(0), args, null, (s, e) => string.Format(message, s));
+            logger.Log(LogLevel.Critical, null, args, null, (s, e) => string.Format(message, s));
         }
 
         public static void LogTrace(this ILogger logger, string message, params object[] args)
