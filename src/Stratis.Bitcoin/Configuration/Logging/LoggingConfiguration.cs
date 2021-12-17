@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using NLog;
 using NLog.Config;
-using NLog.Extensions.Logging;
 using NLog.LayoutRenderers;
 using NLog.Targets;
 using NLog.Targets.Wrappers;
