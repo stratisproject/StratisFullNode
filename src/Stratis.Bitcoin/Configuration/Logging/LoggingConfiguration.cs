@@ -28,41 +28,12 @@ namespace Stratis.Bitcoin.Configuration.Logging
         public static ILoggerFactory Create()
         {
             return new CustomLoggerFactory();
-            /*
-            return Create(builder =>
-            {
-                builder
-                    .AddFilter("Default", Microsoft.Extensions.Logging.LogLevel.Information)
-                    .AddFilter("System", Microsoft.Extensions.Logging.LogLevel.Warning)
-                    .AddFilter("Microsoft", Microsoft.Extensions.Logging.LogLevel.Warning)
-                    .AddFilter("Microsoft.AspNetCore", Microsoft.Extensions.Logging.LogLevel.Error);
-            }
-            );
-            */
         }
 
         /// <summary>Loads the NLog.config file from the <see cref="DataFolder"/>, if it exists.</summary>
         public static ILoggerFactory Create(LogSettings settings, DataFolder dataFolder)
         {
             return new CustomLoggerFactory();
-            /*
-            return Create(builder =>
-            {
-                LoggingConfiguration.ConfigureConsoleFilters(builder, settings);
-
-                builder
-                    .AddFilter("Default", Microsoft.Extensions.Logging.LogLevel.Information)
-                    .AddFilter("System", Microsoft.Extensions.Logging.LogLevel.Warning)
-                    .AddFilter("Microsoft", Microsoft.Extensions.Logging.LogLevel.Warning)
-                    .AddFilter("Microsoft.AspNetCore", Microsoft.Extensions.Logging.LogLevel.Error);
-
-                string configPath = Path.Combine(dataFolder.RootPath, LoggingConfiguration.NLogConfigFileName);
-                if (File.Exists(configPath))
-                    builder.AddNLog(configPath);
-                else
-                    builder.AddNLog();
-            });
-            */
         }
     }
 
@@ -208,6 +179,10 @@ namespace Stratis.Bitcoin.Configuration.Logging
 
             // Logging level for console is always Info.
             LogManager.Configuration.LoggingRules.Add(new LoggingRule($"{nameof(Stratis)}.*", NLog.LogLevel.Info, consoleTarget));
+            LogManager.Configuration.LoggingRules.Add(new LoggingRule("Default", NLog.LogLevel.Warn, consoleTarget));
+            LogManager.Configuration.LoggingRules.Add(new LoggingRule($"{nameof(System)}", NLog.LogLevel.Warn, consoleTarget));
+            LogManager.Configuration.LoggingRules.Add(new LoggingRule($"{nameof(Microsoft)}", NLog.LogLevel.Warn, consoleTarget));
+            LogManager.Configuration.LoggingRules.Add(new LoggingRule($"{nameof(Microsoft)}.{nameof(Microsoft.AspNetCore)}", NLog.LogLevel.Error, consoleTarget));
 
             // Configure main file target, configured using command line or node configuration file settings.
             var mainTarget = new FileTarget
@@ -226,6 +201,10 @@ namespace Stratis.Bitcoin.Configuration.Logging
 
             // Default logging level is Info for all components.
             var defaultRule = new LoggingRule($"{nameof(Stratis)}.*", settings.LogLevel, mainTarget);
+            LogManager.Configuration.LoggingRules.Add(new LoggingRule("Default", NLog.LogLevel.Warn, mainTarget));
+            LogManager.Configuration.LoggingRules.Add(new LoggingRule($"{nameof(System)}", NLog.LogLevel.Warn, mainTarget));
+            LogManager.Configuration.LoggingRules.Add(new LoggingRule($"{nameof(Microsoft)}", NLog.LogLevel.Warn, mainTarget));
+            LogManager.Configuration.LoggingRules.Add(new LoggingRule($"{nameof(Microsoft)}.{nameof(Microsoft.AspNetCore)}", NLog.LogLevel.Error, mainTarget));
 
             if (settings.DebugArgs.Any() && settings.DebugArgs[0] != "1")
             {
