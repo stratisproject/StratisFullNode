@@ -247,7 +247,7 @@ namespace Stratis.Bitcoin.Configuration.Logging
                         if (!usedCategories.Contains(category))
                         {
                             usedCategories.Add(category);
-                            var rule = new LoggingRule(category, settings.LogLevel, mainTarget);
+                            var rule = new LoggingRule(category, NLog.LogLevel.Debug, mainTarget);
                             LogManager.Configuration.LoggingRules.Add(rule);
                         }
                     }
