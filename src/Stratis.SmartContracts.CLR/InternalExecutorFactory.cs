@@ -1,4 +1,4 @@
-﻿using Stratis.Bitcoin.Configuration.Logging;
+﻿using Microsoft.Extensions.Logging;
 
 namespace Stratis.SmartContracts.CLR
 {

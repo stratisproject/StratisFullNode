@@ -1,4 +1,5 @@
-﻿using System;
+﻿/*
+using System;
 
 namespace Stratis.Bitcoin.Configuration.Logging
 {
@@ -13,3 +14,4 @@ namespace Stratis.Bitcoin.Configuration.Logging
         ILogger CreateLogger<T>();
     }
 }
+*/

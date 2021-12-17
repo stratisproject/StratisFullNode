@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
 using TracerAttributes;
 using Stratis.Bitcoin.Configuration.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Stratis.Bitcoin
 {

@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace Stratis.Bitcoin.Configuration.Logging
 {
-    public class LoggerFactory : ILoggerFactory
+    public class CustomLoggerFactory : ILoggerFactory
     {
         public ILogger CreateLogger()
         {
@@ -24,6 +25,11 @@ namespace Stratis.Bitcoin.Configuration.Logging
         public ILogger CreateLogger<T>()
         {
             return new Logger(NLog.LogManager.LogFactory.GetLogger(typeof(T).FullName));
+        }
+
+        public void AddProvider(ILoggerProvider loggerProvider)
+        {
+            throw new NotImplementedException();
         }
 
         public void Dispose()

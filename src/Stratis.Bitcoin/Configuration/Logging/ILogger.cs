@@ -1,19 +1,22 @@
 ﻿using System;
+using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Configuration.Logging
 {
+    /*
     public interface ILogger
     {
         void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter);
 
         bool IsEnabled(LogLevel logLevel);
     }
-
+    */
+    /*
     public interface ILogger<T> : ILogger
     {
     }
-
+    */
     public class Logger : ILogger
     {
         private NLog.Logger logger;
@@ -23,6 +26,7 @@ namespace Stratis.Bitcoin.Configuration.Logging
             this.logger = logger;
         }
 
+        /// <inheritdoc />
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
         {
             if (!this.IsEnabled(logLevel))
@@ -37,9 +41,19 @@ namespace Stratis.Bitcoin.Configuration.Logging
             this.logger.Log(eventInfo);
         }
 
+        /// <inheritdoc />
         public bool IsEnabled(LogLevel logLevel)
         {
             return this.logger.IsEnabled(logLevel.ToNLogLevel());
+        }
+
+        /// <inheritdoc />
+        public IDisposable BeginScope<TState>(TState state)
+        {
+            if (state == null)
+                throw new ArgumentNullException(nameof(state));
+
+            return NLog.NestedDiagnosticsLogicalContext.Push(state);
         }
     }
 }

@@ -6,8 +6,8 @@ using FluentAssertions;
 using Moq;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Utilities;
-using Stratis.Bitcoin.Configuration.Logging;
 using Xunit;
+using Microsoft.Extensions.Logging;
 
 namespace Stratis.Bitcoin.Tests.Utilities
 {

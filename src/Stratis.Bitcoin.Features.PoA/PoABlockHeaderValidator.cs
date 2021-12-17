@@ -1,6 +1,6 @@
-﻿using NBitcoin;
+﻿using Microsoft.Extensions.Logging;
+using NBitcoin;
 using NBitcoin.Crypto;
-using Stratis.Bitcoin.Configuration.Logging;
 
 namespace Stratis.Bitcoin.Features.PoA
 {

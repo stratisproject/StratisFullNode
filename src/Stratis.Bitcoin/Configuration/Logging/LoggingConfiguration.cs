@@ -28,15 +28,15 @@ namespace Stratis.Bitcoin.Configuration.Logging
 
         public static ILoggerFactory Create()
         {
-            return new LoggerFactory();
+            return new CustomLoggerFactory();
             /*
             return Create(builder =>
             {
                 builder
-                    .AddFilter("Default", LogLevel.Information)
-                    .AddFilter("System", LogLevel.Warning)
-                    .AddFilter("Microsoft", LogLevel.Warning)
-                    .AddFilter("Microsoft.AspNetCore", LogLevel.Error);
+                    .AddFilter("Default", Microsoft.Extensions.Logging.LogLevel.Information)
+                    .AddFilter("System", Microsoft.Extensions.Logging.LogLevel.Warning)
+                    .AddFilter("Microsoft", Microsoft.Extensions.Logging.LogLevel.Warning)
+                    .AddFilter("Microsoft.AspNetCore", Microsoft.Extensions.Logging.LogLevel.Error);
             }
             );
             */
@@ -45,18 +45,17 @@ namespace Stratis.Bitcoin.Configuration.Logging
         /// <summary>Loads the NLog.config file from the <see cref="DataFolder"/>, if it exists.</summary>
         public static ILoggerFactory Create(LogSettings settings, DataFolder dataFolder)
         {
-            return new LoggerFactory();
-
+            return new CustomLoggerFactory();
             /*
             return Create(builder =>
             {
                 LoggingConfiguration.ConfigureConsoleFilters(builder, settings);
 
                 builder
-                    .AddFilter("Default", LogLevel.Information)
-                    .AddFilter("System", LogLevel.Warning)
-                    .AddFilter("Microsoft", LogLevel.Warning)
-                    .AddFilter("Microsoft.AspNetCore", LogLevel.Error);
+                    .AddFilter("Default", Microsoft.Extensions.Logging.LogLevel.Information)
+                    .AddFilter("System", Microsoft.Extensions.Logging.LogLevel.Warning)
+                    .AddFilter("Microsoft", Microsoft.Extensions.Logging.LogLevel.Warning)
+                    .AddFilter("Microsoft.AspNetCore", Microsoft.Extensions.Logging.LogLevel.Error);
 
                 string configPath = Path.Combine(dataFolder.RootPath, LoggingConfiguration.NLogConfigFileName);
                 if (File.Exists(configPath))

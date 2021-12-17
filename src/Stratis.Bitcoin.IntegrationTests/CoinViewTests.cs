@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using DBreeze.DataTypes;
+using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
 using NBitcoin.Crypto;

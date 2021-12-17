@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using ConcurrentCollections;
+using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Utilities.Extensions;

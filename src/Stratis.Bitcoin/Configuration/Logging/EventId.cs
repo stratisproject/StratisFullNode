@@ -1,5 +1,6 @@
 ﻿namespace Stratis.Bitcoin.Configuration.Logging
 {
+    /*
     public class EventId
     {
         private int id;
@@ -8,4 +9,5 @@
             this.id = id;
         }
     }
+    */
 }

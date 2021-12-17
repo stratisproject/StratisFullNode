@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using DNS.Protocol;
 using DNS.Protocol.ResourceRecords;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;

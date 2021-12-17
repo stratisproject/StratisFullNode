@@ -1,5 +1,6 @@
 ﻿namespace Stratis.Bitcoin.Configuration.Logging
 {
+    /*
     public enum LogLevel
     {
         Trace = 0,
@@ -10,4 +11,5 @@
         Critical = 5,
         None = 6
     }
+    */
 }

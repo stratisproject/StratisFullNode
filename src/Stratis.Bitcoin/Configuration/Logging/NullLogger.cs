@@ -2,6 +2,7 @@
 
 namespace Stratis.Bitcoin.Configuration.Logging
 {
+    /*
     public class NullLogger : ILogger
     {
         public static NullLogger Instance = new NullLogger();
@@ -15,4 +16,5 @@ namespace Stratis.Bitcoin.Configuration.Logging
             return false;
         }
     }
+    */
 }

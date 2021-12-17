@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
-using Stratis.Bitcoin.Configuration.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Stratis.Bitcoin.Features.Api
 {

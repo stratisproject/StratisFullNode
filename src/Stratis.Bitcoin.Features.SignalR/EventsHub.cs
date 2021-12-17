@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.Configuration.Logging;
 
 namespace Stratis.Bitcoin.Features.SignalR

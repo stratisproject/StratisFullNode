@@ -1,8 +1,8 @@
 ﻿using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
-using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Persistence.KeyValueStores;
 using Stratis.Bitcoin.Tests.Common;

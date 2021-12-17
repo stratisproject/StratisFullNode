@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
@@ -228,7 +229,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
             TxMempool mempool, MempoolSchedulerLock mempoolLock)
         {
             PowBlockDefinition blockAssembler = new PowBlockDefinition(testChainContext.Consensus,
-                testChainContext.DateTimeProvider, testChainContext.LoggerFactory as LoggerFactory, mempool, mempoolLock,
+                testChainContext.DateTimeProvider, testChainContext.LoggerFactory as ILoggerFactory, mempool, mempoolLock,
                 new MinerSettings(testChainContext.NodeSettings), testChainContext.Network, testChainContext.ConsensusRules, new NodeDeployments(testChainContext.Network, testChainContext.ChainIndexer));
 
             BlockTemplate newBlock = blockAssembler.Build(testChainContext.ChainIndexer.Tip, scriptPubKey);

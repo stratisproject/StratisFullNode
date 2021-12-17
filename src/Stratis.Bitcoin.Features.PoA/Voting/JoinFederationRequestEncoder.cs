@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using DBreeze.Utils;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.PoA;

@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Linq;
 using CSharpFunctionalExtensions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration.Logging;

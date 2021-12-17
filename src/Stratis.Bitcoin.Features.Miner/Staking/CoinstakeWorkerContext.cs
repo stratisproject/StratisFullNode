@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using Stratis.Bitcoin.Configuration.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Stratis.Bitcoin.Features.Miner.Staking
 {
