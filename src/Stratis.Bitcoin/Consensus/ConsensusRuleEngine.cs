@@ -48,14 +48,6 @@ namespace Stratis.Bitcoin.Consensus
         /// <summary>State of the current chain that hold consensus tip.</summary>
         public IChainState ChainState { get; }
 
-        public ILogger Logger
-        {
-            get
-            {
-                return this.logger;
-            }
-        }
-
 #pragma warning disable SA1648
 
         /// <inheritdoc cref="IInvalidBlockHashStore"/>
@@ -200,7 +192,7 @@ namespace Stratis.Bitcoin.Consensus
 
             if (validationContext.Error != null)
             {
-                this.Logger.LogWarning("Block '{0}' failed full validation with error: '{1}'.", header, validationContext.Error);
+                this.logger.LogWarning("Block '{0}' failed full validation with error: '{1}'.", header, validationContext.Error);
                 this.HandleConsensusError(validationContext);
             }
 
@@ -220,7 +212,7 @@ namespace Stratis.Bitcoin.Consensus
 
             if (validationContext.Error != null)
             {
-                this.Logger.LogWarning("Block '{0}' failed partial validation with error: '{1}'.", header, validationContext.Error);
+                this.logger.LogWarning("Block '{0}' failed partial validation with error: '{1}'.", header, validationContext.Error);
                 this.HandleConsensusError(validationContext);
             }
 
@@ -247,7 +239,7 @@ namespace Stratis.Bitcoin.Consensus
             }
             catch (Exception exception)
             {
-                this.Logger.LogCritical("Unhandled exception in consensus rules engine: {0}.", exception.ToString());
+                this.logger.LogCritical("Unhandled exception in consensus rules engine: {0}.", exception.ToString());
                 throw;
             }
         }
@@ -259,13 +251,13 @@ namespace Stratis.Bitcoin.Consensus
             // The block shouldn't be banned because it might be valid, it's just we need to redownload it including witness data.
             if (validationContext.Error == ConsensusErrors.BadWitnessNonceSize)
             {
-                this.Logger.LogTrace("(-)[BAD_WITNESS_NONCE]");
+                this.logger.LogTrace("(-)[BAD_WITNESS_NONCE]");
                 return;
             }
 
             uint256 hashToBan = validationContext.ChainedHeaderToValidate.HashBlock;
 
-            this.Logger.LogWarning("Marking '{0}' invalid.", hashToBan);
+            this.logger.LogWarning("Marking '{0}' invalid.", hashToBan);
             this.invalidBlockHashStore.MarkInvalid(hashToBan, validationContext.RejectUntil);
         }
 
@@ -289,7 +281,7 @@ namespace Stratis.Bitcoin.Consensus
             }
             catch (Exception exception)
             {
-                this.Logger.LogCritical("Unhandled exception in consensus rules engine: {0}.", exception.ToString());
+                this.logger.LogCritical("Unhandled exception in consensus rules engine: {0}.", exception.ToString());
                 throw;
             }
         }

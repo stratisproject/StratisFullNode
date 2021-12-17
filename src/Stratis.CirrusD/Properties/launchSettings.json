@@ -1,8 +1,7 @@
 {
   "profiles": {
     "Stratis.CirrusD": {
-      "commandName": "Project",
-      "commandLineArgs": "-debug=Stratis.Bitcoin.BlockPulling.BlockPuller"
+      "commandName": "Project"
     },
     "Stratis.CirrusD Test": {
       "commandName": "Project",
