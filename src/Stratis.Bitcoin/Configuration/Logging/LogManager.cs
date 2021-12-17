@@ -24,7 +24,7 @@ namespace Stratis.Bitcoin.Configuration.Logging
         public static ILogger GetCurrentClassLogger()
         {
             var methodInfo = new StackTrace().GetFrame(1).GetMethod();
-            return new Logger(NLog.LogManager.GetCurrentClassLogger(), methodInfo.ReflectedType.ToString());
+            return new Logger(NLog.LogManager.GetLogger(methodInfo.ReflectedType.ToString()));
         }
 
         public static void ReconfigExistingLoggers()

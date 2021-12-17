@@ -17,18 +17,14 @@ namespace Stratis.Bitcoin.Configuration.Logging
     public class Logger : ILogger
     {
         private NLog.Logger logger;
-        private string loggerName;
 
-        public Logger(NLog.Logger logger, string loggerName)
+        public Logger(NLog.Logger logger)
         {
             this.logger = logger;
-            this.loggerName = loggerName;
         }
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
         {
-            // The rest of the method cares about logging via NLog to files.
-            NLog.LogLevel nLogLevel = logLevel.ToNLogLevel();
             if (!this.IsEnabled(logLevel))
                 return;
 
@@ -37,9 +33,7 @@ namespace Stratis.Bitcoin.Configuration.Logging
 
             string message = formatter(state, exception);
 
-            NLog.LogEventInfo eventInfo = NLog.LogEventInfo.Create(nLogLevel, this.logger.Name, message);
-            eventInfo.Exception = exception;
-            eventInfo.LoggerName = this.loggerName;
+            NLog.LogEventInfo eventInfo = NLog.LogEventInfo.Create(logLevel.ToNLogLevel(), this.logger.Name, message, exception);
             this.logger.Log(eventInfo);
         }
 
