@@ -9,7 +9,6 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Newtonsoft.Json.Linq;
 using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Tests.Common.Logging;
 using Xunit;

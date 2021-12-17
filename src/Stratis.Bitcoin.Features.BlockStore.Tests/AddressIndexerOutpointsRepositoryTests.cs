@@ -4,7 +4,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using LiteDB;
 using NBitcoin;
-using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
 using Xunit;
 

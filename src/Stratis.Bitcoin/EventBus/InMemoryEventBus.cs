@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.EventBus.PerformanceCounters.InMemoryEventBus;
 using Stratis.Bitcoin.Utilities;
 

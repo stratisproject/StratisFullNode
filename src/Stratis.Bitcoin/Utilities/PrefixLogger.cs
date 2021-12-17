@@ -1,6 +1,5 @@
 ﻿using System;
 using Microsoft.Extensions.Logging;
-using Stratis.Bitcoin.Configuration.Logging;
 using TracerAttributes;
 
 namespace Stratis.Bitcoin.Utilities
