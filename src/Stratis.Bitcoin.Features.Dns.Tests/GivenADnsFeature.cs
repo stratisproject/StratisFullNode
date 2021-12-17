@@ -251,7 +251,7 @@ namespace Stratis.Bitcoin.Features.Dns.Tests
             };
             this.defaultConstructorParameters.dnsServer.Setup(s => s.ListenAsync(It.IsAny<int>(), It.IsAny<CancellationToken>())).Callback(action);
 
-            var source = new CancellationTokenSource(30000);
+            var source = new CancellationTokenSource(3000);
             this.defaultConstructorParameters.nodeLifetime.Setup(n => n.StopApplication()).Callback(() => source.Cancel());
             this.defaultConstructorParameters.nodeLifetime.Setup(n => n.ApplicationStopping).Returns(source.Token);
 
@@ -261,12 +261,10 @@ namespace Stratis.Bitcoin.Features.Dns.Tests
                 .Setup(f => f.Log(It.IsAny<LogLevel>(), It.IsAny<EventId>(), It.IsAny<It.IsAnyType>(), It.IsAny<Exception>(), (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()))
                 .Callback(new InvocationAction(invocation =>
                 {
-                    if (!serverError && (LogLevel)invocation.Arguments[0] == LogLevel.Error && invocation.Arguments[4] is Func<object[], Exception, string> func)
+                    if (!serverError && (LogLevel)invocation.Arguments[0] == LogLevel.Error)
                     {
                         // Not yet set, check trace message
-                        serverError = func.Invoke((object[])invocation.Arguments[2], (Exception)invocation.Arguments[3]).Contains("Failed whilst running the DNS server");
-                        if (serverError)
-                            source.Cancel();
+                        serverError = invocation.Arguments[2].ToString().StartsWith("Failed whilst running the DNS server");
                     }
                 }));
             this.defaultConstructorParameters.loggerFactory.Setup(f => f.CreateLogger(It.IsAny<string>())).Returns(logger.Object);
