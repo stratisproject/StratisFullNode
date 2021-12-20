@@ -8,8 +8,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using LiteDB;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration;
@@ -58,7 +58,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         private readonly INodeStats nodeStats;
 
-        private readonly NLog.ILogger logger;
+        private readonly ILogger logger;
 
         private readonly DataFolder dataFolder;
 

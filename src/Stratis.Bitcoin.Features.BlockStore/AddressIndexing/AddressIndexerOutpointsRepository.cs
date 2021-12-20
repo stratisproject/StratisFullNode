@@ -4,7 +4,7 @@ using System.Linq;
 using LiteDB;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
@@ -24,7 +24,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         /// <remarks>Should be protected by <see cref="LockObject"/></remarks>
         private readonly LiteCollection<AddressIndexerRewindData> addressIndexerRewindData;
 
-        private readonly NLog.ILogger logger;
+        private readonly ILogger logger;
 
         private readonly int maxCacheItems;
 

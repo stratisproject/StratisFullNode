@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using LiteDB;
 using Microsoft.Extensions.Logging;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Utilities;
 
@@ -16,7 +16,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         private readonly LiteCollection<AddressIndexerData> addressIndexerDataCollection;
 
-        private readonly NLog.ILogger logger;
+        private readonly ILogger logger;
 
         public AddressIndexRepository(LiteDatabase db, int maxBalanceChangesToKeep = 50_000) : base(maxBalanceChangesToKeep)
         {

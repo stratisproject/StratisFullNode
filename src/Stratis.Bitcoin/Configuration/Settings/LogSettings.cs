@@ -33,7 +33,7 @@ namespace Stratis.Bitcoin.Configuration.Settings
             this.DebugArgs = config.GetOrDefault("debug", string.Empty).Split(',').Where(s => !string.IsNullOrEmpty(s)).ToList();
 
             // Get the minimum log level. The default is either Information or Debug depending on the DebugArgs.
-            this.LogLevel = this.DebugArgs.Any() ? NLog.LogLevel.Debug : NLog.LogLevel.Info;
+            this.LogLevel = (this.DebugArgs.Any() && this.DebugArgs[0] == "1") ? NLog.LogLevel.Debug : NLog.LogLevel.Info;
 
             string logLevelArg = config.GetOrDefault("loglevel", string.Empty);
             if (!string.IsNullOrEmpty(logLevelArg))

@@ -5,10 +5,11 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using DBreeze.Utils;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
 using RocksDbSharp;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Utilities;
 

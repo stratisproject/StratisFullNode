@@ -2,9 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Interfaces;

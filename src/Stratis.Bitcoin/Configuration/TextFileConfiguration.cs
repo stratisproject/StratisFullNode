@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Configuration.Logging;
 
 namespace Stratis.Bitcoin.Configuration
 {

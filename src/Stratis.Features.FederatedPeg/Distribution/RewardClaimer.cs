@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Policy;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.EventBus.CoreEvents;

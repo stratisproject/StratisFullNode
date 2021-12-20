@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using NLog;
+using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.InputConsolidation;

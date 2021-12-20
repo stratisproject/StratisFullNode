@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Utilities;

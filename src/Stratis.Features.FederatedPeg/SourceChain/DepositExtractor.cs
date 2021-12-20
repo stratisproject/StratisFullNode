@@ -2,9 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
 using Stratis.Bitcoin;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;

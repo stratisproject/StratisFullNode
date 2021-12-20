@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
@@ -23,7 +24,7 @@ namespace Stratis.Bitcoin.Base
     public class ChainRepository : IChainRepository
     {
         private readonly IChainStore chainStore;
-        private readonly Logger logger;
+        private readonly ILogger logger;
         private readonly ISignals signals;
 
         private BlockLocator locator;

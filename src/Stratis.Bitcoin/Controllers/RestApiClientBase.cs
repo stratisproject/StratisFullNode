@@ -5,10 +5,11 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using NLog;
 using Polly;
 using Polly.Retry;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 
