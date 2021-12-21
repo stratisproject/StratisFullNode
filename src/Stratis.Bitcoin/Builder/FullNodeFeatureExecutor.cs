@@ -54,10 +54,10 @@ namespace Stratis.Bitcoin.Builder
         {
             try
             {
-                this.logger.Info("Validating feature dependencies.");
+                this.logger.LogInformation("Validating feature dependencies.");
                 this.Execute(feature => feature.ValidateDependencies(this.fullNode.Services));
 
-                this.logger.Info("Initializing fullnode features.");
+                this.logger.LogInformation("Initializing fullnode features.");
                 this.Execute(feature =>
                 {
                     this.signals.Publish(new FullNodeEvent() { Message = $"Initializing feature '{feature.GetType().Name}'.", State = FullNodeState.Initializing.ToString() });
@@ -69,8 +69,8 @@ namespace Stratis.Bitcoin.Builder
             }
             catch (Exception ex)
             {
-                this.logger.Error($"An error occurred starting the application: {ex}");
-                this.logger.Trace("(-)[INITIALIZE_EXCEPTION]");
+                this.logger.LogError($"An error occurred starting the application: {ex}");
+                this.logger.LogTrace("(-)[INITIALIZE_EXCEPTION]");
                 throw;
             }
         }
@@ -89,8 +89,8 @@ namespace Stratis.Bitcoin.Builder
             }
             catch
             {
-                this.logger.Error("An error occurred stopping the application.");
-                this.logger.Trace("(-)[DISPOSE_EXCEPTION]");
+                this.logger.LogError("An error occurred stopping the application.");
+                this.logger.LogTrace("(-)[DISPOSE_EXCEPTION]");
                 throw;
             }
         }
@@ -105,7 +105,7 @@ namespace Stratis.Bitcoin.Builder
         {
             if (this.fullNode.Services == null)
             {
-                this.logger.Trace("(-)[NO_SERVICES]");
+                this.logger.LogTrace("(-)[NO_SERVICES]");
                 return;
             }
 
@@ -154,7 +154,7 @@ namespace Stratis.Bitcoin.Builder
             // Throw an aggregate exception if there were any exceptions.
             if (exceptions != null)
             {
-                this.logger.Trace("(-)[EXECUTION_FAILED]");
+                this.logger.LogTrace("(-)[EXECUTION_FAILED]");
                 throw new AggregateException(exceptions);
             }
         }
@@ -166,7 +166,7 @@ namespace Stratis.Bitcoin.Builder
             var messageText = disposing ? "disposing" : "starting";
             var exceptionText = "An error occurred {0} full node feature '{1}' : '{2}'";
 
-            this.logger.Error(exceptionText, messageText, feature.GetType().Name, exception);
+            this.logger.LogError(exceptionText, messageText, feature.GetType().Name, exception);
             this.signals.Publish(new FullNodeEvent() { Message = string.Format(exceptionText, messageText, feature.GetType().Name, exception.Message), State = FullNodeState.Failed.ToString() });
         }
     }

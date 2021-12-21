@@ -127,7 +127,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             {
                 this.mempoolOrphans.RemoveForBlock(transactionsToRemove);
 
-                this.logger.Debug("Removed {0} transactions from mempool", transactionsToRemove.Count);
+                this.logger.LogDebug("Removed {0} transactions from mempool", transactionsToRemove.Count);
             }
 
             return Task.CompletedTask;

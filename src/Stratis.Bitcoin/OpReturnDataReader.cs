@@ -109,7 +109,7 @@ namespace Stratis.Bitcoin
             }
             catch (Exception ex)
             {
-                this.logger.Debug("Address {destination} could not be converted to a valid address. Reason {message}.", destination, ex.Message);
+                this.logger.LogDebug("Address {destination} could not be converted to a valid address. Reason {message}.", destination, ex.Message);
                 return null;
             }
         }
@@ -124,7 +124,7 @@ namespace Stratis.Bitcoin
             }
             catch (Exception ex)
             {
-                this.logger.Debug("Candidate hash {data} could not be converted to a valid uint256. Reason {message}.", data, ex.Message);
+                this.logger.LogDebug("Candidate hash {data} could not be converted to a valid uint256. Reason {message}.", data, ex.Message);
                 return null;
             }
         }

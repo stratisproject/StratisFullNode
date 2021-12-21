@@ -99,10 +99,10 @@ namespace Stratis.Bitcoin.Consensus
                 this.keyValueRepo.SaveValue(FinalizedBlockKey, resetFinalization);
                 this.finalizedBlockInfo = resetFinalization;
 
-                this.logger.Info("Finalized block info reset.");
+                this.logger.LogInformation("Finalized block info reset.");
             }
 
-            this.logger.Info("Finalized block info initialized at '{0}'.", this.finalizedBlockInfo);
+            this.logger.LogInformation("Finalized block info initialized at '{0}'.", this.finalizedBlockInfo);
 
             this.finalizedBlockInfoPersistingTask = this.PersistFinalizedBlockInfoContinuouslyAsync();
             this.asyncProvider.RegisterTask($"{nameof(FinalizedBlockInfoRepository)}.{nameof(this.finalizedBlockInfoPersistingTask)}", this.finalizedBlockInfoPersistingTask);
@@ -138,7 +138,7 @@ namespace Stratis.Bitcoin.Consensus
 
                 this.keyValueRepo.SaveValue(FinalizedBlockKey, lastFinalizedBlock);
 
-                this.logger.Debug("Finalized info saved: '{0}'.", lastFinalizedBlock);
+                this.logger.LogDebug("Finalized info saved: '{0}'.", lastFinalizedBlock);
             }
         }
 
@@ -169,7 +169,7 @@ namespace Stratis.Bitcoin.Consensus
         {
             if (this.finalizedBlockInfo != null && height <= this.finalizedBlockInfo.Height)
             {
-                this.logger.Trace("(-)[CANT_GO_BACK]:false");
+                this.logger.LogTrace("(-)[CANT_GO_BACK]:false");
                 return false;
             }
 
