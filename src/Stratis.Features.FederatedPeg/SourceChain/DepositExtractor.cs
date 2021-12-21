@@ -121,7 +121,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             {
                 if (inspectForDepositsAtHeight == burnRequest.BlockHeight)
                 {
-                    this.logger.Info($"Processing burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' for {new Money(burnRequest.Amount)} STRAX at height {inspectForDepositsAtHeight}.");
+                    this.logger.LogInformation($"Processing burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' for {new Money(burnRequest.Amount)} STRAX at height {inspectForDepositsAtHeight}.");
 
                     Deposit deposit = CreateDeposit(burnRequest, inspectForDepositsAtHeight);
                     if (deposit == null)
@@ -150,7 +150,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
                         this.conversionRequestRepository.Save(burnRequest);
 
-                        this.logger.Info($"Marking burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' as processed at height {inspectForDepositsAtHeight}.");
+                        this.logger.LogInformation($"Marking burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' as processed at height {inspectForDepositsAtHeight}.");
 
                         continue;
                     }
@@ -166,7 +166,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
                         if (this.depositsBeingProcessedWithinMaturingWindow.Contains(deposit.Id))
                         {
-                            this.logger.Debug($"Burn request '{burnRequest.RequestId}' is already being processed within the maturity window.");
+                            this.logger.LogDebug($"Burn request '{burnRequest.RequestId}' is already being processed within the maturity window.");
                             continue;
                         }
 
@@ -174,7 +174,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
                         this.depositsBeingProcessedWithinMaturingWindow.Add(deposit.Id);
 
-                        this.logger.Info($"Re-injecting burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' that was processed at {burnRequest.BlockHeight} and will mature at {burnRequest.BlockHeight + requiredConfirmations}.");
+                        this.logger.LogInformation($"Re-injecting burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' that was processed at {burnRequest.BlockHeight} and will mature at {burnRequest.BlockHeight + requiredConfirmations}.");
 
                         continue;
                     }
@@ -228,11 +228,11 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             {
                 if (this.federatedPegSettings.IsMainChain && amount < DepositValidationHelper.ConversionTransactionMinimum)
                 {
-                    this.logger.Warn($"Ignoring conversion transaction '{transaction.GetHash()}' with amount {amount} which is below the threshold of {DepositValidationHelper.ConversionTransactionMinimum}.");
+                    this.logger.LogWarning($"Ignoring conversion transaction '{transaction.GetHash()}' with amount {amount} which is below the threshold of {DepositValidationHelper.ConversionTransactionMinimum}.");
                     return Task.FromResult((IDeposit)null);
                 }
 
-                this.logger.Info("Received conversion deposit transaction '{0}' for an amount of {1}.", transaction.GetHash(), amount);
+                this.logger.LogInformation("Received conversion deposit transaction '{0}' for an amount of {1}.", transaction.GetHash(), amount);
 
                 if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
                     depositRetrievalType = DepositRetrievalType.ConversionLarge;

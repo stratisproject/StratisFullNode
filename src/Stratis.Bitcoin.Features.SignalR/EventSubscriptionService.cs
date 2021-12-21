@@ -36,7 +36,7 @@ namespace Stratis.Bitcoin.Features.SignalR
         {
             foreach (IClientEvent eventToHandle in this.options.EventsToHandle)
             {
-                this.logger.Debug("Create subscription for {0}", eventToHandle.NodeEventType);
+                this.logger.LogDebug("Create subscription for {0}", eventToHandle.NodeEventType);
 
                 async Task callback(EventBase eventBase)
                 {

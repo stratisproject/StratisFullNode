@@ -27,7 +27,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         {
             ILogger logger = LogManager.GetCurrentClassLogger();
 
-            logger.Info("Smart Contract Feature Wallet Injected.");
+            logger.LogInformation("Smart Contract Feature Wallet Injected.");
 
             return Task.CompletedTask;
         }

@@ -86,7 +86,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
 
             if (!this.TxIndex)
             {
-                this.logger.Trace("(-)[TX_INDEXING_DISABLED]:null");
+                this.logger.LogTrace("(-)[TX_INDEXING_DISABLED]:null");
                 return default(Transaction);
             }
 
@@ -102,7 +102,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
 
                 if (transactionRow == null)
                 {
-                    this.logger.Trace("(-)[NO_BLOCK]:null");
+                    this.logger.LogTrace("(-)[NO_BLOCK]:null");
                     return null;
                 }
 
@@ -123,7 +123,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
         {
             if (!this.TxIndex)
             {
-                this.logger.Trace("(-)[TX_INDEXING_DISABLED]:null");
+                this.logger.LogTrace("(-)[TX_INDEXING_DISABLED]:null");
                 return null;
             }
 
@@ -139,7 +139,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
 
                     if (alreadyFetched)
                     {
-                        this.logger.Debug("Duplicated transaction encountered. Tx id: '{0}'.", trxids[i]);
+                        this.logger.LogDebug("Duplicated transaction encountered. Tx id: '{0}'.", trxids[i]);
 
                         txes[i] = txes.First(x => x.GetHash() == trxids[i]);
                         continue;
@@ -154,7 +154,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
                     byte[] transactionRow = this.leveldb.Get(BlockRepositoryConstants.TransactionTableName, trxids[i].ToBytes());
                     if (transactionRow == null)
                     {
-                        this.logger.Trace("(-)[NO_TX_ROW]:null");
+                        this.logger.LogTrace("(-)[NO_TX_ROW]:null");
                         return null;
                     }
 
@@ -162,7 +162,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
 
                     if (blockRow != null)
                     {
-                        this.logger.Trace("(-)[NO_BLOCK]:null");
+                        this.logger.LogTrace("(-)[NO_BLOCK]:null");
                         return null;
                     }
 
@@ -183,7 +183,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
 
             if (!this.TxIndex)
             {
-                this.logger.Trace("(-)[NO_TXINDEX]:null");
+                this.logger.LogTrace("(-)[NO_TXINDEX]:null");
                 return default(uint256);
             }
 
@@ -299,7 +299,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
                     warningMessage.AppendLine("".PadRight(133, '='));
                     warningMessage.AppendLine();
 
-                    this.logger.Info(warningMessage.ToString());
+                    this.logger.LogInformation(warningMessage.ToString());
                     using (var batch = new WriteBatch())
                     {
                         var enumerator = this.leveldb.GetEnumerator();
@@ -316,7 +316,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
                                 // inform the user about the ongoing operation
                                 if (++rowCount % 1000 == 0)
                                 {
-                                    this.logger.Info("Reindex in process... {0}/{1} blocks processed.", rowCount, totalBlocksCount);
+                                    this.logger.LogInformation("Reindex in process... {0}/{1} blocks processed.", rowCount, totalBlocksCount);
                                 }
                             }
                         }
@@ -324,7 +324,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
                         this.leveldb.Write(batch, new WriteOptions() { Sync = true });
                     }
 
-                    this.logger.Info("Reindex completed successfully.");
+                    this.logger.LogInformation("Reindex completed successfully.");
                 }
                 else
                 {
@@ -499,13 +499,13 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
                 {
                     results[key.Item1] = this.dBreezeSerializer.Deserialize<Block>(blockRow);
 
-                    this.logger.Debug("Block hash '{0}' loaded from the store.", key.Item1);
+                    this.logger.LogDebug("Block hash '{0}' loaded from the store.", key.Item1);
                 }
                 else
                 {
                     results[key.Item1] = null;
 
-                    this.logger.Debug("Block hash '{0}' not found in the store.", key.Item1);
+                    this.logger.LogDebug("Block hash '{0}' not found in the store.", key.Item1);
                 }
             }
 

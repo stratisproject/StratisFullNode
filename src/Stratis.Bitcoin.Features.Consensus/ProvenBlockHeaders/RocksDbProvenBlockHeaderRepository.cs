@@ -117,7 +117,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
 
             Task task = Task.Run(() =>
             {
-                this.logger.Debug("({0}.Count():{1})", nameof(headers), headers.Count());
+                this.logger.LogDebug("({0}.Count():{1})", nameof(headers), headers.Count());
 
                 this.InsertHeaders(headers);
 

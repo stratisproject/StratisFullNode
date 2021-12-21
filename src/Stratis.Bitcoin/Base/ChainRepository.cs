@@ -72,7 +72,7 @@ namespace Stratis.Bitcoin.Base
                         if (this.signals != null)
                             this.signals.Publish(new FullNodeEvent() { Message = $"Loading chain at height {height}.", State = FullNodeState.Initializing.ToString() });
 
-                        this.logger.Info($"Loading chain at height {height}.");
+                        this.logger.LogInformation($"Loading chain at height {height}.");
                     }
 
                     height++;

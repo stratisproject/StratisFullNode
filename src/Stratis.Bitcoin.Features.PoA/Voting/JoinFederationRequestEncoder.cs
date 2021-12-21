@@ -60,7 +60,7 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
 
                     if (deserializeStream.ProcessedBytes != votingRequestDataBytes.Length)
                     {
-                        this.logger.Trace("(-)[INVALID_SIZE]");
+                        this.logger.LogTrace("(-)[INVALID_SIZE]");
                         PoAConsensusErrors.VotingRequestInvalidFormat.Throw();
                     }
 
@@ -69,8 +69,8 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
             }
             catch (Exception e)
             {
-                this.logger.Debug("Exception during deserialization: '{0}'.", e.ToString());
-                this.logger.Trace("(-)[DESERIALIZING_EXCEPTION]");
+                this.logger.LogDebug("Exception during deserialization: '{0}'.", e.ToString());
+                this.logger.LogTrace("(-)[DESERIALIZING_EXCEPTION]");
 
                 PoAConsensusErrors.VotingRequestInvalidFormat.Throw();
                 return null;

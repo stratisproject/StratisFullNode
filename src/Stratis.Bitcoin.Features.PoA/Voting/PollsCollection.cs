@@ -40,7 +40,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             if (this.polls.Contains(poll))
             {
-                this.logger.Warn("The poll already exists: '{0}'.", poll);
+                this.logger.LogWarning("The poll already exists: '{0}'.", poll);
                 return;
             }
 

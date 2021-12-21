@@ -65,7 +65,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         {
             try
             {
-                this.logger.Debug("BuildDeterministicTransaction depositId(opReturnData)={0}; recipient.ScriptPubKey={1}; recipient.Amount={2}; height={3}", depositId, recipient.ScriptPubKey, recipient.Amount, blockHeight);
+                this.logger.LogDebug("BuildDeterministicTransaction depositId(opReturnData)={0}; recipient.ScriptPubKey={1}; recipient.Amount={2}; height={3}", depositId, recipient.ScriptPubKey, recipient.Amount, blockHeight);
 
                 // Build the multisig transaction template.
                 uint256 opReturnData = depositId;
@@ -100,7 +100,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     if (recipient.ScriptPubKey == this.conversionTransactionFeeDistributionScriptPubKey)
                     {
-                        this.logger.Debug("Generating recipient list for conversion transaction fee distribution.");
+                        this.logger.LogDebug("Generating recipient list for conversion transaction fee distribution.");
 
                         multiSigContext.Recipients = this.distributionManager.DistributeToMultisigNodes(blockHeight, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount);
                     }
@@ -112,9 +112,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                 if (coins.Count > FederatedPegSettings.MaxInputs)
                 {
-                    this.logger.Debug("Too many inputs. Triggering the consolidation process.");
+                    this.logger.LogDebug("Too many inputs. Triggering the consolidation process.");
                     this.signals.Publish(new WalletNeedsConsolidation(recipient.Amount));
-                    this.logger.Trace("(-)[CONSOLIDATING_INPUTS]");
+                    this.logger.LogTrace("(-)[CONSOLIDATING_INPUTS]");
                     return null;
                 }
 
@@ -124,7 +124,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 // Build the transaction.
                 Transaction transaction = this.federationWalletTransactionHandler.BuildTransaction(multiSigContext);
 
-                this.logger.Debug("transaction = {0}", transaction.ToString(this.network, RawFormat.BlockExplorer));
+                this.logger.LogDebug("transaction = {0}", transaction.ToString(this.network, RawFormat.BlockExplorer));
 
                 return transaction;
             }
@@ -134,15 +134,15 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     (walletException.Message == FederationWalletTransactionHandler.NoSpendableTransactionsMessage
                      || walletException.Message == FederationWalletTransactionHandler.NotEnoughFundsMessage))
                 {
-                    this.logger.Warn("Not enough spendable transactions in the wallet. Should be resolved when a pending transaction is included in a block.");
+                    this.logger.LogWarning("Not enough spendable transactions in the wallet. Should be resolved when a pending transaction is included in a block.");
                 }
                 else
                 {
-                    this.logger.Error("Could not create transaction for deposit {0}: {1}", depositId, error.Message);
+                    this.logger.LogError("Could not create transaction for deposit {0}: {1}", depositId, error.Message);
                 }
             }
 
-            this.logger.Trace("(-)[FAIL]");
+            this.logger.LogTrace("(-)[FAIL]");
             return null;
         }
     }

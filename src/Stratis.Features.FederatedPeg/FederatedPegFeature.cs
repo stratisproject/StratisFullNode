@@ -181,7 +181,7 @@ namespace Stratis.Features.FederatedPeg
             }
             catch (Exception e)
             {
-                this.logger.Error(e.ToString());
+                this.logger.LogError(e.ToString());
             }
         }
 

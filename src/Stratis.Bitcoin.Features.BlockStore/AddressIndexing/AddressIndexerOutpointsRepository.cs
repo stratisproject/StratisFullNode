@@ -74,7 +74,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         {
             if (this.TryGetValue(outPoint.ToString(), out outPointData))
             {
-                this.logger.Trace("(-)[FOUND_IN_CACHE]:true");
+                this.logger.LogTrace("(-)[FOUND_IN_CACHE]:true");
                 return true;
             }
 
@@ -84,7 +84,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             if (outPointData != null)
             {
                 this.AddOutPointData(outPointData);
-                this.logger.Trace("(-)[FOUND_IN_DATABASE]:true");
+                this.logger.LogTrace("(-)[FOUND_IN_DATABASE]:true");
                 return true;
             }
 
@@ -93,7 +93,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         public void SaveAllItems()
         {
-            this.logger.Debug("Saving all items.");
+            this.logger.LogDebug("Saving all items.");
             lock (this.LockObject)
             {
                 CacheItem[] dirtyItems = this.Keys.Where(x => x.Dirty).ToArray();
@@ -102,7 +102,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                 foreach (CacheItem dirtyItem in dirtyItems)
                     dirtyItem.Dirty = false;
 
-                this.logger.Debug("{0} items saved.", dirtyItems.Length);
+                this.logger.LogDebug("{0} items saved.", dirtyItems.Length);
             }
             
         }
@@ -123,9 +123,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         {
             lock (this.LockObject)
             {
-                this.logger.Info("AddressIndexer: started purging rewind data items.");
+                this.logger.LogInformation("AddressIndexer: started purging rewind data items.");
                 int purgedCount = this.addressIndexerRewindData.Delete(x => x.BlockHeight < height);
-                this.logger.Info("AddressIndexer: Purged {0} rewind data items.", purgedCount);
+                this.logger.LogInformation("AddressIndexer: Purged {0} rewind data items.", purgedCount);
             }
         }
 
@@ -137,7 +137,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             {
                 IEnumerable<AddressIndexerRewindData> toRestore = this.addressIndexerRewindData.Find(x => x.BlockHeight > height);
 
-                this.logger.Debug("Restoring data for {0} blocks.", toRestore.Count());
+                this.logger.LogDebug("Restoring data for {0} blocks.", toRestore.Count());
 
                 foreach (AddressIndexerRewindData rewindData in toRestore)
                 {

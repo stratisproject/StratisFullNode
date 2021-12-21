@@ -104,7 +104,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 if (!transactionBuilder.Verify(transaction, out TransactionPolicyError[] errors))
                 {
                     string errorsMessage = string.Join(" - ", errors.Select(s => s.ToString()));
-                    this.logger.Error($"Build transaction failed: {errorsMessage}");
+                    this.logger.LogError($"Build transaction failed: {errorsMessage}");
                     throw new WalletException($"Could not build the transaction. Details: {errorsMessage}");
                 }
             }

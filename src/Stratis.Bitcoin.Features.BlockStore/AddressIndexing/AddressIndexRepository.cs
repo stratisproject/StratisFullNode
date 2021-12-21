@@ -32,7 +32,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         {
             if (!this.TryGetValue(address, out AddressIndexerData data))
             {
-                this.logger.Debug("Not found in cache.");
+                this.logger.LogDebug("Not found in cache.");
                 data = this.addressIndexerDataCollection.FindById(address) ?? new AddressIndexerData() { Address = address, BalanceChanges = new List<AddressBalanceChange>() };
             }
 
@@ -82,7 +82,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             {
                 CacheItem[] dirtyItems = this.Keys.Where(x => x.Dirty).ToArray();
 
-                this.logger.Debug("Saving {0} dirty items.", dirtyItems.Length);
+                this.logger.LogDebug("Saving {0} dirty items.", dirtyItems.Length);
 
                 List<AddressIndexerData> toUpsert = dirtyItems.Select(x => x.Value).ToList();
 
@@ -91,7 +91,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                 foreach (CacheItem dirtyItem in dirtyItems)
                     dirtyItem.Dirty = false;
 
-                this.logger.Debug("Saved dirty items.");
+                this.logger.LogDebug("Saved dirty items.");
             }
         }
     }

@@ -55,14 +55,14 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <inheritdoc/>
         protected override void AttachCore()
         {
-            this.logger.Debug("Attaching behaviour for {0}", this.AttachedPeer.PeerEndPoint.Address);
+            this.logger.LogDebug("Attaching behaviour for {0}", this.AttachedPeer.PeerEndPoint.Address);
             this.AttachedPeer.MessageReceived.Register(this.OnMessageReceivedAsync, true);
         }
 
         /// <inheritdoc/>
         protected override void DetachCore()
         {
-            this.logger.Debug("Detaching behaviour for {0}", this.AttachedPeer.PeerEndPoint.Address);
+            this.logger.LogDebug("Detaching behaviour for {0}", this.AttachedPeer.PeerEndPoint.Address);
             this.AttachedPeer.MessageReceived.Unregister(this.OnMessageReceivedAsync);
         }
 
@@ -74,12 +74,12 @@ namespace Stratis.Bitcoin.Features.Interop
             }
             catch (OperationCanceledException)
             {
-                this.logger.Trace("(-)[CANCELED_EXCEPTION]");
+                this.logger.LogTrace("(-)[CANCELED_EXCEPTION]");
                 return;
             }
             catch (Exception ex)
             {
-                this.logger.Error("Exception occurred: {0}", ex.ToString());
+                this.logger.LogError("Exception occurred: {0}", ex.ToString());
                 throw;
             }
         }
@@ -105,7 +105,7 @@ namespace Stratis.Bitcoin.Features.Interop
             }
             catch (OperationCanceledException)
             {
-                this.logger.Trace("(-)[CANCELED_EXCEPTION]");
+                this.logger.LogTrace("(-)[CANCELED_EXCEPTION]");
             }
         }
 
@@ -114,7 +114,7 @@ namespace Stratis.Bitcoin.Features.Interop
             if (!this.federationManager.IsFederationMember)
                 return;
 
-            this.logger.Debug("Conversion request payload request for id '{0}' received from '{1}':'{2}' proposing transaction ID '{4}'.", payload.RequestId, peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, payload.RequestId, payload.TransactionId);
+            this.logger.LogDebug("Conversion request payload request for id '{0}' received from '{1}':'{2}' proposing transaction ID '{4}'.", payload.RequestId, peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, payload.RequestId, payload.TransactionId);
 
             if (payload.TransactionId == BigInteger.MinusOne)
                 return;
@@ -128,14 +128,14 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 if (!this.federationManager.IsMultisigMember(pubKey))
                 {
-                    this.logger.Warn("Conversion request payload for '{0}'. Computed pubkey '{1}'.", payload.RequestId, pubKey?.ToHex());
+                    this.logger.LogWarning("Conversion request payload for '{0}'. Computed pubkey '{1}'.", payload.RequestId, pubKey?.ToHex());
 
                     return;
                 }
             }
             catch (Exception)
             {
-                this.logger.Warn("Received malformed conversion request payload for '{0}'.", payload.RequestId);
+                this.logger.LogWarning("Received malformed conversion request payload for '{0}'.", payload.RequestId);
                 return;
             }
 
@@ -154,7 +154,7 @@ namespace Stratis.Bitcoin.Features.Interop
             // We presume that the initial submitter of the transaction must have at least confirmed it. Otherwise just ignore this coordination attempt.
             if (confirmationCount < 1)
             {
-                this.logger.Info("Multisig wallet transaction {0} has no confirmations.", payload.TransactionId);
+                this.logger.LogInformation("Multisig wallet transaction {0} has no confirmations.", payload.TransactionId);
                 return;
             }
 
@@ -184,13 +184,13 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 if (!this.federationManager.IsMultisigMember(pubKey))
                 {
-                    this.logger.Warn("Received unverified fee proposal payload for '{0}' from pubkey '{1}'.", payload.RequestId, pubKey?.ToHex());
+                    this.logger.LogWarning("Received unverified fee proposal payload for '{0}' from pubkey '{1}'.", payload.RequestId, pubKey?.ToHex());
                     return;
                 }
             }
             catch (Exception)
             {
-                this.logger.Warn("Received malformed fee proposal payload for '{0}'.", payload.RequestId);
+                this.logger.LogWarning("Received malformed fee proposal payload for '{0}'.", payload.RequestId);
                 return;
             }
 
@@ -214,13 +214,13 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 if (!this.federationManager.IsMultisigMember(pubKey))
                 {
-                    this.logger.Warn("Received unverified fee vote payload for '{0}' from pubkey '{1}'.", payload.RequestId, pubKey?.ToHex());
+                    this.logger.LogWarning("Received unverified fee vote payload for '{0}' from pubkey '{1}'.", payload.RequestId, pubKey?.ToHex());
                     return;
                 }
             }
             catch (Exception)
             {
-                this.logger.Warn("Received malformed fee vote payload for '{0}'.", payload.RequestId);
+                this.logger.LogWarning("Received malformed fee vote payload for '{0}'.", payload.RequestId);
                 return;
             }
 

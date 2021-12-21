@@ -89,7 +89,7 @@ namespace Stratis.Features.Collateral
 
                     if (collateralAmount != expectedCollateralAmount)
                     {
-                        this.logger.Debug("Ignoring voting collateral amount '{0}', when expecting '{1}'.", collateralAmount, expectedCollateralAmount);
+                        this.logger.LogDebug("Ignoring voting collateral amount '{0}', when expecting '{1}'.", collateralAmount, expectedCollateralAmount);
 
                         continue;
                     }
@@ -104,7 +104,7 @@ namespace Stratis.Features.Collateral
                     // Nothing to do if already voted.
                     if (this.votingManager.AlreadyVotingFor(VoteKey.AddFederationMember, federationMemberBytes))
                     {
-                        this.logger.Debug("Skipping because already voted for adding '{0}'.", request.PubKey.ToHex());
+                        this.logger.LogDebug("Skipping because already voted for adding '{0}'.", request.PubKey.ToHex());
 
                         continue;
                     }
@@ -119,12 +119,12 @@ namespace Stratis.Features.Collateral
                     PubKey key = PubKey.RecoverFromMessage(request.SignatureMessage, request.Signature);
                     if (key.Hash != request.CollateralMainchainAddress)
                     {
-                        this.logger.Debug("Invalid collateral address validation signature for joining federation via transaction '{0}'", tx.GetHash());
+                        this.logger.LogDebug("Invalid collateral address validation signature for joining federation via transaction '{0}'", tx.GetHash());
                         continue;
                     }
 
                     // Vote to add the member.
-                    this.logger.Debug("Voting to add federation member '{0}'.", request.PubKey.ToHex());
+                    this.logger.LogDebug("Voting to add federation member '{0}'.", request.PubKey.ToHex());
 
                     this.votingManager.ScheduleVote(new VotingData()
                     {
@@ -135,7 +135,7 @@ namespace Stratis.Features.Collateral
                 }
                 catch (Exception err)
                 {
-                    this.logger.Error(err.Message);
+                    this.logger.LogError(err.Message);
                 }
             }
         }
