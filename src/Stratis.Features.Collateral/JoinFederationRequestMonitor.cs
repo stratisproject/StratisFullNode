@@ -9,7 +9,6 @@ using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.PoA.Features.Voting;
-using Stratis.Bitcoin.Signals;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.PoA.Voting;
 
@@ -18,16 +17,14 @@ namespace Stratis.Features.Collateral
     public class JoinFederationRequestMonitor
     {
         private readonly ILogger logger;
-        private readonly ISignals signals;
         private readonly VotingManager votingManager;
         private readonly Network network;
         private readonly Network counterChainNetwork;
         private readonly IFederationManager federationManager;
         private readonly HashSet<uint256> pollsCheckedWithJoinFederationRequestMonitor;
 
-        public JoinFederationRequestMonitor(VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, IFederationManager federationManager, ISignals signals, IJoinFederationRequestService joinFederationRequestService)
+        public JoinFederationRequestMonitor(VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, IFederationManager federationManager)
         {
-            this.signals = signals;
             this.logger = LogManager.GetCurrentClassLogger();
             this.votingManager = votingManager;
             this.network = network;
