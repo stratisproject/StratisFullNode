@@ -30,7 +30,11 @@ namespace Stratis.Bitcoin.Tests.Common
             throw new Exception();
         }
 
-        /// <summary>Gets private constant member of specified type.</summary>
+        /// <summary>Gets a static private constant member of specified type.</summary>
+        /// <param name="type">The type containing the static private constant.</param>
+        /// <param name="constantName">The name of the static private constant.</param>
+        /// <typeparam name="T">The type of the static private constant.</typeparam>
+        /// <returns>The value of the static private constant.</returns>
         public static T GetPrivateConstantValue<T>(this Type type, string constantName)
         {
             T value = type
@@ -71,6 +75,11 @@ namespace Stratis.Bitcoin.Tests.Common
         }
 
         /// <summary>Calls private method using reflection.</summary>
+        /// <param name="obj">The object containing the method to invoke.</param>
+        /// <param name="methodName">The name of the method to invoke.</param>
+        /// <param name="args">The arguments to be passed to <see cref="MethodInfo.Invoke" "/>.</param>
+        /// <typeparam name="T">The type of the object containing the method to invoke.</typeparam>
+        /// <returns>An object containing the return value of the invoked method, or null in the case of a constructor.</returns>
         public static object InvokeMethod<T>(this T obj, string methodName, params object[] args)
         {
             Type type = typeof(T);

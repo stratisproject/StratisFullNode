@@ -70,6 +70,7 @@ namespace Stratis.Features.FederatedPeg
         /// Broadcast the partial transaction request to federation members.
         /// </summary>
         /// <param name="payload">The payload to broadcast.</param>
+        /// <returns>The asynchronous task.</returns>
         private async Task BroadcastAsync(RequestPartialTransactionPayload payload)
         {
             this.logger.LogDebug("Broadcasting to {0}", this.AttachedPeer.PeerEndPoint.Address);
