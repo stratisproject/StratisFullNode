@@ -25,7 +25,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             (this.federationManager, this.federationHistory) = PoATestsBase.CreateFederationManager(this);
             this.chainIndexer = new Mock<ChainIndexer>();
-            this.slotsManager = new SlotsManager(this.network, this.federationManager, this.federationHistory, this.chainIndexer.Object, new LoggerFactory());
+            this.slotsManager = new SlotsManager(this.network, this.federationManager, this.federationHistory, this.chainIndexer.Object);
         }
 
         [Fact]
@@ -49,7 +49,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             (IFederationManager fedManager, IFederationHistory federationHistory) = PoATestsBase.CreateFederationManager(this, this.network, new ExtendedLoggerFactory(), new Signals.Signals(new LoggerFactory(), null));
             var header = new BlockHeader();
             this.chainIndexer.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
-            this.slotsManager = new SlotsManager(this.network, fedManager, federationHistory, this.chainIndexer.Object, new LoggerFactory());
+            this.slotsManager = new SlotsManager(this.network, fedManager, federationHistory, this.chainIndexer.Object);
 
             List<IFederationMember> federationMembers = fedManager.GetFederationMembers();
             uint roundStart = this.consensusOptions.TargetSpacingSeconds * (uint)federationMembers.Count * 5;
@@ -88,7 +88,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             });
 
             this.chainIndexer.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
-            this.slotsManager = new SlotsManager(this.network, fedManager, federationHistory, this.chainIndexer.Object, new LoggerFactory());
+            this.slotsManager = new SlotsManager(this.network, fedManager, federationHistory, this.chainIndexer.Object);
             Assert.Equal(nextTurnTimestamp, this.slotsManager.GetMiningTimestamp(thisTurnTimestamp + 1));
 
         }

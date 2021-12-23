@@ -59,7 +59,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             (this.federationManager, this.federationHistory) = CreateFederationManager(this, this.network, this.loggerFactory, this.signals);
 
-            this.slotsManager = new SlotsManager(this.network, this.federationManager, this.federationHistory, this.ChainIndexer, this.loggerFactory);
+            this.slotsManager = new SlotsManager(this.network, this.federationManager, this.federationHistory, this.ChainIndexer);
 
             this.poaHeaderValidator = new PoABlockHeaderValidator(this.loggerFactory);
             this.asyncProvider = new AsyncProvider(this.loggerFactory, this.signals);
