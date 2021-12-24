@@ -188,6 +188,17 @@ namespace Stratis.Bitcoin.Features.PoA
             log.AppendLine(">> Miner");
             log.AppendLine();
 
+            if (!this.federationManager.IsFederationMember)
+            {
+                log.AppendLine("Mining information is not available for non federation members.");
+                log.AppendLine("It is possible that your node was kicked from the federation due to inactivity.");
+                log.AppendLine();
+
+                this.miningStatisticsLog = log.ToString();
+
+                return;
+            }
+
             if (this.ibdState.IsInitialBlockDownload())
             {
                 log.AppendLine("Mining information is not available whilst the node is syncing.");
