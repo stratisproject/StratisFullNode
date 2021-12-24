@@ -373,7 +373,8 @@ namespace Stratis.Bitcoin.Features.PoA
 
             foreach (ChainedHeader header in blockHeader.EnumerateToGenesis().Take(miners.Length).Reverse())
             {
-                var history = this.federationHistory[header.Height];
+                // Add the miner to the history.
+                (List<IFederationMember> members, HashSet<IFederationMember> joined, IFederationMember miner) history = this.federationHistory[header.Height];
                 history.miner = miners[header.Height - startHeight];
                 this.federationHistory[header.Height] = history;
 

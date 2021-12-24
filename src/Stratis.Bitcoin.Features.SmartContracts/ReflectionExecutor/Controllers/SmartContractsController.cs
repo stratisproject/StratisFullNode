@@ -579,7 +579,19 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
                     !string.IsNullOrWhiteSpace(request.Amount) ? (Money)request.Amount : 0,
                     txData);
 
-                return this.Json(result, new JsonSerializerSettings
+                var deserializer = new ApiLogDeserializer(this.primitiveSerializer, this.network, result.StateRoot, this.contractAssemblyCache);
+
+                var response = new LocalExecutionResponse
+                {
+                    InternalTransfers = deserializer.MapTransferInfo(result.InternalTransfers.ToArray()),
+                    Logs = deserializer.MapLogResponses(result.Logs.ToArray()),
+                    GasConsumed = result.GasConsumed,
+                    Revert = result.Revert,
+                    ErrorMessage = result.ErrorMessage,
+                    Return = result.Return // All return values should be primitives, let default serializer handle.
+                };
+
+                return this.Json(response, new JsonSerializerSettings
                 {
                     ContractResolver = new ContractParametersContractResolver(this.network)
                 });

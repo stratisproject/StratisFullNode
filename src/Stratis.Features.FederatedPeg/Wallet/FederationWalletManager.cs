@@ -186,6 +186,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
             {
                 SpendingDetails spendingDetail = transactionData.SpendingDetails;
 
+                // There is no transaction or its already resolved.
                 if (spendingDetail?.TransactionId == null || spendingDetail.Transaction != null)
                 {
                     res.Add(transactionData, spendingDetail?.Transaction);
@@ -732,6 +733,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
         /// <param name="blockHeight">Height of the block.</param>
         /// <param name="blockHash">Hash of the block.</param>
         /// <param name="block">The block containing the transaction to add.</param>
+        /// <param name="withdrawal">The withdrawal (if any), otherwise <c>null</c>.</param>
         private void AddSpendingTransactionToWalletLocked(Transaction transaction,
             IEnumerable<TxOut> paidToOutputs,
             uint256 spendingTransactionId,
@@ -783,8 +785,16 @@ namespace Stratis.Features.FederatedPeg.Wallet
         }
 
         /// <summary>
-        /// Creates a SpendingDetails object that we can spend an existing transaction with.
+        /// Creates a <see cref="SpendingDetails"/> object for a spending transaction to be associated with a <see cref="TransactionData"/> object.
+        /// The information includes selected transaction outputs as <see cref="PaymentDetails"/> entries. Adds the block information if it has been included in a block.
         /// </summary>
+        /// <param name="transaction">The transaction providing the outputs.</param>
+        /// <param name="paidToOutputs">A filtered list of the transaction outputs.</param>
+        /// <param name="blockHeight">The block height of the transaction if its included in a block.</param>
+        /// <param name="blockHash">The block hash of the transaction if its included in a block.</param>
+        /// <param name="block">The block of the transaction if its included in a block.</param>
+        /// <param name="withdrawal">The withdrawal details if its a withdrawal transaction, otherwise <c>null</c>.</param>
+        /// <returns>See <see cref="SpendingDetails">.</returns>
         private SpendingDetails BuildSpendingDetails(Transaction transaction,
             IEnumerable<TxOut> paidToOutputs,
             int? blockHeight = null,
@@ -836,6 +846,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 CreationTime = DateTimeOffset.FromUnixTimeSeconds(block?.Header.Time ?? this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp()),
                 BlockHeight = blockHeight,
                 BlockHash = blockHash,
+                // Only recording this if it can't be found in a block.
                 Transaction = (blockHeight > 0) ? null : transaction,
                 IsCoinStake = transaction.IsCoinStake == false ? (bool?)null : true
             };

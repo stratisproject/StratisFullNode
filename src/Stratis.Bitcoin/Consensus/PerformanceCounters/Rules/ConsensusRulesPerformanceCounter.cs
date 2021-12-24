@@ -51,10 +51,7 @@ namespace Stratis.Bitcoin.Consensus.PerformanceCounters.Rules
         {
             var stopwatch = new StopwatchDisposable(elapsedTicks =>
             {
-                RulePerformance performance = this.currentSnapshot.PerformanceInfo[rule];
-
-                Interlocked.Increment(ref performance.CalledTimes);
-                Interlocked.Add(ref performance.ExecutionTimesTicks, elapsedTicks);
+                this.currentSnapshot.PerformanceInfo[rule].AddTicks(elapsedTicks);
             });
 
             return stopwatch;

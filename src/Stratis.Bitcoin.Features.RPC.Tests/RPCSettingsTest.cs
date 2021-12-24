@@ -269,8 +269,8 @@ namespace Stratis.Bitcoin.Features.RPC.Tests
 
             Assert.True(rpcSettings.Server);
             Assert.Equal(1378, rpcSettings.RPCPort);
-            Assert.Equal(null, rpcSettings.RpcUser);
-            Assert.Equal(null, rpcSettings.RpcPassword);
+            Assert.Null(rpcSettings.RpcUser);
+            Assert.Null(rpcSettings.RpcPassword);
             Assert.NotEmpty(rpcSettings.Bind);
             Assert.Equal("127.0.0.1:1378", rpcSettings.Bind[0].ToString());
             Assert.NotEmpty(rpcSettings.DefaultBindings);

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 using NBitcoin;
-using Stratis.Bitcoin.Configuration.Logging;
+using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
@@ -9,16 +9,18 @@ using Xunit;
 
 namespace Stratis.Bitcoin.Features.PoA.Tests
 {
-    public class PollsRepositoryTests
+    public sealed class PollsRepositoryTests
     {
+        private readonly ChainIndexer chainIndexer;
         private readonly PollsRepository repository;
 
         public PollsRepositoryTests()
         {
-            string dir = TestBase.CreateTestDir(this);
-            Network network = new TestPoANetwork();
+            var dataDir = new DataFolder(TestBase.CreateTestDir(this));
+            TestPoANetwork network = new TestPoANetwork();
+            this.chainIndexer = new ChainIndexer(network);
 
-            this.repository = new PollsRepository(dir, new DBreezeSerializer(network.Consensus.ConsensusFactory), null);
+            this.repository = new PollsRepository(this.chainIndexer, dataDir, new DBreezeSerializer(network.Consensus.ConsensusFactory), network);
             this.repository.Initialize();
         }
 
@@ -66,7 +68,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
                 this.repository.AddPolls(transaction, new Poll() { Id = 1, PollStartBlockData = new HashHeightPair(2, 2) });
                 this.repository.AddPolls(transaction, new Poll() { Id = 2, PollStartBlockData = new HashHeightPair(3, 3) });
 
-                this.repository.SaveCurrentTip(transaction, new HashHeightPair(0, 0));
+                this.repository.SaveCurrentTip(transaction, new HashHeightPair(this.chainIndexer.Tip.HashBlock, 0));
 
                 transaction.Commit();
             });

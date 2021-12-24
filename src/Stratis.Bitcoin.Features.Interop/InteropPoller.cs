@@ -687,9 +687,10 @@ namespace Stratis.Bitcoin.Features.Interop
         }
 
         /// <summary>
-        /// Wait for the submission to be well-confirmed before initial vote & broadcast.
+        /// Wait for the submission to be well-confirmed before initial vote and broadcast.
         /// </summary>
         /// <param name="identifiers">The transaction information to check.</param>
+        /// <param name="destinationChain"></param>
         /// <param name="caller">The caller that is waiting on the submission transaction's confirmation count.</param>
         /// <returns><c>True if it succeeded</c>, <c>false</c> if the node is stopping.</returns>
         private async Task<bool> WaitForReplenishmentToBeConfirmedAsync(MultisigTransactionIdentifiers identifiers, DestinationChain destinationChain, [CallerMemberName] string caller = null)

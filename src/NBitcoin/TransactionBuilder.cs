@@ -1584,7 +1584,7 @@ namespace NBitcoin
             int witSize = 0;
             if (tx.HasWitness)
                 witSize += 2;
-            foreach (var txin in tx.Inputs.AsIndexedInputs())
+            foreach (IndexedTxIn txin in tx.Inputs.AsIndexedInputs())
             {
                 ICoin coin = FindSignableCoin(txin) ?? FindCoin(txin.PrevOut);
                 if (coin == null)

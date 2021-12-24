@@ -99,6 +99,7 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
         /// <summary>
         /// Stops the full node.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [ActionName("stop")]
         [ActionDescription("Stops the full node.")]
         public Task Stop()
@@ -254,7 +255,7 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
         /// <returns>The hex-encoded merkle proof.</returns>
         [ActionName("gettxoutproof")]
         [ActionDescription("Checks if transactions are within block. Returns a merkle proof of transaction inclusion.")]
-        public async Task<MerkleBlock> GetTxOutProofAsync(string[] txids, string blockhash = "")
+        public Task<MerkleBlock> GetTxOutProofAsync(string[] txids, string blockhash = "")
         {
             List<uint256> transactionIds = txids.Select(txString => uint256.Parse(txString)).ToList();
 
@@ -306,7 +307,7 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
 
             var result = new MerkleBlock(block.Block, transactionIds.ToArray());
 
-            return result;
+            return Task.FromResult(result);
         }
 
         /// <summary>

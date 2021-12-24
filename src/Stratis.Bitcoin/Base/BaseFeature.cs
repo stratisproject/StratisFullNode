@@ -95,7 +95,7 @@ namespace Stratis.Bitcoin.Base
         private readonly ITimeSyncBehaviorState timeSyncBehaviorState;
 
         /// <summary>Manager of node's network peers.</summary>
-        private IPeerAddressManager peerAddressManager;
+        private readonly IPeerAddressManager peerAddressManager;
 
         /// <summary>Periodic task to save list of peers to disk.</summary>
         private IAsyncLoop flushAddressManagerLoop;
@@ -108,6 +108,8 @@ namespace Stratis.Bitcoin.Base
 
         /// <summary>Provider of IBD state.</summary>
         private readonly IInitialBlockDownloadState initialBlockDownloadState;
+
+#pragma warning disable SA1648
 
         /// <inheritdoc cref="Network"/>
         private readonly Network network;
@@ -126,6 +128,8 @@ namespace Stratis.Bitcoin.Base
 
         /// <inheritdoc cref="IPartialValidator"/>
         private readonly IPartialValidator partialValidator;
+
+#pragma warning restore SA1648
 
         public BaseFeature(NodeSettings nodeSettings,
             DataFolder dataFolder,
@@ -203,7 +207,7 @@ namespace Stratis.Bitcoin.Base
                 using (StreamWriter sw = File.AppendText(nodeSettings.ConfigurationFile))
                 {
                     sw.WriteLine($"{BaseFeature.RewindFlag}={height}");
-                };
+                }
             }
         }
 

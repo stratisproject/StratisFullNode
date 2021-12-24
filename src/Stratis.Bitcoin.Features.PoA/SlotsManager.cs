@@ -15,9 +15,13 @@ namespace Stratis.Bitcoin.Features.PoA
 
         /// <summary>Gets next timestamp at which current node can produce a block.</summary>
         /// <exception cref="Exception">Thrown if this node is not a federation member.</exception>
+        /// <param name="currentTime">The current unix timestamp.</param>
+        /// <returns>The next timestamp at which current node can produce a block.</returns>
         uint GetMiningTimestamp(uint currentTime);
 
         /// <summary>Determines whether timestamp is valid according to the network rules.</summary>
+        /// <param name="headerUnixTimestamp">The unix timstamp of a block header.</param>
+        /// <returns><c>True</c> if the timestamp is valid and <c>false</c> otherwise.</returns>
         bool IsValidTimestamp(uint headerUnixTimestamp);
 
         TimeSpan GetRoundLength(int? federationMembersCount = null);

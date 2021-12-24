@@ -20,6 +20,7 @@ namespace Stratis.Bitcoin.Tests.Common
         /// <summary>
         /// Initializes logger factory for inherited tests.
         /// </summary>
+        /// <param name="network">The network context.</param>
         public TestBase(Network network)
         {
             this.Network = network;
@@ -37,6 +38,7 @@ namespace Stratis.Bitcoin.Tests.Common
         /// </summary>
         /// <param name="caller">The calling object, from which we derive the namespace in which the test is contained.</param>
         /// <param name="callingMethod">The name of the test being executed. A directory with the same name will be created.</param>
+        /// <param name="network">The network context.</param>
         /// <returns>The <see cref="DataFolder"/> that was initialized.</returns>
         public static DataFolder CreateDataFolder(object caller, [System.Runtime.CompilerServices.CallerMemberName] string callingMethod = "", Network network = null)
         {
@@ -153,6 +155,7 @@ namespace Stratis.Bitcoin.Tests.Common
         /// Creates a list of Proof of Stake blocks.
         /// </summary>
         /// <param name="amount">The amount of blocks to create.</param>
+        /// <returns>The list of Pos <see cref="Block"/> entries.</returns>
         public List<Block> CreatePosBlocks(int amount)
         {
             var blocks = new List<Block>();
