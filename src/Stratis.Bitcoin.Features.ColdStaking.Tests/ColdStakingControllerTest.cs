@@ -1082,9 +1082,10 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
 
         /// <summary>
         /// Confirms that trying to withdraw money from a non-existent cold staking account will raise an error.
+        /// ColdStakingWithdrawalFromNonExistingColdWalletAccountThrowsWalletException
         /// </summary>
         [Fact]
-        public void ColdStakingWithdrawalFromNonExistingColdWalletAccountThrowsWalletException()
+        public void ColdStakingWithdrawalFromNonExistingColdWallet()
         {
             this.Initialize();
             this.CreateMempoolManager();
