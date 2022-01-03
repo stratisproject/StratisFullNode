@@ -11,6 +11,7 @@ using Stratis.SmartContracts.CLR.Loader;
 using Stratis.SmartContracts.CLR.Serialization;
 using Stratis.SmartContracts.Core.Receipts;
 using Stratis.SmartContracts.Core.State;
+using Stratis.SmartContracts.Core.State.AccountAbstractionLayer;
 using Stratis.SmartContracts.Networks;
 using Xunit;
 
@@ -34,7 +35,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
         public void Deserialize_Basic_Log_Success()
         {
             var network = new SmartContractsRegTest();
-            var primitiveSerializer = new ContractPrimitiveSerializer(network);
+            var primitiveSerializer = new ContractPrimitiveSerializerV2(network);
 
             var testStruct = new TestLog
             {
@@ -53,21 +54,21 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
             var serializer = new ApiLogDeserializer(primitiveSerializer, network, Mock.Of<IStateRepositoryRoot>(), Mock.Of<IContractAssemblyCache>());
             dynamic deserializedLog = serializer.DeserializeLogData(testBytes, typeof(TestLog));
 
-            Assert.Equal(testStruct.Id, deserializedLog.Id);
-            Assert.Equal(testStruct.Name, deserializedLog.Name);
-            Assert.Equal(testStruct.Data, deserializedLog.Data);
-            Assert.True(testStruct.Datas.SequenceEqual((byte[])deserializedLog.Datas));
-            Assert.Equal(testStruct.Truth, deserializedLog.Truth);
-            Assert.Equal(testStruct.Address.ToUint160().ToBase58Address(network), deserializedLog.Address);
-            Assert.Equal(testStruct.Value128.ToString(), deserializedLog.Value128.ToString());
-            Assert.Equal(testStruct.Value256.ToString(), deserializedLog.Value256.ToString());
+            Assert.Equal(testStruct.Id, deserializedLog.Data.Id);
+            Assert.Equal(testStruct.Name, deserializedLog.Data.Name);
+            Assert.Equal(testStruct.Data, deserializedLog.Data.Data);
+            Assert.True(testStruct.Datas.SequenceEqual((byte[])deserializedLog.Data.Datas));
+            Assert.Equal(testStruct.Truth, deserializedLog.Data.Truth);
+            Assert.Equal(testStruct.Address.ToUint160().ToBase58Address(network), deserializedLog.Data.Address);
+            Assert.Equal(testStruct.Value128.ToString(), deserializedLog.Data.Value128.ToString());
+            Assert.Equal(testStruct.Value256.ToString(), deserializedLog.Data.Value256.ToString());
         }
 
         [Fact]
         public void Deserialize_Logs_With_Different_Addresses_From_Cache()
         {
             var network = new SmartContractsRegTest();
-            var primitiveSerializer = new ContractPrimitiveSerializer(network);
+            var primitiveSerializer = new ContractPrimitiveSerializerV2(network);
 
             var testStruct0 = new TestLog
             {
@@ -103,15 +104,45 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
 
             var serializer = new ApiLogDeserializer(primitiveSerializer, network, stateRoot.Object, assemblyCache.Object);
 
-            var responses = serializer.MapLogResponses(logs);
+            List<SmartContracts.Models.LogResponse> responses = serializer.MapLogResponses(logs);
 
             // Verify that we deserialized the logs correctly.
-            Assert.Equal(testStruct0.Name, ((dynamic)responses[0].Log).Name);
-            Assert.Equal(testStruct1.Name, ((dynamic)responses[1].Log).Name);
+            Assert.Equal(testStruct0.Name, ((dynamic)responses[0].Log.Data).Name);
+            Assert.Equal(testStruct1.Name, ((dynamic)responses[1].Log.Data).Name);
 
             // Verify that we got the code for both log assemblies.
             stateRoot.Verify(s => s.GetCodeHash(logs[0].Address), Times.Once);
             stateRoot.Verify(s => s.GetCodeHash(logs[1].Address), Times.Once);
+        }
+
+        [Fact]
+        public void MapTransferInfo_Success()
+        {
+            var network = new SmartContractsRegTest();
+            var primitiveSerializer = new ContractPrimitiveSerializerV2(network);
+
+            var stateRoot = new Mock<IStateRepositoryRoot>();
+            stateRoot.Setup(r => r.GetCodeHash(It.IsAny<uint160>())).Returns(uint256.Zero.ToBytes());
+
+            var assemblyCache = new Mock<IContractAssemblyCache>();
+            var contractAssembly = new Mock<IContractAssembly>();
+
+            var serializer = new ApiLogDeserializer(primitiveSerializer, network, stateRoot.Object, assemblyCache.Object);
+
+            var transferInfos = new List<TransferInfo>
+            {
+                new TransferInfo(uint160.Zero, uint160.One, 12345),
+                new TransferInfo(uint160.One, uint160.Zero, 12345),
+            };
+
+            List<SmartContracts.Models.TransferResponse> result = serializer.MapTransferInfo(transferInfos.ToArray());
+
+            for (var i = 0; i < transferInfos.Count; i++)
+            {
+                Assert.Equal(transferInfos[i].From.ToBase58Address(network), result[i].From);
+                Assert.Equal(transferInfos[i].To.ToBase58Address(network), result[i].To);
+                Assert.Equal(transferInfos[i].Value, result[i].Value);
+            }
         }
     }
 }

@@ -54,7 +54,7 @@ namespace Stratis.SmartContracts.CLR.Tests
             this.addressGenerator = new AddressGenerator();
             this.assemblyLoader = new ContractAssemblyLoader();
             this.moduleDefinitionReader = new ContractModuleDefinitionReader();
-            this.contractPrimitiveSerializer = new ContractPrimitiveSerializer(this.network);
+            this.contractPrimitiveSerializer = new ContractPrimitiveSerializerV2(this.network);
             this.serializer = new Serializer(this.contractPrimitiveSerializer);
             this.contractCache = new ContractAssemblyCache();
             this.vm = new ReflectionVirtualMachine(this.validator, this.loggerFactory, this.assemblyLoader, this.moduleDefinitionReader, this.contractCache);

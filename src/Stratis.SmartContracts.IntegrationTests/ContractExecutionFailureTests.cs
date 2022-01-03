@@ -38,7 +38,7 @@ namespace Stratis.SmartContracts.IntegrationTests
         public void ContractTransaction_Invalid_MethodParamSerialization()
         {
             // Create poorly serialized method params
-            var serializer = new CallDataSerializer(new ContractPrimitiveSerializer(this.node1.CoreNode.FullNode.Network));
+            var serializer = new CallDataSerializer(new ContractPrimitiveSerializerV2(this.node1.CoreNode.FullNode.Network));
 
             var txData = serializer.Serialize(new ContractTxData(1, 1, (Gas)(GasPriceList.BaseCost + 1), new uint160(1), "Test"));
 
