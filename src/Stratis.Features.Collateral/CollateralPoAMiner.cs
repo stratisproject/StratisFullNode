@@ -138,10 +138,6 @@ namespace Stratis.Features.Collateral
                     ChainedHeader pollStartHeader = this.chainIndexer.GetHeader(poll.PollStartBlockData.Hash);
                     ChainedHeader votingRequestHeader = pollStartHeader.Previous;
 
-                    // Already checked?
-                    if (this.joinFederationRequestMonitor.AlreadyChecked(votingRequestHeader.HashBlock))
-                        continue;
-
                     ChainedHeaderBlock blockData = this.consensusManager.GetBlockData(votingRequestHeader.HashBlock);
 
                     this.joinFederationRequestMonitor.OnBlockConnected(new Bitcoin.EventBus.CoreEvents.BlockConnected(

@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using NBitcoin;
 using NLog;
-using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
@@ -18,12 +17,10 @@ namespace Stratis.Features.Collateral
     {
         private readonly ILogger logger;
         private readonly ISignals signals;
-        private SubscriptionToken blockConnectedToken;
         private readonly VotingManager votingManager;
         private readonly Network network;
         private readonly Network counterChainNetwork;
         private readonly IFederationManager federationManager;
-        private readonly HashSet<uint256> pollsCheckedWithJoinFederationRequestMonitor;
 
         public JoinFederationRequestMonitor(VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, IFederationManager federationManager, ISignals signals)
         {
@@ -33,14 +30,11 @@ namespace Stratis.Features.Collateral
             this.network = network;
             this.counterChainNetwork = counterChainNetworkWrapper.CounterChainNetwork;
             this.federationManager = federationManager;
-            this.pollsCheckedWithJoinFederationRequestMonitor = new HashSet<uint256>();
         }
-
-        public bool AlreadyChecked(uint256 hash) => this.pollsCheckedWithJoinFederationRequestMonitor.Contains(hash);
 
         public Task InitializeAsync()
         {
-            this.blockConnectedToken = this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
+            this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
 
             return Task.CompletedTask;
         }
@@ -55,8 +49,6 @@ namespace Stratis.Features.Collateral
                 return;
 
             List<IFederationMember> modifiedFederation = null;
-
-            this.pollsCheckedWithJoinFederationRequestMonitor.Add(blockConnectedData.ConnectedBlock.ChainedHeader.HashBlock);
 
             List<Transaction> transactions = blockConnectedData.ConnectedBlock.Block.Transactions;
 
