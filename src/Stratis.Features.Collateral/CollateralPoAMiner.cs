@@ -15,7 +15,6 @@ using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Mining;
-using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.PoA.Collateral;
 using Stratis.Features.PoA.Collateral.CounterChain;
@@ -121,27 +120,32 @@ namespace Stratis.Features.Collateral
 
             try
             {
-                List<Poll> pendingAddFederationMemberPolls = this.votingManager.GetPendingPolls().Where(p => p.VotingData.Key == VoteKey.AddFederationMember).ToList();
+                List<Poll> pendingMemberPolls = this.votingManager.GetPendingPolls().MemberPolls().ToList();
 
                 // Filter all polls where this federation number has not voted on.
-                pendingAddFederationMemberPolls = pendingAddFederationMemberPolls.Where(p => !p.PubKeysHexVotedInFavor.Any(v => v.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToString())).ToList();
+                pendingMemberPolls = pendingMemberPolls.Where(p => !p.PubKeysHexVotedInFavor.Any(v => v.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToString())).ToList();
 
-                if (!pendingAddFederationMemberPolls.Any())
+                if (!pendingMemberPolls.Any())
                     return;
 
-                IFederationMember collateralFederationMember = this.federationManager.GetCurrentFederationMember();
+                IFederationMember currentFederationMember = this.federationManager.GetCurrentFederationMember() as CollateralFederationMember;
+                if (currentFederationMember == null)
+                    return;
 
                 var poaConsensusFactory = this.network.Consensus.ConsensusFactory as PoAConsensusFactory;
 
-                foreach (Poll poll in pendingAddFederationMemberPolls)
+                byte[] currentFederationMemberBytes = poaConsensusFactory.SerializeFederationMember(currentFederationMember);
+
+                foreach (Poll poll in pendingMemberPolls)
                 {
-                    ChainedHeader pollStartHeader = this.chainIndexer.GetHeader(poll.PollStartBlockData.Hash);
-                    ChainedHeader votingRequestHeader = pollStartHeader.Previous;
+                    IFederationMember memberBeingVotedOn = poaConsensusFactory.DeserializeFederationMember(poll.VotingData.Data);
+                    if (this.votingManager.AlreadyVotingFor(poll.VotingData.Key, poll.VotingData.Data))
+                    {
+                        this.logger.LogInformation($"This node '{currentFederationMember.PubKey.ToHex()}' has already voted for '{memberBeingVotedOn.PubKey.ToHex()}'.");
+                        continue;
+                    }
 
-                    ChainedHeaderBlock blockData = this.consensusManager.GetBlockData(votingRequestHeader.HashBlock);
-
-                    this.joinFederationRequestMonitor.OnBlockConnected(new Bitcoin.EventBus.CoreEvents.BlockConnected(
-                        new ChainedHeaderBlock(blockData.Block, votingRequestHeader)));
+                    this.votingManager.ScheduleVote(poll.VotingData);
                 }
 
                 return;

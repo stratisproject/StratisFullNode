@@ -70,7 +70,7 @@ namespace Stratis.Features.Collateral
                         continue;
 
                     // Only mining federation members vote to include new members.
-                    modifiedFederation = modifiedFederation ?? this.votingManager.GetModifiedFederation(blockConnectedData.ConnectedBlock.ChainedHeader);
+                    modifiedFederation ??= this.votingManager.GetModifiedFederation(blockConnectedData.ConnectedBlock.ChainedHeader);
                     if (!modifiedFederation.Any(m => m.PubKey == this.federationManager.CurrentFederationKey.PubKey))
                         return;
 
