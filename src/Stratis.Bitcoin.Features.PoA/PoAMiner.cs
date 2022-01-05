@@ -190,7 +190,7 @@ namespace Stratis.Bitcoin.Features.PoA
             while (prevBlockMined.Header.Time >= headerTime)
                 prevBlockMined = prevBlockMined.Previous;
 
-            IFederationMember lastMiner = this.federationHistory.GetFederationMemberForBlock(prevBlockMined);
+            IFederationMember minerForBlock = this.federationHistory.GetFederationMemberForBlock(prevBlockMined);
             List<IFederationMember> federationAtBlock = this.federationHistory.GetFederationForBlock(prevBlockMined);
 
             int offset = (int)((headerTime - prevBlockMined.Header.Time) / this.network.ConsensusOptions.TargetSpacingSeconds);
