@@ -545,8 +545,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                                     // Only create an add member poll if a voting request exists.
                                     if (data.Key == VoteKey.AddFederationMember)
                                     {
-                                        ChainedHeader pollStartHeader = chBlock.ChainedHeader.Previous;
-                                        ChainedHeader votingRequestHeader = pollStartHeader.Previous;
+                                        ChainedHeader votingRequestHeader = chBlock.ChainedHeader.Previous;
 
                                         Block blockData = votingRequestHeader.Block ?? this.blockRepository.GetBlock(votingRequestHeader.HashBlock);
 
