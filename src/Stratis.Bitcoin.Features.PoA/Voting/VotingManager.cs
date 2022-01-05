@@ -550,14 +550,22 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                                         Block blockData = votingRequestHeader.Block ?? this.blockRepository.GetBlock(votingRequestHeader.HashBlock);
 
                                         if (blockData == null)
+                                        {
+                                            this.logger.Error("Could not create add member poll for member '{0}' due to failing to read voting request block.", fedMemberKeyHex);
+
                                             return;
+                                        }
 
                                         var encoder = new JoinFederationRequestEncoder();
 
                                         Transaction joinTx = blockData.Transactions.FirstOrDefault(tx => JoinFederationRequestBuilder.Deconstruct(tx, encoder)?.PubKey?.ToHex() == fedMemberKeyHex);
 
                                         if (joinTx == null)
+                                        {
+                                            this.logger.Debug("Ignoring vote with missing join request for member '{0}'.", fedMemberKeyHex);
+
                                             return;
+                                        }
                                     }
 
                                     poll = new Poll()
