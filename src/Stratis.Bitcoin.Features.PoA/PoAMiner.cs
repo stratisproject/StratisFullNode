@@ -243,22 +243,7 @@ namespace Stratis.Bitcoin.Features.PoA
             currentSlotTime -= currentSlotTime % this.network.ConsensusOptions.TargetSpacingSeconds;
 
             // Determine the public key of the current slot.
-            PubKey pubKey;
             string pubKeyRepresentation;
-
-            void SetPubKeyRepresentation(bool producedBlockInLastRound)
-            {
-                if (pubKey == this.federationManager.CurrentFederationKey?.PubKey)
-                {
-                    pubKeyRepresentation = "█████";
-                    this.miningStatistics.ProducedBlockInLastRound = producedBlockInLastRound;
-                }
-                else
-                {
-                    pubKeyRepresentation = pubKey.ToHex().Substring(0, pubKeyTakeCharacters);
-                }
-            }
-
             // Iterate mining slots.
             for (int i = 0; i < maxDepth; i++, currentSlotTime -= this.network.ConsensusOptions.TargetSpacingSeconds)
             {
@@ -267,30 +252,35 @@ namespace Stratis.Bitcoin.Features.PoA
                     currentHeader = currentHeader.Previous;
 
                 // Mined in this slot?
-                if (currentHeader.Header.Time == currentSlotTime)
+                bool minedInThisSlot = currentHeader.Header.Time == currentSlotTime;
+
+                PubKey pubKey = (minedInThisSlot ?
+                    this.federationHistory.GetFederationMemberForBlock(currentHeader) :
+                    DetermineExpectedMinerForTimestamp(currentSlotTime)).PubKey;
+
+
+                if (pubKey == this.federationManager.CurrentFederationKey?.PubKey)
                 {
-                    pubKey = this.federationHistory.GetFederationMemberForBlock(currentHeader)?.PubKey;
-
-                    SetPubKeyRepresentation(true);
-
-                    if (includeHeight)
-                        log.Append($"{currentHeader.Height.ToString().PadLeft(7)}:{ pubKeyRepresentation } ");
-                    else
-                        log.Append($"[{pubKeyRepresentation}] ");
-
-                    hitCount++;
+                    pubKeyRepresentation = "█████";
+                    this.miningStatistics.ProducedBlockInLastRound = minedInThisSlot;
                 }
                 else
                 {
-                    pubKey = DetermineExpectedMinerForTimestamp(currentSlotTime)?.PubKey;
-
-                    SetPubKeyRepresentation(false);
-
-                    if (includeHeight)
-                        log.Append($"---MISS:{ pubKeyRepresentation } ");
-                    else
-                        log.Append($"<{pubKeyRepresentation}> ");
+                    pubKeyRepresentation = pubKey.ToHex().Substring(0, pubKeyTakeCharacters);
                 }
+
+                if (includeHeight)
+                {
+                    string strHeight = minedInThisSlot ? currentHeader.Height.ToString().PadLeft(7) : "---MISS";
+                    log.Append($"{strHeight}:{ pubKeyRepresentation } ");
+                }
+                else
+                {
+                    log.Append(minedInThisSlot ? $"[{pubKeyRepresentation}] " : $"<{pubKeyRepresentation}> ");
+                }
+
+                if (minedInThisSlot)
+                    hitCount++;
 
                 if (((i + 1) % (includeHeight ? 10 : 20)) == 0)
                     log.AppendLine();
