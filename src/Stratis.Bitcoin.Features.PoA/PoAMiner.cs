@@ -249,6 +249,7 @@ namespace Stratis.Bitcoin.Features.PoA
             // Iterate mining slots.
             for (int i = 0; i < maxDepth; i++, currentSlotTime -= this.network.ConsensusOptions.TargetSpacingSeconds)
             {
+                // Find the chained header for this slot.
                 while (currentHeader.Header.Time > currentSlotTime)
                     currentHeader = currentHeader.Previous;
 
