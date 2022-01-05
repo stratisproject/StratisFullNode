@@ -558,7 +558,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                                         var encoder = new JoinFederationRequestEncoder();
 
-                                        Transaction joinTx = blockData.Transactions.FirstOrDefault(tx => JoinFederationRequestBuilder.Deconstruct(tx, encoder)?.PubKey?.ToHex() == fedMemberKeyHex);
+                                        IFederationMember memberVotedOn = GetMemberVotedOn(data);
+
+                                        Transaction joinTx = blockData.Transactions.FirstOrDefault(tx => JoinFederationRequestBuilder.Deconstruct(tx, encoder)?.PubKey == memberVotedOn.PubKey);
 
                                         if (joinTx == null)
                                         {
