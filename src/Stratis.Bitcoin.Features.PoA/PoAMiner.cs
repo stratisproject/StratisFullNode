@@ -181,6 +181,27 @@ namespace Stratis.Bitcoin.Features.PoA
             startAfter: TimeSpans.TenSeconds);
         }
 
+        private IFederationMember DetermineExpectedMinerForTimestamp(uint headerTime)
+        {
+            // When blocks are missing for given timestamps we have to determine whom was supposed to mine
+            // by looking at the federation make-up at the time and whom mined last.
+
+            ChainedHeader prevBlockMined = this.consensusManager.Tip;
+            while (prevBlockMined.Header.Time > headerTime)
+                prevBlockMined = prevBlockMined.Previous;
+
+            IFederationMember minerForBlock = this.federationHistory.GetFederationMemberForBlock(prevBlockMined);
+            List<IFederationMember> federationAtBlock = this.federationHistory.GetFederationForBlock(prevBlockMined);
+
+            int offset = (int)((headerTime - prevBlockMined.Header.Time) / this.network.ConsensusOptions.TargetSpacingSeconds);
+
+            int minerForBlockIndex = federationAtBlock.TakeWhile(m => m.PubKey != minerForBlock.PubKey).Count();
+
+            int expectedIndex = (minerForBlockIndex + offset) % federationAtBlock.Count;
+
+            return federationAtBlock[expectedIndex];
+        }
+
         private void GatherMiningStatistics()
         {
             var log = new StringBuilder();
@@ -231,69 +252,46 @@ namespace Stratis.Bitcoin.Features.PoA
 
             uint currentSlotTime = (uint)this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp();
             currentSlotTime -= currentSlotTime % this.network.ConsensusOptions.TargetSpacingSeconds;
-            if (currentHeader.Header.Time > currentSlotTime)
-                currentSlotTime = currentHeader.Header.Time;
-
-            // Determine the number of slots before this node will mine.
-            uint slotOffset = (this.slotsManager.GetMiningTimestamp(currentSlotTime) - currentSlotTime) / this.network.ConsensusOptions.TargetSpacingSeconds;
-
-            // Determine the current slot from that.
-            int mySlotIndex = modifiedFederation.FindIndex(m => m.PubKey == this.federationManager.CurrentFederationKey?.PubKey);
-            int currentSlot = (int)(mySlotIndex - slotOffset) % modifiedFederation.Count;
-            while (currentSlot < 0)
-                currentSlot += modifiedFederation.Count;
 
             // Determine the public key of the current slot.
-            PubKey pubKey = modifiedFederation[currentSlot].PubKey;
-
+            string pubKeyRepresentation;
             // Iterate mining slots.
-            for (int i = 0; i < maxDepth; i++)
+            for (int i = 0; i < maxDepth; i++, currentSlotTime -= this.network.ConsensusOptions.TargetSpacingSeconds)
             {
-                string pubKeyRepresentation = pubKey.ToString().Substring(0, pubKeyTakeCharacters);
-
-                if (pubKey == this.federationManager.CurrentFederationKey?.PubKey)
-                    pubKeyRepresentation = "█████";
+                // Find the chained header for this slot.
+                while (currentHeader.Header.Time > currentSlotTime)
+                    currentHeader = currentHeader.Previous;
 
                 // Mined in this slot?
-                if (currentHeader.Header.Time == currentSlotTime)
+                bool minedInThisSlot = currentHeader.Header.Time == currentSlotTime;
+
+                PubKey pubKey = (minedInThisSlot ?
+                    this.federationHistory.GetFederationMemberForBlock(currentHeader) :
+                    DetermineExpectedMinerForTimestamp(currentSlotTime)).PubKey;
+
+
+                if (pubKey == this.federationManager.CurrentFederationKey?.PubKey)
                 {
-                    if (includeHeight)
-                        log.Append($"{currentHeader.Height.ToString().PadLeft(7)}:{ pubKeyRepresentation } ");
-                    else
-                        log.Append($"[{pubKeyRepresentation}] ");
-
-                    currentHeader = currentHeader.Previous;
-                    hitCount++;
-
-                    modifiedFederation = this.federationHistory.GetFederationForBlock(currentHeader);
-
-                    if (pubKey == this.federationManager.CurrentFederationKey?.PubKey)
-                        this.miningStatistics.ProducedBlockInLastRound = true;
+                    pubKeyRepresentation = "█████";
+                    this.miningStatistics.ProducedBlockInLastRound = minedInThisSlot;
                 }
                 else
                 {
-                    if (includeHeight)
-                        log.Append($"---MISS:{ pubKeyRepresentation } ");
-                    else
-                        log.Append($"<{pubKeyRepresentation}> ");
-
-                    if (pubKey == this.federationManager.CurrentFederationKey?.PubKey)
-                        this.miningStatistics.ProducedBlockInLastRound = false;
+                    pubKeyRepresentation = pubKey.ToHex().Substring(0, pubKeyTakeCharacters);
                 }
 
-                // Determine previous miner.
-                int index = modifiedFederation.FindIndex(m => m.PubKey.ToHex() == pubKey.ToHex());
-                if (index < 0)
+                if (includeHeight)
                 {
-                    // Federation changed.
-                    log.Append($"(Federation changed)");
-                    break;
+                    string strHeight = minedInThisSlot ? currentHeader.Height.ToString().PadLeft(7) : "---MISS";
+                    log.Append($"{strHeight}:{ pubKeyRepresentation } ");
+                }
+                else
+                {
+                    log.Append(minedInThisSlot ? $"[{pubKeyRepresentation}] " : $"<{pubKeyRepresentation}> ");
                 }
 
-                index = (index > 0) ? (index - 1) : (modifiedFederation.Count - 1);
-                pubKey = modifiedFederation[index].PubKey;
-
-                currentSlotTime -= this.network.ConsensusOptions.TargetSpacingSeconds;
+                if (minedInThisSlot)
+                    hitCount++;
 
                 if (((i + 1) % (includeHeight ? 10 : 20)) == 0)
                     log.AppendLine();
