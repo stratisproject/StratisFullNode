@@ -10,6 +10,7 @@ using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.BlockStore;
+using Stratis.Bitcoin.PoA.Features.Voting;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
@@ -541,6 +542,25 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                                 // Ensures that highestPollId can't be changed before the poll is committed.
                                 this.PollsRepository.Synchronous(() =>
                                 {
+                                    // Only create an add member poll if a voting request exists.
+                                    if (data.Key == VoteKey.AddFederationMember)
+                                    {
+                                        ChainedHeader pollStartHeader = chBlock.ChainedHeader.Previous;
+                                        ChainedHeader votingRequestHeader = pollStartHeader.Previous;
+
+                                        Block blockData = votingRequestHeader.Block ?? this.blockRepository.GetBlock(votingRequestHeader.HashBlock);
+
+                                        if (blockData == null)
+                                            return;
+
+                                        var encoder = new JoinFederationRequestEncoder();
+
+                                        Transaction joinTx = blockData.Transactions.FirstOrDefault(tx => JoinFederationRequestBuilder.Deconstruct(tx, encoder)?.PubKey?.ToHex() == fedMemberKeyHex);
+
+                                        if (joinTx == null)
+                                            return;
+                                    }
+
                                     poll = new Poll()
                                     {
                                         Id = this.PollsRepository.GetHighestPollId() + 1,
@@ -558,6 +578,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                                     this.logger.Debug("New poll was created: '{0}'.", poll);
                                 });
+
+                                if (poll == null)
+                                    continue;
                             }
                             else if (!poll.PubKeysHexVotedInFavor.Any(v => v.PubKey == fedMemberKeyHex))
                             {
