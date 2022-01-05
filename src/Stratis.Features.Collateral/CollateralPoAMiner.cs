@@ -8,6 +8,7 @@ using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Validators;
+using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.PoA;
@@ -127,25 +128,21 @@ namespace Stratis.Features.Collateral
                 pendingAddFederationMemberPolls = pendingAddFederationMemberPolls.Where(p => !p.PubKeysHexVotedInFavor.Any(v => v.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToString())).ToList();
 
                 if (!pendingAddFederationMemberPolls.Any())
+                {
+                    this.logger.LogDebug("There are no outstanding add member polls for this node to vote on.");
                     return;
-
-                IFederationMember collateralFederationMember = this.federationManager.GetCurrentFederationMember();
-
-                var poaConsensusFactory = this.network.Consensus.ConsensusFactory as PoAConsensusFactory;
+                }
 
                 foreach (Poll poll in pendingAddFederationMemberPolls)
                 {
+                    this.logger.LogDebug($"Attempting to cast outstanding vote on poll '{poll.Id}'.");
+
                     ChainedHeader pollStartHeader = this.chainIndexer.GetHeader(poll.PollStartBlockData.Hash);
                     ChainedHeader votingRequestHeader = pollStartHeader.Previous;
 
-                    // Already checked?
-                    if (this.joinFederationRequestMonitor.AlreadyChecked(votingRequestHeader.HashBlock))
-                        continue;
-
                     ChainedHeaderBlock blockData = this.consensusManager.GetBlockData(votingRequestHeader.HashBlock);
 
-                    this.joinFederationRequestMonitor.OnBlockConnected(new Bitcoin.EventBus.CoreEvents.BlockConnected(
-                        new ChainedHeaderBlock(blockData.Block, votingRequestHeader)));
+                    this.joinFederationRequestMonitor.OnBlockConnected(new BlockConnected(new ChainedHeaderBlock(blockData.Block, votingRequestHeader)));
                 }
 
                 return;
