@@ -187,7 +187,7 @@ namespace Stratis.Bitcoin.Features.PoA
             // by looking at the federation make-up at the time and whom mined last.
 
             ChainedHeader prevBlockMined = this.consensusManager.Tip;
-            while (prevBlockMined.Header.Time >= headerTime)
+            while (prevBlockMined.Header.Time > headerTime)
                 prevBlockMined = prevBlockMined.Previous;
 
             IFederationMember minerForBlock = this.federationHistory.GetFederationMemberForBlock(prevBlockMined);
@@ -195,11 +195,11 @@ namespace Stratis.Bitcoin.Features.PoA
 
             int offset = (int)((headerTime - prevBlockMined.Header.Time) / this.network.ConsensusOptions.TargetSpacingSeconds);
 
-            int minerForBlockIndex = modifiedFederation.TakeWhile(m => m.PubKey != lastMiner.PubKey).Count();
+            int minerForBlockIndex = federationAtBlock.TakeWhile(m => m.PubKey != minerForBlock.PubKey).Count();
 
-            int expectedIndex = (lastMinerIndex + offset) % modifiedFederation.Count;
+            int expectedIndex = (minerForBlockIndex + offset) % federationAtBlock.Count;
 
-            return modifiedFederation[expectedIndex];
+            return federationAtBlock[expectedIndex];
         }
 
         private void GatherMiningStatistics()
@@ -246,6 +246,19 @@ namespace Stratis.Bitcoin.Features.PoA
             PubKey pubKey;
             string pubKeyRepresentation;
 
+            void SetPubKeyRepresentation(bool producedBlockInLastRound)
+            {
+                if (pubKey == this.federationManager.CurrentFederationKey?.PubKey)
+                {
+                    pubKeyRepresentation = "█████";
+                    this.miningStatistics.ProducedBlockInLastRound = producedBlockInLastRound;
+                }
+                else
+                {
+                    pubKeyRepresentation = pubKey.ToHex().Substring(0, pubKeyTakeCharacters);
+                }
+            }
+
             // Iterate mining slots.
             for (int i = 0; i < maxDepth; i++, currentSlotTime -= this.network.ConsensusOptions.TargetSpacingSeconds)
             {
@@ -258,15 +271,7 @@ namespace Stratis.Bitcoin.Features.PoA
                 {
                     pubKey = this.federationHistory.GetFederationMemberForBlock(currentHeader)?.PubKey;
 
-                    if (pubKey == this.federationManager.CurrentFederationKey?.PubKey)
-                    {
-                        pubKeyRepresentation = "█████";
-                        this.miningStatistics.ProducedBlockInLastRound = true;
-                    }
-                    else
-                    {
-                        pubKeyRepresentation = pubKey.ToHex().Substring(0, pubKeyTakeCharacters);
-                    }
+                    SetPubKeyRepresentation(true);
 
                     if (includeHeight)
                         log.Append($"{currentHeader.Height.ToString().PadLeft(7)}:{ pubKeyRepresentation } ");
@@ -279,15 +284,7 @@ namespace Stratis.Bitcoin.Features.PoA
                 {
                     pubKey = DetermineExpectedMinerForTimestamp(currentSlotTime)?.PubKey;
 
-                    if (pubKey == this.federationManager.CurrentFederationKey?.PubKey)
-                    {
-                        pubKeyRepresentation = "█████";
-                        this.miningStatistics.ProducedBlockInLastRound = false;
-                    }
-                    else
-                    {
-                        pubKeyRepresentation = pubKey.ToHex().Substring(0, pubKeyTakeCharacters);
-                    }
+                    SetPubKeyRepresentation(false);
 
                     if (includeHeight)
                         log.Append($"---MISS:{ pubKeyRepresentation } ");
