@@ -195,7 +195,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
             int offset = (int)((headerTime - prevBlockMined.Header.Time) / this.network.ConsensusOptions.TargetSpacingSeconds);
 
-            int lastMinerIndex = modifiedFederation.TakeWhile(m => m.PubKey != lastMiner.PubKey).Count();
+            int minerForBlockIndex = modifiedFederation.TakeWhile(m => m.PubKey != lastMiner.PubKey).Count();
 
             int expectedIndex = (lastMinerIndex + offset) % modifiedFederation.Count;
 
