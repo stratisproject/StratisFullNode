@@ -84,6 +84,10 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
             if (votingDataList.Any(data => data.Key == VoteKey.AddFederationMember && !votesExpected.Any(p => data == p)))
                 PoAConsensusErrors.BlockUnexpectedVotes.Throw();
 
+            // Duplicate votes?
+            if (votingDataList.Any(p => votingDataList.Count(data => data == p) != 1))
+                PoAConsensusErrors.BlockDuplicateVotes.Throw();
+
             return Task.CompletedTask;
         }
     }

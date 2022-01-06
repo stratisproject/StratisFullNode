@@ -18,6 +18,8 @@ namespace Stratis.Bitcoin.Features.PoA
 
         public static ConsensusError BlockUnexpectedVotes => new ConsensusError("unexpected-block-votes", "unexpected block votes");
 
+        public static ConsensusError BlockDuplicateVotes => new ConsensusError("duplicate-block-votes", "duplicate block votes");
+
         public static ConsensusError TooManyVotingOutputs => new ConsensusError("too-many-voting-outputs", "there could be only 1 voting output");
 
         public static ConsensusError VotingDataInvalidFormat => new ConsensusError("invalid-voting-data-format", "voting data format is invalid");
