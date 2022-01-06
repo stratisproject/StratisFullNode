@@ -56,8 +56,13 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
             Transaction coinbase = context.ValidationContext.BlockToValidate.Transactions[0];
             byte[] votingDataBytes = this.votingDataEncoder.ExtractRawVotingData(coinbase);
 
-            if (votingDataBytes == null && votesExpected.Any())
-                PoAConsensusErrors.BlockMissingVotes.Throw();
+            if (votingDataBytes == null)
+            {
+                if (votesExpected.Any())
+                    PoAConsensusErrors.BlockMissingVotes.Throw();
+
+                return Task.CompletedTask;
+            }
 
             List<VotingData> votingDataList = this.votingDataEncoder.Decode(votingDataBytes);
 
