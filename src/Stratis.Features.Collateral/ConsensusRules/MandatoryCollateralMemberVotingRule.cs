@@ -15,7 +15,6 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
     {
         private VotingDataEncoder votingDataEncoder;
         private PoAConsensusRuleEngine ruleEngine;
-        private IFederationManager federationManager;
         private IFederationHistory federationHistory;
 
         [NoTrace]
@@ -23,45 +22,52 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         {
             this.votingDataEncoder = new VotingDataEncoder();
             this.ruleEngine = (PoAConsensusRuleEngine)this.Parent;
-            this.federationManager = this.ruleEngine.FederationManager;
             this.federationHistory = this.ruleEngine.FederationHistory;
 
             base.Initialize();
         }
 
+        public static List<VotingData> MinerAddMemberVotesExpected(PubKey blockMiner, int blockHeight, VotingManager votingManager, PoAConsensusOptions poaConsensusOptions)
+        {
+            bool IsTooOldToVoteOn(Poll poll) => poll.IsPending && (blockHeight - poll.PollStartBlockData.Height) >= poaConsensusOptions.PollExpiryBlocks;
+
+            // It is assumed that all non-expired pending "add member" polls are valid and should be voted on.
+            // We rely on checks elsewhere to ensure that no invalid "add member" polls (not having a valid voting request) are created.
+            return votingManager.GetPendingPolls()
+                .Where(p => p.VotingData.Key == VoteKey.AddFederationMember
+                    && p.PollStartBlockData != null
+                    && p.PollStartBlockData.Height <= blockHeight
+                    && !IsTooOldToVoteOn(p)
+                    && !p.PubKeysHexVotedInFavor.Any(pk => pk.PubKey == blockMiner.ToHex()))
+                .Select(p => p.VotingData)
+                .ToList();
+        }
+
         /// <summary>Checks that whomever mined this block is participating in any pending polls to vote-in new federation members.</summary>
         public override Task RunAsync(RuleContext context)
         {
-            // "AddFederationMember" polls, that were started at or before this height, that are still pending, which this node has voted in favor of.
-            List<Poll> pendingPolls = this.ruleEngine.VotingManager.GetPendingPolls()
-                .Where(p => p.VotingData.Key == VoteKey.AddFederationMember
-                    && p.PollStartBlockData != null
-                    && p.PollStartBlockData.Height <= context.ValidationContext.ChainedHeaderToValidate.Height
-                    && p.PubKeysHexVotedInFavor.Any(pk => pk.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex())).ToList();
+            var poaConsensusOptions = this.ruleEngine.ConsensusParams.Options as PoAConsensusOptions;
 
-            // Exit if there aren't any.
-            if (!pendingPolls.Any())
-                return Task.CompletedTask;
-
-            // Ignore any polls that the miner has already voted on.
             PubKey blockMiner = this.federationHistory.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate).PubKey;
-            pendingPolls = pendingPolls.Where(p => !p.PubKeysHexVotedInFavor.Any(pk => pk.PubKey == blockMiner.ToHex())).ToList();
 
-            // Exit if there is nothing remaining.
-            if (!pendingPolls.Any())
-                return Task.CompletedTask;
+            List<VotingData> votesExpected = MinerAddMemberVotesExpected(blockMiner, context.ValidationContext.ChainedHeaderToValidate.Height, this.ruleEngine.VotingManager, poaConsensusOptions);
 
-            // Verify that the miner is including all the missing votes now.
+            // Verify that the miner is including exactly the expected "add member" votes.
             Transaction coinbase = context.ValidationContext.BlockToValidate.Transactions[0];
             byte[] votingDataBytes = this.votingDataEncoder.ExtractRawVotingData(coinbase);
 
-            if (votingDataBytes == null)
+            if (votingDataBytes == null && votesExpected.Any())
                 PoAConsensusErrors.BlockMissingVotes.Throw();
 
-            // If any remaining polls are not found in the voting data list then throw a consenus error.
             List<VotingData> votingDataList = this.votingDataEncoder.Decode(votingDataBytes);
-            if (pendingPolls.Any(p => !votingDataList.Any(data => data == p.VotingData)))
+
+            // Missing "add member" votes?
+            if (votesExpected.Any(p => !votingDataList.Any(data => data == p)))
                 PoAConsensusErrors.BlockMissingVotes.Throw();
+
+            // Unexpected "add member" votes?
+            if (votingDataList.Any(data => data.Key == VoteKey.AddFederationMember && !votesExpected.Any(p => data == p)))
+                PoAConsensusErrors.BlockUnexpectedVotes.Throw();
 
             return Task.CompletedTask;
         }

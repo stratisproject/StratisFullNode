@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NBitcoin;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
+using Stratis.Bitcoin.Features.Collateral.ConsensusRules;
 using Stratis.Bitcoin.Features.Collateral.MempoolRules;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Utilities;
@@ -57,9 +58,8 @@ namespace Stratis.Features.Collateral
             if (!fullNodeBuilder.Network.Consensus.MempoolRules.Contains(typeof(VotingRequestValidationRule)))
                 fullNodeBuilder.Network.Consensus.MempoolRules.Add(typeof(VotingRequestValidationRule));
 
-            // Disabling this for now until we can ensure that the "stale/duplicate poll issue is resolved."
-            // if (!fullNodeBuilder.Network.Consensus.ConsensusRules.FullValidationRules.Contains(typeof(MandatoryCollateralMemberVotingRule)))
-            //    fullNodeBuilder.Network.Consensus.ConsensusRules.FullValidationRules.Add(typeof(MandatoryCollateralMemberVotingRule));
+            if (!fullNodeBuilder.Network.Consensus.ConsensusRules.FullValidationRules.Contains(typeof(MandatoryCollateralMemberVotingRule)))
+                fullNodeBuilder.Network.Consensus.ConsensusRules.FullValidationRules.Add(typeof(MandatoryCollateralMemberVotingRule));
 
             fullNodeBuilder.ConfigureFeature(features =>
             {
