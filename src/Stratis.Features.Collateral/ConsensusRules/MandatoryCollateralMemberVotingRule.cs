@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.PoA;
@@ -75,7 +76,10 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
             if (votingDataBytes == null)
             {
                 if (votesExpected.Any())
-                    PoAConsensusErrors.BlockMissingVotes.Throw();
+                {
+                    this.Logger.LogWarning("The block at height {0} has no voting data but some votes are expected.", context.ValidationContext.ChainedHeaderToValidate.Height);
+                    // PoAConsensusErrors.BlockMissingVotes.Throw();
+                }
 
                 return Task.CompletedTask;
             }
@@ -84,15 +88,30 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
 
             // Missing "add member" votes?
             if (votesExpected.Any(p => !votingDataList.Any(data => data == p)))
-                PoAConsensusErrors.BlockMissingVotes.Throw();
+            {
+                this.Logger.LogWarning("The block at height {0} has no voting data but votes are expected.", context.ValidationContext.ChainedHeaderToValidate.Height);
+
+                // TODO: Disabled temporarily.
+                // PoAConsensusErrors.BlockMissingVotes.Throw();
+            }
 
             // Unexpected "add member" votes?
             if (votingDataList.Any(data => data.Key == VoteKey.AddFederationMember && !votesExpected.Any(p => data == p)))
-                PoAConsensusErrors.BlockUnexpectedVotes.Throw();
+            {
+                this.Logger.LogWarning("The block at height {0} has AddMember votes that are unexpected.", context.ValidationContext.ChainedHeaderToValidate.Height);
+
+                // TODO: Disabled temporarily.
+                // PoAConsensusErrors.BlockUnexpectedVotes.Throw();
+            }
 
             // Duplicate votes?
             if (votingDataList.Any(p => votingDataList.Count(data => data == p) != 1))
-                PoAConsensusErrors.BlockDuplicateVotes.Throw();
+            {
+                this.Logger.LogWarning("The block at height {0} has duplicate votes.", context.ValidationContext.ChainedHeaderToValidate.Height);
+
+                // TODO: Disabled temporarily.
+                // PoAConsensusErrors.BlockDuplicateVotes.Throw();
+            }
 
             return Task.CompletedTask;
         }
