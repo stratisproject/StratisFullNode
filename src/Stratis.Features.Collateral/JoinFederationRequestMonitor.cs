@@ -10,6 +10,7 @@ using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.PoA.Features.Voting;
 using Stratis.Bitcoin.Signals;
 using Stratis.Features.Collateral.CounterChain;
+using Stratis.Features.PoA.Voting;
 
 namespace Stratis.Features.Collateral
 {
@@ -88,11 +89,7 @@ namespace Stratis.Features.Collateral
                     }
 
                     // Fill in the request.removalEventId (if any).
-                    Script collateralScript = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(request.CollateralMainchainAddress);
-
-                    var collateralFederationMember = new CollateralFederationMember(request.PubKey, false, request.CollateralAmount, collateralScript.GetDestinationAddress(this.counterChainNetwork).ToString());
-
-                    byte[] federationMemberBytes = consensusFactory.SerializeFederationMember(collateralFederationMember);
+                    byte[] federationMemberBytes = JoinFederationRequestService.GetFederationMemberBytes(request, this.network, this.counterChainNetwork);
 
                     // Nothing to do if already voted.
                     if (this.votingManager.AlreadyVotingFor(VoteKey.AddFederationMember, federationMemberBytes))
@@ -102,10 +99,7 @@ namespace Stratis.Features.Collateral
                     }
 
                     // Populate the RemovalEventId.
-                    Poll poll = this.votingManager.GetApprovedPolls().FirstOrDefault(x => x.IsExecuted &&
-                          x.VotingData.Key == VoteKey.KickFederationMember && x.VotingData.Data.SequenceEqual(federationMemberBytes));
-
-                    request.RemovalEventId = (poll == null) ? Guid.Empty : new Guid(poll.PollExecutedBlockData.Hash.ToBytes().TakeLast(16).ToArray());
+                    JoinFederationRequestService.SetLastRemovalEventId(request, federationMemberBytes, this.votingManager);
 
                     // Check the signature.
                     PubKey key = PubKey.RecoverFromMessage(request.SignatureMessage, request.Signature);
