@@ -60,7 +60,7 @@ namespace Stratis.Features.PoA.Voting
 
         public static void SetLastRemovalEventId(JoinFederationRequest joinRequest, byte[] federationMemberBytes, VotingManager votingManager)
         {
-            Poll poll = votingManager.GetApprovedPolls().OrderByDescending(p => p.PollStartBlockData.Height).FirstOrDefault(x => x.IsExecuted &&
+            Poll poll = votingManager.GetExecutedPolls().OrderByDescending(p => p.PollExecutedBlockData.Height).FirstOrDefault(x =>
                 x.VotingData.Key == VoteKey.KickFederationMember && x.VotingData.Data.SequenceEqual(federationMemberBytes));
 
             joinRequest.RemovalEventId = (poll == null) ? Guid.Empty : new Guid(poll.PollExecutedBlockData.Hash.ToBytes().TakeLast(16).ToArray());
