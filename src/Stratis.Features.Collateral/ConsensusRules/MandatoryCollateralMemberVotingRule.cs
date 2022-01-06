@@ -5,6 +5,7 @@ using NBitcoin;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
+using Stratis.Bitcoin.Utilities;
 using TracerAttributes;
 
 namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
@@ -17,6 +18,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         private PoAConsensusRuleEngine ruleEngine;
         private IFederationHistory federationHistory;
         private IFederationManager federationManager;
+        private HashHeightPair lastCheckPoint;
 
         [NoTrace]
         public override void Initialize()
@@ -25,6 +27,8 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
             this.ruleEngine = (PoAConsensusRuleEngine)this.Parent;
             this.federationHistory = this.ruleEngine.FederationHistory;
             this.federationManager = this.ruleEngine.FederationManager;
+            var lastCheckPoint = this.ruleEngine.Network.Checkpoints.LastOrDefault();
+            this.lastCheckPoint = (lastCheckPoint.Value != null) ? new HashHeightPair(lastCheckPoint.Value.Hash, lastCheckPoint.Key) : null;
 
             base.Initialize();
         }
@@ -50,7 +54,9 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         /// <summary>Checks that whomever mined this block is participating in any pending polls to vote-in new federation members.</summary>
         public override Task RunAsync(RuleContext context)
         {
-            // TODO: Disable in IBD?
+            // Only start validating at the last checkpoint block.
+            if (context.ValidationContext.ChainedHeaderToValidate.Height < (this.lastCheckPoint?.Height ?? 0))
+                return Task.CompletedTask;
 
             var poaConsensusOptions = this.ruleEngine.ConsensusParams.Options as PoAConsensusOptions;
 
