@@ -251,7 +251,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>
-        /// Tells us whether we have already voted to boot a federation member.
+        /// Tells us whether we have already voted on this federation member.
         /// </summary>
         public bool AlreadyVotingFor(VoteKey voteKey, byte[] federationMemberBytes)
         {
