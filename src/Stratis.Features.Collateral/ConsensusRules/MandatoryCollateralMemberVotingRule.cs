@@ -16,6 +16,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         private VotingDataEncoder votingDataEncoder;
         private PoAConsensusRuleEngine ruleEngine;
         private IFederationHistory federationHistory;
+        private IFederationManager federationManager;
 
         [NoTrace]
         public override void Initialize()
@@ -23,6 +24,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
             this.votingDataEncoder = new VotingDataEncoder();
             this.ruleEngine = (PoAConsensusRuleEngine)this.Parent;
             this.federationHistory = this.ruleEngine.FederationHistory;
+            this.federationManager = this.ruleEngine.FederationManager;
 
             base.Initialize();
         }
@@ -31,24 +33,32 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         {
             bool IsTooOldToVoteOn(Poll poll) => poll.IsPending && (blockHeight - poll.PollStartBlockData.Height) >= poaConsensusOptions.PollExpiryBlocks;
 
-            // It is assumed that all non-expired pending "add member" polls are valid and should be voted on.
+            // It is assumed that all scheduled and non-expired pending "add member" polls are valid and should be voted on.
             // We rely on checks elsewhere to ensure that no invalid "add member" polls (not having a valid voting request) are created.
-            return votingManager.GetPendingPolls()
+            IEnumerable<VotingData> res = votingManager.GetPendingPolls()
                 .Where(p => p.VotingData.Key == VoteKey.AddFederationMember
                     && p.PollStartBlockData != null
                     && p.PollStartBlockData.Height <= blockHeight
                     && !IsTooOldToVoteOn(p)
                     && !p.PubKeysHexVotedInFavor.Any(pk => pk.PubKey == blockMiner.ToHex()))
                 .Select(p => p.VotingData)
-                .ToList();
+                .Concat(votingManager.GetScheduledVotes().Where(data => data.Key == VoteKey.AddFederationMember));
+
+            return res.ToList();
         }
 
         /// <summary>Checks that whomever mined this block is participating in any pending polls to vote-in new federation members.</summary>
         public override Task RunAsync(RuleContext context)
         {
+            // TODO: Disable in IBD?
+
             var poaConsensusOptions = this.ruleEngine.ConsensusParams.Options as PoAConsensusOptions;
 
             PubKey blockMiner = this.federationHistory.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate).PubKey;
+
+            // Trust self.
+            if (this.federationManager.CurrentFederationKey.PubKey == blockMiner)
+                return Task.CompletedTask;
 
             List<VotingData> votesExpected = MinerAddMemberVotesExpected(blockMiner, context.ValidationContext.ChainedHeaderToValidate.Height, this.ruleEngine.VotingManager, poaConsensusOptions);
 
