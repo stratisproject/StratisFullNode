@@ -77,7 +77,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
             {
                 if (votesExpected.Any())
                 {
-                    this.Logger.LogWarning("The block at height {0} has no voting data but some votes are expected.", context.ValidationContext.ChainedHeaderToValidate.Height);
+                    this.Logger.LogWarning("The block at height {0} has no voting data but votes are expected.", context.ValidationContext.ChainedHeaderToValidate.Height);
                     // PoAConsensusErrors.BlockMissingVotes.Throw();
                 }
 
@@ -89,7 +89,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
             // Missing "add member" votes?
             if (votesExpected.Any(p => !votingDataList.Any(data => data == p)))
             {
-                this.Logger.LogWarning("The block at height {0} has no voting data but votes are expected.", context.ValidationContext.ChainedHeaderToValidate.Height);
+                this.Logger.LogWarning("The block at height {0} has missing 'AddMember' votes.", context.ValidationContext.ChainedHeaderToValidate.Height);
 
                 // TODO: Disabled temporarily.
                 // PoAConsensusErrors.BlockMissingVotes.Throw();
@@ -98,7 +98,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
             // Unexpected "add member" votes?
             if (votingDataList.Any(data => data.Key == VoteKey.AddFederationMember && !votesExpected.Any(p => data == p)))
             {
-                this.Logger.LogWarning("The block at height {0} has AddMember votes that are unexpected.", context.ValidationContext.ChainedHeaderToValidate.Height);
+                this.Logger.LogWarning("The block at height {0} has 'AddMember' votes that are unexpected.", context.ValidationContext.ChainedHeaderToValidate.Height);
 
                 // TODO: Disabled temporarily.
                 // PoAConsensusErrors.BlockUnexpectedVotes.Throw();
