@@ -177,8 +177,29 @@ namespace Stratis.Bitcoin.Features.PoA
                 return Task.CompletedTask;
             },
             this.nodeLifetime.ApplicationStopping,
-            repeatEvery: TimeSpans.Minute,
+            repeatEvery: TimeSpans.TenSeconds,
             startAfter: TimeSpans.TenSeconds);
+        }
+
+        private IFederationMember DetermineExpectedMinerForTimestamp(uint headerTime)
+        {
+            // When blocks are missing for given timestamps we have to determine whom was supposed to mine
+            // by looking at the federation make-up at the time and whom mined last.
+
+            ChainedHeader prevBlockMined = this.consensusManager.Tip;
+            while (prevBlockMined.Header.Time > headerTime)
+                prevBlockMined = prevBlockMined.Previous;
+
+            IFederationMember minerForBlock = this.federationHistory.GetFederationMemberForBlock(prevBlockMined);
+            List<IFederationMember> federationAtBlock = this.federationHistory.GetFederationForBlock(prevBlockMined);
+
+            int offset = (int)((headerTime - prevBlockMined.Header.Time) / this.network.ConsensusOptions.TargetSpacingSeconds);
+
+            int minerForBlockIndex = federationAtBlock.TakeWhile(m => m.PubKey != minerForBlock.PubKey).Count();
+
+            int expectedIndex = (minerForBlockIndex + offset) % federationAtBlock.Count;
+
+            return federationAtBlock[expectedIndex];
         }
 
         private void GatherMiningStatistics()
@@ -187,6 +208,17 @@ namespace Stratis.Bitcoin.Features.PoA
 
             log.AppendLine(">> Miner");
             log.AppendLine();
+
+            if (!this.federationManager.IsFederationMember)
+            {
+                log.AppendLine("Mining information is not available for non federation members.");
+                log.AppendLine("It is possible that your node was kicked from the federation due to inactivity.");
+                log.AppendLine();
+
+                this.miningStatisticsLog = log.ToString();
+
+                return;
+            }
 
             if (this.ibdState.IsInitialBlockDownload())
             {
@@ -209,49 +241,59 @@ namespace Stratis.Bitcoin.Features.PoA
 
             int maxDepth = modifiedFederation.Count;
 
+            // TODO: Make this a command line option.
+            bool includeHeight = false;
+
             log.AppendLine($"Mining information for the last { maxDepth } blocks.");
-            log.AppendLine("Note that '<' and '>' surrounds a slot where a miner didn't produce a block.");
+            if (includeHeight)
+                log.AppendLine("Note 'MISS' indicates a slot where a miner didn't produce a block.");
+            else
+                log.AppendLine("Note that '<' and '>' surrounds a slot where a miner didn't produce a block.");
 
-            uint timeHeader = (uint)this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp();
-            timeHeader -= timeHeader % this.network.ConsensusOptions.TargetSpacingSeconds;
-            if (timeHeader < currentHeader.Header.Time)
-                timeHeader += this.network.ConsensusOptions.TargetSpacingSeconds;
+            uint currentSlotTime = (uint)this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp();
+            currentSlotTime -= currentSlotTime % this.network.ConsensusOptions.TargetSpacingSeconds;
 
+            // Determine the public key of the current slot.
+            string pubKeyRepresentation;
             // Iterate mining slots.
-            for (int i = 0; i < maxDepth; i++)
+            for (int i = 0; i < maxDepth; i++, currentSlotTime -= this.network.ConsensusOptions.TargetSpacingSeconds)
             {
-                int headerSlot = (int)(timeHeader / this.network.ConsensusOptions.TargetSpacingSeconds) % modifiedFederation.Count;
-
-                PubKey pubKey = modifiedFederation[headerSlot].PubKey;
-
-                string pubKeyRepresentation = pubKey.ToString().Substring(0, pubKeyTakeCharacters);
-                if (pubKey == this.federationManager.CurrentFederationKey?.PubKey)
-                    pubKeyRepresentation = "█████";
+                // Find the chained header for this slot.
+                while (currentHeader.Header.Time > currentSlotTime)
+                    currentHeader = currentHeader.Previous;
 
                 // Mined in this slot?
-                if (timeHeader == currentHeader.Header.Time)
+                bool minedInThisSlot = currentHeader.Header.Time == currentSlotTime;
+
+                PubKey pubKey = (minedInThisSlot ?
+                    this.federationHistory.GetFederationMemberForBlock(currentHeader) :
+                    DetermineExpectedMinerForTimestamp(currentSlotTime)).PubKey;
+
+
+                if (pubKey == this.federationManager.CurrentFederationKey?.PubKey)
                 {
-                    log.Append($"[{ pubKeyRepresentation }] ");
-
-                    currentHeader = currentHeader.Previous;
-                    hitCount++;
-
-                    modifiedFederation = this.federationHistory.GetFederationForBlock(currentHeader);
-
-                    if (pubKey == this.federationManager.CurrentFederationKey?.PubKey)
-                        this.miningStatistics.ProducedBlockInLastRound = true;
+                    pubKeyRepresentation = "█████";
+                    this.miningStatistics.ProducedBlockInLastRound = minedInThisSlot;
                 }
                 else
                 {
-                    log.Append($"<{ pubKeyRepresentation }> ");
-
-                    if (pubKey == this.federationManager.CurrentFederationKey?.PubKey)
-                        this.miningStatistics.ProducedBlockInLastRound = false;
+                    pubKeyRepresentation = pubKey.ToHex().Substring(0, pubKeyTakeCharacters);
                 }
 
-                timeHeader -= this.network.ConsensusOptions.TargetSpacingSeconds;
+                if (includeHeight)
+                {
+                    string strHeight = minedInThisSlot ? currentHeader.Height.ToString().PadLeft(7) : "---MISS";
+                    log.Append($"{strHeight}:{ pubKeyRepresentation } ");
+                }
+                else
+                {
+                    log.Append(minedInThisSlot ? $"[{pubKeyRepresentation}] " : $"<{pubKeyRepresentation}> ");
+                }
 
-                if ((i % 20) == 19)
+                if (minedInThisSlot)
+                    hitCount++;
+
+                if (((i + 1) % (includeHeight ? 10 : 20)) == 0)
                     log.AppendLine();
             }
 
@@ -368,7 +410,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
                 if (timeNow <= this.consensusManager.Tip.Header.Time)
                 {
-                    await Task.Delay(TimeSpan.FromMilliseconds(500)).ConfigureAwait(false);
+                    await Task.Delay(TimeSpan.FromMilliseconds(100)).ConfigureAwait(false);
                     continue;
                 }
 
@@ -386,12 +428,10 @@ namespace Stratis.Bitcoin.Features.PoA
                     }
                 }
 
-                int estimatedWaitingTime = (int)(myTimestamp - timeNow) - 1;
-
-                if (estimatedWaitingTime <= 0)
+                if (myTimestamp <= (timeNow + 1))
                     return myTimestamp.Value;
 
-                await Task.Delay(TimeSpan.FromMilliseconds(500), this.cancellation.Token).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromMilliseconds(100), this.cancellation.Token).ConfigureAwait(false);
             }
 
             throw new OperationCanceledException();
@@ -401,7 +441,7 @@ namespace Stratis.Bitcoin.Features.PoA
         {
             ChainedHeader tip = this.consensusManager.Tip;
 
-            // Timestamp should always be greater than prev one.
+            // Timestamp should always be greater than prev one.            
             if (timestamp <= tip.Header.Time)
             {
                 // Can happen only when target spacing had crazy low value or key was compromised and someone is mining with our key.
