@@ -40,6 +40,47 @@ namespace Stratis.Features.Collateral
             return Task.CompletedTask;
         }
 
+        public static bool IsValid(JoinFederationRequest request, VotingManager votingManager, ILogger logger, Network network, Network counterChainNetwork)
+        {
+            // Skip if the member already exists.
+            if (votingManager.IsFederationMember(request.PubKey))
+                return false;
+
+
+            // Check if the collateral amount is valid.
+            decimal collateralAmount = request.CollateralAmount.ToDecimal(MoneyUnit.BTC);
+            var expectedCollateralAmount = CollateralFederationMember.GetCollateralAmountForPubKey((PoANetwork)network, request.PubKey);
+
+            if (collateralAmount != expectedCollateralAmount)
+            {
+                logger?.Debug("Ignoring voting collateral amount '{0}', when expecting '{1}'.", collateralAmount, expectedCollateralAmount);
+                return false;
+            }
+
+            // Fill in the request.removalEventId (if any).
+            byte[] federationMemberBytes = JoinFederationRequestService.GetFederationMemberBytes(request, network, counterChainNetwork);
+
+            // Nothing to do if already voted.
+            if (votingManager.AlreadyVotingFor(VoteKey.AddFederationMember, federationMemberBytes))
+            {
+                logger?.Debug("Skipping because already voted for adding '{0}'.", request.PubKey.ToHex());
+                return false;
+            }
+
+            // Populate the RemovalEventId.
+            JoinFederationRequestService.SetLastRemovalEventId(request, federationMemberBytes, votingManager);
+
+            // Check the signature.
+            PubKey key = PubKey.RecoverFromMessage(request.SignatureMessage, request.Signature);
+            if (key.Hash != request.CollateralMainchainAddress)
+            {
+                logger?.Debug("Invalid collateral address validation signature.");
+                return false;
+            }
+
+            return true;
+        }
+
         public void OnBlockConnected(BlockConnected blockConnectedData)
         {
             if (!(this.network.Consensus.ConsensusFactory is CollateralPoAConsensusFactory consensusFactory))
@@ -66,10 +107,6 @@ namespace Stratis.Features.Collateral
                     if (request == null)
                         continue;
 
-                    // Skip if the member already exists.
-                    if (this.votingManager.IsFederationMember(request.PubKey))
-                        continue;
-
                     // Only mining federation members vote to include new members.
                     modifiedFederation ??= this.votingManager.GetModifiedFederation(blockConnectedData.ConnectedBlock.ChainedHeader);
                     if (!modifiedFederation.Any(m => m.PubKey == this.federationManager.CurrentFederationKey.PubKey))
@@ -78,39 +115,13 @@ namespace Stratis.Features.Collateral
                         return;
                     }
 
-                    // Check if the collateral amount is valid.
-                    decimal collateralAmount = request.CollateralAmount.ToDecimal(MoneyUnit.BTC);
-                    var expectedCollateralAmount = CollateralFederationMember.GetCollateralAmountForPubKey((PoANetwork)this.network, request.PubKey);
-
-                    if (collateralAmount != expectedCollateralAmount)
-                    {
-                        this.logger.Debug("Ignoring voting collateral amount '{0}', when expecting '{1}'.", collateralAmount, expectedCollateralAmount);
+                    if (!IsValid(request, this.votingManager, this.logger, this.network, this.counterChainNetwork))
                         continue;
-                    }
-
-                    // Fill in the request.removalEventId (if any).
-                    byte[] federationMemberBytes = JoinFederationRequestService.GetFederationMemberBytes(request, this.network, this.counterChainNetwork);
-
-                    // Nothing to do if already voted.
-                    if (this.votingManager.AlreadyVotingFor(VoteKey.AddFederationMember, federationMemberBytes))
-                    {
-                        this.logger.Debug("Skipping because already voted for adding '{0}'.", request.PubKey.ToHex());
-                        continue;
-                    }
-
-                    // Populate the RemovalEventId.
-                    JoinFederationRequestService.SetLastRemovalEventId(request, federationMemberBytes, this.votingManager);
-
-                    // Check the signature.
-                    PubKey key = PubKey.RecoverFromMessage(request.SignatureMessage, request.Signature);
-                    if (key.Hash != request.CollateralMainchainAddress)
-                    {
-                        this.logger.Debug("Invalid collateral address validation signature for joining federation via transaction '{0}'", tx.GetHash());
-                        continue;
-                    }
 
                     // Vote to add the member.
                     this.logger.Debug("Voting to add federation member '{0}'.", request.PubKey.ToHex());
+
+                    byte[] federationMemberBytes = JoinFederationRequestService.GetFederationMemberBytes(request, this.network, this.counterChainNetwork);
 
                     this.votingManager.ScheduleVote(new VotingData()
                     {
