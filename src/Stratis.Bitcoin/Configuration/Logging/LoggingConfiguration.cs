@@ -193,7 +193,7 @@ namespace Stratis.Bitcoin.Configuration.Logging
                 ArchiveNumbering = ArchiveNumberingMode.Sequence,
                 ArchiveEvery = FileArchivePeriod.Day,
                 MaxArchiveFiles = 7,
-                Layout = "[${longdate:universalTime=true} ${threadid}${mdlc:item=id}] ${level:uppercase=true}: ${logger} ${message}",
+                Layout = "[${longdate:universalTime=true} ${threadid}${mdlc:item=id}] ${level:uppercase=true}: ${callsite} ${message}",
                 Encoding = Encoding.UTF8
             };
 
