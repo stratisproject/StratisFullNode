@@ -25,7 +25,7 @@ namespace Stratis.Bitcoin.Configuration.Logging
             string message = formatter(state, exception);
 
             NLog.LogEventInfo eventInfo = NLog.LogEventInfo.Create(logLevel.ToNLogLevel(), this.logger.Name, message, exception);
-            this.logger.Log(eventInfo);
+            this.logger.Log(typeof(Logger), eventInfo);
         }
 
         /// <inheritdoc />

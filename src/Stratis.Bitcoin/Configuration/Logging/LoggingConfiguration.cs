@@ -33,6 +33,10 @@ namespace Stratis.Bitcoin.Configuration.Logging
         /// <summary>Loads the NLog.config file from the <see cref="DataFolder"/>, if it exists.</summary>
         public static ILoggerFactory Create(LogSettings settings, DataFolder dataFolder)
         {
+            string configPath = Path.Combine(dataFolder.RootPath, LoggingConfiguration.NLogConfigFileName);
+            if (File.Exists(configPath))
+                NLog.LogManager.Configuration = new XmlLoggingConfiguration(configPath, true);
+
             return new CustomLoggerFactory();
         }
     }
@@ -193,7 +197,7 @@ namespace Stratis.Bitcoin.Configuration.Logging
                 ArchiveNumbering = ArchiveNumberingMode.Sequence,
                 ArchiveEvery = FileArchivePeriod.Day,
                 MaxArchiveFiles = 7,
-                Layout = "[${longdate:universalTime=true} ${threadid}${mdlc:item=id}] ${level:uppercase=true}: ${logger} ${message}",
+                Layout = "[${longdate:universalTime=true} ${threadid}${mdlc:item=id}] ${level:uppercase=true}: ${callsite} ${message}",
                 Encoding = Encoding.UTF8
             };
 
