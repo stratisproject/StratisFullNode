@@ -44,6 +44,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         protected readonly ChainState chainState;
         protected readonly IAsyncProvider asyncProvider;
         protected readonly Mock<IFullNode> fullNode;
+        protected readonly Mock<BlockStore.IBlockRepository> blockRepository;
 
         public PoATestsBase(TestPoANetwork network = null)
         {
@@ -52,12 +53,13 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             this.network = network ?? new TestPoANetwork();
             this.consensusOptions = this.network.ConsensusOptions;
             this.dBreezeSerializer = new DBreezeSerializer(this.network.Consensus.ConsensusFactory);
+            this.blockRepository = new Mock<BlockStore.IBlockRepository>();
 
             this.ChainIndexer = new ChainIndexer(this.network);
             IDateTimeProvider dateTimeProvider = new DateTimeProvider();
             this.consensusSettings = new ConsensusSettings(NodeSettings.Default(this.network));
 
-            (this.federationManager, this.federationHistory) = CreateFederationManager(this, this.network, this.loggerFactory, this.signals);
+            (this.federationManager, this.federationHistory) = CreateFederationManager(this, this.network, this.loggerFactory, this.signals, this.blockRepository.Object);
 
             this.slotsManager = new SlotsManager(this.network, this.federationManager, this.ChainIndexer, this.loggerFactory);
 
@@ -69,7 +71,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             this.resultExecutorMock = new Mock<IPollResultExecutor>();
 
             this.votingManager = new VotingManager(this.federationManager, this.resultExecutorMock.Object, new NodeStats(dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), dataFolder,
-                this.dBreezeSerializer, this.signals, this.network, this.ChainIndexer, null);
+                this.dBreezeSerializer, this.signals, this.network, this.ChainIndexer, this.blockRepository.Object);
 
             this.votingManager.Initialize(this.federationHistory);
 
@@ -85,7 +87,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             this.currentHeader = headers.Last();
         }
 
-        public static (IFederationManager federationManager, IFederationHistory federationHistory) CreateFederationManager(object caller, Network network, LoggerFactory loggerFactory, ISignals signals)
+        public static (IFederationManager federationManager, IFederationHistory federationHistory) CreateFederationManager(object caller, Network network, LoggerFactory loggerFactory, ISignals signals, BlockStore.IBlockRepository blockRepository)
         {
             string dir = TestBase.CreateTestDir(caller);
 
@@ -111,7 +113,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             var header = new BlockHeader();
             chainIndexerMock.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
             var votingManager = new VotingManager(federationManager, new Mock<IPollResultExecutor>().Object,
-                new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, signals, network, chainIndexerMock.Object, null, null);
+                new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, signals, network, chainIndexerMock.Object, blockRepository, null);
 
             var federationHistory = new Mock<IFederationHistory>();
             federationHistory.Setup(x => x.GetFederationMemberForBlock(It.IsAny<ChainedHeader>())).Returns<ChainedHeader>((chainedHeader) =>
@@ -136,7 +138,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
         public static (IFederationManager federationManager, IFederationHistory federationHistory) CreateFederationManager(object caller)
         {
-            return CreateFederationManager(caller, new TestPoANetwork(), new ExtendedLoggerFactory(), new Signals.Signals(new LoggerFactory(), null));
+            return CreateFederationManager(caller, new TestPoANetwork(), new ExtendedLoggerFactory(), new Signals.Signals(new LoggerFactory(), null), null);
         }
 
         public void InitRule(ConsensusRuleBase rule)
