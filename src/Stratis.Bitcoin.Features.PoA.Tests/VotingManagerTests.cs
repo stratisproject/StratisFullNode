@@ -70,6 +70,16 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
                 return (hash == votingRequest.ChainedHeader.HashBlock) ? votingRequest.Block : blocks.FirstOrDefault(b => b.ChainedHeader.HashBlock == hash)?.Block;
             });
 
+            // Simulate JoinFederationRequestMonitor.
+            // Create a pending poll so that the scheduled vote is not "sanitized" away.
+            this.votingManager.PollsRepository.WithTransaction(transaction =>
+            {
+                this.votingManager.CreatePendingPoll(transaction, votingData, votingRequest.ChainedHeader);
+                transaction.Commit();
+            });
+
+            this.votingManager.ScheduleVote(votingData);
+
             this.TriggerOnBlockConnected(votingRequest);
 
             for (int i = 0; i < votesRequired; i++)
@@ -107,6 +117,16 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
                 return (hash == votingRequest.ChainedHeader.HashBlock) ? votingRequest.Block : blocks.FirstOrDefault(b => b.ChainedHeader.HashBlock == hash)?.Block;
             });
 
+            // Simulate JoinFederationRequestMonitor.
+            // Create a pending poll so that the scheduled vote is not "sanitized" away.
+            this.votingManager.PollsRepository.WithTransaction(transaction =>
+            {
+                this.votingManager.CreatePendingPoll(transaction, votingData, votingRequest.ChainedHeader);
+                transaction.Commit();
+            });
+
+            this.votingManager.ScheduleVote(votingData);
+
             this.TriggerOnBlockConnected(votingRequest);
 
             for (int i = 0; i < votesRequired; i++)
@@ -123,7 +143,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             // Now we have 1 finished and 0 pending for the same data.
             Assert.Single(this.votingManager.GetApprovedPolls());
-            Assert.Single(this.votingManager.GetPendingPolls());
+            Assert.Empty(this.votingManager.GetPendingPolls());
 
             // This previously caused an error because of Single() being used.
             this.TriggerOnBlockDisconnected(blockToDisconnect);
@@ -179,12 +199,22 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
                 return (hash == votingRequest.ChainedHeader.HashBlock) ? votingRequest.Block : blocks.FirstOrDefault(b => b.ChainedHeader.HashBlock == hash)?.Block;
             });
 
+            // Simulate JoinFederationRequestMonitor.
+            // Create a pending poll so that the scheduled vote is not "sanitized" away.
+            this.votingManager.PollsRepository.WithTransaction(transaction =>
+            {
+                this.votingManager.CreatePendingPoll(transaction, votingData, votingRequest.ChainedHeader);
+                transaction.Commit();
+            });
+
+            this.votingManager.ScheduleVote(votingData);
+
             this.TriggerOnBlockConnected(votingRequest);
             this.TriggerOnBlockConnected(blocks[0]);
             Assert.Single(this.votingManager.GetPendingPolls());
 
             // Advance the chain so that the poll expires.
-            blocks = PoaTestHelper.GetEmptyBlocks(this.ChainIndexer, this.network, 10);
+            blocks = PoaTestHelper.GetEmptyBlocks(this.ChainIndexer, this.network, 9);
 
             for (int i = 0; i < blocks.Length; i++)
             {
@@ -195,7 +225,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             Assert.Single(this.votingManager.GetExpiredPolls());
 
             // Fake a rewind via block disconnected (this will generally happen via a re-org)
-            this.TriggerOnBlockDisconnected(blocks[9]);
+            this.TriggerOnBlockDisconnected(blocks[8]);
 
             // Assert that the poll was "un-expired".
             Assert.Single(this.votingManager.GetPendingPolls());
@@ -227,12 +257,22 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
                 return (hash == votingRequest.ChainedHeader.HashBlock) ? votingRequest.Block : blocks.FirstOrDefault(b => b.ChainedHeader.HashBlock == hash)?.Block;
             });
 
+            // Simulate JoinFederationRequestMonitor.
+            // Create a pending poll so that the scheduled vote is not "sanitized" away.
+            this.votingManager.PollsRepository.WithTransaction(transaction =>
+            {
+                this.votingManager.CreatePendingPoll(transaction, votingData, votingRequest.ChainedHeader);
+                transaction.Commit();
+            });
+
+            this.votingManager.ScheduleVote(votingData);
+
             this.TriggerOnBlockConnected(votingRequest);
             this.TriggerOnBlockConnected(blocks[0]);
             Assert.Single(this.votingManager.GetPendingPolls());
 
             // Advance the chain so that the poll expires.
-            blocks = PoaTestHelper.GetEmptyBlocks(this.ChainIndexer, this.network, 10);
+            blocks = PoaTestHelper.GetEmptyBlocks(this.ChainIndexer, this.network, 9);
             for (int i = 0; i < blocks.Length; i++)
             {
                 this.TriggerOnBlockConnected(blocks[i]);

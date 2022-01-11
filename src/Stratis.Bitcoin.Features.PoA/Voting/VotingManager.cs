@@ -721,7 +721,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     // Otherwise, get the most recent poll. There could currently be unlimited of these, though they're harmless.
                     if (targetPoll == null)
                     {
-                        targetPoll = this.polls.Last(x => x.VotingData == votingData);
+                        targetPoll = this.polls.LastOrDefault(x => x.VotingData == votingData);
+
+                        // Maybe was an ignored vote, so it may have not created a poll.
+                        if (targetPoll == null)
+                            continue;
                     }
 
                     this.logger.LogDebug("Reverting poll voting in favor: '{0}'.", targetPoll);
