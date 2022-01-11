@@ -414,7 +414,7 @@ namespace Stratis.Bitcoin.Features.PoA
                     continue;
                 }
 
-                if (myTimestamp == null)
+                if (myTimestamp == null || this.consensusManager.Tip.Height >= this.network.ConsensusOptions.GetMiningTimestampV2ActivationHeight)
                 {
                     try
                     {
