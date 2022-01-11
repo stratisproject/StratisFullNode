@@ -95,6 +95,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             var nodeSettings = new NodeSettings(network, args: new string[] { $"-datadir={dir}" });
 
+            // Get the secret key for public key: 029528e83f065153d7fa655e73a07fc96fc759162f1e2c8936fa592f2942f39af0
             Key federationKey = new Mnemonic("lava frown leave wedding virtual ghost sibling able mammal liar wide wisdom").DeriveExtKey().PrivateKey;
             new KeyTool(nodeSettings.DataFolder).SavePrivateKey(federationKey);
 
@@ -166,7 +167,8 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             {
                 genesisFederationMembers = new List<IFederationMember>()
                 {
-                    new FederationMember(new PubKey("02d485fc5ae101c2780ff5e1f0cb92dd907053266f7cf3388eb22c5a4bd266ca2e")),
+                    // See PoATestsBase.CreateFederationManager for why this first PubKey must exist.
+                    new FederationMember(new PubKey("029528e83f065153d7fa655e73a07fc96fc759162f1e2c8936fa592f2942f39af0")),
                     new FederationMember(new PubKey("026ed3f57de73956219b85ef1e91b3b93719e2645f6e804da4b3d1556b44a477ef")),
                     new FederationMember(new PubKey("03895a5ba998896e688b7d46dd424809b0362d61914e1432e265d9539fe0c3cac0")),
                     new FederationMember(new PubKey("020fc3b6ac4128482268d96f3bd911d0d0bf8677b808eaacd39ecdcec3af66db34")),
