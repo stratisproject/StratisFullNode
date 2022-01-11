@@ -414,19 +414,16 @@ namespace Stratis.Bitcoin.Features.PoA
                     continue;
                 }
 
-                if (myTimestamp == null || this.consensusManager.Tip.Height >= this.network.ConsensusOptions.GetMiningTimestampV2ActivationHeight)
+                try
                 {
-                    try
-                    {
-                        myTimestamp = this.slotsManager.GetMiningTimestamp(timeNow);
-                    }
-                    catch (NotAFederationMemberException)
-                    {
-                        this.logger.LogWarning("This node is no longer a federation member!");
-
-                        throw new OperationCanceledException();
-                    }
+                    myTimestamp = this.slotsManager.GetMiningTimestamp(timeNow);
                 }
+                catch (NotAFederationMemberException)
+                {
+                    this.logger.LogWarning("This node is no longer a federation member!");
+
+                    throw new OperationCanceledException();
+                }                
 
                 if (myTimestamp <= (timeNow + 1))
                     return myTimestamp.Value;
