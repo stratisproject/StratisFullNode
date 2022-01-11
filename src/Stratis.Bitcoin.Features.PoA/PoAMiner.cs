@@ -402,8 +402,6 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private async Task<uint> WaitUntilMiningSlotAsync()
         {
-            uint? myTimestamp = null;
-
             while (!this.cancellation.IsCancellationRequested)
             {
                 uint timeNow = (uint)this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp();
@@ -416,7 +414,11 @@ namespace Stratis.Bitcoin.Features.PoA
 
                 try
                 {
-                    myTimestamp = this.slotsManager.GetMiningTimestamp(timeNow);
+                    uint myTimestamp = this.slotsManager.GetMiningTimestamp(timeNow);
+
+                    if (myTimestamp <= timeNow)
+                        return myTimestamp;
+
                 }
                 catch (NotAFederationMemberException)
                 {
@@ -424,9 +426,6 @@ namespace Stratis.Bitcoin.Features.PoA
 
                     throw new OperationCanceledException();
                 }                
-
-                if (myTimestamp <= (timeNow + 1))
-                    return myTimestamp.Value;
 
                 await Task.Delay(TimeSpan.FromMilliseconds(100), this.cancellation.Token).ConfigureAwait(false);
             }
