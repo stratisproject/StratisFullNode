@@ -135,8 +135,8 @@ namespace Stratis.Bitcoin.Base
 
         public class ChainRepositoryData : IBitcoinSerializable
         {
-            public uint256 Hash;
-            public byte[] Work;
+            private uint256 hash;
+            private byte[] work;
 
             public ChainRepositoryData()
             {
@@ -144,19 +144,19 @@ namespace Stratis.Bitcoin.Base
 
             public void ReadWrite(BitcoinStream stream)
             {
-                stream.ReadWrite(ref this.Hash);
+                stream.ReadWrite(ref this.hash);
                 if (stream.Serializing)
                 {
-                    int len = this.Work.Length;
+                    int len = this.work.Length;
                     stream.ReadWrite(ref len);
-                    stream.ReadWrite(ref this.Work);
+                    stream.ReadWrite(ref this.work);
                 }
                 else
                 {
                     int len = 0;
                     stream.ReadWrite(ref len);
-                    this.Work = new byte[len];
-                    stream.ReadWrite(ref this.Work);
+                    this.work = new byte[len];
+                    stream.ReadWrite(ref this.work);
                 }
             }
         }
