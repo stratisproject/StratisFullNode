@@ -131,8 +131,8 @@ namespace Stratis.Sidechains.Networks
                 VotingManagerV2ActivationHeight = 1_999_500,
                 Release1100ActivationHeight = 2_796_000,
                 PollExpiryBlocks = 450, // 2 hours,
-                GetMiningTimestampV2ActivationHeight = 2_800_000,
-                ContractSerializerV2ActivationHeight = 2842681
+                GetMiningTimestampV2ActivationHeight = 3_000_000, // 15 January 2022
+                ContractSerializerV2ActivationHeight = 2_842_681
             };
 
             var buriedDeployments = new BuriedDeploymentsArray
