@@ -293,7 +293,7 @@ namespace Stratis.Bitcoin.Consensus
         public abstract HashHeightPair GetBlockHash();
 
         /// <inheritdoc />
-        public abstract Task<RewindState> RewindAsync();
+        public abstract Task<RewindState> RewindAsync(HashHeightPair target);
 
         [NoTrace]
         public T GetRule<T>() where T : ConsensusRuleBase

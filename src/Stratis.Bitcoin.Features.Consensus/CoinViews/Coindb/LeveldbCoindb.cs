@@ -293,7 +293,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         }
 
         /// <inheritdoc />
-        public HashHeightPair Rewind()
+        public HashHeightPair Rewind(HashHeightPair target)
         {
             using (var batch = new WriteBatch())
             {
