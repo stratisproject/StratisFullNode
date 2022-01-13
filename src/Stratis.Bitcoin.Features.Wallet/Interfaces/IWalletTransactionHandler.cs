@@ -2,6 +2,9 @@
 
 namespace Stratis.Bitcoin.Features.Wallet.Interfaces
 {
+    /// <summary>
+    /// A handler that has various functionalities related to transaction operations.
+    /// </summary>
     public interface IWalletTransactionHandler
     {
         /// <summary>

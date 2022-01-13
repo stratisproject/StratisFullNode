@@ -52,6 +52,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// <param name="mempoolBehavior">Memory pool node behavior for managing attached node messages.</param>
         /// <param name="mempoolManager">Memory pool manager for managing external access to memory pool.</param>
         /// <param name="loggerFactory">Logger factory for creating instance logger.</param>
+        /// <param name="nodeStats">See <see cref="INodeStats"/>.</param>
         public MempoolFeature(
             IConnectionManager connectionManager,
             MempoolSignaled mempoolSignaled,
@@ -142,7 +143,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// Include the memory pool feature and related services in the full node.
         /// </summary>
         /// <param name="fullNodeBuilder">Full node builder.</param>
-        /// <returns>Full node builder.</returns>
+        /// <returns>The full node builder.</returns>
         public static IFullNodeBuilder UseMempool(this IFullNodeBuilder fullNodeBuilder)
         {
             LoggingConfiguration.RegisterFeatureNamespace<MempoolFeature>("mempool");

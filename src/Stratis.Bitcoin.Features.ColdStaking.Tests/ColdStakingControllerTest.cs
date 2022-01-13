@@ -810,6 +810,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
         /// Adds a spendable cold staking transaction to a wallet.
         /// </summary>
         /// <param name="wallet">Wallet to add the transaction to.</param>
+        /// <param name="script">Set to <c>true</c> to output to the <see cref="WitScriptId.ScriptPubKey"/>.</param>
         /// <returns>The spendable transaction that was added to the wallet.</returns>
         private Transaction AddSpendableColdstakingTransactionToWallet(Wallet.Wallet wallet, bool script = false)
         {
@@ -855,6 +856,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
         /// Adds a spendable cold staking transaction to a normal account, as oppose to dedicated special account.
         /// </summary>
         /// <param name="wallet">Wallet to add the transaction to.</param>
+        /// <param name="script">Set to <c>true</c> to output to the <see cref="WitScriptId.ScriptPubKey"/>.</param>
         /// <returns>The spendable transaction that was added to the wallet.</returns>
         private Transaction AddSpendableColdstakingTransactionToNormalWallet(Wallet.Wallet wallet, bool script = false)
         {

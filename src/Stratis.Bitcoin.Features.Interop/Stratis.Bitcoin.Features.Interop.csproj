@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>    
-    <Version>1.1.1.0</Version>
+    <Version>1.2.0.0</Version>
     <Authors>Stratis Group Ltd.</Authors>
     <PackageId>Stratis.Features.Interop</PackageId>
     <Product>Stratis.Features.Interop</Product>
@@ -10,6 +10,7 @@
 
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DocumentationFile>bin\Debug\netcoreapp3.1\Stratis.Bitcoin.Features.Interop.xml</DocumentationFile>
+    <NoWarn>1701;1702;1591</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CSharpFunctionalExtensions" Version="1.10.0" />

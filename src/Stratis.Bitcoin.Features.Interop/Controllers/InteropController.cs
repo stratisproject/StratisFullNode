@@ -5,9 +5,10 @@ using System.Net;
 using System.Numerics;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.DataEncoders;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
 using Stratis.Bitcoin.Features.Interop.Models;
 using Stratis.Bitcoin.Features.PoA;
@@ -83,7 +84,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -123,7 +124,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -159,7 +160,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -187,7 +188,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
 
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
@@ -223,7 +224,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
 
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
@@ -259,7 +260,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
 
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
@@ -292,7 +293,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
 
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
@@ -330,7 +331,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
 
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
@@ -374,7 +375,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
 
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
@@ -416,7 +417,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
 
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
@@ -446,7 +447,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
 
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
@@ -486,7 +487,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception setting conversion request '{0}' to {1} : {2}.", requestId, e.ToString(), ConversionRequestStatus.OriginatorNotSubmitted);
+                this.logger.LogError("Exception setting conversion request '{0}' to {1} : {2}.", requestId, e.ToString(), ConversionRequestStatus.OriginatorNotSubmitted);
 
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
             }
@@ -510,7 +511,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception setting conversion request '{0}' to {1} : {2}.", requestId, e.ToString(), ConversionRequestStatus.NotOriginator);
+                this.logger.LogError("Exception setting conversion request '{0}' to {1} : {2}.", requestId, e.ToString(), ConversionRequestStatus.NotOriginator);
 
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
             }
@@ -530,13 +531,13 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             try
             {
                 this.conversionRequestRepository.ReprocessBurnRequest(model.RequestId, model.BlockHeight, ConversionRequestStatus.Unprocessed);
-                this.logger.Info($"Burn request '{model.RequestId}' will be reprocessed at height {model.BlockHeight}.");
+                this.logger.LogInformation($"Burn request '{model.RequestId}' will be reprocessed at height {model.BlockHeight}.");
 
                 return this.Json($"Burn request '{model.RequestId}' will be reprocessed at height {model.BlockHeight}.");
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception setting burn request '{0}' to be reprocessed : {1}.", model.RequestId, e.ToString());
+                this.logger.LogError("Exception setting burn request '{0}' to be reprocessed : {1}.", model.RequestId, e.ToString());
 
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
             }
@@ -561,7 +562,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception manual pushing vote for conversion request '{0}' : {1}.", model.RequestId, e.ToString());
+                this.logger.LogError("Exception manual pushing vote for conversion request '{0}' : {1}.", model.RequestId, e.ToString());
 
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
             }

@@ -230,6 +230,12 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
         /// <param name="conn">Connection to the database engine.</param>
         /// <param name="walletId">The wallet we are retrieving history for.</param>
         /// <param name="accountIndex">The account index in question.</param>
+        /// <param name="limit">The maximum number of history items to return.</param>
+        /// <param name="offset">The number of history items to skip.</param>
+        /// <param name="txId">A transaction id filter or a null string.</param>
+        /// <param name="address">An address filter or a null string.</param>
+        /// <param name="forSmartContracts">Set to <c>true</c> if its a smart contract history.</param>
+        /// <param name="forCirrus">Set to <c>true</c> if its for Cirrus.</param>
         /// <returns>An unpaged set of wallet transaction history items</returns>
         internal static IEnumerable<FlattenedHistoryItem> GetHistory(DBConnection conn, int walletId, int accountIndex, int limit, int offset, string txId, string address, bool forSmartContracts = false, bool forCirrus = false)
         {

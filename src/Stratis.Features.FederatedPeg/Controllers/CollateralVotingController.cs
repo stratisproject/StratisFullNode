@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Utilities;
@@ -32,8 +33,11 @@ namespace Stratis.Features.FederatedPeg.Controllers
             this.logger = LogManager.GetCurrentClassLogger();
         }
 
+        /// <summary>Schedules a vote to kick a federation member.</summary>
+        /// <param name="request">See <see cref="CollateralFederationMemberModel"/>.</param>
         /// <response code="400">Not yet implemented</response>
         /// <response code="500">Request is null</response>
+        /// <returns>See <see cref="cref="IActionResult"/>.</returns>
         [Route("schedulevote-kickfedmember")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -74,7 +78,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "There was a problem executing a command.", e.ToString());
             }
         }

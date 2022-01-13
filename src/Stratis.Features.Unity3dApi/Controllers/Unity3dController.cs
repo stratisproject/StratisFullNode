@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -71,9 +71,12 @@ namespace Stratis.Features.Unity3dApi.Controllers
 
         private readonly ILocalExecutor localExecutor;
 
+        private readonly INFTTransferIndexer NFTTransferIndexer;
+
         public Unity3dController(ILoggerFactory loggerFactory, IAddressIndexer addressIndexer,
-            IBlockStore blockStore, IChainState chainState, Network network, ICoinView coinView, WalletController walletController, ChainIndexer chainIndexer, IStakeChain stakeChain = null,
-            IContractPrimitiveSerializer primitiveSerializer = null, IStateRepositoryRoot stateRoot = null, IContractAssemblyCache contractAssemblyCache = null, 
+            IBlockStore blockStore, IChainState chainState, Network network, ICoinView coinView, WalletController walletController, ChainIndexer chainIndexer, INFTTransferIndexer NFTTransferIndexer,
+            IStakeChain stakeChain = null,
+            IContractPrimitiveSerializer primitiveSerializer = null, IStateRepositoryRoot stateRoot = null, IContractAssemblyCache contractAssemblyCache = null,
             IReceiptRepository receiptRepository = null, ISmartContractTransactionService smartContractTransactionService = null, ILocalExecutor localExecutor = null)
         {
             Guard.NotNull(loggerFactory, nameof(loggerFactory));
@@ -86,6 +89,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
             this.walletController = Guard.NotNull(walletController, nameof(walletController));
             this.chainIndexer = Guard.NotNull(chainIndexer, nameof(chainIndexer));
             this.stakeChain = stakeChain;
+            this.NFTTransferIndexer = NFTTransferIndexer;
 
             this.primitiveSerializer = primitiveSerializer;
             this.stateRoot = stateRoot;
@@ -98,6 +102,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// <summary>
         /// Gets UTXOs for specified address.
         /// </summary>
+        /// <returns>See <see cref="GetUTXOsResponseModel"/>.</returns>
         /// <param name="address">Address to get UTXOs for.</param>
         [Route("getutxosforaddress")]
         [HttpGet]
@@ -135,7 +140,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
 
             foreach (List<Transaction> txList in blocks.Select(x => x.Transactions))
             {
-                foreach (Transaction transaction in txList.Where(x => !x.IsCoinBase && !x.IsCoinStake))
+                foreach (Transaction transaction in txList)
                 {
                     for (int i = 0; i < transaction.Outputs.Count; i++)
                     {
@@ -155,6 +160,8 @@ namespace Stratis.Features.Unity3dApi.Controllers
                 UTXOs = new List<UTXOModel>()
             };
 
+            Money totalM = Money.Zero;
+
             foreach (KeyValuePair<OutPoint, UnspentOutput> unspentOutput in fetchCoinsResponse.UnspentOutputs)
             {
                 if (unspentOutput.Value.Coins == null)
@@ -162,9 +169,13 @@ namespace Stratis.Features.Unity3dApi.Controllers
 
                 OutPoint outPoint = unspentOutput.Key;
                 Money value = unspentOutput.Value.Coins.TxOut.Value;
+                totalM += value;
 
                 response.UTXOs.Add(new UTXOModel(outPoint, value));
             }
+
+            if (totalM != balanceSat)
+                this.logger.LogError(string.Format("Should be {0}, is: {1}", new Money(balanceSat), totalM));
 
             return response;
         }
@@ -178,18 +189,30 @@ namespace Stratis.Features.Unity3dApi.Controllers
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        public long GetAddressBalance(string address)
+        public IActionResult GetAddressBalance(string address)
         {
+            long money = -1;
             try
             {
-                AddressBalancesResult result = this.addressIndexer.GetAddressBalances(new []{address}, 1);
-
-                return result.Balances.First().Balance.Satoshi;
+                AddressBalancesResult result = this.addressIndexer.GetAddressBalances(new[] { address }, 1);
+                money = result.Balances.First().Balance.Satoshi;
             }
             catch (Exception e)
             {
                 this.logger.LogError("Exception occurred: {0}", e.ToString());
-                return -1;
+            }
+
+            if (this.Request.Headers["Accept"] == "application/json")
+            {
+                GetBalanceResponseModel response = new GetBalanceResponseModel()
+                {
+                    Balance = money
+                };
+                return Ok(response);
+            }
+            else
+            {
+                return Ok(money);
             }
         }
 
@@ -285,10 +308,10 @@ namespace Stratis.Features.Unity3dApi.Controllers
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.Forbidden)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public async Task<IActionResult> SendTransaction([FromBody] SendTransactionRequest request,
+        public async Task<IActionResult> SendTransactionAsync([FromBody] SendTransactionRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            return await this.walletController.SendTransaction(request, cancellationToken).ConfigureAwait(false);
+            return await this.walletController.SendTransactionAsync(request, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -344,7 +367,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
 
             if (result.IsValid)
             {
-                var scriptPubKey = BitcoinAddress.Create(address, this.network).ScriptPubKey;
+                NBitcoin.Script scriptPubKey = BitcoinAddress.Create(address, this.network).ScriptPubKey;
                 result.ScriptPubKey = scriptPubKey.ToHex();
                 result.IsWitness = scriptPubKey.IsWitness(this.network);
             }
@@ -452,7 +475,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// <returns>The receipt for the smart contract.</returns> 
         /// <response code="200">Returns transaction receipt</response>
         /// <response code="400">Transaction not found</response>
-        [Route("api/[controller]/receipt")]
+        [Route("receipt")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -492,10 +515,11 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// </summary> 
         /// <param name="request">An object containing the necessary parameters to build the transaction.</param> 
         /// <results>The result of the local call to the smart contract method.</results>
+        /// <returns>The <see cref="IActionResult"/>.</returns>
         /// <response code="200">Returns call response</response>
         /// <response code="400">Invalid request</response>
         /// <response code="500">Unable to deserialize method parameters</response>
-        [Route("api/[controller]/local-call")]
+        [Route("local-call")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -549,18 +573,55 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// <param name="toBlock">The block number where searching finishes.</param>
         /// 
         /// <returns>A list of receipts for transactions relating to a specific smart contract and a specific event in that smart contract.</returns>
-        [Route("api/[controller]/receipt-search")]
+        [Route("receipt-search")]
         [HttpGet]
-        public async Task<List<ReceiptResponse>> ReceiptSearchAPI([FromQuery] string contractAddress, [FromQuery] string eventName, [FromQuery] List<string> topics = null, [FromQuery] int fromBlock = 0, [FromQuery] int? toBlock = null)
+        public Task<List<ReceiptResponse>> ReceiptSearchAPI([FromQuery] string contractAddress, [FromQuery] string eventName, [FromQuery] List<string> topics = null, [FromQuery] int fromBlock = 0, [FromQuery] int? toBlock = null)
         {
             List<ReceiptResponse> result = this.smartContractTransactionService.ReceiptSearch(contractAddress, eventName, topics, fromBlock, toBlock);
 
-            return result;
+            return Task.FromResult(result);
+        }
+        
+        [Route("watch-nft-contract")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public void WatchNFTContract([FromQuery] string contractAddress)
+        {
+            this.NFTTransferIndexer.WatchNFTContract(contractAddress);
+        }
+        
+        [Route("get-watched-nft-contracts")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public List<string> GetWatchedNFTContracts()
+        {
+            return this.NFTTransferIndexer.GetWatchedNFTContracts();
+        }
+        
+        [Route("get-owned-nfts")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public OwnedNFTsModel GetOwnedNFTs([FromQuery] string ownerAddress)
+        {
+            return this.NFTTransferIndexer.GetOwnedNFTs(ownerAddress);
+        }
+        
+        [Route("get-all-nft-owners-by-contract-address")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public NFTContractModel GetAllNFTOwnersByContractAddress([FromQuery] string contractAddress)
+        {
+            return this.NFTTransferIndexer.GetAllNFTOwnersByContractAddress(contractAddress);
         }
 
         /// <summary>
         /// If the call is to a property, rewrites the method name to the getter method's name.
         /// </summary>
+        /// <param name="request">See <see cref="LocalCallContractRequest"/>.</param>
         private void RewritePropertyGetterName(LocalCallContractRequest request)
         {
             // Don't rewrite if there are params

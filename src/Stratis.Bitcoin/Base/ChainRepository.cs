@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
@@ -23,7 +24,7 @@ namespace Stratis.Bitcoin.Base
     public class ChainRepository : IChainRepository
     {
         private readonly IChainStore chainStore;
-        private readonly Logger logger;
+        private readonly ILogger logger;
         private readonly ISignals signals;
 
         private BlockLocator locator;
@@ -71,7 +72,7 @@ namespace Stratis.Bitcoin.Base
                         if (this.signals != null)
                             this.signals.Publish(new FullNodeEvent() { Message = $"Loading chain at height {height}.", State = FullNodeState.Initializing.ToString() });
 
-                        this.logger.Info($"Loading chain at height {height}.");
+                        this.logger.LogInformation($"Loading chain at height {height}.");
                     }
 
                     height++;
@@ -135,28 +136,38 @@ namespace Stratis.Bitcoin.Base
 
         public class ChainRepositoryData : IBitcoinSerializable
         {
-            public uint256 Hash;
-            public byte[] Work;
+            private uint256 hash;
+            private byte[] work;
+
+            public uint256 Hash => this.hash;
+
+            public byte[] Work => this.work;
 
             public ChainRepositoryData()
             {
             }
 
+            public ChainRepositoryData(uint256 hash, byte[] work) : this()
+            {
+                this.hash = hash;
+                this.work = work;
+            }
+
             public void ReadWrite(BitcoinStream stream)
             {
-                stream.ReadWrite(ref this.Hash);
+                stream.ReadWrite(ref this.hash);
                 if (stream.Serializing)
                 {
-                    int len = this.Work.Length;
+                    int len = this.work.Length;
                     stream.ReadWrite(ref len);
-                    stream.ReadWrite(ref this.Work);
+                    stream.ReadWrite(ref this.work);
                 }
                 else
                 {
                     int len = 0;
                     stream.ReadWrite(ref len);
-                    this.Work = new byte[len];
-                    stream.ReadWrite(ref this.Work);
+                    this.work = new byte[len];
+                    stream.ReadWrite(ref this.work);
                 }
             }
         }
