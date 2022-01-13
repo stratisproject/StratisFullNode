@@ -13,8 +13,8 @@ namespace Stratis.Bitcoin.Base.Deployments
         private ChainIndexer chainIndexer;
         private ThresholdConditionCache cache;
         private int deployment;
-        private ChainedHeader lastPollExpiryHeightChecked;
-        private int pollExpiryActivationHeight;
+        private ChainedHeader lastHeightChecked;
+        private int activationHeight;
 
         public ActivationHeightProvider(Network network, ThresholdConditionCache cache, ChainIndexer chainIndexer, int deployment)
         {
@@ -22,8 +22,8 @@ namespace Stratis.Bitcoin.Base.Deployments
             this.cache = cache;
             this.chainIndexer = chainIndexer;
             this.deployment = deployment;
-            this.lastPollExpiryHeightChecked = null;
-            this.pollExpiryActivationHeight = int.MaxValue;
+            this.lastHeightChecked = null;
+            this.activationHeight = int.MaxValue;
         }
 
         /// <summary>
@@ -34,21 +34,21 @@ namespace Stratis.Bitcoin.Base.Deployments
         {
             get
             {
-                if (this.pollExpiryActivationHeight == int.MaxValue && this.chainIndexer.Tip != this.lastPollExpiryHeightChecked)
+                if (this.activationHeight == int.MaxValue && this.chainIndexer.Tip != this.lastHeightChecked)
                 {
-                    if (this.lastPollExpiryHeightChecked != null)
-                        this.lastPollExpiryHeightChecked = this.chainIndexer.Tip.FindFork(this.lastPollExpiryHeightChecked);
+                    if (this.lastHeightChecked != null)
+                        this.lastHeightChecked = this.chainIndexer.Tip.FindFork(this.lastHeightChecked);
 
-                    int lastHeightChecked = this.lastPollExpiryHeightChecked?.Height ?? 0;
+                    int lastHeightChecked = this.lastHeightChecked?.Height ?? 0;
                     // TODO: This can be improved (if required) by iterating windows instead of blocks.
                     int activeHeight = BinarySearch.BinaryFindFirst((h) => this.IsLockedInAtHeight(h), lastHeightChecked + 1, this.chainIndexer.Tip.Height - lastHeightChecked);
-                    this.lastPollExpiryHeightChecked = this.chainIndexer.Tip;
+                    this.lastHeightChecked = this.chainIndexer.Tip;
 
                     if (activeHeight >= 0)
-                        this.pollExpiryActivationHeight = this.IsActiveAtHeight(activeHeight) ? activeHeight : (activeHeight + this.network.Consensus.MinerConfirmationWindow);
+                        this.activationHeight = this.IsActiveAtHeight(activeHeight) ? activeHeight : (activeHeight + this.network.Consensus.MinerConfirmationWindow);
                 }
 
-                return this.pollExpiryActivationHeight;
+                return this.activationHeight;
             }
         }
 
