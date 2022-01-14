@@ -6,12 +6,6 @@ namespace Stratis.Bitcoin.Configuration.Logging
 {
     public class CustomLoggerFactory : ILoggerFactory
     {
-        public ILogger CreateLogger()
-        {
-            var methodInfo = new StackTrace().GetFrame(1).GetMethod();
-            return new Logger(NLog.LogManager.LogFactory.GetLogger(methodInfo.ReflectedType.ToString()));
-        }
-
         public ILogger CreateLogger(string name)
         {
             return new Logger(NLog.LogManager.LogFactory.GetLogger(name));
