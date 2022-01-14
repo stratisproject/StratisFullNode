@@ -8,9 +8,9 @@ namespace Stratis.Bitcoin.Configuration.Logging
     {
         private NLog.Logger logger;
 
-        public Logger(NLog.Logger logger)
+        public Logger(NLog.Logger logger = null)
         {
-            this.logger = logger;
+            this.logger = logger ?? NLog.LogManager.GetCurrentClassLogger();
         }
 
         /// <inheritdoc />
