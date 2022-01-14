@@ -252,7 +252,7 @@ namespace Stratis.Bitcoin.Consensus
 
                 // In case block store initialized behind, rewind until or before the block store tip.
                 // The node will complete loading before connecting to peers so the chain will never know if a reorg happened.
-                RewindState transitionState = await this.ConsensusRules.RewindAsync().ConfigureAwait(false);
+                RewindState transitionState = await this.ConsensusRules.RewindAsync(new HashHeightPair(this.chainState.BlockStoreTip)).ConfigureAwait(false);
                 coinViewTip = transitionState.BlockHash;
             }
 
@@ -739,7 +739,7 @@ namespace Stratis.Bitcoin.Consensus
                     }
                 }
 
-                await this.ConsensusRules.RewindAsync().ConfigureAwait(false);
+                await this.ConsensusRules.RewindAsync(new HashHeightPair(current.Previous)).ConfigureAwait(false);
 
                 lock (this.peerLock)
                 {

@@ -100,7 +100,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
         }
 
         /// <inheritdoc />
-        public HashHeightPair Rewind()
+        public HashHeightPair Rewind(HashHeightPair target)
         {
             throw new NotImplementedException();
         }
