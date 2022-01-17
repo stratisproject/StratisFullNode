@@ -81,7 +81,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <summary>
         /// Retrieves a list of pending or "active" polls.
         /// </summary>
-        /// <param name="voteType">See <see cref="VoteKey"/>.</param>
+        /// <param name="voteType">See <see cref="VoteKey"/>0 = Kick Member, 1 - Add Member, 2 = Whitelist Hash, 3 = Remove Hash</param>
         /// <param name="pubKeyOfMemberBeingVotedOn">The public key of the member being voted on (in hexadecimal). If omitted or empty then all polls are returned.</param>
         /// <returns>Active polls</returns>
         /// <response code="200">Returns the active polls</response>
@@ -112,7 +112,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <summary>
         /// Retrieves a list of finished polls.
         /// </summary>
-        /// <param name="voteType">See <see cref="VoteKey"/>.</param>
+        /// <param name="voteType">See <see cref="VoteKey"/>0 = Kick Member, 1 - Add Member, 2 = Whitelist Hash, 3 = Remove Hash</param>
         /// <param name="pubKeyOfMemberBeingVotedOn">The public key of the member being voted on (in hexadecimal). If omitted or empty then all polls are returned.</param>
         /// <returns>Finished polls</returns>
         /// <response code="200">Returns the finished polls</response>
@@ -143,7 +143,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <summary>
         /// Retrieves a list of executed polls.
         /// </summary>
-        /// <param name="voteType">See <see cref="VoteKey"/>.</param>
+        /// <param name="voteType">See <see cref="VoteKey"/>0 = Kick Member, 1 - Add Member, 2 = Whitelist Hash, 3 = Remove Hash</param>
         /// <param name="pubKeyOfMemberBeingVotedOn">The public key of the member being voted on (in hexadecimal). If omitted or empty then all polls are returned.</param>
         /// <returns>Finished polls</returns>
         /// <response code="200">Returns the finished polls</response>

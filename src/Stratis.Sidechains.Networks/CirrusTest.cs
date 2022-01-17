@@ -122,7 +122,7 @@ namespace Stratis.Sidechains.Networks
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
                 autoKickIdleMembers: true,
-                federationMemberMaxIdleTimeSeconds: 60 * 60 * 3 // 3 Hours
+                federationMemberMaxIdleTimeSeconds: 60 * 30 // 30 minutes
             )
             {
                 InterFluxV2MainChainActivationHeight = 500_000,
@@ -130,8 +130,9 @@ namespace Stratis.Sidechains.Networks
                 EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
                 VotingManagerV2ActivationHeight = 1_999_500,
                 Release1100ActivationHeight = 2_796_000,
-                PollExpiryBlocks = 450, // 2 hours
-                ContractSerializerV2ActivationHeight = 2842681
+                PollExpiryBlocks = 450, // 2 hours,
+                GetMiningTimestampV2ActivationHeight = 3_000_000, // 15 January 2022
+                ContractSerializerV2ActivationHeight = 2_842_681
             };
 
             var buriedDeployments = new BuriedDeploymentsArray
@@ -228,6 +229,7 @@ namespace Stratis.Sidechains.Networks
                 { 2_300_000, new CheckpointInfo(new uint256("0x8e189e0c38cb55c795276d13cc7f6d9c6825eb85324f38ec94a9d4df5d5b5938")) },
                 { 2_600_000, new CheckpointInfo(new uint256("0x272a6bd353d794bdbf0ebfe2846fb45ed63bc0073202fcfbbd0d6820bf2370c4")) },
                 { 2_800_000, new CheckpointInfo(new uint256("0xec789f5b9dec0245b3c81fe9279b403dd233dfb4f4361a18386152c66f88cb87")) },
+                { 2_900_000, new CheckpointInfo(new uint256("0x37650f6df2f43fa6e00eb628f5aa5b728fc80dcabc18a9d071bbf171db4a2f7c")) },
             };
 
             this.DNSSeeds = new List<DNSSeedData>

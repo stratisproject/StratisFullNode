@@ -257,7 +257,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>
-        /// Tells us whether we have already voted to boot a federation member.
+        /// Tells us whether we have already voted on this federation member.
         /// </summary>
         /// <param name="voteKey">See <see cref="VoteKey"/>.</param>
         /// <param name="federationMemberBytes">The bytes to compare <see cref="VotingData.Data"/> against.</param>
