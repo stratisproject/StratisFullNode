@@ -150,7 +150,11 @@ namespace Stratis.Features.Unity3dApi
                             contractAddr, "TransferLog", null, currentContract.LastUpdatedBlock + 1, null);
 
                         if ((receipts == null) || (receipts.Count == 0))
+                        {
+                            currentContract.LastUpdatedBlock = chainTip.Height;
+                            this.NFTContractCollection.Upsert(currentContract);
                             continue;
+                        }
 
                         int lastReceiptHeight = 0;
                         if (receipts.Any())
@@ -190,7 +194,7 @@ namespace Stratis.Features.Unity3dApi
 
                     try
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(6), this.cancellation.Token);
+                        await Task.Delay(TimeSpan.FromSeconds(3), this.cancellation.Token);
                     }
                     catch (TaskCanceledException)
                     {
