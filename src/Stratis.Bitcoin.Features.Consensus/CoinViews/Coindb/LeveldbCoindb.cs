@@ -310,7 +310,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
             using (var batch = new WriteBatch())
             {
-                for (int height = startHeight; height > target.Height && height > (startHeight - MaxRewindBatchSize); height--)
+                for (int height = startHeight; height > (target?.Height ?? (startHeight - 1)) && height > (startHeight - MaxRewindBatchSize); height--)
                 {
                     byte[] row = this.leveldb.Get(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(height).Reverse()).ToArray());
 
