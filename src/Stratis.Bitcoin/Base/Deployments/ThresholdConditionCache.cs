@@ -36,16 +36,23 @@ namespace Stratis.Bitcoin.Base.Deployments
 
         // Cache of BIP9 deployment states keyed by block hash.
         private Dictionary<uint256, ThresholdState?[]> cache = new Dictionary<uint256, ThresholdState?[]>();
+        private ActivationHeightProvider[] activationHeightProviders;
+
+        public ActivationHeightProvider[] ActivationHeightProviders => this.activationHeightProviders;
 
         /// <summary>
         /// Constructs this object containing the BIP9 deployment states cache.
         /// </summary>
         /// <param name="consensus">Records the consensus object containing the activation parameters.</param>
-        public ThresholdConditionCache(IConsensus consensus)
+        public ThresholdConditionCache(Network network, ChainIndexer chainIndexer)
         {
-            Guard.NotNull(consensus, nameof(consensus));
+            Guard.NotNull(network, nameof(network));
+            Guard.NotNull(chainIndexer, nameof(chainIndexer));
 
-            this.consensus = consensus;
+            this.consensus = network.Consensus;
+            this.activationHeightProviders = new ActivationHeightProvider[this.consensus.BIP9Deployments.Length];
+            for (int i = 0; i < this.consensus.BIP9Deployments.Length; i++)
+                this.activationHeightProviders[i] = new ActivationHeightProvider(network, this, chainIndexer, i);
         }
 
         /// <summary>
