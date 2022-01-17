@@ -13,7 +13,7 @@ namespace Stratis.Bitcoin.Base.Deployments
         private ChainIndexer chainIndexer;
         private ThresholdConditionCache cache;
         private int deployment;
-        private ChainedHeader lastHeightChecked;
+        private ChainedHeader lastHeaderChecked;
         private int activationHeight;
 
         public ActivationHeightProvider(Network network, ThresholdConditionCache cache, ChainIndexer chainIndexer, int deployment)
@@ -22,7 +22,7 @@ namespace Stratis.Bitcoin.Base.Deployments
             this.cache = cache;
             this.chainIndexer = chainIndexer;
             this.deployment = deployment;
-            this.lastHeightChecked = null;
+            this.lastHeaderChecked = null;
             this.activationHeight = int.MaxValue;
         }
 
@@ -34,15 +34,15 @@ namespace Stratis.Bitcoin.Base.Deployments
         {
             get
             {
-                if (this.activationHeight == int.MaxValue && this.chainIndexer.Tip != this.lastHeightChecked)
+                if (this.activationHeight == int.MaxValue && this.chainIndexer.Tip != this.lastHeaderChecked)
                 {
-                    if (this.lastHeightChecked != null)
-                        this.lastHeightChecked = this.chainIndexer.Tip.FindFork(this.lastHeightChecked);
+                    if (this.lastHeaderChecked != null)
+                        this.lastHeaderChecked = this.chainIndexer.Tip.FindFork(this.lastHeaderChecked);
 
-                    int lastHeightChecked = this.lastHeightChecked?.Height ?? 0;
+                    int lastHeightChecked = this.lastHeaderChecked?.Height ?? 0;
                     // TODO: This can be improved (if required) by iterating windows instead of blocks.
                     int activeHeight = BinarySearch.BinaryFindFirst((h) => this.IsLockedInAtHeight(h), lastHeightChecked + 1, this.chainIndexer.Tip.Height - lastHeightChecked);
-                    this.lastHeightChecked = this.chainIndexer.Tip;
+                    this.lastHeaderChecked = this.chainIndexer.Tip;
 
                     if (activeHeight >= 0)
                         this.activationHeight = this.IsActiveAtHeight(activeHeight) ? activeHeight : (activeHeight + this.network.Consensus.MinerConfirmationWindow);
