@@ -116,7 +116,7 @@ namespace Stratis.Bitcoin.Tests.PackagesAndVersions
 
                 // Compare source with files from NuGet.
                 string packageSource = Path.Combine(targetPath, "src", project.ProjectName);
-                if (Directory.Exists(packageSource) && DirectoryEquals(packageSource, Path.GetDirectoryName(projectFolder)))
+                if (Directory.Exists(packageSource) && DirectoryEquals(packageSource, Path.GetDirectoryName(projectFolder), debugLog))
                 {
                     // Even though the project file may be unchanged the references could be referring to different versions.
 
@@ -162,26 +162,26 @@ namespace Stratis.Bitcoin.Tests.PackagesAndVersions
             Assert.True(modifiedPackages.Count == 0, $"{debugLog.ToString()} Affected packages: {string.Join(", ", modifiedPackages)}");
         }
 
-        static bool DirectoryEquals(string directory1, string directory2)
+        static bool DirectoryEquals(string directory1, string directory2, StringBuilder debugLog)
         {
             foreach (string fileName1 in Directory.EnumerateFiles(directory1))
             {
                 string fileName2 = Path.Combine(directory2, Path.GetFileName(fileName1));
-                if (!FileEquals(fileName1, fileName2))
+                if (!FileEquals(fileName1, fileName2, debugLog))
                     return false;
             }
 
             foreach (string subFolder in Directory.EnumerateDirectories(directory1))
             {
                 string directoryName = Path.GetFileName(subFolder);
-                if (!DirectoryEquals(subFolder, Path.Combine(directory2, directoryName)))
+                if (!DirectoryEquals(subFolder, Path.Combine(directory2, directoryName), debugLog))
                     return false;
             }
 
             return true;
         }
 
-        static bool FileEquals(string fileName1, string fileName2)
+        static bool FileEquals(string fileName1, string fileName2, StringBuilder debugLog)
         {
             try
             {
@@ -192,7 +192,10 @@ namespace Stratis.Bitcoin.Tests.PackagesAndVersions
                     string compare = source.Take(1).FirstOrDefault();
 
                     if (compare?.Trim() != line.Trim())
+                    {
+                        debugLog.AppendLine($"'{fileName1}' differs from '{fileName2}' on these lines:{Environment.NewLine}'{compare}', and {Environment.NewLine}'{line}'.");
                         return false;
+                    }
 
                     source = source.Skip(1);
                     continue;
