@@ -40,6 +40,9 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// <inheritdoc />
         public IETHClient GetClientForChain(DestinationChain chain)
         {
+            if (chain == DestinationChain.CIRRUS)
+                return null;
+
             if (!this.supportedChains.ContainsKey(chain))
                 throw new NotImplementedException("Provided chain type not supported: " + chain);
 

@@ -87,6 +87,8 @@ namespace Stratis.Features.FederatedPeg.Conversion
         /// </summary>
         public bool Processed { get { return this.processed; } set { this.processed = value; } }
 
+        public string TokenContract { get { return this.tokenContract; } set { this.tokenContract = value; } }
+
         private string requestId;
 
         private string externalChainTxHash;
@@ -107,6 +109,8 @@ namespace Stratis.Features.FederatedPeg.Conversion
 
         private bool processed;
 
+        private string tokenContract;
+
         public void ReadWrite(BitcoinStream stream)
         {
             stream.ReadWrite(ref this.requestId);
@@ -124,6 +128,8 @@ namespace Stratis.Features.FederatedPeg.Conversion
                 stream.ReadWrite(ref this.externalChainTxHash);
                 stream.ReadWrite(ref this.externalChainTxEventId);
 
+                // InterFlux v3 fields
+                stream.ReadWrite(ref this.tokenContract);
             }
             catch (Exception)
             {

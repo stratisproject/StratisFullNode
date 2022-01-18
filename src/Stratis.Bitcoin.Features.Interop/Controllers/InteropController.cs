@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Numerics;
+using System.Security;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -31,7 +32,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         private readonly InteropSettings interopSettings;
         private readonly ILogger logger;
         private readonly Network network;
-
+        
         public InteropController(
             Network network,
             IConversionRequestCoordinationService conversionRequestCoordinationService,
@@ -47,6 +48,32 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             this.interopSettings = interopSettings;
             this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
+        }
+
+        [Route("initializeinterflux")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public async Task<IActionResult> InitializeInterfluxAsync([FromBody] InitializeInterfluxRequestModel model)
+        {
+            try
+            {
+                this.interopSettings.WalletCredentials = new WalletCredentials()
+                {
+                    WalletName = model.WalletName,
+                    WalletPassword = model.WalletPassword,
+                    AccountName = model.AccountName
+                };
+
+                return this.Json(true);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
         }
 
         [Route("status/burns")]

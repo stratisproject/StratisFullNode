@@ -10,6 +10,7 @@ using Nethereum.RPC.Eth.Blocks;
 using Nethereum.RPC.Eth.DTOs;
 using Nethereum.Web3;
 using Nethereum.Web3.Accounts.Managed;
+using Stratis.Bitcoin.Features.MemoryPool.Fee;
 
 namespace Stratis.Bitcoin.Features.Interop.ETHClient
 {
@@ -35,6 +36,8 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         Task<BlockWithTransactions> GetBlockAsync(BigInteger blockNumber);
 
         Task<List<(string TransactionHash, BurnFunction Burn)>> GetBurnsFromBlock(BlockWithTransactions block);
+
+        Task<List<(string TransactionHash, string TransferContractAddress, TransferFunction Transfer)>> GetTransfersFromBlock(BlockWithTransactions block, HashSet<string> tokens);
 
         /// <summary>
         /// Queries the previously created event filter for any new events matching the filter criteria.
@@ -125,6 +128,29 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// <param name="addressToQuery">The account to retrieve the ERC20 balance of.</param>
         /// <returns>The balance of the account.</returns>
         Task<BigInteger> GetErc20BalanceAsync(string addressToQuery);
+
+        /// <summary>
+        /// Retrieves a string from the Key Value Store contract.
+        /// </summary>
+        /// <remarks>Submitted key-value pairs are not fully private to the node that submitted them, and can be
+        /// read by any participant on the associated network if they have knowledge of the submitter's address
+        /// as well as the key.</remarks>
+        /// <param name="address">The address of the node that originally submitted the key-value pair.</param>
+        /// <param name="key">The key of the key-value pair to be retrieved.</param>
+        /// <returns>The string value stored against the specified key by the specified submitting node.</returns>
+        Task<string> GetKeyValueStoreAsync(string address, string key);
+
+        /// <summary>
+        /// Stores a string value in the Key Value Store contract.
+        /// </summary>
+        /// <remarks>It is not possible to specify the 'source address', it is automatically set to
+        /// the address of the submitting node's wallet. It is also therefore not possible to overwrite
+        /// another node's submitted values, inadvertently or otherwise.</remarks>
+        /// <param name="key">The key to store the value against.</param>
+        /// <param name="value">The string value to be stored.</param>
+        /// <param name="gasPrice">The gas price to be used for the transaction, in gwei.</param>
+        /// <returns>The transaction ID of the resulting contract call transaction.</returns>
+        Task<string> SetKeyValueStoreAsync(string key, string value, BigInteger gasPrice);
 
         /// <summary>
         /// Returns the encoded form of transaction data that calls the transfer(address, uint256) method on the WrappedStrax contract.
@@ -288,6 +314,52 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
             return burns;
         }
 
+        public async Task<List<(string TransactionHash, string TransferContractAddress, TransferFunction Transfer)>> GetTransfersFromBlock(BlockWithTransactions block, HashSet<string> tokens)
+        {
+            var transfers = new List<(string TransactionHash, string TransferContractAddress, TransferFunction Transfer)>();
+
+            foreach (Transaction tx in block.Transactions)
+            {
+                // The transfer call obviously isn't made against the federation's multisig wallet contract itself. So we need to check against the list of previously added token contracts.
+                if (!tokens.Contains(tx.To))
+                    continue;
+
+                // TODO: Need to abstract out the needed and common fields rather than storing the function - there will be multiple 'Transfer' equivalents in the various token contract standards
+                TransferFunction transfer;
+
+                try
+                {
+                    transfer = tx.DecodeTransactionToFunctionMessage<TransferFunction>();
+                }
+                catch
+                {
+                    continue;
+                }
+
+                if (transfer.To != this.settings.MultisigWalletAddress)
+                {
+                    // Ignoring transfers that are made to any address except the federation's multisig wallet.
+                    continue;
+                }
+
+                if (transfer.TokenAmount == BigInteger.Zero)
+                {
+                    // Ignoring zero-valued transfer.
+                    continue;
+                }
+
+                if (transfer.TokenAmount < BigInteger.Zero)
+                {
+                    // Ignoring negative-valued transfer.
+                    continue;
+                }
+
+                transfers.Add((tx.TransactionHash, tx.To, transfer));
+            }
+
+            return transfers;
+        }
+
         /// <inheritdoc />
         public async Task<List<EventLog<TransferEventDTO>>> GetTransferEventsForWrappedStraxAsync()
         {
@@ -394,6 +466,18 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
             return await WrappedStrax.GetErc20BalanceAsync(this.web3, this.settings.WrappedStraxContractAddress, addressToQuery).ConfigureAwait(false);
         }
 
+        /// <inheritdoc />
+        public async Task<string> GetKeyValueStoreAsync(string address, string key)
+        {
+            return await KVStore.GetAsync(this.web3, this.settings.KeyValueStoreContractAddress, address, key).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task<string> SetKeyValueStoreAsync(string key, string value, BigInteger gasPrice)
+        {
+            return await KVStore.SetAsync(this.web3, this.settings.KeyValueStoreContractAddress, key, value, this.settings.GasLimit, gasPrice).ConfigureAwait(false);            
+        }
+        
         /// <inheritdoc />
         public string EncodeTransferParams(string address, BigInteger amount)
         {
