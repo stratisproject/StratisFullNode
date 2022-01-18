@@ -152,7 +152,7 @@ namespace Stratis.Bitcoin.Tests.PackagesAndVersions
                         continue;
                 }
 
-                string msg2 = $"The project '{project.ProjectName}' has been modified since it was published but its local version {version} remains unchanged.";
+                string msg2 = $"The local project '{project.ProjectName}' differs from the published package but its version {version} is the same.";
                 debugLog.AppendLine(msg2);
 
                 modifiedPackages.Add(project.ProjectName);
