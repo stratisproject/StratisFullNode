@@ -14,6 +14,7 @@ using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
+using Stratis.Bitcoin.Utilities;
 using FileMode = LiteDB.FileMode;
 
 namespace Stratis.Features.Unity3dApi
@@ -50,14 +51,17 @@ namespace Stratis.Features.Unity3dApi
         private readonly ChainIndexer chainIndexer;
         private readonly IAsyncProvider asyncProvider;
         private readonly ISmartContractTransactionService smartContractTransactionService;
+        private readonly Network network;
 
         private LiteDatabase db;
         private LiteCollection<NFTContractModel> NFTContractCollection;
         private CancellationTokenSource cancellation;
         private Task indexingTask;
         
-        public NFTTransferIndexer(DataFolder dataFolder, ILoggerFactory loggerFactory, IAsyncProvider asyncProvider, ChainIndexer chainIndexer, ISmartContractTransactionService smartContractTransactionService = null)
+        public NFTTransferIndexer(DataFolder dataFolder, ILoggerFactory loggerFactory, IAsyncProvider asyncProvider, 
+            ChainIndexer chainIndexer, Network network, ISmartContractTransactionService smartContractTransactionService = null)
         {
+            this.network = network;
             this.dataFolder = dataFolder;
             this.cancellation = new CancellationTokenSource();
             this.asyncProvider = asyncProvider;
@@ -86,12 +90,14 @@ namespace Stratis.Features.Unity3dApi
         /// <inheritdoc />
         public void WatchNFTContract(string contractAddress)
         {
+            int watchFromHeight = this.network.IsTest() ? 3000000 : 3400000;
+
             if (!this.NFTContractCollection.Exists(x => x.ContractAddress == contractAddress))
             {
                 NFTContractModel model = new NFTContractModel()
                 {
                     ContractAddress = contractAddress,
-                    LastUpdatedBlock = 0,
+                    LastUpdatedBlock = watchFromHeight,
                     OwnedIDsByAddress = new Dictionary<string, List<long>>()
                 };
 
