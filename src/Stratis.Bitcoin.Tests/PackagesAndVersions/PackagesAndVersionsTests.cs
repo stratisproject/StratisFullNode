@@ -193,7 +193,7 @@ namespace Stratis.Bitcoin.Tests.PackagesAndVersions
 
                     if (compare?.Trim() != line.Trim())
                     {
-                        debugLog.AppendLine($"'{fileName1}' differs from '{fileName2}' on these lines:{Environment.NewLine}'{line}', and {Environment.NewLine}'{compare}' respectively.");
+                        debugLog.AppendLine($"The published package differs from '{fileName2}' on these lines:{Environment.NewLine}'{line}', and {Environment.NewLine}'{compare}' respectively.");
                         return false;
                     }
 
