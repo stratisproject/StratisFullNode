@@ -141,7 +141,7 @@ namespace Stratis.Bitcoin.Tests.PackagesAndVersions
 
                         if (cmpVersion != referencedVersions[includeFullPath])
                         {
-                            string msg = $"Comparing the local project '{project.ProjectName}' version {version} with its published package, '{targetName}', the published package references version '{cmpVersion}' of '{name3}' while the local project references version '{referencedVersions[includeFullPath]}'.";
+                            string msg = $"Comparing the local project ({project.ProjectName}) version ({version}) with its published package, ({targetName}), the published package references version '{cmpVersion}' of '{name3}' while the local project references version '{referencedVersions[includeFullPath]}'.";
                             debugLog.AppendLine(msg);
                             referencedPackagesMatch = false;
                             break;
