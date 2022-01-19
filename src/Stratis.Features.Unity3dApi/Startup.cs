@@ -88,7 +88,7 @@ namespace Stratis.Features.Unity3dApi
                 .AddNewtonsoftJson(options =>
                 {
                     options.SerializerSettings.ContractResolver = new DefaultContractResolver();
-                    Stratis.Bitcoin.Utilities.JsonConverters.Serializer.RegisterFrontConverters(options.SerializerSettings);
+                    Stratis.Bitcoin.Utilities.JsonConverters.Serializer.RegisterFrontConverters(options.SerializerSettings, null, false);
                 })
                 .AddControllers(this.fullNode.Services.Features, services)
                 .ConfigureApplicationPartManager(a =>
