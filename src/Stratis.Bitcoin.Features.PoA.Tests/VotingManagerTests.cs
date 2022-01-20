@@ -56,10 +56,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             };
 
             // Create a voting request.
-            var addressKey = new Key();
-            var request = new JoinFederationRequest(memberPubKey, new Money(CollateralFederationMember.MinerCollateralAmount, MoneyUnit.BTC), addressKey.PubKey.Hash);
-            request.AddSignature(addressKey.SignMessage(request.SignatureMessage));
-            ChainedHeaderBlock votingRequest = GetBlocksWithVotingRequest(1, request, new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().GetHash(), 0)).First();
+            ChainedHeaderBlock votingRequest = GetBlockWithVotingRequest(memberPubKey);
 
             int votesRequired = (this.federationManager.GetFederationMembers().Count / 2) + 1;
             ChainedHeaderBlock[] blocks = GetBlocksWithVotingData(votesRequired, votingData, votingRequest.ChainedHeader);
@@ -94,10 +91,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             int votesRequired = (this.federationManager.GetFederationMembers().Count / 2) + 1;
 
             // Create a voting request.
-            var addressKey = new Key();
-            var request = new JoinFederationRequest(memberPubKey, new Money(CollateralFederationMember.MinerCollateralAmount, MoneyUnit.BTC), addressKey.PubKey.Hash);
-            request.AddSignature(addressKey.SignMessage(request.SignatureMessage));
-            ChainedHeaderBlock votingRequest = GetBlocksWithVotingRequest(1, request, new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().GetHash(), 0)).First();
+            ChainedHeaderBlock votingRequest = GetBlockWithVotingRequest(memberPubKey);
 
             ChainedHeaderBlock[] blocks = GetBlocksWithVotingData(votesRequired + 1, votingData, votingRequest.ChainedHeader);
 
@@ -165,10 +159,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             };
 
             // Create a voting request.
-            var addressKey = new Key();
-            var request = new JoinFederationRequest(memberPubKey, new Money(CollateralFederationMember.MinerCollateralAmount, MoneyUnit.BTC), addressKey.PubKey.Hash);
-            request.AddSignature(addressKey.SignMessage(request.SignatureMessage));
-            ChainedHeaderBlock votingRequest = GetBlocksWithVotingRequest(1, request, new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().GetHash(), 0)).First();
+            ChainedHeaderBlock votingRequest = GetBlockWithVotingRequest(memberPubKey);
 
             // Create a single pending poll.
             ChainedHeaderBlock[] blocks = GetBlocksWithVotingData(1, votingData, votingRequest.ChainedHeader);
@@ -213,10 +204,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             };
 
             // Create a voting request.
-            var addressKey = new Key();
-            var request = new JoinFederationRequest(memberPubKey, new Money(CollateralFederationMember.MinerCollateralAmount, MoneyUnit.BTC), addressKey.PubKey.Hash);
-            request.AddSignature(addressKey.SignMessage(request.SignatureMessage));
-            ChainedHeaderBlock votingRequest = GetBlocksWithVotingRequest(1, request, new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().GetHash(), 0)).First();
+            ChainedHeaderBlock votingRequest = GetBlockWithVotingRequest(memberPubKey);
 
             // Create a single pending poll.
             ChainedHeaderBlock[] blocks = GetBlocksWithVotingData(1, votingData, votingRequest.ChainedHeader);
@@ -269,6 +257,14 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         private ChainedHeaderBlock[] GetBlocksWithVotingRequest(int count, JoinFederationRequest votingRequest, ChainedHeader previous)
         {
             return PoaTestHelper.GetBlocks(count, this.ChainIndexer, i => this.CreateBlockWithVotingRequest(votingRequest, i + 1), previous);
+        }
+
+        private ChainedHeaderBlock GetBlockWithVotingRequest(PubKey memberPubKey)
+        {
+            var addressKey = new Key();
+            var request = new JoinFederationRequest(memberPubKey, new Money(CollateralFederationMember.MinerCollateralAmount, MoneyUnit.BTC), addressKey.PubKey.Hash);
+            request.AddSignature(addressKey.SignMessage(request.SignatureMessage));
+            return GetBlocksWithVotingRequest(1, request, new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().GetHash(), 0)).First();
         }
 
         private ChainedHeaderBlock CreateBlockWithVotingRequest(JoinFederationRequest votingRequest, int height)
