@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.EventBus.CoreEvents;
@@ -46,14 +47,27 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         [Fact]
         public void CanVote()
         {
+            // Create add federation member vote.
+            PubKey memberPubKey = (new Key()).PubKey;
             var votingData = new VotingData()
             {
                 Key = VoteKey.AddFederationMember,
-                Data = (new Key()).PubKey.ToBytes()
+                Data = memberPubKey.ToBytes()
             };
 
+            // Create a voting request.
+            ChainedHeaderBlock votingRequest = GetBlockWithVotingRequest(memberPubKey);
+
             int votesRequired = (this.federationManager.GetFederationMembers().Count / 2) + 1;
-            ChainedHeaderBlock[] blocks = GetBlocksWithVotingData(votesRequired, votingData, new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().GetHash(), 0));
+            ChainedHeaderBlock[] blocks = GetBlocksWithVotingData(votesRequired, votingData, votingRequest.ChainedHeader);
+
+            // Mock the blocks via the block repository.
+            this.blockRepository.Setup(r => r.GetBlock(It.IsAny<uint256>())).Returns((uint256 hash) =>
+            {
+                return (hash == votingRequest.ChainedHeader.HashBlock) ? votingRequest.Block : blocks.FirstOrDefault(b => b.ChainedHeader.HashBlock == hash)?.Block;
+            });
+
+            this.TriggerOnBlockConnected(votingRequest);
 
             for (int i = 0; i < votesRequired; i++)
             {
@@ -66,17 +80,28 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         [Fact]
         public void AddVoteAfterPollComplete()
         {
-            //TODO: When/if we remove duplicate polls, this test will need to be changed to account for the new expected functionality.
-
+            // Create add federation member vote.
+            PubKey memberPubKey = (new Key()).PubKey;
             var votingData = new VotingData()
             {
                 Key = VoteKey.AddFederationMember,
-                Data = (new Key()).PubKey.ToBytes()
+                Data = memberPubKey.ToBytes()
             };
 
             int votesRequired = (this.federationManager.GetFederationMembers().Count / 2) + 1;
 
-            ChainedHeaderBlock[] blocks = GetBlocksWithVotingData(votesRequired + 1, votingData, new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().GetHash(), 0));
+            // Create a voting request.
+            ChainedHeaderBlock votingRequest = GetBlockWithVotingRequest(memberPubKey);
+
+            ChainedHeaderBlock[] blocks = GetBlocksWithVotingData(votesRequired + 1, votingData, votingRequest.ChainedHeader);
+
+            // Mock the blocks via the block repository.
+            this.blockRepository.Setup(r => r.GetBlock(It.IsAny<uint256>())).Returns((uint256 hash) =>
+            {
+                return (hash == votingRequest.ChainedHeader.HashBlock) ? votingRequest.Block : blocks.FirstOrDefault(b => b.ChainedHeader.HashBlock == hash)?.Block;
+            });
+
+            this.TriggerOnBlockConnected(votingRequest);
 
             for (int i = 0; i < votesRequired; i++)
             {
@@ -90,14 +115,14 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             ChainedHeaderBlock blockToDisconnect = blocks[votesRequired];
             this.TriggerOnBlockConnected(blockToDisconnect);
 
-            // Now we have 1 finished and 1 pending for the same data.
+            // Now we have 1 finished and 0 pending for the same data.
             Assert.Single(this.votingManager.GetApprovedPolls());
             Assert.Single(this.votingManager.GetPendingPolls());
 
             // This previously caused an error because of Single() being used.
             this.TriggerOnBlockDisconnected(blockToDisconnect);
 
-            // VotingManager cleverly removed the pending poll but kept the finished poll.
+            // No change, as the superfluous vote had no effect.
             Assert.Single(this.votingManager.GetApprovedPolls());
             Assert.Empty(this.votingManager.GetPendingPolls());
         }
@@ -105,35 +130,45 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         [Fact]
         public void CanCreateVotingRequest()
         {
-            var addressKey = new Key();
-            var miningKey = new Key();
+            // Create add federation member vote.
+            PubKey memberPubKey = (new Key()).PubKey;
 
-            var votingRequest = new JoinFederationRequest(miningKey.PubKey, new Money(10_000m, MoneyUnit.BTC), addressKey.PubKey.Hash);
+            // Create a voting request.
+            ChainedHeaderBlock votingRequest = GetBlockWithVotingRequest(memberPubKey);
 
-            votingRequest.AddSignature(addressKey.SignMessage(votingRequest.SignatureMessage));
-
-            int votesRequired = (this.federationManager.GetFederationMembers().Count / 2) + 1;
-
-            ChainedHeaderBlock[] blocks = GetBlocksWithVotingRequest(votesRequired, votingRequest, new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().GetHash(), 0));
-
-            for (int i = 0; i < votesRequired; i++)
+            // Mock the blocks via the block repository.
+            this.blockRepository.Setup(r => r.GetBlock(It.IsAny<uint256>())).Returns((uint256 hash) =>
             {
-                this.TriggerOnBlockConnected(blocks[i]);
-            }
+                return votingRequest.Block;
+            });
+
+            this.TriggerOnBlockConnected(votingRequest);
         }
 
         [Fact]
         public void CanExpireAndUnExpirePollViaBlockDisconnected()
         {
             // Create add federation member vote.
+            PubKey memberPubKey = (new Key()).PubKey;
             var votingData = new VotingData()
             {
                 Key = VoteKey.AddFederationMember,
-                Data = new Key().PubKey.ToBytes()
+                Data = memberPubKey.ToBytes()
             };
 
+            // Create a voting request.
+            ChainedHeaderBlock votingRequest = GetBlockWithVotingRequest(memberPubKey);
+
             // Create a single pending poll.
-            ChainedHeaderBlock[] blocks = GetBlocksWithVotingData(1, votingData, new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().GetHash(), 0));
+            ChainedHeaderBlock[] blocks = GetBlocksWithVotingData(1, votingData, votingRequest.ChainedHeader);
+
+            // Mock the blocks via the block repository.
+            this.blockRepository.Setup(r => r.GetBlock(It.IsAny<uint256>())).Returns((uint256 hash) =>
+            {
+                return (hash == votingRequest.ChainedHeader.HashBlock) ? votingRequest.Block : blocks.FirstOrDefault(b => b.ChainedHeader.HashBlock == hash)?.Block;
+            });
+
+            this.TriggerOnBlockConnected(votingRequest);
             this.TriggerOnBlockConnected(blocks[0]);
             Assert.Single(this.votingManager.GetPendingPolls());
 
@@ -159,14 +194,26 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         public void CanExpireAndUnExpirePollViaNodeRewind()
         {
             // Create add federation member vote.
+            PubKey memberPubKey = (new Key()).PubKey;
             var votingData = new VotingData()
             {
                 Key = VoteKey.AddFederationMember,
-                Data = new Key().PubKey.ToBytes()
+                Data = memberPubKey.ToBytes()
             };
 
+            // Create a voting request.
+            ChainedHeaderBlock votingRequest = GetBlockWithVotingRequest(memberPubKey);
+
             // Create a single pending poll.
-            ChainedHeaderBlock[] blocks = GetBlocksWithVotingData(1, votingData, new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().GetHash(), 0));
+            ChainedHeaderBlock[] blocks = GetBlocksWithVotingData(1, votingData, votingRequest.ChainedHeader);
+
+            // Mock the blocks via the block repository.
+            this.blockRepository.Setup(r => r.GetBlock(It.IsAny<uint256>())).Returns((uint256 hash) =>
+            {
+                return (hash == votingRequest.ChainedHeader.HashBlock) ? votingRequest.Block : blocks.FirstOrDefault(b => b.ChainedHeader.HashBlock == hash)?.Block;
+            });
+
+            this.TriggerOnBlockConnected(votingRequest);
             this.TriggerOnBlockConnected(blocks[0]);
             Assert.Single(this.votingManager.GetPendingPolls());
 
@@ -202,12 +249,20 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
         private ChainedHeaderBlock[] GetBlocksWithVotingData(int count, VotingData votingData, ChainedHeader previous)
         {
-            return PoaTestHelper.GetBlocks(count, this.ChainIndexer, i => this.CreateBlockWithVotingData(new List<VotingData>() { votingData }, i + 1), previous);
+            return PoaTestHelper.GetBlocks(count, this.ChainIndexer, i => this.CreateBlockWithVotingData(new List<VotingData>() { votingData }, i + 2), previous);
         }
 
         private ChainedHeaderBlock[] GetBlocksWithVotingRequest(int count, JoinFederationRequest votingRequest, ChainedHeader previous)
         {
             return PoaTestHelper.GetBlocks(count, this.ChainIndexer, i => this.CreateBlockWithVotingRequest(votingRequest, i + 1), previous);
+        }
+
+        private ChainedHeaderBlock GetBlockWithVotingRequest(PubKey memberPubKey)
+        {
+            var addressKey = new Key();
+            var request = new JoinFederationRequest(memberPubKey, new Money(CollateralFederationMember.MinerCollateralAmount, MoneyUnit.BTC), addressKey.PubKey.Hash);
+            request.AddSignature(addressKey.SignMessage(request.SignatureMessage));
+            return GetBlocksWithVotingRequest(1, request, new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().GetHash(), 0)).First();
         }
 
         private ChainedHeaderBlock CreateBlockWithVotingRequest(JoinFederationRequest votingRequest, int height)
@@ -220,7 +275,8 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             var votingRequestOutputScript = new Script(OpcodeType.OP_RETURN, Op.GetPushOp(votingRequestData.ToArray()));
 
             Transaction tx = this.network.CreateTransaction();
-            tx.AddOutput(Money.COIN, votingRequestOutputScript);
+            tx.AddOutput(new TxOut());
+            tx.AddOutput(new Money(JoinFederationRequestBuilder.VotingRequestTransferAmount, MoneyUnit.BTC), votingRequestOutputScript);
 
             Block block = PoaTestHelper.CreateBlock(this.network, tx, height);
 
