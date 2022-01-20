@@ -130,21 +130,19 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         [Fact]
         public void CanCreateVotingRequest()
         {
-            var addressKey = new Key();
-            var miningKey = new Key();
+            // Create add federation member vote.
+            PubKey memberPubKey = (new Key()).PubKey;
 
-            var votingRequest = new JoinFederationRequest(miningKey.PubKey, new Money(10_000m, MoneyUnit.BTC), addressKey.PubKey.Hash);
+            // Create a voting request.
+            ChainedHeaderBlock votingRequest = GetBlockWithVotingRequest(memberPubKey);
 
-            votingRequest.AddSignature(addressKey.SignMessage(votingRequest.SignatureMessage));
-
-            int votesRequired = (this.federationManager.GetFederationMembers().Count / 2) + 1;
-
-            ChainedHeaderBlock[] blocks = GetBlocksWithVotingRequest(votesRequired, votingRequest, new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().GetHash(), 0));
-
-            for (int i = 0; i < votesRequired; i++)
+            // Mock the blocks via the block repository.
+            this.blockRepository.Setup(r => r.GetBlock(It.IsAny<uint256>())).Returns((uint256 hash) =>
             {
-                this.TriggerOnBlockConnected(blocks[i]);
-            }
+                return votingRequest.Block;
+            });
+
+            this.TriggerOnBlockConnected(votingRequest);
         }
 
         [Fact]
