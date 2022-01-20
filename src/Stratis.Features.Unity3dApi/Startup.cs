@@ -151,17 +151,21 @@ namespace Stratis.Features.Unity3dApi
             });
 
             // Enable middleware to serve generated Swagger as a JSON endpoint.
-            app.UseSwagger();
-
+            app.UseSwagger(c =>
+            {
+                c.RouteTemplate = "swagger/unity/{documentname}/swagger.json";
+            });
+            
             // Enable middleware to serve swagger-ui (HTML, JS, CSS etc.)
             app.UseSwaggerUI(c =>
             {
+                c.RoutePrefix = "swagger/unity";
                 c.DefaultModelRendering(ModelRendering.Model);
 
                 // Build a swagger endpoint for each discovered API version
                 foreach (ApiVersionDescription description in provider.ApiVersionDescriptions)
                 {
-                    c.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
+                    c.SwaggerEndpoint($"/swagger/unity/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
                 }
 
                 // Hack to be able to access and modify the options object configured here
