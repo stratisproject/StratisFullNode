@@ -56,7 +56,7 @@ namespace Stratis.Bitcoin.Features.Consensus
             {
                 this.logger.LogInformation("Rewinding {0} from '{1}'.", this.GetType().Name, coinViewTip);
 
-                coinViewTip = this.stakeDb.Rewind();
+                coinViewTip = this.stakeDb.Rewind(coinViewTip);
                 currentHeader = this.chainIndexer.GetHeader(coinViewTip.Hash);
             }
 

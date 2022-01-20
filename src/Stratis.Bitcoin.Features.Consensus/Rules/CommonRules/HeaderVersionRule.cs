@@ -19,7 +19,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         public int ComputeBlockVersion(ChainedHeader prevChainedHeader)
         {
             uint version = ThresholdConditionCache.VersionbitsTopBits;
-            var thresholdConditionCache = new ThresholdConditionCache(this.Parent.Network.Consensus);
+            var thresholdConditionCache = new ThresholdConditionCache(this.Parent.Network, this.Parent.ChainIndexer);
 
             for (int deployment = 0; deployment < thresholdConditionCache.ArraySize; deployment++)
             {

@@ -258,7 +258,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         }
 
         /// <inheritdoc />
-        public HashHeightPair Rewind()
+        public HashHeightPair Rewind(HashHeightPair target)
         {
             HashHeightPair res = null;
             using (DBreeze.Transactions.Transaction transaction = this.CreateTransaction())
