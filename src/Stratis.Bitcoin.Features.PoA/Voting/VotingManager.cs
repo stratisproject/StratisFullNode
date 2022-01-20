@@ -579,7 +579,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                             if (poll == null)
                             {
-                                // The JoinFederationRequestMonitor is not responsible for creating "add member" polls.
+                                // The JoinFederationRequestMonitor is now responsible for creating "add member" polls.
                                 // Hence, if the poll does not exist then this is not a valid vote.
                                 if (data.Key == VoteKey.AddFederationMember)
                                     continue;
