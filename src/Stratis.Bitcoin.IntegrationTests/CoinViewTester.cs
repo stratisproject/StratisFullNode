@@ -77,9 +77,9 @@ namespace Stratis.Bitcoin.IntegrationTests
             return newHash;
         }
 
-        public HashHeightPair Rewind()
+        public HashHeightPair Rewind(HashHeightPair target = null)
         {
-            this.hash = this.coinView.Rewind();
+            this.hash = this.coinView.Rewind(target);
             this.blockHeight--;
             return this.hash;
         }

@@ -1,4 +1,6 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
+using System.Reflection;
 using Microsoft.Extensions.Logging;
 
 namespace Stratis.Bitcoin.Configuration.Logging
@@ -24,8 +26,21 @@ namespace Stratis.Bitcoin.Configuration.Logging
 
         public static ILogger GetCurrentClassLogger()
         {
-            var methodInfo = new StackTrace().GetFrame(1).GetMethod();
-            return new Logger(NLog.LogManager.GetLogger(methodInfo.ReflectedType.ToString()));
+            try
+            {
+                var stackTrace = new StackTrace();
+                if (stackTrace.FrameCount > 1)
+                {
+
+                    MethodBase methodInfo = stackTrace.GetFrame(1).GetMethod();
+                    return new Logger(NLog.LogManager.GetLogger(methodInfo.ReflectedType.ToString()));
+                }
+            }
+            catch (Exception)
+            {
+            }
+
+            return new Logger();
         }
 
         public static void ReconfigExistingLoggers()

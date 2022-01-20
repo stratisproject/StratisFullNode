@@ -155,6 +155,7 @@ namespace Stratis.Bitcoin.Networks
                 { 500_000, new CheckpointInfo(new uint256("0xda5da5c0ac8f34e89d6d308e1a046e98e46080941670e327d9eb84dc859d153f"), new uint256("0x1f73717627345bdc6d7b9b521dcea85df2586208a6d3a90fcd2efd16dcf9c591")) },
                 { 650_000, new CheckpointInfo(new uint256("0x50b2ddb88c5efe942d8bf6a07bed996f44b3b663df0f77d5d88ad1adba48329b"), new uint256("0xb507c86a412b9e50d0bed3be52a9042c2dbaca6653ff6ccb3e2e355c24c73a70")) },
                 { 750_000, new CheckpointInfo(new uint256("0x592842f3e5af517b0ce6f451f6b61738a6dea1007ccbaab39f22878de8de78dc"), new uint256("0x6ee053737f80a3a5173c10a507b1d1ea2ec9f6fa6be07b2b9d26558e4622f4a4")) },
+                { 800_000, new CheckpointInfo(new uint256("0x70c51661a4b358c42984019ee5dac9faee2f724860f651f8d78ed309e137f957"), new uint256("0x82ddde3f4e73a2eb69907b3f07f1f70f4c3b7e95812590fdef1050afb253cf84")) },
             };
 
             this.Bech32Encoders = new Bech32Encoder[2];

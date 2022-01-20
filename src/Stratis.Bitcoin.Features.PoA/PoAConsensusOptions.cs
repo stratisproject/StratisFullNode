@@ -54,6 +54,13 @@ namespace Stratis.Bitcoin.Features.PoA
         public int InterFluxV2MainChainActivationHeight { get; set; }
 
         /// <summary>
+        /// The height at which inituitive mining slots become active.
+        /// Legacy mining slots are determined by mining_slot = block_height % number_of_federation_members.
+        /// Once the specified height is reached there should no longer be a shift in mining slots when new federation members are added/removed.
+        /// </summary>
+        public int GetMiningTimestampV2ActivationHeight { get; set; }
+
+        /// <summary>
         /// Logic related to release 1.1.0.0 will activate at this height, this includes Poll Expiry and the Join Federation Voting Request consensus rule.
         /// </summary>
         public int Release1100ActivationHeight { get; set; }

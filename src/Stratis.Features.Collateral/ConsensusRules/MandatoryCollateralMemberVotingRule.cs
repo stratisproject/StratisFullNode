@@ -30,6 +30,8 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         }
 
         /// <summary>Checks that whomever mined this block is participating in any pending polls to vote-in new federation members.</summary>
+        /// <param name="context">See <see cref="RuleContext"/>.</param>
+        /// <returns>The asynchronous task.</returns>
         public override Task RunAsync(RuleContext context)
         {
             // "AddFederationMember" polls, that were started at or before this height, that are still pending, which this node has voted in favor of.
