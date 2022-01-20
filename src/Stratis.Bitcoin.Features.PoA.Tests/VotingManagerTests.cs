@@ -44,6 +44,18 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             Assert.Empty(this.votingManager.GetScheduledVotes());
         }
 
+        private void SimulateJoinFederationRequestMonitor(VotingData votingData, ChainedHeaderBlock votingRequest)
+        {
+            // Create a pending poll so that the scheduled vote is not "sanitized" away.
+            this.votingManager.PollsRepository.WithTransaction(transaction =>
+            {
+                this.votingManager.CreatePendingPoll(transaction, votingData, votingRequest.ChainedHeader);
+                transaction.Commit();
+            });
+
+            this.votingManager.ScheduleVote(votingData);
+        }
+
         [Fact]
         public void CanVote()
         {
@@ -69,13 +81,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             // Simulate JoinFederationRequestMonitor.
             // Create a pending poll so that the scheduled vote is not "sanitized" away.
-            this.votingManager.PollsRepository.WithTransaction(transaction =>
-            {
-                this.votingManager.CreatePendingPoll(transaction, votingData, votingRequest.ChainedHeader);
-                transaction.Commit();
-            });
-
-            this.votingManager.ScheduleVote(votingData);
+            SimulateJoinFederationRequestMonitor(votingData, votingRequest);
 
             this.TriggerOnBlockConnected(votingRequest);
 
@@ -113,13 +119,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             // Simulate JoinFederationRequestMonitor.
             // Create a pending poll so that the scheduled vote is not "sanitized" away.
-            this.votingManager.PollsRepository.WithTransaction(transaction =>
-            {
-                this.votingManager.CreatePendingPoll(transaction, votingData, votingRequest.ChainedHeader);
-                transaction.Commit();
-            });
-
-            this.votingManager.ScheduleVote(votingData);
+            SimulateJoinFederationRequestMonitor(votingData, votingRequest);
 
             this.TriggerOnBlockConnected(votingRequest);
 
@@ -190,13 +190,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             // Simulate JoinFederationRequestMonitor.
             // Create a pending poll so that the scheduled vote is not "sanitized" away.
-            this.votingManager.PollsRepository.WithTransaction(transaction =>
-            {
-                this.votingManager.CreatePendingPoll(transaction, votingData, votingRequest.ChainedHeader);
-                transaction.Commit();
-            });
-
-            this.votingManager.ScheduleVote(votingData);
+            SimulateJoinFederationRequestMonitor(votingData, votingRequest);
 
             this.TriggerOnBlockConnected(votingRequest);
             this.TriggerOnBlockConnected(blocks[0]);
@@ -245,13 +239,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             // Simulate JoinFederationRequestMonitor.
             // Create a pending poll so that the scheduled vote is not "sanitized" away.
-            this.votingManager.PollsRepository.WithTransaction(transaction =>
-            {
-                this.votingManager.CreatePendingPoll(transaction, votingData, votingRequest.ChainedHeader);
-                transaction.Commit();
-            });
-
-            this.votingManager.ScheduleVote(votingData);
+            SimulateJoinFederationRequestMonitor(votingData, votingRequest);
 
             this.TriggerOnBlockConnected(votingRequest);
             this.TriggerOnBlockConnected(blocks[0]);
