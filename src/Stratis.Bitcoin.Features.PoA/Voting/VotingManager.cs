@@ -192,7 +192,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 bool IsValid(VotingData currentScheduledData)
                 {
-                    // Remove scheduled voting data that can be found in pending polls.
+                    if (currentScheduledData.Key == VoteKey.AddFederationMember)
+                        // Only vote on pending polls that are not too old to vote on.
+                        return pendingPolls.Any(x => x.VotingData == currentScheduledData && !IsTooOldToVoteOn(x));
+
+                    // Remove scheduled voting data that relate to too-old pending polls.
                     if (pendingPolls.Any(x => x.VotingData == currentScheduledData && IsTooOldToVoteOn(x)))
                         return false;
 
@@ -294,6 +298,33 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
 
             return false;
+        }
+
+        public Poll CreatePendingPoll(DBreeze.Transactions.Transaction transaction, VotingData votingData, ChainedHeader chainedHeader, List<Vote> pubKeysVotedInFavor = null)
+        {
+            Poll poll = null;
+
+            // Ensures that highestPollId can't be changed before the poll is committed.
+            this.PollsRepository.Synchronous(() =>
+            {
+                poll = new Poll()
+                {
+                    Id = this.PollsRepository.GetHighestPollId() + 1,
+                    PollVotedInFavorBlockData = null,
+                    PollExecutedBlockData = null,
+                    PollStartBlockData = new HashHeightPair(chainedHeader),
+                    VotingData = votingData,
+                    PubKeysHexVotedInFavor = pubKeysVotedInFavor ?? new List<Vote>() {  }
+                };
+
+                this.polls.Add(poll);
+
+                this.PollsRepository.AddPolls(transaction, poll);
+
+                this.logger.LogInformation("New poll was created: '{0}'.", poll);
+            });
+
+            return poll;
         }
 
         public bool IsFederationMember(PubKey pubKey)
@@ -548,26 +579,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                             if (poll == null)
                             {
-                                // Ensures that highestPollId can't be changed before the poll is committed.
-                                this.PollsRepository.Synchronous(() =>
-                                {
-                                    poll = new Poll()
-                                    {
-                                        Id = this.PollsRepository.GetHighestPollId() + 1,
-                                        PollVotedInFavorBlockData = null,
-                                        PollExecutedBlockData = null,
-                                        PollStartBlockData = new HashHeightPair(chBlock.ChainedHeader),
-                                        VotingData = data,
-                                        PubKeysHexVotedInFavor = new List<Vote>() { new Vote() { PubKey = fedMemberKeyHex, Height = chBlock.ChainedHeader.Height } }
-                                    };
+                                // The JoinFederationRequestMonitor is now responsible for creating "add member" polls.
+                                // Hence, if the poll does not exist then this is not a valid vote.
+                                if (data.Key == VoteKey.AddFederationMember)
+                                    continue;
 
-                                    this.polls.Add(poll);
-
-                                    this.PollsRepository.AddPolls(transaction, poll);
-                                    pollsRepositoryModified = true;
-
-                                    this.logger.LogDebug("New poll was created: '{0}'.", poll);
-                                });
+                                poll = CreatePendingPoll(transaction, data, chBlock.ChainedHeader, new List<Vote>() { new Vote() { PubKey = fedMemberKeyHex, Height = chBlock.ChainedHeader.Height } });
+                                pollsRepositoryModified = true;
                             }
                             else if (!poll.PubKeysHexVotedInFavor.Any(v => v.PubKey == fedMemberKeyHex))
                             {
@@ -705,7 +723,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     // Otherwise, get the most recent poll. There could currently be unlimited of these, though they're harmless.
                     if (targetPoll == null)
                     {
-                        targetPoll = this.polls.Last(x => x.VotingData == votingData);
+                        targetPoll = this.polls.LastOrDefault(x => x.VotingData == votingData);
+
+                        // Maybe was an ignored vote, so it may have not created a poll.
+                        if (targetPoll == null)
+                            continue;
                     }
 
                     this.logger.LogDebug("Reverting poll voting in favor: '{0}'.", targetPoll);
@@ -726,14 +748,20 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     {
                         targetPoll.PubKeysHexVotedInFavor.RemoveAt(voteIndex);
 
-                        if (targetPoll.PubKeysHexVotedInFavor.Count == 0)
-                        {
-                            this.polls.Remove(targetPoll);
-                            this.PollsRepository.RemovePolls(transaction, targetPoll.Id);
-                            pollsRepositoryModified = true;
+                        this.PollsRepository.UpdatePoll(transaction, targetPoll);
+                        pollsRepositoryModified = true;
+                    }
+                }
 
-                            this.logger.LogDebug("Poll with Id {0} was removed.", targetPoll.Id);
-                        }
+                foreach (Poll targetPoll in GetPendingPolls())
+                {
+                    if (targetPoll.PollStartBlockData.Height >= chBlock.ChainedHeader.Height)
+                    {
+                        this.polls.Remove(targetPoll);
+                        this.PollsRepository.RemovePolls(transaction, targetPoll.Id);
+                        pollsRepositoryModified = true;
+
+                        this.logger.LogDebug("Poll with Id {0} was removed.", targetPoll.Id);
                     }
                 }
 

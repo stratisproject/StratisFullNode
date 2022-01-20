@@ -114,12 +114,20 @@ namespace Stratis.Features.Collateral
                     // Vote to add the member.
                     this.logger.LogDebug("Voting to add federation member '{0}'.", request.PubKey.ToHex());
 
-                    this.votingManager.ScheduleVote(new VotingData()
+                    VotingData votingData = new VotingData()
                     {
                         Key = VoteKey.AddFederationMember,
                         Data = federationMemberBytes
+                    };
+
+                    // Create a pending poll so that the scheduled vote is not "sanitized" away.
+                    this.votingManager.PollsRepository.WithTransaction(transaction =>
+                    {
+                        this.votingManager.CreatePendingPoll(transaction, votingData, blockConnectedData.ConnectedBlock.ChainedHeader);
+                        transaction.Commit();
                     });
 
+                    this.votingManager.ScheduleVote(votingData);
                 }
                 catch (Exception err)
                 {
