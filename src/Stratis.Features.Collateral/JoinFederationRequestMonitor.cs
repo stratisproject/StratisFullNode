@@ -134,7 +134,6 @@ namespace Stratis.Features.Collateral
                     });
 
                     this.votingManager.ScheduleVote(votingData);
-
                 }
                 catch (Exception err)
                 {
