@@ -74,7 +74,7 @@ namespace Stratis.Bitcoin.Tests.Base
             allHashes.AddRange(hashesBannedTemporarily2);
 
             foreach (uint256 hash in allHashes)
-                Assert.True(store.IsInvalid(hash));
+                Assert.True(store.IsInvalid(hash, out _));
 
             // Wait 5 seconds and then check if hashes from first temporary group are no longer banned and all others still are.
             Thread.Sleep(5000);
@@ -83,7 +83,7 @@ namespace Stratis.Bitcoin.Tests.Base
             {
                 uint num = hash.GetLow32();
                 bool isSecondGroup = (0x10 <= num) && (num < 0x20);
-                Assert.Equal(!isSecondGroup, store.IsInvalid(hash));
+                Assert.Equal(!isSecondGroup, store.IsInvalid(hash, out _));
             }
         }
     }

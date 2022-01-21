@@ -1087,10 +1087,10 @@ namespace Stratis.Bitcoin.Consensus
             uint256 newHeaderHash = currentBlockHeader.GetHash();
             insufficientHeaderInformation = false;
 
-            if (this.invalidHashesStore.IsInvalid(newHeaderHash))
+            if (this.invalidHashesStore.IsInvalid(newHeaderHash, out ConsensusError reason))
             {
                 this.logger.LogTrace("(-)[HEADER_HASH_MARKED_INVALID]");
-                throw new HeaderInvalidException();
+                throw new HeaderInvalidException(reason);
             }
 
             var newChainedHeader = new ChainedHeader(currentBlockHeader, newHeaderHash, previousChainedHeader);
