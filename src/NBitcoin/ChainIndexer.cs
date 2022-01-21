@@ -1,5 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+
+[assembly: InternalsVisibleTo("Stratis.Bitcoin")]
+[assembly: InternalsVisibleTo("Stratis.Bitcoin.Features.PoA.Tests")]
+[assembly: InternalsVisibleTo("Stratis.SmartContracts.Core.Tests")]
+[assembly: InternalsVisibleTo("Stratis.Bitcoin.Tests.Common")]
 
 namespace NBitcoin
 {
@@ -179,9 +185,9 @@ namespace NBitcoin
         }
 
         /// <summary>
-        /// TODO: Make this internal when the component moves to Stratis.Bitcoin
+        /// Advances the chain indexer tip by adding a new tip on top of the old tip.
         /// </summary>
-        public void Add(ChainedHeader addTip)
+        internal void Add(ChainedHeader addTip)
         {
             lock (this.lockObject)
             {
@@ -196,9 +202,9 @@ namespace NBitcoin
         }
 
         /// <summary>
-        /// TODO: Make this internal when the component moves to Stratis.Bitcoin
+        /// Rewinds the chain indexer to the header prior to the current tip.
         /// </summary>
-        public void Remove(ChainedHeader removeTip)
+        internal void Remove(ChainedHeader removeTip)
         {
             lock (this.lockObject)
             {
