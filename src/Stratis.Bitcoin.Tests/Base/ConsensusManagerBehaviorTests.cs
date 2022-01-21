@@ -413,7 +413,7 @@ namespace Stratis.Bitcoin.Tests.Base
         public async Task ProcessHeadersAsync_PeerThatSentInvalidHeaderIsBannedAsync()
         {
             this.helper.CreateAndAttachBehavior(this.headers[10], null, null, NetworkPeerState.HandShaked,
-                (presentedHeaders, triggerDownload) => { throw new HeaderInvalidException(); });
+                (presentedHeaders, triggerDownload) => { throw new HeaderInvalidException(new ConsensusError("code", "message")); });
 
             await this.helper.ReceivePayloadAsync(new HeadersPayload(this.headers.Skip(11).Take(5).Select(x => x.Header)));
 
