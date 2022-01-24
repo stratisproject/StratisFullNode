@@ -6,6 +6,7 @@ using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Primitives;
+using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
 using Xunit;
 
@@ -1214,7 +1215,8 @@ namespace Stratis.Bitcoin.Tests.Consensus
             // Extend the chain (chain A) with max reorg headers (500) + 50 extra.
             // Example: h1=h2=h3=h4=(h5)=a6=...=a555.
             const int maxReorg = 500;
-            ctx.ChainState.Setup(x => x.MaxReorgLength).Returns(maxReorg);
+            ctx.Network.Consensus.SetPrivatePropertyValue(nameof(ctx.Network.Consensus.MaxReorgLength), (uint)maxReorg);
+
             ChainedHeader chainATip = ctx.ExtendAChain(maxReorg + 50, initialChainTip);
 
             // Chain A is presented by peer 1.
@@ -1776,8 +1778,8 @@ namespace Stratis.Bitcoin.Tests.Consensus
             ctx.SetupCheckpoints(checkpoint);
 
             // Setup max reorg of 10.
-            const int maxReorg = 10;
-            ctx.ChainState.Setup(x => x.MaxReorgLength).Returns(maxReorg);
+            const uint maxReorg = 10;
+            ctx.Network.Consensus.SetPrivatePropertyValue(nameof(ctx.Network.Consensus.MaxReorgLength), maxReorg);
 
             // Setup finalized block height to 10.
             ctx.FinalizedBlockMock.Setup(m => m.GetFinalizedBlockInfo()).Returns(new HashHeightPair(uint256.One, 10));
@@ -2119,7 +2121,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
 
             // Setup max reorg to 100.
             const int maxReorg = 100;
-            ctx.ChainState.Setup(x => x.MaxReorgLength).Returns(maxReorg);
+            ctx.Network.Consensus.SetPrivatePropertyValue(nameof(ctx.Network.Consensus.MaxReorgLength), (uint)maxReorg);
 
             // Extend the chain with (checkpoint + MaxReorg + 10) headers, i.e. 115 headers.
             const int extensionSize = 10;
@@ -2753,8 +2755,8 @@ namespace Stratis.Bitcoin.Tests.Consensus
             Assert.Equal(initialChainSize, initialChainTip.Height);
 
             // Setup max reorg of 10.
-            const int maxReorg = 10;
-            testContext.ChainState.Setup(x => x.MaxReorgLength).Returns(maxReorg);
+            const uint maxReorg = 10;
+            testContext.Network.Consensus.SetPrivatePropertyValue(nameof(testContext.Network.Consensus.MaxReorgLength), maxReorg);
 
             // Setup finalized block height to 40.
             const int finalizedBlockHeight = 40;
