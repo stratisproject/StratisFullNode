@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using NLog;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Wallet.Broadcasting;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
@@ -22,7 +23,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <summary>
         /// Enables the node operator to try and manually push fully signed transactions.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The asynchronous task returning <see cref="SignedMultisigTransactionBroadcastResult"/>.</returns>
         Task<SignedMultisigTransactionBroadcastResult> BroadcastFullySignedTransfersAsync();
 
         /// <summary>
@@ -87,7 +88,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             if (fullySignedTransfers.Length == 0)
             {
-                this.logger.Debug("There are no fully signed transactions to broadcast.");
+                this.logger.LogDebug("There are no fully signed transactions to broadcast.");
                 return new SignedMultisigTransactionBroadcastResult() { Message = "There are no fully signed transactions to broadcast." };
             }
 
@@ -112,12 +113,12 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             TxMempoolInfo txMempoolInfo = await this.mempoolManager.InfoAsync(crossChainTransfer.PartialTransaction.GetHash()).ConfigureAwait(false);
             if (txMempoolInfo != null)
             {
-                this.logger.Info("Deposit '{0}' already in the mempool.", crossChainTransfer.DepositTransactionId);
+                this.logger.LogInformation("Deposit '{0}' already in the mempool.", crossChainTransfer.DepositTransactionId);
                 transferItem.ItemMessage = $"Deposit '{crossChainTransfer.DepositTransactionId}' already in the mempool.";
                 return transferItem;
             }
 
-            this.logger.Info("Broadcasting deposit '{0}', a signed multisig transaction '{1}' to the network.", crossChainTransfer.DepositTransactionId, crossChainTransfer.PartialTransaction.GetHash());
+            this.logger.LogInformation("Broadcasting deposit '{0}', a signed multisig transaction '{1}' to the network.", crossChainTransfer.DepositTransactionId, crossChainTransfer.PartialTransaction.GetHash());
 
             await this.broadcasterManager.BroadcastTransactionAsync(crossChainTransfer.PartialTransaction).ConfigureAwait(false);
 
@@ -132,7 +133,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             if (transactionBroadCastEntry.TransactionBroadcastState == TransactionBroadcastState.CantBroadcast && !CrossChainTransferStore.IsMempoolErrorRecoverable(transactionBroadCastEntry.MempoolError))
             {
-                this.logger.Warn("Deposit '{0}' rejected: '{1}'.", crossChainTransfer.DepositTransactionId, transactionBroadCastEntry.ErrorMessage);
+                this.logger.LogWarning("Deposit '{0}' rejected: '{1}'.", crossChainTransfer.DepositTransactionId, transactionBroadCastEntry.ErrorMessage);
                 this.crossChainTransferStore.RejectTransfer(crossChainTransfer);
                 transferItem.ItemMessage = $"Deposit '{crossChainTransfer.DepositTransactionId}' rejected: '{transactionBroadCastEntry.ErrorMessage}'.";
                 return transferItem;

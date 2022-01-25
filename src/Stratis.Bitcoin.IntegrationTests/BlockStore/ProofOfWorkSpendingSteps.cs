@@ -91,7 +91,7 @@ namespace Stratis.Bitcoin.IntegrationTests.BlockStore
                     .BuildTransaction(transactionBuildContext);
 
                 await this.sendingStratisBitcoinNode.FullNode.NodeController<WalletController>()
-                    .SendTransaction(new SendTransactionRequest(this.lastTransaction.ToHex()));
+                    .SendTransactionAsync(new SendTransactionRequest(this.lastTransaction.ToHex()));
             }
             catch (Exception exception)
             {

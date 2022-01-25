@@ -122,6 +122,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public IActionResult GetBlock([FromQuery] SearchByHashRequest query)
         {
             if (!this.ModelState.IsValid)
@@ -134,14 +135,14 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
                 ChainedHeader chainedHeader = this.chainIndexer.GetHeader(blockId);
 
                 if (chainedHeader == null)
-                    return this.Ok("Block not found");
+                    return this.NotFound("Block not found");
 
                 Block block = chainedHeader.Block ?? this.blockStore.GetBlock(blockId);
 
                 // In rare occasions a block that is found in the
                 // indexer may not have been pushed to the store yet. 
                 if (block == null)
-                    return this.Ok("Block not found");
+                    return this.NotFound("Block not found");
 
                 if (!query.OutputJson)
                 {

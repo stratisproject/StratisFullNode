@@ -45,8 +45,9 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         uint256 BlockHash { get; }
 
         /// <summary>
-        /// Abbreviated information about the withdrawal.
+        /// Gets abbreviated information about the withdrawal.
         /// </summary>
+        /// <returns>The abbreviated information.</returns>
         string GetInfo();
     }
 }

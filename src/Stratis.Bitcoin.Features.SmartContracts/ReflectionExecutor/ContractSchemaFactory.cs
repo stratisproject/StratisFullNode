@@ -47,7 +47,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor
         /// <summary>
         /// Maps a type to its schemas.
         /// </summary>
-        /// <param name="type"></param>
+        /// <param name="methods"></param>
         /// <returns></returns>
         public IDictionary<string, OpenApiSchema> Map(IEnumerable<MethodInfo> methods)
         {
@@ -65,7 +65,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor
             schema.Properties = new Dictionary<string, OpenApiSchema>();
             schema.Title = method.Name;
 
-            foreach (var parameter in method.GetParameters())
+            foreach (ParameterInfo parameter in method.GetParameters())
             {
                 // Default to string.
                 OpenApiSchema paramSchema = PrimitiveTypeMap.ContainsKey(parameter.ParameterType)

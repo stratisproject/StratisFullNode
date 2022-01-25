@@ -267,7 +267,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Swagger
         /// <param name="documentName">The name of the swagger document to use.</param>
         /// <param name="host"></param>
         /// <param name="basePath"></param>
-        /// <param name="schemes"></param>
         /// <returns></returns>
         public OpenApiDocument GetSwagger(string documentName, string host = null, string basePath = null)
         {

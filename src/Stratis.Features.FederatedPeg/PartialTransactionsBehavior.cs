@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol;
 using Stratis.Bitcoin.P2P.Protocol.Behaviors;
@@ -9,7 +10,6 @@ using Stratis.Features.FederatedPeg.InputConsolidation;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Payloads;
 using TracerAttributes;
-using ILogger = NLog.ILogger;
 
 namespace Stratis.Features.FederatedPeg
 {
@@ -56,13 +56,13 @@ namespace Stratis.Features.FederatedPeg
 
         protected override void AttachCore()
         {
-            this.logger.Debug("Attaching behaviour for {0}", this.AttachedPeer.PeerEndPoint.Address);
+            this.logger.LogDebug("Attaching behaviour for {0}", this.AttachedPeer.PeerEndPoint.Address);
             this.AttachedPeer.MessageReceived.Register(this.OnMessageReceivedAsync, true);
         }
 
         protected override void DetachCore()
         {
-            this.logger.Debug("Detaching behaviour for {0}", this.AttachedPeer.PeerEndPoint.Address);
+            this.logger.LogDebug("Detaching behaviour for {0}", this.AttachedPeer.PeerEndPoint.Address);
             this.AttachedPeer.MessageReceived.Unregister(this.OnMessageReceivedAsync);
         }
 
@@ -70,9 +70,10 @@ namespace Stratis.Features.FederatedPeg
         /// Broadcast the partial transaction request to federation members.
         /// </summary>
         /// <param name="payload">The payload to broadcast.</param>
+        /// <returns>The asynchronous task.</returns>
         private async Task BroadcastAsync(RequestPartialTransactionPayload payload)
         {
-            this.logger.Debug("Broadcasting to {0}", this.AttachedPeer.PeerEndPoint.Address);
+            this.logger.LogDebug("Broadcasting to {0}", this.AttachedPeer.PeerEndPoint.Address);
             await this.AttachedPeer.SendMessageAsync(payload).ConfigureAwait(false);
         }
 
@@ -84,19 +85,19 @@ namespace Stratis.Features.FederatedPeg
             // Don't process payloads whilst the federation wallet and cross chain store is syncing.
             if (!this.federationWalletManager.IsSyncedWithChain())
             {
-                this.logger.Debug($"Federation payloads will only be processed once the federation wallet is synced; current height {this.federationWalletManager.WalletTipHeight}");
+                this.logger.LogDebug($"Federation payloads will only be processed once the federation wallet is synced; current height {this.federationWalletManager.WalletTipHeight}");
                 return;
             }
 
             // Is a consolidation request.
             if (payload.DepositId == RequestPartialTransactionPayload.ConsolidationDepositId)
             {
-                this.logger.Debug("Received request to sign consolidation transaction.");
+                this.logger.LogDebug("Received request to sign consolidation transaction.");
                 await this.HandleConsolidationTransactionRequestAsync(peer, payload);
                 return;
             }
 
-            this.logger.Debug("{0} with deposit Id '{1}' received from '{2}':'{3}'.", nameof(RequestPartialTransactionPayload), payload.DepositId, peer.PeerEndPoint.Address, peer.RemoteSocketAddress);
+            this.logger.LogDebug("{0} with deposit Id '{1}' received from '{2}':'{3}'.", nameof(Payloads.RequestPartialTransactionPayload), payload.DepositId, peer.PeerEndPoint.Address, peer.RemoteSocketAddress);
 
             ICrossChainTransfer[] transfer = await this.crossChainTransferStore.GetAsync(new[] { payload.DepositId }).ConfigureAwait(false);
 
@@ -105,25 +106,25 @@ namespace Stratis.Features.FederatedPeg
             // on chain and as such the store was not able to sync.
             if (transfer == null)
             {
-                this.logger.Debug("{0}: Unable to retrieve transfers for deposit {1} at this time, the store is not synced.", nameof(this.OnMessageReceivedAsync), payload.DepositId);
+                this.logger.LogDebug("{0}: Unable to retrieve transfers for deposit {1} at this time, the store is not synced.", nameof(this.OnMessageReceivedAsync), payload.DepositId);
                 return;
             }
 
             if (transfer[0] == null)
             {
-                this.logger.Debug("{0}: Deposit {1} does not exist.", nameof(this.OnMessageReceivedAsync), payload.DepositId);
+                this.logger.LogDebug("{0}: Deposit {1} does not exist.", nameof(this.OnMessageReceivedAsync), payload.DepositId);
                 return;
             }
 
             if (transfer[0].Status != CrossChainTransferStatus.Partial)
             {
-                this.logger.Debug("{0}: Deposit {1} is {2}.", nameof(this.OnMessageReceivedAsync), payload.DepositId, transfer[0].Status);
+                this.logger.LogDebug("{0}: Deposit {1} is {2}.", nameof(this.OnMessageReceivedAsync), payload.DepositId, transfer[0].Status);
                 return;
             }
 
             if (transfer[0].PartialTransaction == null)
             {
-                this.logger.Debug("{0}: Deposit {1}, PartialTransaction not found.", nameof(this.OnMessageReceivedAsync), payload.DepositId);
+                this.logger.LogDebug("{0}: Deposit {1}, PartialTransaction not found.", nameof(this.OnMessageReceivedAsync), payload.DepositId);
                 return;
             }
 
@@ -133,20 +134,20 @@ namespace Stratis.Features.FederatedPeg
 
             if (signedTransaction == null)
             {
-                this.logger.Debug("{0}: Deposit {1}, signedTransaction not found.", nameof(this.OnMessageReceivedAsync), payload.DepositId);
+                this.logger.LogDebug("{0}: Deposit {1}, signedTransaction not found.", nameof(this.OnMessageReceivedAsync), payload.DepositId);
                 return;
             }
 
             if (oldHash != signedTransaction.GetHash())
             {
-                this.logger.Debug("Signed transaction (deposit={0}) to produce {1} from {2}.", payload.DepositId, signedTransaction.GetHash(), oldHash);
+                this.logger.LogDebug("Signed transaction (deposit={0}) to produce {1} from {2}.", payload.DepositId, signedTransaction.GetHash(), oldHash);
 
                 // Respond back to the peer that requested a signature.
                 await this.BroadcastAsync(payload.AddPartial(signedTransaction)).ConfigureAwait(false);
             }
             else
             {
-                this.logger.Debug("The old and signed hash matches '{0}'.", oldHash);
+                this.logger.LogDebug("The old and signed hash matches '{0}'.", oldHash);
             }
         }
 
@@ -156,7 +157,7 @@ namespace Stratis.Features.FederatedPeg
 
             if (result.Signed)
             {
-                this.logger.Debug("Signed consolidating transaction to produce {0} from {1}", result.TransactionResult.GetHash(), payload.PartialTransaction.GetHash());
+                this.logger.LogDebug("Signed consolidating transaction to produce {0} from {1}", result.TransactionResult.GetHash(), payload.PartialTransaction.GetHash());
                 await this.BroadcastAsync(payload.AddPartial(result.TransactionResult)).ConfigureAwait(false);
             }
         }

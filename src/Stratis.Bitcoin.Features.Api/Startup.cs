@@ -9,7 +9,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
-using Newtonsoft.Json.Converters;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using Swashbuckle.AspNetCore.SwaggerUI;
 
@@ -74,7 +73,9 @@ namespace Stratis.Bitcoin.Features.Api
                 {
                     options.Filters.Add(typeof(LoggingActionFilter));
 
+#pragma warning disable ASP0000 // Do not call 'IServiceCollection.BuildServiceProvider' in 'ConfigureServices'
                     ServiceProvider serviceProvider = services.BuildServiceProvider();
+#pragma warning restore ASP0000 // Do not call 'IServiceCollection.BuildServiceProvider' in 'ConfigureServices'
                     var apiSettings = (ApiSettings)serviceProvider.GetRequiredService(typeof(ApiSettings));
                     if (apiSettings.KeepaliveTimer != null)
                     {

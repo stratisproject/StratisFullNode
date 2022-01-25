@@ -957,6 +957,12 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <inheritdoc />
         public IEnumerable<HdAccount> GetAccounts(string walletName)
         {
+            return GetAccounts(walletName, null);
+        }
+
+        /// <inheritdoc />
+        public IEnumerable<HdAccount> GetAccounts(string walletName, Func<HdAccount, bool> accountFilter)
+        {
             Guard.NotEmpty(walletName, nameof(walletName));
 
             Wallet wallet = this.GetWallet(walletName);
@@ -964,7 +970,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             HdAccount[] res = null;
             lock (this.lockObject)
             {
-                res = wallet.GetAccounts().ToArray();
+                res = wallet.GetAccounts(accountFilter).ToArray();
             }
 
             return res;
@@ -1018,6 +1024,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             this.WalletRepository.AddWatchOnlyAddresses(walletName, accountName, 0, pubKeys.Select(pubKey => new HdAddress() { Pubkey = pubKey.ScriptPubKey }).ToList());
         }
 
+        // TODO: Not sure if the intention was to return special accounts too. If not, this method doesn't have much purpose and is essentially a duplicate of GetAccounts(), albeit across all wallets
         public IEnumerable<HdAccount> GetAllAccounts()
         {
             HdAccount[] res = null;

@@ -1,8 +1,8 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using NBitcoin.Policy;
-using NLog;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration.Logging;
@@ -27,7 +27,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         {
             ILogger logger = LogManager.GetCurrentClassLogger();
 
-            logger.Info("Smart Contract Feature Wallet Injected.");
+            logger.LogInformation("Smart Contract Feature Wallet Injected.");
 
             return Task.CompletedTask;
         }

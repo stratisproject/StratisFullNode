@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
 using RocksDbSharp;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Utilities;
@@ -116,7 +117,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
 
             Task task = Task.Run(() =>
             {
-                this.logger.Debug("({0}.Count():{1})", nameof(headers), headers.Count());
+                this.logger.LogDebug("({0}.Count():{1})", nameof(headers), headers.Count());
 
                 this.InsertHeaders(headers);
 

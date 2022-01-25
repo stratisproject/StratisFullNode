@@ -5,10 +5,11 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using NLog;
 using Polly;
 using Polly.Retry;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 
@@ -81,28 +82,28 @@ namespace Stratis.Bitcoin.Controllers
                     // Retry the following call according to the policy.
                     await this.policy.ExecuteAsync(async token =>
                     {
-                        this.logger.Debug("Sending request of type '{0}' to Uri '{1}'.",
+                        this.logger.LogDebug("Sending request of type '{0}' to Uri '{1}'.",
                             requestModel.GetType().FullName, publicationUri);
 
                         response = await client.PostAsync(publicationUri, request, cancellation).ConfigureAwait(false);
-                        this.logger.Debug("Response received: {0}", response);
+                        this.logger.LogDebug("Response received: {0}", response);
                     }, cancellation);
                 }
                 catch (OperationCanceledException)
                 {
-                    this.logger.Debug("Operation canceled.");
-                    this.logger.Trace("(-)[CANCELLED]:null");
+                    this.logger.LogDebug("Operation canceled.");
+                    this.logger.LogTrace("(-)[CANCELLED]:null");
                     return null;
                 }
                 catch (HttpRequestException ex)
                 {
-                    this.logger.Error("Target node is not ready to receive API calls at this time on {0}. Reason: {1}.", this.EndpointUrl, ex.Message);
-                    this.logger.Debug("Failed to send a message. Exception: '{0}'.", ex);
+                    this.logger.LogError("Target node is not ready to receive API calls at this time on {0}. Reason: {1}.", this.EndpointUrl, ex.Message);
+                    this.logger.LogDebug("Failed to send a message. Exception: '{0}'.", ex);
                     return new HttpResponseMessage() { ReasonPhrase = ex.Message, StatusCode = HttpStatusCode.InternalServerError };
                 }
             }
 
-            this.logger.Trace("(-)[SUCCESS]");
+            this.logger.LogTrace("(-)[SUCCESS]");
             return response;
         }
 
@@ -131,19 +132,19 @@ namespace Stratis.Bitcoin.Controllers
         {
             if (httpResponse == null)
             {
-                this.logger.Trace("(-)[NO_RESPONSE]:null");
+                this.logger.LogTrace("(-)[NO_RESPONSE]:null");
                 return null;
             }
 
             if (!httpResponse.IsSuccessStatusCode)
             {
-                this.logger.Trace("(-)[NOT_SUCCESS_CODE]:null");
+                this.logger.LogTrace("(-)[NOT_SUCCESS_CODE]:null");
                 return null;
             }
 
             if (httpResponse.Content == null)
             {
-                this.logger.Trace("(-)[NO_CONTENT]:null");
+                this.logger.LogTrace("(-)[NO_CONTENT]:null");
                 return null;
             }
 
@@ -152,13 +153,13 @@ namespace Stratis.Bitcoin.Controllers
 
             if (successJson == null)
             {
-                this.logger.Trace("(-)[JSON_PARSING_FAILURE]:null");
+                this.logger.LogTrace("(-)[JSON_PARSING_FAILURE]:null");
                 return null;
             }
 
             Response responseModel = JsonConvert.DeserializeObject<Response>(successJson);
 
-            this.logger.Trace("(-)[SUCCESS]");
+            this.logger.LogTrace("(-)[SUCCESS]");
             return responseModel;
         }
 
@@ -182,35 +183,35 @@ namespace Stratis.Bitcoin.Controllers
                     // Retry the following call according to the policy.
                     await this.policy.ExecuteAsync(async token =>
                     {
-                        this.logger.Debug("Sending request to Url '{1}'.", url);
+                        this.logger.LogDebug("Sending request to Url '{1}'.", url);
 
                         response = await client.GetAsync(url, cancellation).ConfigureAwait(false);
 
                         if (response != null)
-                            this.logger.Debug("Response received: {0}", response);
+                            this.logger.LogDebug("Response received: {0}", response);
                     }, cancellation);
                 }
                 catch (OperationCanceledException)
                 {
-                    this.logger.Debug("Operation canceled.");
-                    this.logger.Trace("(-)[CANCELLED]:null");
+                    this.logger.LogDebug("Operation canceled.");
+                    this.logger.LogTrace("(-)[CANCELLED]:null");
                     return null;
                 }
                 catch (HttpRequestException ex)
                 {
-                    this.logger.Error("Target node is not ready to receive API calls at this time ({0})", this.EndpointUrl);
-                    this.logger.Debug("Failed to send a message to '{0}'. Exception: '{1}'.", url, ex);
+                    this.logger.LogError("Target node is not ready to receive API calls at this time ({0})", this.EndpointUrl);
+                    this.logger.LogDebug("Failed to send a message to '{0}'. Exception: '{1}'.", url, ex);
                     return new HttpResponseMessage() { ReasonPhrase = ex.Message, StatusCode = HttpStatusCode.InternalServerError };
                 }
             }
 
-            this.logger.Trace("(-)[SUCCESS]");
+            this.logger.LogTrace("(-)[SUCCESS]");
             return response;
         }
 
         protected virtual void OnRetry(Exception exception, TimeSpan delay)
         {
-            this.logger.Debug("Exception while calling API method: {0}. Retrying...", exception.ToString());
+            this.logger.LogDebug("Exception while calling API method: {0}. Retrying...", exception.ToString());
         }
     }
 

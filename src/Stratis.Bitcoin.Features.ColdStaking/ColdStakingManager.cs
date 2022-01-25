@@ -68,6 +68,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
         /// <param name="scriptAddressReader">A reader for extracting an address from a <see cref="Script"/>.</param>
         /// <param name="loggerFactory">The logger factory to use to create the custom logger.</param>
         /// <param name="dateTimeProvider">Provider of time functions.</param>
+        /// <param name="walletRepository">The wallet repository.</param>
         /// <param name="broadcasterManager">The broadcaster manager.</param>
         public ColdStakingManager(
             Network network,
@@ -194,6 +195,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
         /// <param name="walletName">The name of the wallet where we wish to create the account.</param>
         /// <param name="isColdWalletAccount">Indicates whether we need the cold wallet account (versus the hot wallet account).</param>
         /// <param name="walletPassword">The wallet password which will be used to create the account.</param>
+        /// <param name="extPubKey">The <see cref="ExtPubKey"/> of the wallet account. Can be <c>null</c> for watch-only wallets.</param>
         /// <returns>The new or existing cold staking account.</returns>
         internal HdAccount GetOrCreateColdStakingAccount(string walletName, bool isColdWalletAccount, string walletPassword, ExtPubKey extPubKey)
         {
@@ -457,6 +459,14 @@ namespace Stratis.Bitcoin.Features.ColdStaking
         /// Builds an unsigned transaction template for a cold staking withdrawal transaction.
         /// This requires specialised logic due to the lack of a private key for the cold account.
         /// </summary>
+        /// <param name="walletTransactionHandler">The <see cref="IWalletTransactionHandler"/>.</param>
+        /// <param name="receivingAddress">The receiving address.</param>
+        /// <param name="walletName">The spending wallet name.</param>
+        /// <param name="accountName">The spending account name.</param>
+        /// <param name="amount">The amount to spend.</param>
+        /// <param name="feeAmount">The fee amount.</param>
+        /// <param name="subtractFeeFromAmount">Set to <c>true</c> to subtract the <paramref name="feeAmount"/> from the <paramref name="amount"/>.</param>
+        /// <returns>See <see cref="BuildOfflineSignResponse"/>.</returns>
         public BuildOfflineSignResponse BuildOfflineColdStakingWithdrawalRequest(IWalletTransactionHandler walletTransactionHandler, string receivingAddress,
             string walletName, string accountName, Money amount, Money feeAmount, bool subtractFeeFromAmount)
         {
@@ -552,6 +562,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
         /// <param name="walletPassword">The wallet password.</param>
         /// <param name="amount">The amount to remove from cold staking.</param>
         /// <param name="feeAmount">The fee to pay for cold staking transaction withdrawal.</param>
+        /// <param name="subtractFeeFromAmount">Set to <c>true</c> to subtract the <paramref name="feeAmount"/> from the <paramref name="amount"/>.</param>
         /// <returns>The <see cref="Transaction"/> for cold staking withdrawal.</returns>
         /// <exception cref="WalletException">Thrown if the receiving address is in a cold staking account in this wallet.</exception>
         /// <exception cref="ArgumentNullException">Thrown if the receiving address is invalid.</exception>

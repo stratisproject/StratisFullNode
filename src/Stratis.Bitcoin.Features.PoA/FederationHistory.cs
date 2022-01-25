@@ -27,8 +27,9 @@ namespace Stratis.Bitcoin.Features.PoA
 
         /// <summary>Gets the federation for a specified block.</summary>
         /// <param name="chainedHeader">Identifies the block and timestamp.</param>
+        /// <param name="offset">Identifies a block relative to <paramref name="chainedHeader"/></param>
         /// <returns>The federation member or <c>null</c> if the member could not be determined.</returns>
-        List<IFederationMember> GetFederationForBlock(ChainedHeader chainedHeader);
+        List<IFederationMember> GetFederationForBlock(ChainedHeader chainedHeader, int offset = 0);
 
         /// <summary>
         /// Determines when a federation member was last active. This includes mining or joining.
@@ -96,11 +97,12 @@ namespace Stratis.Bitcoin.Features.PoA
         }
 
         /// <inheritdoc />
-        public List<IFederationMember> GetFederationForBlock(ChainedHeader chainedHeader)
+        public List<IFederationMember> GetFederationForBlock(ChainedHeader chainedHeader, int offset = 0)
         {
             lock (this.lockObject)
             {
-                if ((this.lastActiveTip == chainedHeader || this.lastActiveTip?.FindFork(chainedHeader)?.Height >= chainedHeader.Height) &&
+                if (this.lastFederationTip >= (chainedHeader.Height + offset) &&
+                   (this.lastActiveTip == chainedHeader || this.lastActiveTip?.FindFork(chainedHeader)?.Height >= chainedHeader.Height) &&
                     this.federationHistory.TryGetValue(chainedHeader.Height, out (List<IFederationMember> modifiedFederation, HashSet<IFederationMember> whoJoined, IFederationMember miner) item))
                 {
                     return item.modifiedFederation;
@@ -347,7 +349,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
                 return blockHeader.GetAncestor(height);
             }
-            
+
             // Find the first block with Time >= minTime. We're not interested in re-reading any blocks below or at the last active tip though.
             int startHeight = (this.lastActiveTip?.Height ?? -1) + 1;
             startHeight = BinarySearch.BinaryFindFirst(n => GetHeader(n).Header.Time >= minTime, startHeight, blockHeader.Height - startHeight + 1);
@@ -373,7 +375,8 @@ namespace Stratis.Bitcoin.Features.PoA
 
             foreach (ChainedHeader header in blockHeader.EnumerateToGenesis().Take(miners.Length).Reverse())
             {
-                var history = this.federationHistory[header.Height];
+                // Add the miner to the history.
+                (List<IFederationMember> members, HashSet<IFederationMember> joined, IFederationMember miner) history = this.federationHistory[header.Height];
                 history.miner = miners[header.Height - startHeight];
                 this.federationHistory[header.Height] = history;
 

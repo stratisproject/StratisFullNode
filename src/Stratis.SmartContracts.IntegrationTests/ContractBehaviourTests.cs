@@ -234,13 +234,75 @@ namespace Stratis.SmartContracts.IntegrationTests
         }
 
         [Fact]
-        public void Local_Call_Returns_Correctly_Formatted_Value()
+        public void Local_Internal_Call_Should_Transfer_Value()
         {
-            var network = this.mockChain.Nodes[0].CoreNode.FullNode.Network;
+            // Ref: https://github.com/stratisproject/StratisFullNode/pull/662#issuecomment-902379004
+            var localExecutor = this.mockChain.Nodes[0].CoreNode.FullNode.NodeService<ILocalExecutor>();
 
             // Ensure fixture is funded.
             this.mockChain.MineBlocks(1);
 
+            // Deploy contract 1
+            ContractCompilationResult compilationResult = ContractCompiler.CompileFile("SmartContracts/ValueTransferTest.cs");
+
+            Assert.True(compilationResult.Success);
+            BuildCreateContractTransactionResponse valueTransferContractResponse = this.node1.SendCreateContractTransaction(compilationResult.Compilation, 0);
+            this.mockChain.WaitAllMempoolCount(1);
+            this.mockChain.MineBlocks(1);
+
+            Assert.NotNull(this.node1.GetCode(valueTransferContractResponse.NewContractAddress));
+            Assert.Equal(0UL, this.node1.GetContractBalance(valueTransferContractResponse.NewContractAddress));
+
+            ReceiptResponse receipt = this.node1.GetReceipt(valueTransferContractResponse.TransactionId.ToString());
+            Assert.True(receipt.Success);
+
+            // Deploy contract 2
+            var compilationResult2 = ContractCompiler.CompileFile("SmartContracts/ValueTransferRecipient.cs");
+
+            Assert.True(compilationResult2.Success);
+            var recipientResponse = this.node1.SendCreateContractTransaction(compilationResult2.Compilation, 0);
+            this.mockChain.WaitAllMempoolCount(1);
+            this.mockChain.MineBlocks(1);
+
+            Assert.NotNull(this.node1.GetCode(recipientResponse.NewContractAddress));
+            Assert.Equal(0UL, this.node1.GetContractBalance(recipientResponse.NewContractAddress));
+
+            ReceiptResponse receipt2 = this.node1.GetReceipt(recipientResponse.TransactionId.ToString());
+            Assert.True(receipt2.Success);
+
+            uint256 currentHash = this.node1.GetLastBlock().GetHash();
+
+            NBitcoin.Block lastBlock = this.node1.GetLastBlock();
+
+            // Create a log in a local call.
+            var parameters = new object[]
+            {
+                recipientResponse.NewContractAddress.ToAddress(this.node1.CoreNode.FullNode.Network)
+            };
+
+            var call = new ContractTxData(1, 100, (Gas)250000, valueTransferContractResponse.NewContractAddress.ToUint160(this.node1.CoreNode.FullNode.Network), nameof(ValueTransferTest.CanForwardValueCall), parameters);
+            var internalTransferResult = localExecutor.Execute((ulong)this.node1.CoreNode.FullNode.ChainIndexer.Height, this.mockChain.Nodes[0].MinerAddress.Address.ToUint160(this.node1.CoreNode.FullNode.Network), 10, call);
+
+            Assert.False(internalTransferResult.Revert);
+            
+            //Assert.NotEmpty(createLogResult.Logs);
+            //RLPCollection collection = (RLPCollection)RLP.Decode(createLogResult.Logs[0].Data);
+            //var loggedData = Encoding.UTF8.GetString(collection[0].RLPData);
+            //Assert.Equal(nameof(LocalCallTests.CreateLog), loggedData);
+
+            //// Create a transfer in a local call
+            //call = new ContractTxData(1, 100, (Gas)250000, preResponse.NewContractAddress.ToUint160(this.node1.CoreNode.FullNode.Network), nameof(LocalCallTests.CreateTransfer));
+            //var createTransferResult = localExecutor.Execute((ulong)this.node1.CoreNode.FullNode.ChainIndexer.Height, this.mockChain.Nodes[0].MinerAddress.Address.ToUint160(this.node1.CoreNode.FullNode.Network), 0, call);
+
+            ////Assert.NotEmpty(createTransferResult.InternalTransfers);
+            ////Assert.Equal(Address.Zero.ToUint160(), createTransferResult.InternalTransfers[0].To);
+            ////Assert.Equal(1UL, createTransferResult.InternalTransfers[0].Value);
+        }
+
+        [Fact]
+        public void Local_Call_Returns_Correctly_Formatted_Value()
+        {
+            var network = this.mockChain.Nodes[0].CoreNode.FullNode.Network;
             // Deploy contract
             ContractCompilationResult compilationResult = ContractCompiler.CompileFile("SmartContracts/LocalCallTests.cs");
 
