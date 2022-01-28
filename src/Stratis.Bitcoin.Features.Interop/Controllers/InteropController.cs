@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Numerics;
-using System.Security;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -30,6 +29,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         private readonly IETHCompatibleClientProvider ethCompatibleClientProvider;
         private readonly IFederationManager federationManager;
         private readonly InteropSettings interopSettings;
+        private readonly InteropPoller interopPoller;
         private readonly ILogger logger;
         private readonly Network network;
         
@@ -39,13 +39,15 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             IConversionRequestRepository conversionRequestRepository,
             IETHCompatibleClientProvider ethCompatibleClientProvider,
             IFederationManager federationManager,
-            InteropSettings interopSettings)
+            InteropSettings interopSettings,
+            InteropPoller interopPoller)
         {
             this.conversionRequestCoordinationService = conversionRequestCoordinationService;
             this.conversionRequestRepository = conversionRequestRepository;
             this.ethCompatibleClientProvider = ethCompatibleClientProvider;
             this.federationManager = federationManager;
             this.interopSettings = interopSettings;
+            this.interopPoller = interopPoller;
             this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
         }
@@ -590,6 +592,32 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             catch (Exception e)
             {
                 this.logger.LogError("Exception manual pushing vote for conversion request '{0}' : {1}.", model.RequestId, e.ToString());
+
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Endpoint that allows the multisig operator to reset the scan height of the interop poller.
+        /// </summary>
+        /// <param name="model">The chain identifier and block height to reset the scan height for.</param>
+        [Route("resetscanheight")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult ReprocessBurnRequest([FromBody] ResetScanHeightModel model)
+        {
+            try
+            {
+                this.interopPoller.ResetScanHeight(model.DestinationChain, model.Height);
+                this.logger.LogInformation($"Scan height for chain {model.DestinationChain} will be reset to '{model.Height}'.");
+
+                return this.Json($"Scan height for chain {model.DestinationChain} will be reset to '{model.Height}'.");
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception resetting scan height to '{0}' : {1}.", model.Height, e.ToString());
 
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
             }
