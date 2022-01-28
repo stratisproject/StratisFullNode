@@ -75,6 +75,10 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private readonly Dictionary<DestinationChain, BigInteger> lastPolledBlock;
 
+        // Normally all the values of this dictionary will be -1. If they are anything else, the lastPolledBlock will
+        // be reset to that value on the next async loop iteration.
+        private readonly Dictionary<DestinationChain, BigInteger> overrideLastPolledBlock;
+
         /// <summary>Both the <see cref="conversionLoop"/> and <see cref="conversionBurnTransferLoop"/> need to access the repository, so access to it should be locked to ensure consistency.</summary>
         private readonly object repositoryLock;
 
@@ -115,6 +119,8 @@ namespace Stratis.Bitcoin.Features.Interop
             this.cirrusClient = cirrusClient;
 
             this.lastPolledBlock = new Dictionary<DestinationChain, BigInteger>();
+
+            this.overrideLastPolledBlock = new Dictionary<DestinationChain, BigInteger>();
 
             this.repositoryLock = new object();
 
@@ -206,6 +212,16 @@ namespace Stratis.Bitcoin.Features.Interop
                 {
                     foreach (KeyValuePair<DestinationChain, IETHClient> supportedChain in this.ethClientProvider.GetAllSupportedChains())
                     {
+                        if (this.overrideLastPolledBlock[supportedChain.Key] != BigInteger.MinusOne)
+                        {
+                            this.logger.Info($"Resetting scan height for chain {supportedChain.Key} to {this.overrideLastPolledBlock[supportedChain.Key]}.");
+
+                            this.lastPolledBlock[supportedChain.Key] = this.overrideLastPolledBlock[supportedChain.Key];
+                            this.overrideLastPolledBlock[supportedChain.Key] = BigInteger.MinusOne;
+
+                            SaveLastPolledBlock(supportedChain.Key);
+                        }
+
                         BigInteger blockHeight = await supportedChain.Value.GetBlockHeightAsync().ConfigureAwait(false);
 
                         if (this.lastPolledBlock[supportedChain.Key] < (blockHeight - DestinationChainReorgWindow))
@@ -224,6 +240,11 @@ namespace Stratis.Bitcoin.Features.Interop
             startAfter: TimeSpans.Second);
         }
 
+        public void ResetScanHeight(DestinationChain chain, int height)
+        {
+            this.overrideLastPolledBlock[chain] = height;
+        }
+
         /// <summary>
         /// Loads the last polled block from the store.
         /// </summary>
@@ -238,6 +259,8 @@ namespace Stratis.Bitcoin.Features.Interop
                     this.lastPolledBlock[supportedChain.Key] = await this.ethClientProvider.GetClientForChain(supportedChain.Key).GetBlockHeightAsync().ConfigureAwait(false);
                 else
                     this.lastPolledBlock[supportedChain.Key] = loaded;
+
+                this.overrideLastPolledBlock[supportedChain.Key] = BigInteger.MinusOne;
 
                 this.logger.Info($"Last polled block for {supportedChain.Key} set to {this.lastPolledBlock[supportedChain.Key]}.");
             }
