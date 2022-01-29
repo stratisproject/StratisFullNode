@@ -204,9 +204,12 @@ namespace Stratis.Bitcoin.Features.Interop
                     return;
 
                 if (this.interopSettings.WalletCredentials == null)
+                {
+                    this.logger.Warn("Interop wallet credentials not set, please call the initialize interflux endpoint first.");
                     return;
+                }
 
-                this.logger.Debug("Beginning conversion burn & transfer transaction polling loop.");
+                this.logger.Info("Beginning conversion burn & transfer transaction polling loop.");
 
                 try
                 {
@@ -223,6 +226,8 @@ namespace Stratis.Bitcoin.Features.Interop
                         }
 
                         BigInteger blockHeight = await supportedChain.Value.GetBlockHeightAsync().ConfigureAwait(false);
+
+                        this.logger.Debug($"Last polled block: {this.lastPolledBlock[supportedChain.Key]}; blockheight: {blockHeight}");
 
                         if (this.lastPolledBlock[supportedChain.Key] < (blockHeight - DestinationChainReorgWindow))
                             await PollBlockForBurnsAndTransfersAsync(supportedChain, blockHeight).ConfigureAwait(false);
