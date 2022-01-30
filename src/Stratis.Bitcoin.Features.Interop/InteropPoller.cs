@@ -176,7 +176,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 if (this.initialBlockDownloadState.IsInitialBlockDownload())
                     return;
 
-                this.logger.Trace("Beginning conversion processing loop.");
+                this.logger.Debug("Beginning conversion processing loop.");
 
                 try
                 {
@@ -308,7 +308,9 @@ namespace Stratis.Bitcoin.Features.Interop
                 this.ProcessBurn(block.BlockHash, TransactionHash, Burn);
             }
 
-            List<(string TransactionHash, string TransferContractAddress, TransferFunction Transfer)> transfers = await supportedChain.Value.GetTransfersFromBlock(block, this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts.Keys.ToHashSet()).ConfigureAwait(false);
+            this.logger.Debug($"Transaction count of block: {block.Transactions.Count()}");
+
+            List<(string TransactionHash, string TransferContractAddress, TransferFunction Transfer)> transfers = await supportedChain.Value.GetTransfersFromBlock(this.logger, block, this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts.Keys.ToHashSet()).ConfigureAwait(false);
 
             foreach ((string TransactionHash, string TransferContractAddress, TransferFunction Transfer) in transfers)
             {

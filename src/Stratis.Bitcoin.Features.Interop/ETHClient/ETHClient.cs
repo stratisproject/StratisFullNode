@@ -10,7 +10,7 @@ using Nethereum.RPC.Eth.Blocks;
 using Nethereum.RPC.Eth.DTOs;
 using Nethereum.Web3;
 using Nethereum.Web3.Accounts.Managed;
-using Stratis.Bitcoin.Features.MemoryPool.Fee;
+using NLog;
 
 namespace Stratis.Bitcoin.Features.Interop.ETHClient
 {
@@ -37,7 +37,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
         Task<List<(string TransactionHash, BurnFunction Burn)>> GetBurnsFromBlock(BlockWithTransactions block);
 
-        Task<List<(string TransactionHash, string TransferContractAddress, TransferFunction Transfer)>> GetTransfersFromBlock(BlockWithTransactions block, HashSet<string> tokens);
+        Task<List<(string TransactionHash, string TransferContractAddress, TransferFunction Transfer)>> GetTransfersFromBlock(ILogger logger, BlockWithTransactions block, HashSet<string> tokens);
 
         /// <summary>
         /// Queries the previously created event filter for any new events matching the filter criteria.
@@ -314,7 +314,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
             return burns;
         }
 
-        public async Task<List<(string TransactionHash, string TransferContractAddress, TransferFunction Transfer)>> GetTransfersFromBlock(BlockWithTransactions block, HashSet<string> tokens)
+        public async Task<List<(string TransactionHash, string TransferContractAddress, TransferFunction Transfer)>> GetTransfersFromBlock(ILogger logger, BlockWithTransactions block, HashSet<string> tokens)
         {
             var transfers = new List<(string TransactionHash, string TransferContractAddress, TransferFunction Transfer)>();
 
@@ -329,6 +329,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
                 try
                 {
+                    logger.Debug($"Decoding '{tx.TransactionHash}'");
                     transfer = tx.DecodeTransactionToFunctionMessage<TransferFunction>();
                 }
                 catch
@@ -475,9 +476,9 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// <inheritdoc />
         public async Task<string> SetKeyValueStoreAsync(string key, string value, BigInteger gasPrice)
         {
-            return await KVStore.SetAsync(this.web3, this.settings.KeyValueStoreContractAddress, key, value, this.settings.GasLimit, gasPrice).ConfigureAwait(false);            
+            return await KVStore.SetAsync(this.web3, this.settings.KeyValueStoreContractAddress, key, value, this.settings.GasLimit, gasPrice).ConfigureAwait(false);
         }
-        
+
         /// <inheritdoc />
         public string EncodeTransferParams(string address, BigInteger amount)
         {
