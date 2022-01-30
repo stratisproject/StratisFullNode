@@ -310,12 +310,17 @@ namespace Stratis.Bitcoin.Features.Interop
 
             this.logger.Debug($"Transaction count of block: {block.Transactions.Count()}");
 
-            List<(string TransactionHash, string TransferContractAddress, TransferFunction Transfer)> transfers = supportedChain.Value.GetTransfersFromBlock(block, this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts.Keys.ToHashSet());
-
-            foreach ((string TransactionHash, string TransferContractAddress, TransferFunction Transfer) in transfers)
+            if (this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts != null && this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts.Any())
             {
-                await this.ProcessTransferAsync(block.BlockHash, TransactionHash, TransferContractAddress, Transfer, supportedChain).ConfigureAwait(false);
+                List<(string TransactionHash, string TransferContractAddress, TransferFunction Transfer)> transfers = supportedChain.Value.GetTransfersFromBlock(block, this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts.Keys.ToHashSet());
+
+                foreach ((string TransactionHash, string TransferContractAddress, TransferFunction Transfer) in transfers)
+                {
+                    await this.ProcessTransferAsync(block.BlockHash, TransactionHash, TransferContractAddress, Transfer, supportedChain).ConfigureAwait(false);
+                }
             }
+            else
+                this.logger.Debug($"There are no watched erc20 contracts to check.");
 
             this.lastPolledBlock[supportedChain.Key] += 1;
 

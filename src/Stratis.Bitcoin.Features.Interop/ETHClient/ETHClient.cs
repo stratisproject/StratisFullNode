@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using Nethereum.ABI;
 using Nethereum.Contracts;
 using Nethereum.Hex.HexConvertors.Extensions;
@@ -11,7 +10,7 @@ using Nethereum.RPC.Eth.Blocks;
 using Nethereum.RPC.Eth.DTOs;
 using Nethereum.Web3;
 using Nethereum.Web3.Accounts.Managed;
-using Stratis.Bitcoin.Configuration.Logging;
+using NLog;
 
 namespace Stratis.Bitcoin.Features.Interop.ETHClient
 {
@@ -324,7 +323,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
             foreach (Transaction tx in block.Transactions)
             {
-                this.logger.LogDebug($"Checking tx '{tx.TransactionHash}'");
+                this.logger.Debug($"Checking tx '{tx.TransactionHash}'");
 
                 // The transfer call obviously isn't made against the federation's multisig wallet contract itself. So we need to check against the list of previously added token contracts.
                 if (!tokens.Contains(tx.To))
@@ -335,7 +334,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
                 try
                 {
-                    this.logger.LogDebug($"Decoding tx '{tx.TransactionHash}'");
+                    this.logger.Debug($"Decoding tx '{tx.TransactionHash}'");
                     transfer = tx.DecodeTransactionToFunctionMessage<TransferFunction>();
                 }
                 catch
