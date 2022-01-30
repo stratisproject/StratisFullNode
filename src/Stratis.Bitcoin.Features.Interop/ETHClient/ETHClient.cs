@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Nethereum.ABI;
 using Nethereum.Contracts;
 using Nethereum.Hex.HexConvertors.Extensions;
@@ -10,7 +11,7 @@ using Nethereum.RPC.Eth.Blocks;
 using Nethereum.RPC.Eth.DTOs;
 using Nethereum.Web3;
 using Nethereum.Web3.Accounts.Managed;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 
 namespace Stratis.Bitcoin.Features.Interop.ETHClient
 {
@@ -37,7 +38,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
         Task<List<(string TransactionHash, BurnFunction Burn)>> GetBurnsFromBlock(BlockWithTransactions block);
 
-        Task<List<(string TransactionHash, string TransferContractAddress, TransferFunction Transfer)>> GetTransfersFromBlock(ILogger logger, BlockWithTransactions block, HashSet<string> tokens);
+        List<(string TransactionHash, string TransferContractAddress, TransferFunction Transfer)> GetTransfersFromBlock(BlockWithTransactions block, HashSet<string> tokens);
 
         /// <summary>
         /// Queries the previously created event filter for any new events matching the filter criteria.
@@ -206,6 +207,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
     {
         protected ETHInteropSettings settings;
         protected Web3 web3;
+        private readonly ILogger logger;
         protected Event<TransferEventDTO> transferEventHandler;
         protected NewFilterInput filterAllTransferEventsForContract;
         protected HexBigInteger filterId;
@@ -223,6 +225,8 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
             // TODO: Support loading offline accounts from keystore JSON directly?
             this.web3 = !string.IsNullOrWhiteSpace(this.settings.ClientUrl) ? new Web3(account, this.settings.ClientUrl) : new Web3(account);
+
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
         protected virtual void SetupConfiguration(InteropSettings interopSettings)
@@ -314,12 +318,14 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
             return burns;
         }
 
-        public async Task<List<(string TransactionHash, string TransferContractAddress, TransferFunction Transfer)>> GetTransfersFromBlock(ILogger logger, BlockWithTransactions block, HashSet<string> tokens)
+        public List<(string TransactionHash, string TransferContractAddress, TransferFunction Transfer)> GetTransfersFromBlock(BlockWithTransactions block, HashSet<string> tokens)
         {
             var transfers = new List<(string TransactionHash, string TransferContractAddress, TransferFunction Transfer)>();
 
             foreach (Transaction tx in block.Transactions)
             {
+                this.logger.LogDebug($"Checking tx '{tx.TransactionHash}'");
+
                 // The transfer call obviously isn't made against the federation's multisig wallet contract itself. So we need to check against the list of previously added token contracts.
                 if (!tokens.Contains(tx.To))
                     continue;
@@ -329,7 +335,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
                 try
                 {
-                    logger.Debug($"Decoding '{tx.TransactionHash}'");
+                    this.logger.LogDebug($"Decoding tx '{tx.TransactionHash}'");
                     transfer = tx.DecodeTransactionToFunctionMessage<TransferFunction>();
                 }
                 catch

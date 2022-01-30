@@ -310,7 +310,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             this.logger.Debug($"Transaction count of block: {block.Transactions.Count()}");
 
-            List<(string TransactionHash, string TransferContractAddress, TransferFunction Transfer)> transfers = await supportedChain.Value.GetTransfersFromBlock(this.logger, block, this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts.Keys.ToHashSet()).ConfigureAwait(false);
+            List<(string TransactionHash, string TransferContractAddress, TransferFunction Transfer)> transfers = supportedChain.Value.GetTransfersFromBlock(block, this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts.Keys.ToHashSet());
 
             foreach ((string TransactionHash, string TransferContractAddress, TransferFunction Transfer) in transfers)
             {
