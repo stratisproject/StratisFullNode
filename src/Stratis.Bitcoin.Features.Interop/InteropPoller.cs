@@ -308,8 +308,6 @@ namespace Stratis.Bitcoin.Features.Interop
                 this.ProcessBurn(block.BlockHash, TransactionHash, Burn);
             }
 
-            this.logger.Debug($"Transaction count of block: {block.Transactions.Count()}");
-
             if (this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts != null && this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts.Any())
             {
                 List<(string TransactionHash, string TransferContractAddress, TransferFunction Transfer)> transfers = supportedChain.Value.GetTransfersFromBlock(block, this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts.Keys.ToHashSet());
@@ -319,8 +317,6 @@ namespace Stratis.Bitcoin.Features.Interop
                     await this.ProcessTransferAsync(block.BlockHash, TransactionHash, TransferContractAddress, Transfer, supportedChain).ConfigureAwait(false);
                 }
             }
-            else
-                this.logger.Debug($"There are no watched erc20 contracts to check.");
 
             this.lastPolledBlock[supportedChain.Key] += 1;
 
