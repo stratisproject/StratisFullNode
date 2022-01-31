@@ -190,7 +190,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
 
             if (storageValue == null)
             {
-                return this.Json(new
+                return this.NotFound(new
                 {
                     Message = string.Format("No data at storage with key {0}", request.StorageKey)
                 });
