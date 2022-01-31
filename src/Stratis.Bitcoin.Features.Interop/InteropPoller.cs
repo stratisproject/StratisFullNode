@@ -145,15 +145,13 @@ namespace Stratis.Bitcoin.Features.Interop
                 return;
             }
 
-            this.logger.Info($"Interoperability enabled, initializing periodic loop.");
-
             // Initialize the interop polling loop, to check for interop contract requests.
-            this.interopLoop = this.asyncProvider.CreateAndRunAsyncLoop("PeriodicCheckInterop", async (cancellation) =>
+            this.interopLoop = this.asyncProvider.CreateAndRunAsyncLoop("PeriodicCheckInteropNodes", async (cancellation) =>
             {
                 if (this.initialBlockDownloadState.IsInitialBlockDownload())
                     return;
 
-                this.logger.Trace("Beginning interop loop.");
+                this.logger.Debug("Executing check interop nodes loop.");
 
                 try
                 {
@@ -161,22 +159,20 @@ namespace Stratis.Bitcoin.Features.Interop
                 }
                 catch (Exception e)
                 {
-                    this.logger.Warn("Exception raised when checking interop requests. {0}", e);
+                    this.logger.Warn("Exception raised when checking interop nodes. {0}", e);
                 }
-
-                this.logger.Trace("Finishing interop loop.");
             },
             this.nodeLifetime.ApplicationStopping,
             repeatEvery: TimeSpans.TenSeconds,
             startAfter: TimeSpans.Second);
 
             // Initialize the conversion polling loop, to check for conversion requests.
-            this.conversionLoop = this.asyncProvider.CreateAndRunAsyncLoop("PeriodicCheckConversionStore", async (cancellation) =>
+            this.conversionLoop = this.asyncProvider.CreateAndRunAsyncLoop("PeriodicCheckInteropNodesForMintRequests", async (cancellation) =>
             {
                 if (this.initialBlockDownloadState.IsInitialBlockDownload())
                     return;
 
-                this.logger.Debug("Beginning conversion processing loop.");
+                this.logger.Debug("Executing check for minting/conversion requests.");
 
                 try
                 {
@@ -184,32 +180,32 @@ namespace Stratis.Bitcoin.Features.Interop
                 }
                 catch (Exception e)
                 {
-                    this.logger.Warn($"Exception raised when checking conversion requests. {e}");
+                    this.logger.Warn($"Exception occurred checking for minting/conversion requests: {e}");
                 }
-
-                this.logger.Trace("Finishing conversion processing loop.");
             },
             this.nodeLifetime.ApplicationStopping,
             repeatEvery: TimeSpans.TenSeconds,
             startAfter: TimeSpans.Second);
 
             // Load the last polled block for each chain.
-            await LoadLastPolledBlockAsync();
+            await LoadLastPolledBlockForBurnAndTransferRequestsAsync();
 
-            await EnsureLastPolledBlockIsSyncedWithChainAsync();
-
-            this.conversionBurnTransferLoop = this.asyncProvider.CreateAndRunAsyncLoop("PeriodicPollConversionBurnsAndTransfers", async (cancellation) =>
+            this.conversionBurnTransferLoop = this.asyncProvider.CreateAndRunAsyncLoop("PeriodicCheckForBurnsAndTransfers", async (cancellation) =>
             {
                 if (this.initialBlockDownloadState.IsInitialBlockDownload())
                     return;
 
                 if (this.interopSettings.WalletCredentials == null)
                 {
-                    this.logger.Warn("Interop wallet credentials not set, please call the initialize interflux endpoint first.");
+                    this.logger.Warn("Interop wallet credentials not set, please call the initialize interflux endpoint first so that burns and transfers can be checked.");
                     return;
                 }
 
-                this.logger.Info("Beginning conversion burn & transfer transaction polling loop.");
+                this.logger.Info("Executing check for any burns or transfers.");
+
+                // In the event that the last polled block was set back a considerable distance from the tip, we need to first catch up faster.
+                // If we are already in the acceptable range, the usual logic will apply.
+                await EnsureLastPolledBlockIsSyncedWithChainAsync();
 
                 try
                 {
@@ -217,17 +213,17 @@ namespace Stratis.Bitcoin.Features.Interop
                     {
                         if (this.overrideLastPolledBlock[supportedChain.Key] != BigInteger.MinusOne)
                         {
-                            this.logger.Info($"Resetting scan height for chain {supportedChain.Key} to {this.overrideLastPolledBlock[supportedChain.Key]}.");
+                            this.logger.Info($"Resetting scan height for burns and transfers on chain {supportedChain.Key} to {this.overrideLastPolledBlock[supportedChain.Key]}.");
 
                             this.lastPolledBlock[supportedChain.Key] = this.overrideLastPolledBlock[supportedChain.Key];
                             this.overrideLastPolledBlock[supportedChain.Key] = BigInteger.MinusOne;
 
-                            SaveLastPolledBlock(supportedChain.Key);
+                            SaveLastPolledBlockForBurnsAndTransfers(supportedChain.Key);
                         }
 
                         BigInteger blockHeight = await supportedChain.Value.GetBlockHeightAsync().ConfigureAwait(false);
 
-                        this.logger.Debug($"Last polled block: {this.lastPolledBlock[supportedChain.Key]}; blockheight: {blockHeight}");
+                        this.logger.Info($"Last polled block for burns and transfers: {this.lastPolledBlock[supportedChain.Key]}; current {supportedChain.Key} chain height: {blockHeight}");
 
                         if (this.lastPolledBlock[supportedChain.Key] < (blockHeight - DestinationChainReorgWindow))
                             await PollBlockForBurnsAndTransfersAsync(supportedChain, blockHeight).ConfigureAwait(false);
@@ -237,8 +233,6 @@ namespace Stratis.Bitcoin.Features.Interop
                 {
                     this.logger.Warn($"Exception raised when polling for conversion burn & transfer transactions. {e}");
                 }
-
-                this.logger.Debug("Finishing conversion burn transaction polling loop.");
             },
             this.nodeLifetime.ApplicationStopping,
             repeatEvery: TimeSpans.TenSeconds,
@@ -253,7 +247,7 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <summary>
         /// Loads the last polled block from the store.
         /// </summary>
-        private async Task LoadLastPolledBlockAsync()
+        private async Task LoadLastPolledBlockForBurnAndTransferRequestsAsync()
         {
             foreach (KeyValuePair<DestinationChain, IETHClient> supportedChain in this.ethClientProvider.GetAllSupportedChains())
             {
@@ -267,14 +261,14 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 this.overrideLastPolledBlock[supportedChain.Key] = BigInteger.MinusOne;
 
-                this.logger.Info($"Last polled block for {supportedChain.Key} set to {this.lastPolledBlock[supportedChain.Key]}.");
+                this.logger.Info($"Last polled block for burns and transfers on chain {supportedChain.Key} set to {this.lastPolledBlock[supportedChain.Key]}.");
             }
         }
 
-        private void SaveLastPolledBlock(DestinationChain destinationChain)
+        private void SaveLastPolledBlockForBurnsAndTransfers(DestinationChain destinationChain)
         {
             this.keyValueRepository.SaveValueJson(string.Format(LastPolledBlockKey, destinationChain), this.lastPolledBlock[destinationChain]);
-            this.logger.Info($"Last polled block for {destinationChain} saved as {this.lastPolledBlock[destinationChain]}.");
+            this.logger.Info($"Last polled block for burns and transfers on chain {destinationChain} saved as {this.lastPolledBlock[destinationChain]}.");
         }
 
         /// <summary>
@@ -297,7 +291,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private async Task PollBlockForBurnsAndTransfersAsync(KeyValuePair<DestinationChain, IETHClient> supportedChain, BigInteger blockHeight)
         {
-            this.logger.Info("Polling {0} block at height {1} for burn transactions.", supportedChain.Key, blockHeight);
+            this.logger.Info("Polling {0} block at height {1} for burn or transfers transactions.", supportedChain.Key, blockHeight);
 
             BlockWithTransactions block = await supportedChain.Value.GetBlockAsync(this.lastPolledBlock[supportedChain.Key]).ConfigureAwait(false);
 
@@ -320,7 +314,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             this.lastPolledBlock[supportedChain.Key] += 1;
 
-            SaveLastPolledBlock(supportedChain.Key);
+            SaveLastPolledBlockForBurnsAndTransfers(supportedChain.Key);
         }
 
         /// <summary>Retrieves the current chain heights of interop enabled chains via the RPC interface.</summary>
