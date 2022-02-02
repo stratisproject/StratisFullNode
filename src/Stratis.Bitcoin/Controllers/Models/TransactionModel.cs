@@ -346,6 +346,7 @@ namespace Stratis.Bitcoin.Controllers.Models
         {
             if (template == null)
                 return "nonstandard";
+
             switch (template.Type)
             {
                 case TxOutType.TX_PUBKEY:

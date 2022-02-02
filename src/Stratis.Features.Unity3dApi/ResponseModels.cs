@@ -12,6 +12,11 @@ namespace Stratis.Features.Unity3dApi
         public string Reason;
     }
 
+    public class GetBalanceResponseModel
+    {
+        public long Balance;
+    }
+
     public class UTXOModel
     {
         public UTXOModel()

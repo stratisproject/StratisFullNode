@@ -4,8 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.PoA.Models;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 
@@ -45,7 +46,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>
-        /// Signals the node to rebuild the federation via cleabning and rebuilding executed polls.
+        /// Signals the node to rebuild the federation via cleaning and rebuilding executed polls.
         /// This will be done via writing a flag to the .conf file so that on startup it be executed.
         /// </summary>
         /// <returns>See response codes</returns>
@@ -65,7 +66,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -126,12 +127,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         federationMemberModel.PollWillFinishInBlocks = 0;
                     else
                         federationMemberModel.PollWillFinishInBlocks = (poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength) - chainTip.Height;
-                }
 
-                // Has the poll executed?
-                poll = this.votingManager.GetExecutedPolls().MemberPolls().OrderByDescending(p => p.PollExecutedBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == this.federationManager.CurrentFederationKey.PubKey);
-                if (poll != null)
-                    federationMemberModel.PollExecutedBlockHeight = poll.PollExecutedBlockData.Height;
+                    // Has the poll executed?
+                    federationMemberModel.PollExecutedBlockHeight = poll.PollExecutedBlockData?.Height;
+                }
 
                 federationMemberModel.RewardEstimatePerBlock = 9d / this.federationManager.GetFederationMembers().Count;
 
@@ -141,7 +140,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -181,7 +180,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -208,7 +207,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -241,7 +240,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }

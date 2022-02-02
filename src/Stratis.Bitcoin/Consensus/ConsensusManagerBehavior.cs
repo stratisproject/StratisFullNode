@@ -23,6 +23,8 @@ namespace Stratis.Bitcoin.Consensus
         /// <summary>Provider of IBD state.</summary>
         protected IInitialBlockDownloadState InitialBlockDownloadState { get; private set; }
 
+#pragma warning disable SA1648
+
         /// <inheritdoc cref="Consensus.ConsensusManager"/>
         protected IConsensusManager ConsensusManager { get; private set; }
 
@@ -31,6 +33,8 @@ namespace Stratis.Bitcoin.Consensus
 
         /// <inheritdoc cref="IPeerBanning"/>
         protected IPeerBanning PeerBanning { get; private set; }
+
+#pragma warning restore SA1648
 
         /// <summary>Factory for creating loggers.</summary>
         protected ILoggerFactory LoggerFactory { get; private set; }
@@ -573,7 +577,7 @@ namespace Stratis.Bitcoin.Consensus
         }
 
         /// <summary>Tries to sync the chain with the peer by sending it <see cref="GetHeadersPayload"/> in case peer's state is <see cref="NetworkPeerState.HandShaked"/>.</summary>
-        public async Task ResyncAsync()
+        public Task ResyncAsync()
         {
             if (this.cachedHeaders.Any())
             {
@@ -589,7 +593,7 @@ namespace Stratis.Bitcoin.Consensus
                 if (getHeadersPayload == null)
                 {
                     this.logger.LogDebug("Ignoring sync request, headersPayload is null.");
-                    return;
+                    return Task.CompletedTask;
                 }
 
                 try
@@ -605,6 +609,8 @@ namespace Stratis.Bitcoin.Consensus
             }
             else
                 this.logger.LogDebug("Can't sync. Peer's state is not handshaked or peer was not attached.");
+
+            return Task.CompletedTask;
         }
 
         /// <summary>

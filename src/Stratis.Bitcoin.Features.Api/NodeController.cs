@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
 using NLog.Config;
 using NLog.Targets;
 using NLog.Targets.Wrappers;
@@ -15,6 +14,7 @@ using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers.Models;
@@ -27,7 +27,6 @@ using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.Bitcoin.Utilities.ModelStateErrors;
-using ILogger = Microsoft.Extensions.Logging.ILogger;
 using LogLevel = NLog.LogLevel;
 using Target = NBitcoin.Target;
 
@@ -221,33 +220,34 @@ namespace Stratis.Bitcoin.Features.Api
         /// <param name="hash">The hash of the block to retrieve.</param>
         /// <param name="isJsonFormat">A flag that specifies whether to return the block header in the JSON format. Defaults to true. A value of false is currently not supported.</param>
         /// <returns>Json formatted <see cref="BlockHeaderModel"/>. <c>null</c> if block not found. Returns <see cref="Microsoft.AspNetCore.Mvc.IActionResult"/> formatted error if fails.</returns>
-        /// <exception cref="NotImplementedException">Thrown if isJsonFormat = false</exception>"
-        /// <exception cref="ArgumentException">Thrown if hash is empty.</exception>
-        /// <exception cref="ArgumentNullException">Thrown if logger is not provided.</exception>
+        /// <response code="200">Returns the blockheader if found.</response>
+        /// <response code="400">Null hash provided, BlockHeader does not exist or if isJsonFormat = false>/response>
         /// <remarks>Binary serialization is not supported with this method.</remarks>
         [Route("getblockheader")]
         [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public IActionResult GetBlockHeader([FromQuery] string hash, bool isJsonFormat = true)
         {
             try
             {
-                Guard.NotEmpty(hash, nameof(hash));
+                if (string.IsNullOrEmpty(hash))
+                    return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", "Null hash provided.");
 
                 this.logger.LogDebug("GetBlockHeader {0}", hash);
+
                 if (!isJsonFormat)
                 {
                     this.logger.LogError("Binary serialization is not supported.");
-                    throw new NotImplementedException();
+                    return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", "Binary serialization is not supported.");
                 }
 
-                BlockHeaderModel model = null;
                 BlockHeader blockHeader = this.chainIndexer?.GetHeader(uint256.Parse(hash))?.Header;
-                if (blockHeader != null)
-                {
-                    model = new BlockHeaderModel(blockHeader);
-                }
+                if (blockHeader == null)
+                    return this.NotFound($"Block header for '{hash}' not found");
 
-                return this.Json(model);
+                return this.Json(new BlockHeaderModel(blockHeader));
             }
             catch (Exception e)
             {
@@ -385,7 +385,7 @@ namespace Stratis.Bitcoin.Features.Api
 
             if (result.IsValid)
             {
-                var scriptPubKey = BitcoinAddress.Create(address, this.network).ScriptPubKey;
+                NBitcoin.Script scriptPubKey = BitcoinAddress.Create(address, this.network).ScriptPubKey;
                 result.ScriptPubKey = scriptPubKey.ToHex();
                 result.IsWitness = scriptPubKey.IsWitness(this.network);
             }
@@ -453,7 +453,7 @@ namespace Stratis.Bitcoin.Features.Api
         /// <returns>The hex-encoded merkle proof.</returns>
         [Route("gettxoutproof")]
         [HttpGet]
-        public async Task<IActionResult> GetTxOutProofAsync([FromQuery] string[] txids, string blockhash = "")
+        public Task<IActionResult> GetTxOutProofAsync([FromQuery] string[] txids, string blockhash = "")
         {
             List<uint256> transactionIds = txids.Select(txString => uint256.Parse(txString)).ToList();
 
@@ -500,7 +500,7 @@ namespace Stratis.Bitcoin.Features.Api
 
             var result = new MerkleBlock(block.Block, transactionIds.ToArray());
 
-            return this.Json(result);
+            return Task.FromResult<IActionResult>(this.Json(result));
         }
 
         /// <summary>
@@ -529,6 +529,8 @@ namespace Stratis.Bitcoin.Features.Api
         /// Signals the node to rewind to the specified height.
         /// This will be done via writing a flag to the .conf file so that on startup it be executed.
         /// </summary>
+        /// <param name="height">The rewind height.</param>
+        /// <returns>A json text result indicating success or an <see cref="ErrorResult"/> indicating failure.</returns>
         [Route("rewind")]
         [HttpPut]
         [ProducesResponseType((int)HttpStatusCode.OK)]
@@ -697,7 +699,7 @@ namespace Stratis.Bitcoin.Features.Api
         /// <summary>
         /// Schedules data folder storing chain state in the <see cref="DataFolder"/> for deletion on the next graceful shutdown.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>Returns an <see cref="OkResult"/>.</returns>
         [HttpDelete]
         [Route("datafolder/chain")]
         public IActionResult DeleteChain()
@@ -717,7 +719,7 @@ namespace Stratis.Bitcoin.Features.Api
         /// <exception cref="ArgumentNullException">Thrown if fullnode is not provided.</exception>
         internal ChainedHeader GetTransactionBlock(uint256 trxid, ChainIndexer chain)
         {
-            Guard.NotNull(fullNode, nameof(fullNode));
+            Guard.NotNull(this.fullNode, nameof(this.fullNode));
 
             ChainedHeader block = null;
             uint256 blockid = this.blockStore?.GetBlockIdByTransactionId(trxid);

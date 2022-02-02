@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
-using NLog;
+using Microsoft.Extensions.Logging;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.PoA.Voting
@@ -39,7 +40,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             if (this.polls.Contains(poll))
             {
-                this.logger.Warn("The poll already exists: '{0}'.", poll);
+                this.logger.LogWarning("The poll already exists: '{0}'.", poll);
                 return;
             }
 

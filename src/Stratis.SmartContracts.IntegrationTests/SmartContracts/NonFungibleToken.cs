@@ -46,7 +46,7 @@ public class StratisCollectible : SmartContract
         AddTokenTo(to, tokenId);
         RemoveTokenFrom(from);
 
-        Log(new Transfer{From = from, To = to, TokenId = tokenId});
+        Log(new Transfer2 { From = from, To = to, TokenId = tokenId });
     }
 
     private void AddTokenTo(Address to, ulong tokenId)
@@ -60,7 +60,7 @@ public class StratisCollectible : SmartContract
         SetBalance(from, BalanceOf(from) - 1);
     }
 
-    public struct Transfer
+    public struct Transfer2
     {
         [Index]
         public ulong TokenId;
@@ -71,5 +71,4 @@ public class StratisCollectible : SmartContract
         [Index]
         public Address To;
     }
-
 }

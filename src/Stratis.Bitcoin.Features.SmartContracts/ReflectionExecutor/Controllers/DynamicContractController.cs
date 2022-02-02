@@ -62,7 +62,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <exception cref="Exception"></exception>
         [Route("api/contract/{address}/method/{method}")]
         [HttpPost]
-        public async Task<IActionResult> CallMethod([FromRoute] string address, [FromRoute] string method, [FromBody] JObject requestData)
+        public Task<IActionResult> CallMethod([FromRoute] string address, [FromRoute] string method, [FromBody] JObject requestData)
         {
             var contractCode = this.stateRoot.GetCode(address.ToUint160(this.network));
 
@@ -88,7 +88,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             BuildCallContractTransactionRequest request = this.MapCallRequest(address, method, methodParams, this.Request.Headers);
 
             // Proxy to the actual SC controller.
-            return this.smartContractWalletController.Call(request);
+            return Task.FromResult<IActionResult>(this.smartContractWalletController.Call(request));
         }
 
         /// <summary>

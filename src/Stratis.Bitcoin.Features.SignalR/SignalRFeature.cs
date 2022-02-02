@@ -23,7 +23,7 @@ namespace Stratis.Bitcoin.Features.SignalR
         private readonly IEnumerable<IClientEventBroadcaster> eventBroadcasters;
         private readonly IEventsSubscriptionService eventsSubscriptionService;
         private IWebHost webHost;
-        private readonly ILogger<SignalRFeature> logger;
+        private readonly ILogger logger;
 
         public SignalRFeature(
             FullNode fullNode,

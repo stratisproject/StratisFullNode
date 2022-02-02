@@ -50,11 +50,11 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// Dynamically generates a swagger document for the contract at the given address.
         /// </summary>
         /// <param name="address">The contract's address.</param>
-        /// <returns>A <see cref="SwaggerDocument"/> model.</returns>
+        /// <returns>A swagger document serialized as an OpenApi 3.0 json string.</returns>
         /// <exception cref="Exception"></exception>
         [Route("swagger/contracts/{address}")]
         [HttpGet]
-        public async Task<IActionResult> ContractSwaggerDoc(string address)
+        public Task<IActionResult> ContractSwaggerDoc(string address)
         {
             var code = this.stateRepository.GetCode(address.ToUint160(this.network));
 
@@ -82,7 +82,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             // TODO confirm v2/v3
             var outputString = doc.Serialize(OpenApiSpecVersion.OpenApi3_0, OpenApiFormat.Json);
 
-            return Ok(outputString);
+            return Task.FromResult<IActionResult>(Ok(outputString));
         }
 
         /// <summary>
@@ -92,7 +92,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <returns>A success response.</returns>
         [HttpPost]
         [Route("api/swagger/contracts")]
-        public async Task<IActionResult> AddContractToSwagger([FromBody] AddContractRequest address)
+        public Task<IActionResult> AddContractToSwagger([FromBody] AddContractRequest address)
         {
             // Check that the contract exists
             var code = this.stateRepository.GetCode(address.Address.ToUint160(this.network));
@@ -111,7 +111,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
 
             this.uiOptions.ConfigObject.Urls = newUrls;
 
-            return Ok();
+            return Task.FromResult<IActionResult>(Ok());
         }
 
         public class AddContractRequest

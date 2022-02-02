@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Utilities;
 
@@ -51,7 +52,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
         {
             long currentBlockQueueSize = Interlocked.Add(ref this.blocksQueueSize, -block.BlockSize.Value);
 
-            this.logger.Debug("Block '{0}' queued for processing. Queue size changed to {1} bytes.", block.GetHash(), currentBlockQueueSize);
+            this.logger.LogDebug("Block '{0}' queued for processing. Queue size changed to {1} bytes.", block.GetHash(), currentBlockQueueSize);
 
             await this.callback(block, cancellationToken).ConfigureAwait(false);
         }
@@ -72,7 +73,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 if (this.blocksQueueSize >= this.MaxQueueSize)
                 {
                     this.maxQueueSizeReached = true;
-                    this.logger.Trace("(-)[REACHED_MAX_QUEUE_SIZE]");
+                    this.logger.LogTrace("(-)[REACHED_MAX_QUEUE_SIZE]");
                 }
             }
             else
@@ -84,7 +85,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
             if (!this.maxQueueSizeReached)
             {
                 long currentBlockQueueSize = Interlocked.Add(ref this.blocksQueueSize, block.BlockSize.Value);
-                this.logger.Debug("Queue sized changed to {0} bytes.", currentBlockQueueSize);
+                this.logger.LogDebug("Queue sized changed to {0} bytes.", currentBlockQueueSize);
 
                 this.blocksQueue.Enqueue(block);
 

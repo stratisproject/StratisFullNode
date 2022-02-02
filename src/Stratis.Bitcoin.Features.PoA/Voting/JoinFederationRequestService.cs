@@ -46,6 +46,23 @@ namespace Stratis.Features.PoA.Voting
             this.votingManager = votingManager;
         }
 
+        public static byte[] GetFederationMemberBytes(JoinFederationRequest joinRequest, Network network, Network counterChainNetwork)
+        {
+            Script collateralScript = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(joinRequest.CollateralMainchainAddress);
+            BitcoinAddress bitcoinAddress = collateralScript.GetDestinationAddress(counterChainNetwork);
+            var collateralFederationMember = new CollateralFederationMember(joinRequest.PubKey, false, joinRequest.CollateralAmount, bitcoinAddress.ToString());
+
+            return (network.Consensus.ConsensusFactory as CollateralPoAConsensusFactory).SerializeFederationMember(collateralFederationMember);
+        }
+
+        public static void SetLastRemovalEventId(JoinFederationRequest joinRequest, byte[] federationMemberBytes, VotingManager votingManager)
+        {
+            Poll poll = votingManager.GetExecutedPolls().OrderByDescending(p => p.PollExecutedBlockData.Height).FirstOrDefault(x =>
+                x.VotingData.Key == VoteKey.KickFederationMember && x.VotingData.Data.SequenceEqual(federationMemberBytes));
+
+            joinRequest.RemovalEventId = (poll == null) ? Guid.Empty : new Guid(poll.PollExecutedBlockData.Hash.ToBytes().TakeLast(16).ToArray());
+        }
+
         public async Task<PubKey> JoinFederationAsync(JoinFederationRequestModel request, CancellationToken cancellationToken)
         {
             // Wait until the node is synced before joining.
@@ -71,13 +88,7 @@ namespace Stratis.Features.PoA.Voting
             var joinRequest = new JoinFederationRequest(minerKey.PubKey, new Money(expectedCollateralAmount, MoneyUnit.BTC), addressKey);
 
             // Populate the RemovalEventId.
-            var collateralFederationMember = new CollateralFederationMember(minerKey.PubKey, false, joinRequest.CollateralAmount, request.CollateralAddress);
-
-            byte[] federationMemberBytes = (this.network.Consensus.ConsensusFactory as CollateralPoAConsensusFactory).SerializeFederationMember(collateralFederationMember);
-            Poll poll = this.votingManager.GetApprovedPolls().FirstOrDefault(x => x.IsExecuted &&
-                  x.VotingData.Key == VoteKey.KickFederationMember && x.VotingData.Data.SequenceEqual(federationMemberBytes));
-
-            joinRequest.RemovalEventId = (poll == null) ? Guid.Empty : new Guid(poll.PollExecutedBlockData.Hash.ToBytes().TakeLast(16).ToArray());
+            SetLastRemovalEventId(joinRequest, GetFederationMemberBytes(joinRequest, this.network, this.counterChainSettings.CounterChainNetwork), this.votingManager);
 
             // Get the signature by calling the counter-chain "signmessage" API.
             var signMessageRequest = new SignMessageRequest()

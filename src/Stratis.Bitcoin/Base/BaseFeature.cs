@@ -109,6 +109,8 @@ namespace Stratis.Bitcoin.Base
         /// <summary>Provider of IBD state.</summary>
         private readonly IInitialBlockDownloadState initialBlockDownloadState;
 
+#pragma warning disable SA1648
+
         /// <inheritdoc cref="Network"/>
         private readonly Network network;
         private readonly INodeStats nodeStats;
@@ -126,6 +128,8 @@ namespace Stratis.Bitcoin.Base
 
         /// <inheritdoc cref="IPartialValidator"/>
         private readonly IPartialValidator partialValidator;
+
+#pragma warning restore SA1648
 
         public BaseFeature(NodeSettings nodeSettings,
             DataFolder dataFolder,

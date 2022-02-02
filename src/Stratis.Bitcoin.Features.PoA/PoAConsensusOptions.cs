@@ -15,6 +15,9 @@ namespace Stratis.Bitcoin.Features.PoA
         /// </remarks>
         public List<IFederationMember> GenesisFederationMembers { get; protected set; }
 
+        /// <summary>
+        /// The number of elapsed seconds required between mined block.
+        /// </summary>
         public uint TargetSpacingSeconds { get; protected set; }
 
         /// <summary>Adds capability of voting for adding\kicking federation members and other things.</summary>
@@ -51,6 +54,13 @@ namespace Stratis.Bitcoin.Features.PoA
         public int InterFluxV2MainChainActivationHeight { get; set; }
 
         /// <summary>
+        /// The height at which inituitive mining slots become active.
+        /// Legacy mining slots are determined by mining_slot = block_height % number_of_federation_members.
+        /// Once the specified height is reached there should no longer be a shift in mining slots when new federation members are added/removed.
+        /// </summary>
+        public int GetMiningTimestampV2ActivationHeight { get; set; }
+
+        /// <summary>
         /// Logic related to release 1.1.0.0 will activate at this height, this includes Poll Expiry and the Join Federation Voting Request consensus rule.
         /// </summary>
         public int Release1100ActivationHeight { get; set; }
@@ -68,6 +78,16 @@ namespace Stratis.Bitcoin.Features.PoA
         public int ContractSerializerV2ActivationHeight { get; set; }
 
         /// <summary>Initializes values for networks that use block size rules.</summary>
+        /// <param name="maxBlockBaseSize">See <see cref="ConsensusOptions.MaxBlockBaseSize"/>.</param>
+        /// <param name="maxStandardVersion">See <see cref="ConsensusOptions.MaxStandardVersion"/>.</param>
+        /// <param name="maxStandardTxWeight">See <see cref="ConsensusOptions.MaxStandardTxWeight"/>.</param>
+        /// <param name="maxBlockSigopsCost">See <see cref="ConsensusOptions.MaxBlockSigopsCost"/>.</param>
+        /// <param name="maxStandardTxSigopsCost">See <see cref="ConsensusOptions.MaxStandardTxSigopsCost"/>.</param>
+        /// <param name="genesisFederationMembers">See <see cref="GenesisFederationMembers"/>.</param>
+        /// <param name="targetSpacingSeconds">See <see cref="TargetSpacingSeconds"/>.</param>
+        /// <param name="votingEnabled">See <see cref="VotingEnabled"/>.</param>
+        /// <param name="autoKickIdleMembers">See <see cref="AutoKickIdleMembers"/>.</param>
+        /// <param name="federationMemberMaxIdleTimeSeconds">See <see cref="FederationMemberMaxIdleTimeSeconds"/>.</param>
         public PoAConsensusOptions(
             uint maxBlockBaseSize,
             int maxStandardVersion,

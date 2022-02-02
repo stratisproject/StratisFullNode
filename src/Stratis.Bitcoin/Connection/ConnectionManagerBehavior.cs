@@ -71,7 +71,7 @@ namespace Stratis.Bitcoin.Connection
             }
         }
 
-        private async Task OnStateChangedAsync(INetworkPeer peer, NetworkPeerState oldState)
+        private Task OnStateChangedAsync(INetworkPeer peer, NetworkPeerState oldState)
         {
             try
             {
@@ -93,6 +93,8 @@ namespace Stratis.Bitcoin.Connection
             catch (OperationCanceledException)
             {
             }
+
+            return Task.CompletedTask;
         }
 
         [NoTrace]

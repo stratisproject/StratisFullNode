@@ -4,6 +4,7 @@ using Stratis.Bitcoin.Utilities.JsonConverters;
 
 namespace Stratis.Bitcoin.Features.Wallet.Models
 {
+    // TODO: This is similar to the UnspentCoin class in the RPC feature; perhaps one of the two should be removed?
     /// <summary>
     /// Model for Json response for listunspent RPC call.
     /// </summary>
@@ -45,6 +46,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         /// </summary>
         [JsonProperty(PropertyName = "redeemScript")]
         public string RedeemScriptHex { get; set; }
+
+        /// <summary>
+        /// If the output is a P2WSH or P2SH-P2WSH whose script belongs to this wallet, this is the redeem script.
+        /// </summary>
+        [JsonProperty(PropertyName = "witnessScript")]
+        public string WitnessScriptHex { get; set; }
 
         /// <summary>
         /// The transaction amount.
