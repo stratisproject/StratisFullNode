@@ -30,8 +30,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             VotingManager votingManager,
             Network network,
             IFederationHistory federationHistory,
-            IPoAMiner poAMiner,
-            ReconstructFederationService reconstructFederationService)
+            ReconstructFederationService reconstructFederationService,
+            IPoAMiner poAMiner = null)
         {
             this.chainIndexer = chainIndexer;
             this.federationManager = federationManager;
