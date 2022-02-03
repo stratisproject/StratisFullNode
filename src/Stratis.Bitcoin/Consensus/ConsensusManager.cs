@@ -692,7 +692,7 @@ namespace Stratis.Bitcoin.Consensus
             // Add peers that needed to be banned as a result of a failure to connect blocks.
             // Otherwise they get lost as we are returning a different ConnnectBlocksResult.
             // We also need to set the ban reason and ban time otherwise it is not known why
-            // connecting the new chain failed and hence why the peer is being disconnected in 
+            // connecting the new chain failed and hence why the peer is being disconnected in
             // peer banning.
             reconnectionResult.BanReason = connectBlockResult.BanReason;
             reconnectionResult.BanDurationSeconds = connectBlockResult.BanDurationSeconds;
@@ -820,7 +820,7 @@ namespace Stratis.Bitcoin.Consensus
                 // TODO: Validate block size display, seems incorrect
                 this.logger.LogDebug("New tip = {0}-{1} : time  = {2} ms : size = {3} kb : trx count = {4}",
                     blockToConnect.ChainedHeader.Height, blockToConnect.ChainedHeader.HashBlock,
-                    dsb.watch.ElapsedMilliseconds, blockToConnect.Block.BlockSize.Value.BytesToKiloBytes(), blockToConnect.Block.Transactions.Count());
+                    dsb.Watch.ElapsedMilliseconds, blockToConnect.Block.BlockSize.Value.BytesToKiloBytes(), blockToConnect.Block.Transactions.Count());
             }
 
             // After successfully connecting all blocks set the tree tip and claim the branch.

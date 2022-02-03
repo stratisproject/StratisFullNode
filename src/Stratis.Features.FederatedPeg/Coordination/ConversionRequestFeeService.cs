@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Newtonsoft.Json;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Utilities;
@@ -126,7 +127,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
             {
                 if (conversionRequestSyncStart.AddMinutes(2) <= this.dateTimeProvider.GetUtcNow())
                 {
-                    this.logger.Warn($"A fee for conversion request '{requestId}' failed to reach consensus after 2 minutes, ignoring.");
+                    this.logger.LogWarning($"A fee for conversion request '{requestId}' failed to reach consensus after 2 minutes, ignoring.");
                     interopConversionRequestFee.State = InteropFeeState.FailRevertToFallback;
                     this.interopRequestKeyValueStore.SaveValueJson(requestId, interopConversionRequestFee);
                     break;
@@ -182,7 +183,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
             {
                 interopConversionRequest = new InteropConversionRequestFee() { RequestId = requestId, BlockHeight = blockHeight, State = InteropFeeState.ProposalInProgress };
                 this.interopRequestKeyValueStore.SaveValueJson(requestId, interopConversionRequest);
-                this.logger.Debug($"InteropConversionRequestFee object for request '{requestId}' has been created.");
+                this.logger.LogDebug($"InteropConversionRequestFee object for request '{requestId}' has been created.");
             }
 
             return interopConversionRequest;
@@ -204,10 +205,10 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 interopConversionRequestFee.FeeProposals.Add(new InterOpFeeToMultisig() { BlockHeight = interopConversionRequestFee.BlockHeight, PubKey = this.federationManager.CurrentFederationKey.PubKey.ToHex(), FeeAmount = candidateFee });
                 this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
 
-                this.logger.Debug($"Adding this node's proposal fee of {candidateFee} for conversion request id '{interopConversionRequestFee.RequestId}'.");
+                this.logger.LogDebug($"Adding this node's proposal fee of {candidateFee} for conversion request id '{interopConversionRequestFee.RequestId}'.");
             }
 
-            this.logger.Debug($"{interopConversionRequestFee.FeeProposals.Count} node(s) has proposed a fee for conversion request id '{interopConversionRequestFee.RequestId}'.");
+            this.logger.LogDebug($"{interopConversionRequestFee.FeeProposals.Count} node(s) has proposed a fee for conversion request id '{interopConversionRequestFee.RequestId}'.");
 
             if (HasFeeProposalBeenConcluded(interopConversionRequestFee))
             {
@@ -218,7 +219,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                     this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
 
                     IEnumerable<long> values = interopConversionRequestFee.FeeProposals.Select(s => Convert.ToInt64(s.FeeAmount));
-                    this.logger.Debug($"Proposal fee for request id '{interopConversionRequestFee.RequestId}' has concluded, average amount: {values.Average()}");
+                    this.logger.LogDebug($"Proposal fee for request id '{interopConversionRequestFee.RequestId}' has concluded, average amount: {values.Average()}");
                 }
             }
 
@@ -237,7 +238,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
         {
             if (!HasFeeProposalBeenConcluded(interopConversionRequestFee))
             {
-                this.logger.Error($"Cannot vote on fee proposal for request id '{interopConversionRequestFee.RequestId}' as it hasn't concluded yet.");
+                this.logger.LogError($"Cannot vote on fee proposal for request id '{interopConversionRequestFee.RequestId}' as it hasn't concluded yet.");
                 return;
             }
 
@@ -250,10 +251,10 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 interopConversionRequestFee.FeeVotes.Add(interOpFeeToMultisig);
                 this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
 
-                this.logger.Debug($"Creating fee vote for conversion request id '{interopConversionRequestFee.RequestId}' with a fee amount of {new Money(candidateFee)}.");
+                this.logger.LogDebug($"Creating fee vote for conversion request id '{interopConversionRequestFee.RequestId}' with a fee amount of {new Money(candidateFee)}.");
             }
 
-            this.logger.Debug($"{interopConversionRequestFee.FeeVotes.Count} node(s) has voted on a fee for conversion request id '{interopConversionRequestFee.RequestId}'.");
+            this.logger.LogDebug($"{interopConversionRequestFee.FeeVotes.Count} node(s) has voted on a fee for conversion request id '{interopConversionRequestFee.RequestId}'.");
 
             if (HasFeeVoteBeenConcluded(interopConversionRequestFee))
                 ConcludeInteropConversionRequestFee(interopConversionRequestFee);
@@ -285,7 +286,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                     interopConversionRequestFee.FeeProposals.Add(new InterOpFeeToMultisig() { BlockHeight = interopConversionRequestFee.BlockHeight, PubKey = pubKey.ToHex(), FeeAmount = feeAmount });
                     this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
 
-                    this.logger.Debug($"Received conversion request proposal '{requestId}' from '{pubKey}', proposing fee of {new Money(feeAmount)}.");
+                    this.logger.LogDebug($"Received conversion request proposal '{requestId}' from '{pubKey}', proposing fee of {new Money(feeAmount)}.");
                 }
 
                 // This node would have proposed this fee if the InteropConversionRequestFee object exists.
@@ -311,7 +312,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                     interopConversionRequestFee.FeeVotes.Add(new InterOpFeeToMultisig() { BlockHeight = interopConversionRequestFee.BlockHeight, PubKey = pubKey.ToHex(), FeeAmount = feeAmount });
                     this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
 
-                    this.logger.Debug($"Received conversion request fee vote '{requestId}' from '{pubKey} for a fee of {new Money(feeAmount)}.");
+                    this.logger.LogDebug($"Received conversion request fee vote '{requestId}' from '{pubKey} for a fee of {new Money(feeAmount)}.");
                 }
 
                 // This node would have voted on this if the InteropConversionRequestFee object exists.
@@ -338,7 +339,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
             if (feeAmount < (currentAverage - (currentAverage * FeeProposalRange)) ||
                 feeAmount > (currentAverage + (currentAverage * FeeProposalRange)))
             {
-                this.logger.Debug($"Conversion request '{requestId}' received from pubkey '{pubKey}' with amount {feeAmount} is out of range of the current average of {currentAverage}, skipping.");
+                this.logger.LogDebug($"Conversion request '{requestId}' received from pubkey '{pubKey}' with amount {feeAmount} is out of range of the current average of {currentAverage}, skipping.");
                 return false;
             }
 
@@ -352,7 +353,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
             var conversionTransactionFee = this.externalApiPoller.EstimateConversionTransactionFee();
             if (conversionTransactionFee == -1)
             {
-                this.logger.Debug("External poller returned -1, will retry.");
+                this.logger.LogDebug("External poller returned -1, will retry.");
                 return false;
             }
 
@@ -378,7 +379,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
             foreach (InterOpFeeToMultisig vote in interopConversionRequestFee.FeeVotes)
             {
-                this.logger.Debug($"Pubkey '{vote.PubKey}' voted for {new Money(vote.FeeAmount)}.");
+                this.logger.LogDebug($"Pubkey '{vote.PubKey}' voted for {new Money(vote.FeeAmount)}.");
             }
 
             // Try and find the majority vote
@@ -392,7 +393,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
             interopConversionRequestFee.State = InteropFeeState.AgreeanceConcluded;
             this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
 
-            this.logger.Debug($"Voting on fee for request id '{interopConversionRequestFee.RequestId}' has concluded, amount: {new Money(interopConversionRequestFee.Amount)}");
+            this.logger.LogDebug($"Voting on fee for request id '{interopConversionRequestFee.RequestId}' has concluded, amount: {new Money(interopConversionRequestFee.Amount)}");
         }
 
         private void AddComponentStats(StringBuilder benchLog)

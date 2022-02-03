@@ -2,9 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
 using Stratis.Bitcoin;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -120,7 +121,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             {
                 if (inspectForDepositsAtHeight == burnRequest.BlockHeight)
                 {
-                    this.logger.Info($"Processing burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' for {new Money(burnRequest.Amount)} STRAX at height {inspectForDepositsAtHeight}.");
+                    this.logger.LogInformation($"Processing burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' for {new Money(burnRequest.Amount)} STRAX at height {inspectForDepositsAtHeight}.");
 
                     Deposit deposit = CreateDeposit(burnRequest, inspectForDepositsAtHeight);
                     if (deposit == null)
@@ -149,7 +150,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
                         this.conversionRequestRepository.Save(burnRequest);
 
-                        this.logger.Info($"Marking burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' as processed at height {inspectForDepositsAtHeight}.");
+                        this.logger.LogInformation($"Marking burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' as processed at height {inspectForDepositsAtHeight}.");
 
                         continue;
                     }
@@ -165,7 +166,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
                         if (this.depositsBeingProcessedWithinMaturingWindow.Contains(deposit.Id))
                         {
-                            this.logger.Debug($"Burn request '{burnRequest.RequestId}' is already being processed within the maturity window.");
+                            this.logger.LogDebug($"Burn request '{burnRequest.RequestId}' is already being processed within the maturity window.");
                             continue;
                         }
 
@@ -173,7 +174,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
                         this.depositsBeingProcessedWithinMaturingWindow.Add(deposit.Id);
 
-                        this.logger.Info($"Re-injecting burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' that was processed at {burnRequest.BlockHeight} and will mature at {burnRequest.BlockHeight + requiredConfirmations}.");
+                        this.logger.LogInformation($"Re-injecting burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' that was processed at {burnRequest.BlockHeight} and will mature at {burnRequest.BlockHeight + requiredConfirmations}.");
 
                         continue;
                     }
@@ -209,15 +210,15 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         }
 
         /// <inheritdoc />
-        public async Task<IDeposit> ExtractDepositFromTransaction(Transaction transaction, int blockHeight, uint256 blockHash)
+        public Task<IDeposit> ExtractDepositFromTransaction(Transaction transaction, int blockHeight, uint256 blockHash)
         {
             // If there are no deposits to the multsig (i.e. cross chain transfers) do nothing.
             if (!DepositValidationHelper.TryGetDepositsToMultisig(this.network, transaction, FederatedPegSettings.CrossChainTransferMinimum, out List<TxOut> depositsToMultisig))
-                return null;
+                return Task.FromResult((IDeposit)null);
 
             // If there are deposits to the multsig (i.e. cross chain transfers), try and extract and validate the address by the specfied destination chain.
             if (!DepositValidationHelper.TryGetTarget(transaction, this.opReturnDataReader, out bool conversionTransaction, out string targetAddress, out int targetChain))
-                return null;
+                return Task.FromResult((IDeposit)null);
 
             Money amount = depositsToMultisig.Sum(o => o.Value);
 
@@ -227,11 +228,11 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             {
                 if (this.federatedPegSettings.IsMainChain && amount < DepositValidationHelper.ConversionTransactionMinimum)
                 {
-                    this.logger.Warn($"Ignoring conversion transaction '{transaction.GetHash()}' with amount {amount} which is below the threshold of {DepositValidationHelper.ConversionTransactionMinimum}.");
-                    return null;
+                    this.logger.LogWarning($"Ignoring conversion transaction '{transaction.GetHash()}' with amount {amount} which is below the threshold of {DepositValidationHelper.ConversionTransactionMinimum}.");
+                    return Task.FromResult((IDeposit)null);
                 }
 
-                this.logger.Info("Received conversion deposit transaction '{0}' for an amount of {1}.", transaction.GetHash(), amount);
+                this.logger.LogInformation("Received conversion deposit transaction '{0}' for an amount of {1}.", transaction.GetHash(), amount);
 
                 if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
                     depositRetrievalType = DepositRetrievalType.ConversionLarge;
@@ -250,7 +251,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 }
             }
 
-            return new Deposit(transaction.GetHash(), depositRetrievalType, amount, targetAddress, (DestinationChain)targetChain, blockHeight, blockHash);
+            return Task.FromResult((IDeposit)new Deposit(transaction.GetHash(), depositRetrievalType, amount, targetAddress, (DestinationChain)targetChain, blockHeight, blockHash));
         }
 
         private DepositRetrievalType DetermineDepositRetrievalType(Money amount)

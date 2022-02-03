@@ -156,5 +156,33 @@ namespace Stratis.Bitcoin.Features.Consensus
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
+
+        /// <summary>
+        /// Returns the current tip of consensus.
+        /// </summary>
+        /// <returns>Json formatted <see cref="uint256"/> hash and height of the block at the consensus tip. Returns <see cref="IActionResult"/> formatted error if fails.</returns>
+        /// <response code="200">Returns the tip hash and height.</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route("api/[controller]/tip")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult ConsensusTip()
+        {
+            try
+            {
+                if (this.ConsensusManager.Tip == null)
+                    return this.Json("Consensus is not initialized.");
+
+                var tip = this.ConsensusManager.Tip;
+
+                return this.Json(new { TipHash = tip.HashBlock, TipHeight = tip.Height });
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
     }
 }

@@ -13,7 +13,6 @@ public class TryCatch : SmartContract
         try
         {
             throw new Exception();
-            return true;
         }
         catch (ArgumentException e)
         {

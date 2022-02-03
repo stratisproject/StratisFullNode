@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 
 namespace Stratis.Bitcoin.Features.PoA.Voting
 {
@@ -29,7 +30,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 if (votingDataBytes.Length > VotingDataMaxSerializedSize)
                 {
-                    this.logger.Trace("(-)[INVALID_SIZE]");
+                    this.logger.LogTrace("(-)[INVALID_SIZE]");
                     PoAConsensusErrors.VotingDataInvalidFormat.Throw();
                 }
 
@@ -46,8 +47,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Debug("Exception during deserialization: '{0}'.", e.ToString());
-                this.logger.Trace("(-)[DESERIALIZING_EXCEPTION]");
+                this.logger.LogDebug("Exception during deserialization: '{0}'.", e.ToString());
+                this.logger.LogTrace("(-)[DESERIALIZING_EXCEPTION]");
 
                 PoAConsensusErrors.VotingDataInvalidFormat.Throw();
                 return null;
@@ -93,7 +94,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 if (votingData != null)
                 {
-                    this.logger.Trace("(-)[TOO_MANY_VOTING_OUTPUTS]");
+                    this.logger.LogTrace("(-)[TOO_MANY_VOTING_OUTPUTS]");
                     PoAConsensusErrors.TooManyVotingOutputs.Throw();
                 }
 

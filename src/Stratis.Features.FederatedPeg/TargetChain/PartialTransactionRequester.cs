@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using NLog;
+using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.InputConsolidation;
@@ -70,19 +71,19 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         {
             if (this.ibdState.IsInitialBlockDownload() || !this.federationWalletManager.IsFederationWalletActive())
             {
-                this.logger.Info("Federation wallet isn't active or in IBD. Not attempting to request transaction signatures.");
+                this.logger.LogInformation("Federation wallet isn't active or in IBD. Not attempting to request transaction signatures.");
                 return;
             }
 
             // Broadcast the partial transaction with the earliest inputs.
             IEnumerable<ICrossChainTransfer> partialtransfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Partial }, true);
 
-            this.logger.Info($"Requesting partial templates for {partialtransfers.Count()} transfers.");
+            this.logger.LogInformation($"Requesting partial templates for {partialtransfers.Count()} transfers.");
 
             foreach (ICrossChainTransfer transfer in partialtransfers)
             {
                 await this.federatedPegBroadcaster.BroadcastAsync(new RequestPartialTransactionPayload(transfer.DepositTransactionId).AddPartial(transfer.PartialTransaction)).ConfigureAwait(false);
-                this.logger.Debug("Partial template requested for deposit Id '{0}'", transfer.DepositTransactionId);
+                this.logger.LogDebug("Partial template requested for deposit Id '{0}'", transfer.DepositTransactionId);
             }
 
             // If we don't have any broadcastable transactions, check if we have any consolidating transactions to sign.
@@ -97,7 +98,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     if (toSign != null)
                     {
                         await this.federatedPegBroadcaster.BroadcastAsync(new RequestPartialTransactionPayload(RequestPartialTransactionPayload.ConsolidationDepositId).AddPartial(toSign.PartialTransaction)).ConfigureAwait(false);
-                        this.logger.Debug("Partial consolidating transaction requested for '{0}'.", toSign.PartialTransaction.GetHash());
+                        this.logger.LogDebug("Partial consolidating transaction requested for '{0}'.", toSign.PartialTransaction.GetHash());
                     }
                 }
             }

@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json.Serialization;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Features.Api;
 using Swashbuckle.AspNetCore.SwaggerGen;
@@ -74,7 +75,9 @@ namespace Stratis.Features.Unity3dApi
                 {
                     options.Filters.Add(typeof(LoggingActionFilter));
 
+#pragma warning disable ASP0000 // Do not call 'IServiceCollection.BuildServiceProvider' in 'ConfigureServices'
                     ServiceProvider serviceProvider = services.BuildServiceProvider();
+#pragma warning restore ASP0000 // Do not call 'IServiceCollection.BuildServiceProvider' in 'ConfigureServices'
                     var apiSettings = (ApiSettings)serviceProvider.GetRequiredService(typeof(ApiSettings));
                     if (apiSettings.KeepaliveTimer != null)
                     {
@@ -82,8 +85,10 @@ namespace Stratis.Features.Unity3dApi
                     }
                 })
                 // add serializers for NBitcoin objects
-                .AddNewtonsoftJson(options => {
-                    Stratis.Bitcoin.Utilities.JsonConverters.Serializer.RegisterFrontConverters(options.SerializerSettings);
+                .AddNewtonsoftJson(options =>
+                {
+                    options.SerializerSettings.ContractResolver = new DefaultContractResolver();
+                    Stratis.Bitcoin.Utilities.JsonConverters.Serializer.RegisterFrontConverters(options.SerializerSettings, null, false);
                 })
                 .AddControllers(this.fullNode.Services.Features, services)
                 .ConfigureApplicationPartManager(a =>
@@ -146,17 +151,21 @@ namespace Stratis.Features.Unity3dApi
             });
 
             // Enable middleware to serve generated Swagger as a JSON endpoint.
-            app.UseSwagger();
-
+            app.UseSwagger(c =>
+            {
+                c.RouteTemplate = "swagger/unity/{documentname}/swagger.json";
+            });
+            
             // Enable middleware to serve swagger-ui (HTML, JS, CSS etc.)
             app.UseSwaggerUI(c =>
             {
+                c.RoutePrefix = "swagger/unity";
                 c.DefaultModelRendering(ModelRendering.Model);
 
                 // Build a swagger endpoint for each discovered API version
                 foreach (ApiVersionDescription description in provider.ApiVersionDescriptions)
                 {
-                    c.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
+                    c.SwaggerEndpoint($"/swagger/unity/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
                 }
 
                 // Hack to be able to access and modify the options object configured here

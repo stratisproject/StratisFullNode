@@ -28,8 +28,12 @@ namespace Stratis.Bitcoin.EventBus
         /// </summary>
         private readonly object subscriptionsLock = new object();
 
+#pragma warning disable SA1648
+
         /// <inheritdoc cref="InMemoryEventBusPerformanceCounter"/>
         private readonly InMemoryEventBusPerformanceCounter performanceCounter;
+
+#pragma warning restore SA1648
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryEventBus"/> class.

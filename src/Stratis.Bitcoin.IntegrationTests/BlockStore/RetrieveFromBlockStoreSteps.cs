@@ -114,7 +114,7 @@ namespace Stratis.Bitcoin.IntegrationTests.BlockStore
             this.transaction = this.node.FullNode.WalletTransactionHandler().BuildTransaction(transactionBuildContext);
 
             await this.node.FullNode.NodeController<WalletController>()
-                .SendTransaction(new SendTransactionRequest(this.transaction.ToHex()));
+                .SendTransactionAsync(new SendTransactionRequest(this.transaction.ToHex()));
         }
 
         private void the_block_with_the_transaction_is_mined()

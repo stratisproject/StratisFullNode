@@ -192,6 +192,8 @@ namespace Stratis.Bitcoin.Features.Miner
         /// <summary>
         /// Ensures that the node is synced before mining is allowed to start.
         /// </summary>
+        /// <param name="context">The <see cref="MineBlockContext"/>.</param>
+        /// <returns><c>True</c> if the node is synced and <c>false</c> otherwise.</returns>
         private bool ConsensusIsAtTip(MineBlockContext context)
         {
             this.miningCancellationTokenSource.Token.ThrowIfCancellationRequested();
@@ -219,6 +221,8 @@ namespace Stratis.Bitcoin.Features.Miner
         /// generation of blocks inside tests, where it is possible to generate multiple blocks within one second.
         /// </para>
         /// </summary>
+        /// <param name="context">The <see cref="MineBlockContext"/>.</param>
+        /// <returns><c>True</c> if the block was successfully built or <c>false</c> otherwise.</returns>
         private bool BuildBlock(MineBlockContext context)
         {
             context.BlockTemplate = this.blockProvider.BuildPowBlock(context.ChainTip, context.ReserveScript.ReserveFullNodeScript);
@@ -235,6 +239,8 @@ namespace Stratis.Bitcoin.Features.Miner
         /// <summary>
         /// Executes until the required work (difficulty) has been reached. This is the "mining" process.
         /// </summary>
+        /// <param name="context">The <see cref="MineBlockContext"/>.</param>
+        /// <returns><c>True</c> if the block was successfully mined or <c>false</c> otherwise.</returns>
         private bool MineBlock(MineBlockContext context)
         {
             if (this.network.Consensus.LastPOWBlock != 0 && context.ChainTip.Height > this.network.Consensus.LastPOWBlock)
@@ -263,6 +269,8 @@ namespace Stratis.Bitcoin.Features.Miner
         /// <summary>
         /// Ensures that the block was properly mined by checking the block's work against the next difficulty target.
         /// </summary>
+        /// <param name="context">The <see cref="MineBlockContext"/>.</param>
+        /// <returns><c>True</c> if the block passed validation or <c>false</c> otherwise.</returns>
         private bool ValidateMinedBlock(MineBlockContext context)
         {
             if (context.BlockTemplate.Block.Header.Nonce == InnerLoopCount)
@@ -281,6 +289,8 @@ namespace Stratis.Bitcoin.Features.Miner
         /// On successful block validation the block will be connected to the chain.
         /// </para>
         /// </summary>
+        /// <param name="context">The <see cref="MineBlockContext"/>.</param>
+        /// <returns><c>True</c> if the block was successfully validated and connected or <c>false</c> otherwise.</returns>
         private bool ValidateAndConnectBlock(MineBlockContext context)
         {
             ChainedHeader chainedHeader = this.consensusManager.BlockMinedAsync(context.BlockTemplate.Block).GetAwaiter().GetResult();

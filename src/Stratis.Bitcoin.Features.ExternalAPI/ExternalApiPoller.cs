@@ -9,26 +9,63 @@ using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.ExternalApi
 {
+    /// <summary>
+    /// External API poller.
+    /// </summary>
     public interface IExternalApiPoller : IDisposable
     {
+        /// <summary>
+        /// Initialize the instance.
+        /// </summary>
         void Initialize();
 
+        /// <summary>
+        /// Gets the Stratis price.
+        /// </summary>
+        /// <returns>The Stratis price.</returns>
         decimal GetStratisPrice();
 
+        /// <summary>
+        /// Gets the Ethereum price.
+        /// </summary>
+        /// <returns>The Ethereum price.</returns>
         decimal GetEthereumPrice();
 
+        /// <summary>
+        /// Gets the gas price.
+        /// </summary>
+        /// <returns>The gas price.</returns>
         int GetGasPrice();
 
+        /// <summary>Estimates the total conversion gas costs.</summary>
+        /// <returns>The estimated total amount of gas a conversion transaction will require.</returns>
+        /// <remarks>The decimal type is acceptable here because it supports sufficiently large numbers for most conceivable gas calculations.</remarks>
         decimal EstimateConversionTransactionGas();
 
+        /// <summary>
+        /// Estimates the conversion transaction fee.
+        /// </summary>
+        /// <returns>The estimated conversion transaction fee, converted from the USD total to the equivalent STRAX amount.</returns>
         decimal EstimateConversionTransactionFee();
     }
 
+    /// <inheritdoc/>
     public class ExternalApiPoller : IExternalApiPoller
     {
+        /// <summary>
+        /// The quorum size.
+        /// </summary>
         // TODO: This should be linked to the setting in the interop feature
         public const int QuorumSize = 6;
+
+        /// <summary>
+        /// One Ether.
+        /// </summary>
         public const decimal OneEther = 1_000_000_000_000_000_000;
+
+        /// <summary>
+        /// One Gwei.
+        /// </summary>
         public const decimal OneGwei = 1_000_000_000;
 
         private readonly IAsyncProvider asyncProvider;
@@ -41,6 +78,13 @@ namespace Stratis.Bitcoin.Features.ExternalApi
         private IAsyncLoop gasPriceLoop;
         private IAsyncLoop priceLoop;
 
+        /// <summary>
+        /// The instance constructor.
+        /// </summary>
+        /// <param name="nodeSettings">The <see cref="NodeSettings"/>.</param>
+        /// <param name="asyncProvider">The <see cref="IAsyncProvider"/>.</param>
+        /// <param name="nodeLifetime">The <see cref="INodeLifetime"/>.</param>
+        /// <param name="externalApiSettings">The <see cref="ExternalApiSettings"/>.</param>
         public ExternalApiPoller(NodeSettings nodeSettings,
             IAsyncProvider asyncProvider,
             INodeLifetime nodeLifetime,
@@ -54,6 +98,9 @@ namespace Stratis.Bitcoin.Features.ExternalApi
             this.coinGeckoClient = new CoinGeckoClient(this.externalApiSettings);
         }
 
+        /// <summary>
+        /// Inializes the instance.
+        /// </summary>
         public void Initialize()
         {
             this.logger.LogInformation($"External API feature enabled, initializing periodic loops.");
@@ -68,7 +115,7 @@ namespace Stratis.Bitcoin.Features.ExternalApi
 
                     try
                     {
-                        await this.etherscanClient.GasOracle(true).ConfigureAwait(false);
+                        await this.etherscanClient.GasOracleAsync().ConfigureAwait(false);
                     }
                     catch (HttpRequestException e2) when (e2.InnerException is SocketException socketException && socketException.ErrorCode == 11001)
                     {
@@ -115,23 +162,25 @@ namespace Stratis.Bitcoin.Features.ExternalApi
             }
         }
 
+        /// <inheritdoc/>
         public decimal GetStratisPrice()
         {
             return this.coinGeckoClient.GetStratisPrice();
         }
 
+        /// <inheritdoc/>
         public decimal GetEthereumPrice()
         {
             return this.coinGeckoClient.GetEthereumPrice();
         }
 
+        /// <inheritdoc/>
         public int GetGasPrice()
         {
             return this.etherscanClient.GetGasPrice();
         }
 
-        /// <summary>The decimal type is acceptable here because it supports sufficiently large numbers for most conceivable gas calculations.</summary>
-        /// <returns>The estimated total amount of gas a conversion transaction will require.</returns>
+        /// <inheritdoc/>
         public decimal EstimateConversionTransactionGas()
         {
             // The cost of submitting a multisig ERC20 transfer to the multisig contract.
@@ -152,7 +201,7 @@ namespace Stratis.Bitcoin.Features.ExternalApi
             return totalGas * gasPrice * OneGwei;
         }
 
-        /// <returns>The estimated conversion transaction fee, converted from the USD total to the equivalent STRAX amount.</returns>
+        /// <inheritdoc/>
         public decimal EstimateConversionTransactionFee()
         {
             // The approximate USD fee that will be applied to conversion transactions, over and above the computed gas cost.
@@ -173,6 +222,7 @@ namespace Stratis.Bitcoin.Features.ExternalApi
             return (overallGasUsd / stratisPriceUsd) + (ConversionTransactionFee / stratisPriceUsd);
         }
 
+        /// <inheritdoc/>
         public void Dispose()
         {
             this.gasPriceLoop?.Dispose();

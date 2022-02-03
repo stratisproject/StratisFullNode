@@ -10,16 +10,34 @@ namespace Stratis.Features.Diagnostic.PeerDiagnostic
     /// </summary>
     public class PeerStatistics
     {
+        /// <summary>
+        /// The peer endpoint.
+        /// </summary>
         public IPEndPoint PeerEndPoint { get; set; }
 
+        /// <summary>
+        /// Indicates whether this is an inbound peer.
+        /// </summary>
         public bool Inbound { get; set; }
 
+        /// <summary>
+        /// The number of bytes sent to the peer.
+        /// </summary>
         public long BytesSent { get; set; }
 
+        /// <summary>
+        /// The number of bytes received from the peer.
+        /// </summary>
         public long BytesReceived { get; set; }
 
+        /// <summary>
+        /// The number of messages received from the peer.
+        /// </summary>
         public int ReceivedMessages { get; set; }
 
+        /// <summary>
+        /// The number of messages sent to the peer.
+        /// </summary>
         public int SentMessages { get; set; }
 
         /// <summary>
@@ -41,6 +59,10 @@ namespace Stratis.Features.Diagnostic.PeerDiagnostic
             this.LatestEvents = new ConcurrentFixedSizeQueue<string>(maxLoggedEvents);
         }
 
+        /// <summary>
+        /// Logs an event.
+        /// </summary>
+        /// <param name="loggedText">The text to log.</param>
         public void LogEvent(string loggedText)
         {
             this.LatestEvents.Enqueue($"[{DateTime.UtcNow}] {loggedText}");

@@ -3,10 +3,14 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
-using NLog;
+using Microsoft.Extensions.Logging;
+using Stratis.Bitcoin.Configuration.Logging;
 
 namespace Stratis.Bitcoin.Features.SignalR
 {
+    /// <summary>
+    /// SignalR message.
+    /// </summary>
     public class SignalRMessageArgs
     {
         public string Target { get; set; }
@@ -30,17 +34,18 @@ namespace Stratis.Bitcoin.Features.SignalR
 
         public override Task OnConnectedAsync()
         {
-            this.logger.Debug("New client with id {id} connected", this.Context.ConnectionId);
+            this.logger.LogDebug("New client with id {id} connected", this.Context.ConnectionId);
             return base.OnConnectedAsync();
         }
 
         public override Task OnDisconnectedAsync(Exception exception)
         {
-            this.logger.Debug("Client with id {id} disconnected", this.Context.ConnectionId);
+            this.logger.LogDebug("Client with id {id} disconnected", this.Context.ConnectionId);
             return base.OnDisconnectedAsync(exception);
         }
 
-        /// <summary>Called using reflection from SignalR</summary> 
+        /// <summary>Called using reflection from SignalR</summary>
+        /// <param name="message">See <see cref="SignalRMessageArgs"/>.</param>
         public void SendMessage(SignalRMessageArgs message)
         {
             try
@@ -55,7 +60,7 @@ namespace Stratis.Bitcoin.Features.SignalR
             }
             catch (Exception e)
             {
-                this.logger.Error("Error SendMessage", e);
+                this.logger.LogError("Error SendMessage", e);
             }
         }
 
@@ -89,7 +94,7 @@ namespace Stratis.Bitcoin.Features.SignalR
             }
             catch (Exception ex)
             {
-                this.logger.Error(ex, "Error sending to clients");
+                this.logger.LogError(ex, "Error sending to clients");
             }
         }
     }

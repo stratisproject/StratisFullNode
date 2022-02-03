@@ -27,7 +27,7 @@ namespace NBitcoin
                 wordlist = Wordlist.AutoDetect(mnemonic) ?? Wordlist.English;
 
             string[] words = mnemonic.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
-            _Mnemonic = string.Join(wordlist.Space.ToString(), words);
+            this._Mnemonic = string.Join(wordlist.Space.ToString(), words);
 
             //if the sentence is not at least 12 characters or cleanly divisible by 3, it is bad!
             if (!CorrectWordCount(words.Length))
@@ -54,7 +54,7 @@ namespace NBitcoin
 
             int i = Array.IndexOf(entArray, entropy.Length * 8);
             if(i == -1)
-                throw new ArgumentException("The length for entropy should be : " + String.Join(",", entArray), "entropy");
+                throw new ArgumentException("The length for entropy should be : " + string.Join(",", entArray), "entropy");
 
             int cs = csArray[i];
             byte[] checksum = Hashes.SHA256(entropy);
@@ -200,10 +200,10 @@ namespace NBitcoin
             return new ExtKey(DeriveSeed(passphrase));
         }
 
-        private static Byte[] Concat(Byte[] source1, Byte[] source2)
+        private static byte[] Concat(byte[] source1, byte[] source2)
         {
             //Most efficient way to merge two arrays this according to http://stackoverflow.com/questions/415291/best-way-to-combine-two-or-more-byte-arrays-in-c-sharp
-            var buffer = new Byte[source1.Length + source2.Length];
+            var buffer = new byte[source1.Length + source2.Length];
             Buffer.BlockCopy(source1, 0, buffer, 0, source1.Length);
             Buffer.BlockCopy(source2, 0, buffer, source1.Length, source2.Length);
 

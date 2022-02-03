@@ -61,6 +61,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// Gets the rewind data by block height.
         /// </summary>
         /// <param name="height">The height of the block.</param>
+        /// <returns>See <see cref="RewindData"/>.</returns>
         RewindData GetRewindData(int height);
 
         /// <summary>Gets the minimum rewind height.</summary>

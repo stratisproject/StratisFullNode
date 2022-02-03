@@ -25,7 +25,7 @@ namespace Stratis.Bitcoin.Utilities
     public class StopwatchDisposable : IDisposable
     {
         /// <summary>Stopwatch to measure elapsed ticks of the code block.</summary>
-        public readonly Stopwatch watch;
+        private readonly Stopwatch watch;
 
         /// <summary>
         /// Action to execute when the measurement is done.

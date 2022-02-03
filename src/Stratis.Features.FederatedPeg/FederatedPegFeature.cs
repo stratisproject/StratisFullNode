@@ -5,8 +5,8 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
@@ -16,7 +16,6 @@ using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.Notifications;
 using Stratis.Bitcoin.Features.SmartContracts;
-using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
 using Stratis.Bitcoin.Utilities;
@@ -182,7 +181,7 @@ namespace Stratis.Features.FederatedPeg
             }
             catch (Exception e)
             {
-                this.logger.Error(e.ToString());
+                this.logger.LogError(e.ToString());
             }
         }
 

@@ -857,7 +857,7 @@ namespace NBitcoin
                 i++;
             }
             char unit = format[i];
-            var unitToUseInCalc = MoneyUnit.BTC;
+            MoneyUnit unitToUseInCalc = MoneyUnit.BTC;
             switch (unit)
             {
                 case 'B':

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using NLog;
+using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Interfaces;
@@ -14,7 +14,6 @@ namespace Stratis.Bitcoin.Utilities
 {
     public interface INodeStats
     {
-
         /// <summary>
         /// A flag indicating whether or not to display bench stats on the console output.
         /// </summary>
@@ -126,11 +125,11 @@ namespace Stratis.Bitcoin.Utilities
                     }
                     catch (OperationCanceledException)
                     {
-                        this.logger.Warn("{0} failed to provide inline statistics after {1} seconds, please investigate...", inlineStatItem.ComponentName, ComponentStatsWaitSeconds);
+                        this.logger.LogWarning("{0} failed to provide inline statistics after {1} seconds, please investigate...", inlineStatItem.ComponentName, ComponentStatsWaitSeconds);
                     }
                     catch (Exception ex)
                     {
-                        this.logger.Warn("{0} failed to provide inline statistics: {1}", inlineStatItem.ComponentName, ex.ToString());
+                        this.logger.LogWarning("{0} failed to provide inline statistics: {1}", inlineStatItem.ComponentName, ex.ToString());
                     }
                 });
 
@@ -155,11 +154,11 @@ namespace Stratis.Bitcoin.Utilities
                     }
                     catch (OperationCanceledException)
                     {
-                        this.logger.Warn("{0} failed to provide statistics after {1} seconds, please investigate...", componentStatItem.ComponentName, ComponentStatsWaitSeconds);
+                        this.logger.LogWarning("{0} failed to provide statistics after {1} seconds, please investigate...", componentStatItem.ComponentName, ComponentStatsWaitSeconds);
                     }
                     catch (Exception ex)
                     {
-                        this.logger.Warn("{0} failed to provide statistics: {1}", componentStatItem.ComponentName, ex.ToString());
+                        this.logger.LogWarning("{0} failed to provide statistics: {1}", componentStatItem.ComponentName, ex.ToString());
                     }
                 });
 

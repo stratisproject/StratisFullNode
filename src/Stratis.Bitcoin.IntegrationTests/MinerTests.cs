@@ -181,7 +181,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 foreach (var ruleType in this.network.Consensus.ConsensusRules.HeaderValidationRules)
                     consensusRulesContainer.HeaderValidationRules.Add(Activator.CreateInstance(ruleType) as HeaderValidationConsensusRule);
 
-                foreach (var ruleType in network.Consensus.ConsensusRules.FullValidationRules)
+                foreach (var ruleType in this.network.Consensus.ConsensusRules.FullValidationRules)
                 {
                     FullValidationConsensusRule rule = null;
                     if (ruleType == typeof(FlushCoinviewRule))
