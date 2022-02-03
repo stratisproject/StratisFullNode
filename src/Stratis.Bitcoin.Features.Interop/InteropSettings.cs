@@ -125,6 +125,8 @@ namespace Stratis.Bitcoin.Features.Interop
 
             string watchErc20Key = this.GetSettingsPrefix() + "watcherc20";
 
+            this.WatchedErc20Contracts = new Dictionary<string, string>();
+
             foreach (string watched in nodeSettings.ConfigReader.GetAll(watchErc20Key))
             {
                 if (!watched.Contains(","))
