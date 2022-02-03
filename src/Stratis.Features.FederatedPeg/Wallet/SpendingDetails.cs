@@ -66,6 +66,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
         /// <summary>
         /// Determines whether this transaction being spent is confirmed.
         /// </summary>
+        /// <returns><c>True</c> if the transaction is confirmed and <c>false</c> otherwise.</returns>
         public bool IsSpentConfirmed()
         {
             return this.BlockHeight != null;

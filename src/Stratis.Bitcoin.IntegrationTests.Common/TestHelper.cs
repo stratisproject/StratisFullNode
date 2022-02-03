@@ -525,7 +525,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common
 
             var transaction = sender.FullNode.WalletTransactionHandler().BuildTransaction(context);
 
-            sender.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(transaction.ToHex())).GetAwaiter().GetResult();
+            sender.FullNode.NodeController<WalletController>().SendTransactionAsync(new SendTransactionRequest(transaction.ToHex())).GetAwaiter().GetResult();
 
             MineBlocks(miner, 1);
 

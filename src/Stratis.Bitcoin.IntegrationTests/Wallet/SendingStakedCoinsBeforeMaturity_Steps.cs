@@ -73,13 +73,13 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 return null;
 
             return this.proofOfStakeSteps.PremineNodeWithCoins.FullNode.NodeController<WalletController>()
-                .SendTransaction(new SendTransactionRequest(walletTransactionModel.Hex)).GetAwaiter().GetResult();
+                .SendTransactionAsync(new SendTransactionRequest(walletTransactionModel.Hex)).GetAwaiter().GetResult();
         }
 
         private IActionResult BuildTransaction()
         {
             IActionResult transactionResult = this.proofOfStakeSteps.PremineNodeWithCoins.FullNode.NodeController<WalletController>()
-                .BuildTransaction(new BuildTransactionRequest
+                .BuildTransactionAsync(new BuildTransactionRequest
                 {
                     AccountName = this.proofOfStakeSteps.PremineWalletAccount,
                     AllowUnconfirmed = true,

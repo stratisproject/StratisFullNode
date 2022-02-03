@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using LiteDB;
 using Microsoft.Extensions.Logging;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Utilities;
 
@@ -17,9 +18,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         private readonly ILogger logger;
 
-        public AddressIndexRepository(LiteDatabase db, ILoggerFactory loggerFactory, int maxBalanceChangesToKeep = 50_000) : base(maxBalanceChangesToKeep)
+        public AddressIndexRepository(LiteDatabase db, int maxBalanceChangesToKeep = 150000) : base(maxBalanceChangesToKeep)
         {
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
             this.addressIndexerDataCollection = db.GetCollection<AddressIndexerData>(DbAddressDataKey);
             this.addressIndexerDataCollection.EnsureIndex("BalanceChangedHeightIndex", "$.BalanceChanges[*].BalanceChangedHeight", false);
         }
@@ -80,10 +81,17 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             lock (this.LockObject)
             {
                 CacheItem[] dirtyItems = this.Keys.Where(x => x.Dirty).ToArray();
-                this.addressIndexerDataCollection.Upsert(dirtyItems.Select(x => x.Value));
 
+                this.logger.LogDebug("Saving {0} dirty items.", dirtyItems.Length);
+
+                List<AddressIndexerData> toUpsert = dirtyItems.Select(x => x.Value).ToList();
+
+                this.addressIndexerDataCollection.Upsert(toUpsert);
+                
                 foreach (CacheItem dirtyItem in dirtyItems)
                     dirtyItem.Dirty = false;
+
+                this.logger.LogDebug("Saved dirty items.");
             }
         }
     }

@@ -2,8 +2,9 @@
 using System.Linq;
 using System.Numerics;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Features.FederatedPeg.Coordination
@@ -85,7 +86,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 // Check if the pubkey node has voted for this request.
                 if (!voted.Contains(pubKey))
                 {
-                    this.logger.Debug("Adding vote for request '{0}' (transactionId '{1}') from pubkey {2}.", requestId, transactionId, pubKey.ToHex());
+                    this.logger.LogDebug("Adding vote for request '{0}' (transactionId '{1}') from pubkey {2}.", requestId, transactionId, pubKey.ToHex());
 
                     voted.Add(pubKey);
 

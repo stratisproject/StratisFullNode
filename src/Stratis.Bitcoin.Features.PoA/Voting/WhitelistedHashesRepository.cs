@@ -24,14 +24,16 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.locker = new object();
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
-        }
 
-        public void Initialize()
-        {
+            // Load this before initialize to ensure its available to when the Mempool feature initializes.
             lock (this.locker)
             {
                 this.whitelistedHashes = this.kvRepository.LoadValueJson<List<uint256>>(dbKey) ?? new List<uint256>();
             }
+        }
+
+        public void Initialize()
+        {
         }
 
         private void SaveHashes()

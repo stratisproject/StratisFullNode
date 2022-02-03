@@ -125,7 +125,7 @@ namespace Stratis.Bitcoin.Configuration
         /// </summary>
         public void DeleteChainDirectories()
         {
-            var dirsForDeletion = new string[] { BlockPath, ChainPath, CoindbPath, KeyValueRepositoryPath, SmartContractStatePath, ProvenBlockHeaderPath };
+            var dirsForDeletion = new string[] { this.BlockPath, this.ChainPath, this.CoindbPath, this.KeyValueRepositoryPath, this.SmartContractStatePath, this.ProvenBlockHeaderPath };
 
             foreach (var dir in dirsForDeletion.Select(dir => new DirectoryInfo(dir)))
             {

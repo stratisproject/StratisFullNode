@@ -97,6 +97,10 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
         /// <summary>
         /// Creates test chain with a consensus loop.
         /// </summary>
+        /// <param name="network">The network context.</param>
+        /// <param name="dataDir">The data directory.</param>
+        /// <param name="mockPeerAddressManager">A mock <see cref="IPeerAddressManager"/>.</param>
+        /// <returns>The asynchronous task returning a <see cref="TestChainContext"/>.</returns>
         public static async Task<TestChainContext> CreateAsync(Network network, string dataDir, Mock<IPeerAddressManager> mockPeerAddressManager = null)
         {
             var testChainContext = new TestChainContext() { Network = network };
@@ -180,6 +184,11 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
         /// <summary>
         /// Mine new blocks in to the consensus database and the chain.
         /// </summary>
+        /// <param name="testChainContext">See <see cref="TestChainContext"/>.</param>
+        /// <param name="count">The number of blocks to mine.</param>
+        /// <param name="receiver">Script that explains what conditions must be met to claim ownership of the mined coins.</param>
+        /// <param name="mutateLastBlock">Indicates whether mutated blocks should be built.</param>
+        /// <returns>A list of mined <see cref="Block"/> entries.</returns>
         private static async Task<List<Block>> MineBlocksAsync(TestChainContext testChainContext, int count, Script receiver, bool mutateLastBlock)
         {
             var blockPolicyEstimator = new BlockPolicyEstimator(new MempoolSettings(testChainContext.NodeSettings), testChainContext.LoggerFactory, testChainContext.NodeSettings);
@@ -209,7 +218,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
 
             TryFindNonceForProofOfWork(testChainContext, newBlock);
 
-            if (!getMutatedBlock) await ValidateBlock(testChainContext, newBlock);
+            if (!getMutatedBlock) await ValidateBlockAsync(testChainContext, newBlock);
             else CheckBlockIsMutated(newBlock);
 
             return newBlock;
@@ -219,7 +228,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
             TxMempool mempool, MempoolSchedulerLock mempoolLock)
         {
             PowBlockDefinition blockAssembler = new PowBlockDefinition(testChainContext.Consensus,
-                testChainContext.DateTimeProvider, testChainContext.LoggerFactory as LoggerFactory, mempool, mempoolLock,
+                testChainContext.DateTimeProvider, testChainContext.LoggerFactory as ILoggerFactory, mempool, mempoolLock,
                 new MinerSettings(testChainContext.NodeSettings), testChainContext.Network, testChainContext.ConsensusRules, new NodeDeployments(testChainContext.Network, testChainContext.ChainIndexer));
 
             BlockTemplate newBlock = blockAssembler.Build(testChainContext.ChainIndexer.Tip, scriptPubKey);
@@ -260,7 +269,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
             isMutated.Should().Be(true);
         }
 
-        private static async Task ValidateBlock(TestChainContext testChainContext, BlockTemplate newBlock)
+        private static async Task ValidateBlockAsync(TestChainContext testChainContext, BlockTemplate newBlock)
         {
             var res = await testChainContext.Consensus.BlockMinedAsync(newBlock.Block);
             Assert.NotNull(res);

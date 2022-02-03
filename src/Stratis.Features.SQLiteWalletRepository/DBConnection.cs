@@ -296,40 +296,46 @@ namespace Stratis.Features.SQLiteWalletRepository
             }
         }
 
-        internal List<HDAddress> CreateWatchOnlyAddresses(HDAccount account, int addressType, List<HdAddress> hdAddresses, bool force = false)
+        internal List<HDAddress> CreateWatchOnlyAddresses(WalletAccountReference accountReference, HDAccount account, int addressType, List<HdAddress> hdAddresses, bool force = false)
         {
             var addresses = new List<HDAddress>();
             int addressIndex = HDAddress.GetAddressCount(this.SQLiteConnection, account.WalletId, account.AccountIndex, addressType);
+            
+            IEnumerable<HdAddress> existingAddresses = this.Repository.GetAccountAddresses(accountReference, addressType, int.MaxValue);
+
+            var existingPubKeys = new HashSet<PubKey>();
+
+            foreach (HdAddress existing in existingAddresses)
+            {
+                existingPubKeys.Add(PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(existing.Pubkey));
+            }
 
             foreach (HdAddress hdAddress in hdAddresses)
             {
-                try
+                var pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(hdAddress.Pubkey);
+
+                if (existingPubKeys.Contains(pubKey))
+                    continue;
+
+                HDAddress address = this.Repository.CreateAddress(account, addressType, addressIndex, pubKey);
+
+                if (force || this.Repository.TestMode)
                 {
-                    var pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(hdAddress.Pubkey);
-                    HDAddress address = this.Repository.CreateAddress(account, addressType, addressIndex, pubKey);
-
-                    if (force || this.Repository.TestMode)
-                    {
-                        // Allow greater control over field values for legacy tests.
-                        address.Address = hdAddress?.Address;
-                        address.ScriptPubKey = hdAddress.ScriptPubKey?.ToHex();
-                        address.PubKey = hdAddress.Pubkey?.ToHex();
-                        this.Insert(address);
-                        this.AddTransactions(account, hdAddress, hdAddress.Transactions);
-                    }
-                    else
-                    {
-                        this.Insert(address);
-                    }
-
-                    addresses.Add(address);
-
-                    addressIndex++;
+                    // Allow greater control over field values for legacy tests.
+                    address.Address = hdAddress?.Address;
+                    address.ScriptPubKey = hdAddress.ScriptPubKey?.ToHex();
+                    address.PubKey = hdAddress.Pubkey?.ToHex();
+                    this.Insert(address);
+                    this.AddTransactions(account, hdAddress, hdAddress.Transactions);
                 }
-                catch (Exception)
+                else
                 {
-                    throw;
+                    this.Insert(address);
                 }
+
+                addresses.Add(address);
+
+                addressIndex++;
             }
 
             return addresses;
@@ -608,6 +614,7 @@ namespace Stratis.Features.SQLiteWalletRepository
         /// </summary>
         /// <param name="wallet">The wallet.</param>
         /// <param name="lastBlockSynced">The last block synced to set.</param>
+        /// <returns>An enumeration of transactions that were removed as tuples of transaction id (string) and transaction creation time (long).</returns>
         internal IEnumerable<(string txId, long creationTime)> SetLastBlockSynced(HDWallet wallet, ChainedHeader lastBlockSynced)
         {
             if (this.IsInTransaction)

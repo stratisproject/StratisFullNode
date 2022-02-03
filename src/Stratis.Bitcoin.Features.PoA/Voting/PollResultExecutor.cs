@@ -7,12 +7,16 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
     public interface IPollResultExecutor
     {
         /// <summary>Applies effect of <see cref="VotingData"/>.</summary>
+        /// <param name="data">See <see cref="VotingData"/>.</param>
         void ApplyChange(VotingData data);
 
         /// <summary>Reverts effect of <see cref="VotingData"/>.</summary>
+        /// <param name="data">See <see cref="VotingData"/>.</param>
         void RevertChange(VotingData data);
 
         /// <summary>Converts <see cref="VotingData"/> to a human readable format.</summary>
+        /// <param name="data">See <see cref="VotingData"/>.</param>
+        /// <returns>The string representation of the <see cref="VotingData"/>.</returns>
         string ConvertToString(VotingData data);
     }
 

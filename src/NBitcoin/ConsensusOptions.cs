@@ -13,7 +13,7 @@ namespace NBitcoin
         /// </summary>
         public const int SerializeTransactionNoWitness = 0x40000000;
 
-        /// <summary>Maximum size for a block in bytes. </summary>
+        /// <summary>Maximum size for a block in bytes.</summary>
         public uint MaxBlockBaseSize { get; set; }
 
         /// <summary>The maximum allowed weight for a block, see BIP 141 (network rule)</summary>

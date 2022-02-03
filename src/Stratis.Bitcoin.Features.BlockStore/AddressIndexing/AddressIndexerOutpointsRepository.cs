@@ -4,6 +4,7 @@ using System.Linq;
 using LiteDB;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
@@ -27,9 +28,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         private readonly int maxCacheItems;
 
-        public AddressIndexerOutpointsRepository(LiteDatabase db, ILoggerFactory loggerFactory, int maxItems = 60_000)
+        public AddressIndexerOutpointsRepository(LiteDatabase db, int maxItems = 60_000)
         {
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
             this.addressIndexerOutPointData = db.GetCollection<OutPointData>(DbOutputsDataKey);
             this.addressIndexerRewindData = db.GetCollection<AddressIndexerRewindData>(DbOutputsRewindDataKey);
             this.maxCacheItems = maxItems;
@@ -92,6 +93,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         public void SaveAllItems()
         {
+            this.logger.LogDebug("Saving all items.");
             lock (this.LockObject)
             {
                 CacheItem[] dirtyItems = this.Keys.Where(x => x.Dirty).ToArray();
@@ -99,7 +101,10 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
                 foreach (CacheItem dirtyItem in dirtyItems)
                     dirtyItem.Dirty = false;
+
+                this.logger.LogDebug("{0} items saved.", dirtyItems.Length);
             }
+            
         }
 
         /// <summary>Persists rewind data into the repository.</summary>
@@ -118,15 +123,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         {
             lock (this.LockObject)
             {
-                var itemsToPurge = this.addressIndexerRewindData.Find(x => x.BlockHeight < height).ToArray();
-
-                for (int i = 0; i < itemsToPurge.Count(); i++)
-                {
-                    this.addressIndexerRewindData.Delete(itemsToPurge[i].BlockHash);
-
-                    if (i % 100 == 0)
-                        this.logger.LogInformation("Purging {0}/{1} rewind data items.", i, itemsToPurge.Count());
-                }
+                this.logger.LogInformation("AddressIndexer: started purging rewind data items.");
+                int purgedCount = this.addressIndexerRewindData.Delete(x => x.BlockHeight < height);
+                this.logger.LogInformation("AddressIndexer: Purged {0} rewind data items.", purgedCount);
             }
         }
 

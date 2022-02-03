@@ -48,6 +48,8 @@ namespace Stratis.Bitcoin.Consensus
         /// <summary>State of the current chain that hold consensus tip.</summary>
         public IChainState ChainState { get; }
 
+#pragma warning disable SA1648
+
         /// <inheritdoc cref="IInvalidBlockHashStore"/>
         private readonly IInvalidBlockHashStore invalidBlockHashStore;
 
@@ -55,6 +57,8 @@ namespace Stratis.Bitcoin.Consensus
 
         /// <inheritdoc cref="ConsensusRulesPerformanceCounter"/>
         private ConsensusRulesPerformanceCounter performanceCounter;
+
+#pragma warning restore SA1648
 
         protected ConsensusRuleEngine(
             Network network,

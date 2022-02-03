@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -34,15 +36,15 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             this.federationHistory = engine.FederationHistory;
             this.validator = engine.PoaHeaderValidator;
 
-            var lastCheckPoint = engine.Network.Checkpoints.LastOrDefault();
+            KeyValuePair<int, CheckpointInfo> lastCheckPoint = engine.Network.Checkpoints.LastOrDefault();
             this.lastCheckPoint = (lastCheckPoint.Value != null) ? new HashHeightPair(lastCheckPoint.Value.Hash, lastCheckPoint.Key) : null;
         }
 
-        public override async Task RunAsync(RuleContext context)
+        public override Task RunAsync(RuleContext context)
         {
             // Only start validating at the last checkpoint block.
             if (context.ValidationContext.ChainedHeaderToValidate.Height < (this.lastCheckPoint?.Height ?? 0))
-                return;
+                return Task.CompletedTask;
 
             ChainedHeader chainedHeader = context.ValidationContext.ChainedHeaderToValidate;
 
@@ -71,12 +73,12 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             }
 
             // Look at the last round of blocks to find the previous time that the miner mined.
-            var roundTime = this.slotsManager.GetRoundLength(this.federationHistory.GetFederationForBlock(chainedHeader).Count);
+            TimeSpan roundTime = this.slotsManager.GetRoundLength(this.federationHistory.GetFederationForBlock(chainedHeader).Count);
 
             // Quick check for optimisation.
             this.federationHistory.GetLastActiveTime(federationMember, chainedHeader.Previous, out uint lastActiveTime);
             if ((chainedHeader.Header.Time - lastActiveTime) >= roundTime.TotalSeconds)
-                return;
+                return Task.CompletedTask;
 
             int blockCounter = 0;
 
@@ -103,6 +105,8 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 this.Logger.LogTrace("(-)[TIME_TOO_EARLY]");
                 ConsensusErrors.BlockTimestampTooEarly.Throw();
             }
+
+            return Task.CompletedTask;
         }
     }
 }
