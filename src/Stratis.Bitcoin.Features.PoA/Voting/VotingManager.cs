@@ -44,7 +44,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         /// <summary>All access should be protected by <see cref="locker"/>.</remarks>
         public PollsRepository PollsRepository { get; private set; }
-        public object CirrusBIP9Deployments { get; private set; }
 
         private IIdleFederationMembersKicker idleFederationMembersKicker;
         private readonly INodeLifetime nodeLifetime;
