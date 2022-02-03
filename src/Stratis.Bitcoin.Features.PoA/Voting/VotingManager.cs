@@ -5,6 +5,7 @@ using System.Text;
 using ConcurrentCollections;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.EventBus;
@@ -43,9 +44,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         /// <summary>All access should be protected by <see cref="locker"/>.</remarks>
         public PollsRepository PollsRepository { get; private set; }
+        public object CirrusBIP9Deployments { get; private set; }
 
         private IIdleFederationMembersKicker idleFederationMembersKicker;
         private readonly INodeLifetime nodeLifetime;
+        private readonly NodeDeployments nodeDeployments;
 
         /// <summary>In-memory collection of pending polls.</summary>
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
@@ -74,7 +77,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             Network network,
             ChainIndexer chainIndexer,
             IBlockRepository blockRepository = null,
-            INodeLifetime nodeLifetime = null)
+            INodeLifetime nodeLifetime = null,
+            NodeDeployments nodeDeployments = null)
         {
             this.federationManager = Guard.NotNull(federationManager, nameof(federationManager));
             this.pollResultExecutor = Guard.NotNull(pollResultExecutor, nameof(pollResultExecutor));
@@ -95,6 +99,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.blockRepository = blockRepository;
             this.chainIndexer = chainIndexer;
             this.nodeLifetime = nodeLifetime;
+            this.nodeDeployments = nodeDeployments;
 
             this.isInitialized = false;
         }
@@ -187,12 +192,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 List<Poll> pendingPolls = this.GetPendingPolls().ToList();
                 List<Poll> approvedPolls = this.GetApprovedPolls().Where(x => !x.IsExecuted).ToList();
+                var release1210ActivationHeight = this.nodeDeployments?.BIP9.ActivationHeightProviders[0 /* Release1210 */].ActivationHeight ?? 0;
 
                 bool IsTooOldToVoteOn(Poll poll) => poll.IsPending && (this.chainIndexer.Tip.Height - poll.PollStartBlockData.Height) >= this.poaConsensusOptions.PollExpiryBlocks;
 
                 bool IsValid(VotingData currentScheduledData)
                 {
-                    if (currentScheduledData.Key == VoteKey.AddFederationMember)
+                    if (currentScheduledData.Key == VoteKey.AddFederationMember && this.chainIndexer.Tip.Height >= release1210ActivationHeight)
                         // Only vote on pending polls that are not too old to vote on.
                         return pendingPolls.Any(x => x.VotingData == currentScheduledData && !IsTooOldToVoteOn(x));
 
@@ -314,7 +320,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     PollExecutedBlockData = null,
                     PollStartBlockData = new HashHeightPair(chainedHeader),
                     VotingData = votingData,
-                    PubKeysHexVotedInFavor = pubKeysVotedInFavor ?? new List<Vote>() {  }
+                    PubKeysHexVotedInFavor = pubKeysVotedInFavor ?? new List<Vote>() { }
                 };
 
                 this.polls.Add(poll);
@@ -581,7 +587,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             {
                                 // The JoinFederationRequestMonitor is now responsible for creating "add member" polls.
                                 // Hence, if the poll does not exist then this is not a valid vote.
-                                if (data.Key == VoteKey.AddFederationMember)
+                                var release1210ActivationHeight = this.nodeDeployments?.BIP9.ActivationHeightProviders[0 /* Release1210 */].ActivationHeight ?? 0;
+                                if (data.Key == VoteKey.AddFederationMember && chBlock.ChainedHeader.Height >= release1210ActivationHeight)
                                     continue;
 
                                 poll = CreatePendingPoll(transaction, data, chBlock.ChainedHeader, new List<Vote>() { new Vote() { PubKey = fedMemberKeyHex, Height = chBlock.ChainedHeader.Height } });

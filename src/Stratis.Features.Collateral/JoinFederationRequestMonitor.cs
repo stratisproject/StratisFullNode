@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.PoA;
@@ -23,8 +24,9 @@ namespace Stratis.Features.Collateral
         private readonly Network network;
         private readonly Network counterChainNetwork;
         private readonly IFederationManager federationManager;
+        private readonly NodeDeployments nodeDeployments;
 
-        public JoinFederationRequestMonitor(VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, IFederationManager federationManager, ISignals signals)
+        public JoinFederationRequestMonitor(VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, IFederationManager federationManager, ISignals signals, NodeDeployments nodeDeployments)
         {
             this.signals = signals;
             this.logger = LogManager.GetCurrentClassLogger();
@@ -32,6 +34,7 @@ namespace Stratis.Features.Collateral
             this.network = network;
             this.counterChainNetwork = counterChainNetworkWrapper.CounterChainNetwork;
             this.federationManager = federationManager;
+            this.nodeDeployments = nodeDeployments;
         }
 
         public Task InitializeAsync()
@@ -120,12 +123,17 @@ namespace Stratis.Features.Collateral
                         Data = federationMemberBytes
                     };
 
-                    // Create a pending poll so that the scheduled vote is not "sanitized" away.
-                    this.votingManager.PollsRepository.WithTransaction(transaction =>
+                    var release1210ActivationHeight = this.nodeDeployments?.BIP9.ActivationHeightProviders[0 /* Release1210 */].ActivationHeight ?? 0;
+
+                    if (blockConnectedData.ConnectedBlock.ChainedHeader.Height >= release1210ActivationHeight)
                     {
-                        this.votingManager.CreatePendingPoll(transaction, votingData, blockConnectedData.ConnectedBlock.ChainedHeader);
-                        transaction.Commit();
-                    });
+                        // Create a pending poll so that the scheduled vote is not "sanitized" away.
+                        this.votingManager.PollsRepository.WithTransaction(transaction =>
+                        {
+                            this.votingManager.CreatePendingPoll(transaction, votingData, blockConnectedData.ConnectedBlock.ChainedHeader);
+                            transaction.Commit();
+                        });
+                    }
 
                     this.votingManager.ScheduleVote(votingData);
                 }
