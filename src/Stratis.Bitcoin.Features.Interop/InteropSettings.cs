@@ -122,6 +122,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             this.InteropContractCirrusAddress = nodeSettings.ConfigReader.GetOrDefault(this.GetSettingsPrefix() + "interopcontractcirrusaddress", "");
             this.InteropContractAddress = nodeSettings.ConfigReader.GetOrDefault(this.GetSettingsPrefix() + "interopcontractaddress", "");
+            this.WatchedErc20Contracts = new Dictionary<string, string>();
 
             string watchErc20Key = this.GetSettingsPrefix() + "watcherc20";
 
