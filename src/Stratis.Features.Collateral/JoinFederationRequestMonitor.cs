@@ -123,7 +123,9 @@ namespace Stratis.Features.Collateral
                         Data = federationMemberBytes
                     };
 
-                    var release1210ActivationHeight = this.nodeDeployments?.BIP9.ActivationHeightProviders[0 /* Release1210 */].ActivationHeight ?? 0;
+                    int release1210ActivationHeight = 0;
+                    if (this.nodeDeployments.BIP9.ArraySize != 0 /* Not NoBIP9Deployments */)
+                        release1210ActivationHeight = this.nodeDeployments?.BIP9.ActivationHeightProviders[0 /* Release1210 */].ActivationHeight ?? 0;
 
                     if (blockConnectedData.ConnectedBlock.ChainedHeader.Height >= release1210ActivationHeight)
                     {

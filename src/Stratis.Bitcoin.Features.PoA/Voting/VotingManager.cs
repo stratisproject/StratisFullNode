@@ -191,15 +191,21 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 List<Poll> pendingPolls = this.GetPendingPolls().ToList();
                 List<Poll> approvedPolls = this.GetApprovedPolls().Where(x => !x.IsExecuted).ToList();
-                var release1210ActivationHeight = this.nodeDeployments?.BIP9.ActivationHeightProviders[0 /* Release1210 */].ActivationHeight ?? 0;
+
+                int release1210ActivationHeight = 0;
+                if (this.nodeDeployments.BIP9.ArraySize != 0 /* Not NoBIP9Deployments */)
+                    release1210ActivationHeight = this.nodeDeployments?.BIP9.ActivationHeightProviders[0 /* Release1210 */].ActivationHeight ?? 0;
 
                 bool IsTooOldToVoteOn(Poll poll) => poll.IsPending && (this.chainIndexer.Tip.Height - poll.PollStartBlockData.Height) >= this.poaConsensusOptions.PollExpiryBlocks;
 
                 bool IsValid(VotingData currentScheduledData)
                 {
-                    if (currentScheduledData.Key == VoteKey.AddFederationMember && this.chainIndexer.Tip.Height >= release1210ActivationHeight)
-                        // Only vote on pending polls that are not too old to vote on.
-                        return pendingPolls.Any(x => x.VotingData == currentScheduledData && !IsTooOldToVoteOn(x));
+                    if (currentScheduledData.Key == VoteKey.AddFederationMember)
+                    {
+                        // "Add member" votes must have pending polls created by the JoinFederationRequestMonitor (if this behavior was active in the monitor).
+                        if (!pendingPolls.Any(x => x.VotingData == currentScheduledData && x.PollStartBlockData.Height >= release1210ActivationHeight))
+                            return false;
+                    }
 
                     // Remove scheduled voting data that relate to too-old pending polls.
                     if (pendingPolls.Any(x => x.VotingData == currentScheduledData && IsTooOldToVoteOn(x)))
@@ -586,9 +592,15 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             {
                                 // The JoinFederationRequestMonitor is now responsible for creating "add member" polls.
                                 // Hence, if the poll does not exist then this is not a valid vote.
-                                var release1210ActivationHeight = this.nodeDeployments?.BIP9.ActivationHeightProviders[0 /* Release1210 */].ActivationHeight ?? 0;
-                                if (data.Key == VoteKey.AddFederationMember && chBlock.ChainedHeader.Height >= release1210ActivationHeight)
-                                    continue;
+                                if (data.Key == VoteKey.AddFederationMember)
+                                {
+                                    int release1210ActivationHeight = 0;
+                                    if (this.nodeDeployments.BIP9.ArraySize != 0  /* Not NoBIP9Deployments */)
+                                        release1210ActivationHeight = this.nodeDeployments?.BIP9.ActivationHeightProviders[0 /* Release1210 */].ActivationHeight ?? 0;
+
+                                    if (chBlock.ChainedHeader.Height >= release1210ActivationHeight)
+                                        continue;
+                                }
 
                                 poll = CreatePendingPoll(transaction, data, chBlock.ChainedHeader, new List<Vote>() { new Vote() { PubKey = fedMemberKeyHex, Height = chBlock.ChainedHeader.Height } });
                                 pollsRepositoryModified = true;
