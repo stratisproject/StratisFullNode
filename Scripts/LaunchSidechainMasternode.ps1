@@ -498,7 +498,7 @@ if ( $NodeType -eq "50K" )
 {
     if ( $ethGasPrice )
     {
-        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -eth_interopenabled=1 -eth_account=$ethAddress -eth_passphrase=$ethPassword -eth_multisigwalletcontractaddress=$ethMultiSigContract -eth_wrappedstraxcontractaddress=$ethWrappedStraxContract -eth_keyvaluestorecontractaddress=$ethKeyValueStoreContractAddress -eth_gasprice=$ethGasPrice -eth_gas=$ethGasLimit" -PassThru
+        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -eth_interopenabled=1 -eth_account=$ethAddress -eth_passphrase=$ethPassword -eth_multisigwalletcontractaddress=$ethMultiSigContract -eth_wrappedstraxcontractaddress=$ethWrappedStraxContract -eth_keyvaluestorecontractaddress=$ethKeyValueStoreContractAddress -eth_gasprice=$ethGasPrice -eth_gas=$ethGasLimit -cirrusmultisigcontractaddress=$cirrusMultiSig -cirrussmartcontractactiveaddress=$walletAddress0 -eth_watcherc20=$Token1 -eth_watcherc20=$Token2 -eth_watcherc20=$Token3 -eth_watcherc20=$Token4" -PassThru
     }
         Else
         {
@@ -628,6 +628,24 @@ if ( $WalletNames -eq $null )
 }
 if ( $NodeType -eq "50K" )
 {
+    #Initialize InterFlux
+    Write-Host (Get-TimeStamp) "Initializing InterFlux" -ForegroundColor Cyan 
+
+    $requstBody = ConvertTo-Json @{
+
+        walletName = $miningWalletName
+        walletPassword = $miningPassword
+        account = "account 0"
+    }
+
+    $initializeInterFlux = Invoke-RestMethod -Uri http://localhost:$API/api/Interop/initializeinterflux -Method Post -Body $requstBody -ContentType "application/json-patch+json"
+    if ( $initializeInterFlux -ne $true )
+    {
+        Write-Host (Get-TimeStamp) "ERROR: Something went wrong. Cannot Initialize InterFlux! Please contact support in Discord" -ForegroundColor Red
+        Start-Sleep 30
+        Exit
+    }
+
     #Enable Federation
     Write-Host (Get-TimeStamp) "Enabling Federation" -ForegroundColor Cyan
 
@@ -704,8 +722,8 @@ Exit
 # SIG # Begin signature block
 # MIIO+gYJKoZIhvcNAQcCoIIO6zCCDucCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU6SkKvZm9lMqG1hK5IeK0CnGd
-# rJOgggxCMIIFfjCCBGagAwIBAgIQCrk836uc/wPyOiuycqPb5zANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU8EAEXjJFZfZdJ63PTmn06N82
+# 93WgggxCMIIFfjCCBGagAwIBAgIQCrk836uc/wPyOiuycqPb5zANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTIxMDQyMjAwMDAwMFoXDTI0MDcxOTIzNTk1
@@ -775,11 +793,11 @@ Exit
 # ZXJ0LmNvbTErMCkGA1UEAxMiRGlnaUNlcnQgRVYgQ29kZSBTaWduaW5nIENBIChT
 # SEEyKQIQCrk836uc/wPyOiuycqPb5zAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIB
 # DDEKMAigAoAAoQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEE
-# AYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUK3D6We+cF1CI
-# mVNcrocg5rY6WMQwDQYJKoZIhvcNAQEBBQAEggEAIL5pQjErOqJs4uEObjXQAd8j
-# SoVlUDGvL50BcAkRkjCoHzJvIn1uKHWgX+DqLBDfS8MifM8xyEIKIr4Bi4IcTj01
-# zWNgp6atroXxDKyC9mx1hYB+fjTq8ozYd7sV6JoEJRV8ZOobGv4gr30tNskpvPuY
-# jV+kZT4ZsLk+YDrE+zKo0nV/+aH1Z82MBRQ6YsTo9GYANBW5ZOW0K2cRkptiOCFl
-# uznDsuY8dF4TxE0REDsmsSyBIp1uH7l4qpfUdKsd3LF8fT1FmyQiVZdSSlCGOYQn
-# 6u9Lnvjwuwfa5sH+3e8QBaPMEPvBThSsxkQDVawoHpGiXEM+xbSgtP9KAxDl2w==
+# AYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQU7nzYCyTYoxlf
+# Hin+kQo/N34URN8wDQYJKoZIhvcNAQEBBQAEggEAConfLmRE4i5BXfTp36VKLosI
+# Zi83KSC5/Uz/54yOjZuBaChyjf1RrR+d7GD8JvcccsliYZHByvmhHugzHBOyRCCZ
+# iQWL2MfXNWJ2PKQ7b54KOMYoBcW/r0S2G7Tbe8XESre+GCsfnKvgEZRI7Ugn7g3M
+# tG5C6+q7sCGu3FuOVPZBGzkli20+Nak6Yut2nxlZBEQqSN/iyApWb7pOqOB/IhzI
+# Mjnb/NrzIlZSHOAUPn4XfZI9dww3CVTgVWJGL+Njh95E1nUSzU2hrDJblouwr6Tf
+# O3T1jLO8taWuJ1BHHRA3WOnbrvmLa2ovbEv/msce0efT6Q6UQdDj4skBjaoh/w==
 # SIG # End signature block
