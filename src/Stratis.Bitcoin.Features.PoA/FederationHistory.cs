@@ -130,23 +130,23 @@ namespace Stratis.Bitcoin.Features.PoA
         }
 
         /// <inheritdoc />
-        public IFederationMember GetFederationMemberForBlock(ChainedHeader chainedHeader)
+        public IFederationMember GetFederationMemberForBlock(ChainedHeader headerToCheck)
         {
             lock (this.lockObject)
             {
-                if ((this.lastActiveTip == chainedHeader || this.lastActiveTip?.FindFork(chainedHeader)?.Height >= chainedHeader.Height) &&
-                    this.federationHistory.TryGetValue(chainedHeader.Height, out (List<IFederationMember> modifiedFederation, HashSet<IFederationMember>, IFederationMember miner) item) &&
+                if ((this.lastActiveTip == headerToCheck || this.lastActiveTip?.FindFork(headerToCheck)?.Height >= headerToCheck.Height) &&
+                    this.federationHistory.TryGetValue(headerToCheck.Height, out (List<IFederationMember> modifiedFederation, HashSet<IFederationMember>, IFederationMember miner) item) &&
                     item.miner != null)
                 {
                     return item.miner;
                 }
 
-                this.UpdateTip(chainedHeader);
+                this.UpdateTip(headerToCheck);
 
-                if (this.federationHistory.TryGetValue(chainedHeader.Height, out item) && item.miner != null)
+                if (this.federationHistory.TryGetValue(headerToCheck.Height, out item) && item.miner != null)
                     return item.miner;
 
-                return this.GetFederationMembersForBlocks(chainedHeader, 1)[0];
+                return this.GetFederationMembersForBlocks(headerToCheck, 1)[0];
             }
         }
 
@@ -157,12 +157,15 @@ namespace Stratis.Bitcoin.Features.PoA
 
             IFederationMember[] miners = new IFederationMember[headers.Length];
 
-            // Reading chainedHeader's "Header" does not play well with asynchronocity so we will load the block times here.
             int votingManagerV2ActivationHeight = (this.network.Consensus.Options as PoAConsensusOptions).VotingManagerV2ActivationHeight;
 
             int startHeight = lastHeader.Height + 1 - count;
 
-            Parallel.For(0, headers.Length, i => miners[i] = GetFederationMemberForBlock(headers[i], this.federationHistory[i + startHeight].members, (i + startHeight) >= votingManagerV2ActivationHeight));
+            Parallel.For(0, headers.Length, i =>
+            {
+                var found = this.federationHistory.TryGetValue(i + startHeight, out (List<IFederationMember> members, HashSet<IFederationMember> joined, IFederationMember miner) federationAtBlock);
+                miners[i] = GetFederationMemberForBlock(headers[i], found ? federationAtBlock.members : null, (i + startHeight) >= votingManagerV2ActivationHeight);
+            });
 
             if (startHeight == 0)
                 miners[0] = this.federationHistory[0].members.Last();
