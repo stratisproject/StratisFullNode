@@ -164,7 +164,7 @@ namespace Stratis.Bitcoin.Features.PoA
             Parallel.For(0, headers.Length, i =>
             {
                 var found = this.federationHistory.TryGetValue(i + startHeight, out (List<IFederationMember> members, HashSet<IFederationMember> joined, IFederationMember miner) federationAtBlock);
-                miners[i] = GetFederationMemberForBlock(headers[i], found ? federationAtBlock.members : null, (i + startHeight) >= votingManagerV2ActivationHeight);
+                miners[i] = GetFederationMemberForBlock(headers[i], found ? federationAtBlock.members : this.federationManager.GetFederationMembers(), (i + startHeight) >= votingManagerV2ActivationHeight);
             });
 
             if (startHeight == 0)
