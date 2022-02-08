@@ -98,7 +98,7 @@ namespace Stratis.Features.Unity3dApi
                 {
                     ContractAddress = contractAddress,
                     LastUpdatedBlock = watchFromHeight,
-                    OwnedIDsByAddress = new Dictionary<string, List<long>>()
+                    OwnedIDsByAddress = new Dictionary<string, HashSet<long>>()
                 };
 
                 this.NFTContractCollection.Upsert(model);
@@ -120,8 +120,8 @@ namespace Stratis.Features.Unity3dApi
 
             foreach (NFTContractModel contractModel in NFTContractModels)
             {
-                List<long> ids = contractModel.OwnedIDsByAddress[address];
-                output.OwnedIDsByContractAddress.Add(contractModel.ContractAddress, ids);
+                HashSet<long> ids = contractModel.OwnedIDsByAddress[address];
+                output.OwnedIDsByContractAddress.Add(contractModel.ContractAddress, ids.ToList());
             }
 
             return output;
@@ -190,7 +190,7 @@ namespace Stratis.Features.Unity3dApi
                             }
 
                             if (!currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.To))
-                                currentContract.OwnedIDsByAddress.Add(transferInfo.To, new List<long>());
+                                currentContract.OwnedIDsByAddress.Add(transferInfo.To, new HashSet<long>());
 
                             currentContract.OwnedIDsByAddress[transferInfo.To].Add(transferInfo.TokenId);
                         }
@@ -228,7 +228,7 @@ namespace Stratis.Features.Unity3dApi
         public string ContractAddress { get; set; }
 
         // Key is nft owner address, value is list of NFT IDs
-        public Dictionary<string, List<long>> OwnedIDsByAddress { get; set; }
+        public Dictionary<string, HashSet<long>> OwnedIDsByAddress { get; set; }
 
         public int LastUpdatedBlock { get; set; }
     }
