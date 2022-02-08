@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
 using Flurl;
 using Flurl.Http;
 using NBitcoin;
+using Newtonsoft.Json;
+using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.Bitcoin.Interfaces;
@@ -33,8 +36,14 @@ namespace Stratis.Bitcoin.Features.Interop
         /// Retrieves the receipt for a given smart contract invocation.
         /// </summary>
         /// <param name="txHash">The txid of the Cirrus transaction containing the smart contract call.</param>
-        /// <returns>The <see cref="ReceiptResponse"/> of the given receipt.</returns>
-        Task<ReceiptResponse> GetReceiptAsync(string txHash);
+        /// <returns>The <see cref="CirrusReceiptResponse"/> of the given receipt.</returns>
+        Task<CirrusReceiptResponse> GetReceiptAsync(string txHash);
+
+        Task<BlockModel> GetBlockByHeightAsync(int blockHeight);
+
+        Task<ConsensusTipModel> GetConsensusTipAsync();
+
+        Task<TransactionVerboseModel> GetRawTransactionAsync(string transactionId);
 
         /// <summary>
         /// Gets the number of on-chain confirmations a given txid has. This would be the number of confirmations on the Cirrus chain.
@@ -134,7 +143,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 .ReceiveJson<BuildCallContractTransactionResponse>()
                 .ConfigureAwait(false);
 
-            ReceiptResponse receipt = await this.GetReceiptAsync(response.TransactionId.ToString()).ConfigureAwait(false);
+            CirrusReceiptResponse receipt = await this.GetReceiptAsync(response.TransactionId.ToString()).ConfigureAwait(false);
 
             if (!receipt.Success)
             {
@@ -153,12 +162,57 @@ namespace Stratis.Bitcoin.Features.Interop
         }
 
         /// <inheritdoc />
-        public async Task<ReceiptResponse> GetReceiptAsync(string txHash)
+        public async Task<CirrusReceiptResponse> GetReceiptAsync(string txHash)
         {
-            ReceiptResponse response = await this.interopSettings.CirrusClientUrl
+            // We have to use our own model for this, as the ReceiptResponse used inside the node does not have public setters on its properties.
+            CirrusReceiptResponse response = await this.interopSettings.CirrusClientUrl
                 .AppendPathSegment("api/smartcontracts/receipt")
                 .SetQueryParam("txHash", txHash)
-                .GetJsonAsync<ReceiptResponse>()
+                .GetJsonAsync<CirrusReceiptResponse>()
+                .ConfigureAwait(false);
+
+            return response;
+        }
+
+        public async Task<BlockModel> GetBlockByHeightAsync(int blockHeight)
+        {
+            string blockHash = await this.interopSettings.CirrusClientUrl
+                .AppendPathSegment("api/Consensus/getblockhash")
+                .SetQueryParam("height", blockHeight)
+                .GetJsonAsync<string>()
+                .ConfigureAwait(false);
+
+            if (blockHash == null)
+                return null;
+
+            BlockModel response = await this.interopSettings.CirrusClientUrl
+                .AppendPathSegment("api/BlockStore/block")
+                .SetQueryParam("Hash", blockHash)
+                .SetQueryParam("ShowTransactionDetails", true)
+                .SetQueryParam("OutputJson", true)
+                .GetJsonAsync<BlockModel>()
+                .ConfigureAwait(false);
+
+            return response;
+        }
+
+        public async Task<ConsensusTipModel> GetConsensusTipAsync()
+        {
+            ConsensusTipModel response = await this.interopSettings.CirrusClientUrl
+                .AppendPathSegment("api/Consensus/tip")
+                .GetJsonAsync<ConsensusTipModel>()
+                .ConfigureAwait(false);
+
+            return response;
+        }
+
+        public async Task<TransactionVerboseModel> GetRawTransactionAsync(string transactionId)
+        {
+            TransactionVerboseModel response = await this.interopSettings.CirrusClientUrl
+                .AppendPathSegment("api/Node/getrawtransaction")
+                .SetQueryParam("trxid", transactionId)
+                .SetQueryParam("verbose", true)
+                .GetJsonAsync<TransactionVerboseModel>()
                 .ConfigureAwait(false);
 
             return response;
@@ -230,9 +284,82 @@ namespace Stratis.Bitcoin.Features.Interop
                 .ReceiveJson<BuildCallContractTransactionResponse>()
                 .ConfigureAwait(false);
 
-            ReceiptResponse receipt = await this.GetReceiptAsync(response.TransactionId.ToString()).ConfigureAwait(false);
+            CirrusReceiptResponse receipt = await this.GetReceiptAsync(response.TransactionId.ToString()).ConfigureAwait(false);
 
             return receipt.TransactionHash;
         }
+    }
+
+    public class ConsensusTipModel
+    {
+        public string TipHash { get; set; }
+
+        public int TipHeight { get; set; }
+    }
+
+    public class CirrusReceiptResponse
+    {
+        [JsonProperty("transactionHash")]
+        public string TransactionHash { get; set; }
+
+        [JsonProperty("blockHash")]
+        public string BlockHash { get; set; }
+
+        [JsonProperty("blockNumber")]
+        public ulong? BlockNumber { get; set; }
+
+        [JsonProperty("postState")]
+        public string PostState { get; set; }
+
+        [JsonProperty("gasUsed")]
+        public ulong GasUsed { get; set; }
+
+        [JsonProperty("from")]
+        public string From { get; set; }
+
+        [JsonProperty("to")]
+        public string To { get; set; }
+
+        [JsonProperty("newContractAddress")]
+        public string NewContractAddress { get; set; }
+
+        [JsonProperty("success")]
+        public bool Success { get; set; }
+
+        [JsonProperty("returnValue")]
+        public string ReturnValue { get; set; }
+
+        [JsonProperty("bloom")]
+        public string Bloom { get; set; }
+
+        [JsonProperty("error")]
+        public string Error { get; set; }
+
+        [JsonProperty("logs")]
+        public CirrusLogResponse[] Logs { get; set; }
+    }
+
+    public class CirrusLogResponse
+    {
+        [JsonProperty("address")]
+        public string Address { get; set; }
+
+        [JsonProperty("topics")]
+        public string[] Topics { get; set; }
+
+        [JsonProperty("data")]
+        public string Data { get; set; }
+
+        [JsonProperty("log")]
+        public CirrusLogData Log { get; set; }
+    }
+
+    public class CirrusLogData
+    {
+        [JsonProperty("event")]
+        public string Event { get; set; }
+
+        [JsonProperty("data")]
+        public IDictionary<string, object> Data { get; set; }
     }
 }

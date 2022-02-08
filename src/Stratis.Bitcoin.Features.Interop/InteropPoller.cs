@@ -13,6 +13,7 @@ using Nethereum.Web3;
 using NLog;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
 using Stratis.Bitcoin.Features.Interop.Exceptions;
@@ -27,6 +28,8 @@ using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Coordination;
 using Stratis.Features.FederatedPeg.Distribution;
 using Stratis.Features.FederatedPeg.Interfaces;
+using Stratis.SmartContracts;
+using Stratis.SmartContracts.CLR;
 
 namespace Stratis.Bitcoin.Features.Interop
 {
@@ -188,7 +191,7 @@ namespace Stratis.Bitcoin.Features.Interop
             startAfter: TimeSpans.Second);
 
             // Load the last polled block for each chain.
-            await LoadLastPolledBlockForBurnAndTransferRequestsAsync();
+            await LoadLastPolledBlockForBurnAndTransferRequestsAsync().ConfigureAwait(false);
 
             this.conversionBurnTransferLoop = this.asyncProvider.CreateAndRunAsyncLoop("PeriodicCheckForBurnsAndTransfers", async (cancellation) =>
             {
@@ -205,21 +208,13 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 // In the event that the last polled block was set back a considerable distance from the tip, we need to first catch up faster.
                 // If we are already in the acceptable range, the usual logic will apply.
-                await EnsureLastPolledBlockIsSyncedWithChainAsync();
+                await EnsureLastPolledBlockIsSyncedWithChainAsync().ConfigureAwait(false);
 
                 try
                 {
                     foreach (KeyValuePair<DestinationChain, IETHClient> supportedChain in this.ethClientProvider.GetAllSupportedChains())
                     {
-                        if (this.overrideLastPolledBlock[supportedChain.Key] != BigInteger.MinusOne)
-                        {
-                            this.logger.Info($"Resetting scan height for burns and transfers on chain {supportedChain.Key} to {this.overrideLastPolledBlock[supportedChain.Key]}.");
-
-                            this.lastPolledBlock[supportedChain.Key] = this.overrideLastPolledBlock[supportedChain.Key];
-                            this.overrideLastPolledBlock[supportedChain.Key] = BigInteger.MinusOne;
-
-                            SaveLastPolledBlockForBurnsAndTransfers(supportedChain.Key);
-                        }
+                        CheckForBlockHeightOverrides(supportedChain.Key);
 
                         BigInteger blockHeight = await supportedChain.Value.GetBlockHeightAsync().ConfigureAwait(false);
 
@@ -228,6 +223,18 @@ namespace Stratis.Bitcoin.Features.Interop
                         if (this.lastPolledBlock[supportedChain.Key] < (blockHeight - DestinationChainReorgWindow))
                             await PollBlockForBurnsAndTransfersAsync(supportedChain, blockHeight).ConfigureAwait(false);
                     }
+
+                    // The logic duplication is unfortunate, but Cirrus doesn't have an IEthClient so it has to be handled differently.
+                    CheckForBlockHeightOverrides(DestinationChain.CIRRUS);
+
+                    ConsensusTipModel cirrusTip = await this.cirrusClient.GetConsensusTipAsync().ConfigureAwait(false);
+
+                    BigInteger cirrusBlockHeight = cirrusTip.TipHeight;
+
+                    this.logger.Info($"Last polled Cirrus block for burns and transfers: {this.lastPolledBlock[DestinationChain.CIRRUS]}; current Cirrus chain height: {cirrusBlockHeight}");
+
+                    if (this.lastPolledBlock[DestinationChain.CIRRUS] < (cirrusBlockHeight - DestinationChainReorgWindow))
+                        await PollCirrusForBurnsAsync(cirrusBlockHeight).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
@@ -237,6 +244,19 @@ namespace Stratis.Bitcoin.Features.Interop
             this.nodeLifetime.ApplicationStopping,
             repeatEvery: TimeSpans.TenSeconds,
             startAfter: TimeSpans.Second);
+        }
+
+        public void CheckForBlockHeightOverrides(DestinationChain chain)
+        {
+            if (this.overrideLastPolledBlock[chain] == BigInteger.MinusOne)
+                return;
+
+            this.logger.Info($"Resetting scan height for burns and transfers on chain {chain} to {this.overrideLastPolledBlock[chain]}.");
+
+            this.lastPolledBlock[chain] = this.overrideLastPolledBlock[chain];
+            this.overrideLastPolledBlock[chain] = BigInteger.MinusOne;
+
+            SaveLastPolledBlockForBurnsAndTransfers(chain);
         }
 
         public void ResetScanHeight(DestinationChain chain, int height)
@@ -284,29 +304,198 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 while (this.lastPolledBlock[supportedChain.Key] < (blockHeight - DestinationChainReorgWindow - DestinationChainSyncToBuffer))
                 {
-                    await PollBlockForBurnsAndTransfersAsync(supportedChain, blockHeight);
+                    await PollBlockForBurnsAndTransfersAsync(supportedChain, blockHeight).ConfigureAwait(false);
                 }
             }
         }
 
+        private async Task PollCirrusForBurnsAsync(BigInteger blockHeight)
+        {
+            this.logger.Info("Polling Cirrus block at height {0} for burn transactions.", blockHeight);
+            
+            BlockModel block = await this.cirrusClient.GetBlockByHeightAsync((int)blockHeight).ConfigureAwait(false);
+
+            if (block == null)
+            {
+                this.logger.Info($"Unable to retrieve block with height {blockHeight}.");
+
+                // We shouldn't update the block height before returning because we might skip a block. 
+                return;
+            }
+
+            // TODO: Need to build these sets across all supported chains
+            HashSet<string> watchedSrc20Contracts = this.interopSettings.GetSettingsByChain(DestinationChain.ETH).WatchedErc20Contracts.Values.ToHashSet();
+            HashSet<string> watchedSrc721Contracts = this.interopSettings.GetSettingsByChain(DestinationChain.ETH).WatchedErc721Contracts.Values.ToHashSet();
+
+            var zeroAddressRaw = new uint160(Address.Zero.ToBytes());
+            string zeroAddress = zeroAddressRaw.ToBase58Address(this.network);
+
+            foreach (object transaction in block.Transactions)
+            {
+                try
+                {
+                    if (!(transaction is string transactionId))
+                    {
+                        this.logger.Info($"Malformed transaction ID in block {blockHeight} {block.Hash}: {transaction}.");
+
+                        continue;
+                    }
+
+                    CirrusReceiptResponse receipt = await this.cirrusClient.GetReceiptAsync(transactionId).ConfigureAwait(false);
+
+                    // This is probably a normal Cirrus transfer (if null), or a failed contract call that should be ignored.
+                    if (receipt == null || !receipt.Success)
+                    {
+                        this.logger.Info($"Transaction {transactionId} did not contain a successful receipt.");
+
+                        continue;
+                    }
+
+                    // Filter out calls to contracts that we aren't monitoring.
+                    if (!watchedSrc20Contracts.Contains(receipt.To) && !watchedSrc721Contracts.Contains(receipt.To))
+                        continue;
+
+                    this.logger.Info($"Found transaction {receipt.TransactionHash} from {receipt.From} with a receipt that affects watched contract {receipt.To}.");
+
+                    // We don't easily know if this was an SRC20 or SRC721 burn, unless we use the watched hashsets as a lookup.
+                    // In any case we have to validate all the fields in the relevant receipt logs.
+                    foreach (CirrusLogResponse log in receipt.Logs)
+                    {
+                        TransferDetails src20burn = ExtractBurnFromBurnMetadataLog(log);
+
+                        if (src20burn != null)
+                        {
+                            this.logger.Info($"Found a valid burn transaction with metadata: {src20burn.To}.");
+                        }
+
+                        // TODO: Awaiting an InterFluxNonFungibleToken contract that has a 'burn with metadata' method
+                        //TransferDetails src721burn = ExtractBurnFromTransferLog(log, zeroAddress);
+
+                        // TODO: Need to insert the burns into the conversion request repository & extend the InteropPoller state machine to handle Cirrus -> Ethereum transfer requests
+                    }
+                }
+                catch (Exception e)
+                {
+                    this.logger.Error("Error processing Cirrus block {0} for burns: {1}", blockHeight, e);
+                }
+            }
+
+            this.lastPolledBlock[DestinationChain.CIRRUS] += 1;
+
+            SaveLastPolledBlockForBurnsAndTransfers(DestinationChain.CIRRUS);
+        }
+
+        /// <summary>
+        /// SRC20 InterFluxStandardToken burns.
+        /// </summary>
+        /// <param name="log">The log data from a Cirrus smart contract receipt.</param>
+        /// <returns>A <see cref="TransferDetails"/> instance if this was a valid SRC721 burn, else null.</returns>
+        private TransferDetails ExtractBurnFromBurnMetadataLog(CirrusLogResponse log)
+        {
+            // We presume that anything emitting this event must be a burn and thus the 'To' address is neither included in the event nor validated here.
+            if (log.Log.Event != "BurnMetadata")
+                return null;
+
+            if (!log.Log.Data.TryGetValue("from", out object from))
+                return null;
+
+            string fromAddress = (string)from;
+
+            if (!log.Log.Data.TryGetValue("metadata", out object metadata))
+                return null;
+
+            // TODO: Check that this string is in an acceptable format? Maybe it should encode the destination chain as well
+            string metadataString = (string)metadata;
+
+            if (!log.Log.Data.TryGetValue("amount", out object amount))
+                return null;
+
+            string amountString = (string)amount;
+
+            if (!int.TryParse(amountString, out int transferAmount))
+                return null;
+
+            var transfer = new TransferDetails()
+            {
+                ContractType = ContractType.ERC20,
+                From = fromAddress,
+                To = metadataString,
+                TransferType = TransferType.Burn,
+                Value = transferAmount
+            };
+
+            return transfer;
+        }
+
+        /// <summary>
+        /// For SRC721 NonFungibleToken burns.
+        /// </summary>
+        /// <param name="log">The log data from a Cirrus smart contract receipt.</param>
+        /// <param name="zeroAddress">The base58 representation of <see cref="Address.Zero"/>.</param>
+        /// <returns>A <see cref="TransferDetails"/> instance if this was a valid SRC721 burn, else null.</returns>
+        private TransferDetails ExtractBurnFromTransferLog(CirrusLogResponse log, string zeroAddress)
+        {
+            throw new NotImplementedException("This will not work yet, the NFT contract should instead be adapted to emit a BurnMetadata log as well");
+
+            if (log.Log.Event != "TransferLog")
+                return null;
+
+            if (!log.Log.Data.TryGetValue("from", out object from))
+                return null;
+
+            string fromAddress = (string)from;
+
+            if (!log.Log.Data.TryGetValue("to", out object to))
+                return null;
+
+            string toAddress = (string)to;
+
+            // If it's not being transferred to the zero address it isn't a burn, and can thus be ignored.
+            if (toAddress != zeroAddress)
+                return null;
+
+            if (!log.Log.Data.TryGetValue("tokenId", out object tokenId))
+                return null;
+
+            string tokenIdString = (string)tokenId;
+
+            if (!int.TryParse(tokenIdString, out int tokenIdInt))
+                return null;
+
+            var transfer = new TransferDetails()
+            {
+                ContractType = ContractType.ERC721,
+                From = fromAddress,
+                To = toAddress,
+                TransferType = TransferType.Burn,
+                Value = tokenIdInt
+            };
+
+            return transfer;
+        }
+
         private async Task PollBlockForBurnsAndTransfersAsync(KeyValuePair<DestinationChain, IETHClient> supportedChain, BigInteger blockHeight)
         {
-            this.logger.Info("Polling {0} block at height {1} for burn or transfers transactions.", supportedChain.Key, blockHeight);
+            this.logger.Info("Polling {0} block at height {1} for burn or transfer transactions.", supportedChain.Key, blockHeight);
 
             BlockWithTransactions block = await supportedChain.Value.GetBlockAsync(this.lastPolledBlock[supportedChain.Key]).ConfigureAwait(false);
 
-            List<(string TransactionHash, BurnFunction Burn)> burns = await supportedChain.Value.GetBurnsFromBlock(block).ConfigureAwait(false);
+            // TODO: Move this check into the same method as the transfers to save iterating over the entire Ethereum block twice
+            List<(string TransactionHash, BurnFunction Burn)> burns = await supportedChain.Value.GetWStraxBurnsFromBlockAsync(block).ConfigureAwait(false);
 
             foreach ((string TransactionHash, BurnFunction Burn) in burns)
             {
-                this.ProcessBurn(block.BlockHash, TransactionHash, Burn);
+                this.ProcessWStraxBurn(block.BlockHash, TransactionHash, Burn);
             }
 
-            if (this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts != null && this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts.Any())
+            if (this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts.Any() || 
+                this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc721Contracts.Any())
             {
-                List<(string TransactionHash, string TransferContractAddress, TransferFunction Transfer)> transfers = supportedChain.Value.GetTransfersFromBlock(block, this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts.Keys.ToHashSet());
+                List<(string TransactionHash, string TransferContractAddress, TransferDetails Transfer)> transfers = await supportedChain.Value.GetTransfersFromBlockAsync(block,
+                    this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts.Keys.ToHashSet(),
+                    this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc721Contracts.Keys.ToHashSet()).ConfigureAwait(false);
 
-                foreach ((string TransactionHash, string TransferContractAddress, TransferFunction Transfer) in transfers)
+                foreach ((string TransactionHash, string TransferContractAddress, TransferDetails Transfer) in transfers)
                 {
                     await this.ProcessTransferAsync(block.BlockHash, TransactionHash, TransferContractAddress, Transfer, supportedChain).ConfigureAwait(false);
                 }
@@ -345,7 +534,7 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <param name="blockHash">The hash of the block the burn transaction appeared in.</param>
         /// <param name="transactionHash">The hash of the transaction that the burn method call appeared in.</param>
         /// <param name="burn">The metadata of the burn method call.</param>
-        private void ProcessBurn(string blockHash, string transactionHash, BurnFunction burn)
+        private void ProcessWStraxBurn(string blockHash, string transactionHash, BurnFunction burn)
         {
             this.logger.Info("Conversion burn transaction '{0}' received from polled block '{1}', sender {2}.", transactionHash, blockHash, burn.FromAddress);
 
@@ -411,9 +600,9 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <param name="transactionHash">The hash of the transaction that the transfer method call appeared in.</param>
         /// <param name="transferContractAddress">The address of the ERC20 contract that the transfer was actioned against.</param>
         /// <param name="transfer">The metadata of the transfer method call.</param>
-        private async Task ProcessTransferAsync(string blockHash, string transactionHash, string transferContractAddress, TransferFunction transfer, KeyValuePair<DestinationChain, IETHClient> supportedChain)
+        private async Task ProcessTransferAsync(string blockHash, string transactionHash, string transferContractAddress, TransferDetails transfer, KeyValuePair<DestinationChain, IETHClient> supportedChain)
         {
-            this.logger.Info("Conversion transfer transaction '{0}' received from polled block '{1}', sender {2}.", transactionHash, blockHash, transfer.FromAddress);
+            this.logger.Info("Conversion transfer transaction '{0}' received from polled block '{1}', sender {2}.", transactionHash, blockHash, transfer.From);
 
             lock (this.repositoryLock)
             {
@@ -425,13 +614,13 @@ namespace Stratis.Bitcoin.Features.Interop
                 }
             }
 
-            this.logger.Info("Conversion transfer transaction '{0}' has value {1}.", transactionHash, transfer.TokenAmount);
+            this.logger.Info("Conversion transfer transaction '{0}' has value {1}.", transactionHash, transfer.Value);
 
             // Unlike processing WSTRAX burns, we cannot impose a different method signature on an arbitrary contract's transfer() method without breaking ERC20
             // compatibility. Therefore, we need to rely on the user having previously captured their desired destination address using the key value store contract.
             // Therefore every transfer transaction actually requires two transactions (unless one user performs multiple transfers with the same source address, in which
             // case the number of transactions will be 1 KVS transaction + N transfers).
-            string destinationAddress = await supportedChain.Value.GetKeyValueStoreAsync(transfer.FromAddress, "CirrusDestinationAddress").ConfigureAwait(false);
+            string destinationAddress = await supportedChain.Value.GetKeyValueStoreAsync(transfer.From, "CirrusDestinationAddress").ConfigureAwait(false);
 
             if (string.IsNullOrWhiteSpace(destinationAddress))
             {
@@ -478,7 +667,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     RequestType = ConversionRequestType.Mint,
                     Processed = false,
                     RequestStatus = ConversionRequestStatus.Unprocessed,
-                    Amount = this.ConvertWeiToSatoshi(transfer.TokenAmount),
+                    Amount = this.ConvertWeiToSatoshi(transfer.Value),
                     BlockHeight = (int)blockHeight,
                     DestinationAddress = destinationAddress,
                     DestinationChain = DestinationChain.CIRRUS,
