@@ -35,15 +35,9 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
         Task<BlockWithTransactions> GetBlockAsync(BigInteger blockNumber);
 
-        Task<List<(string TransactionHash, BurnFunction Burn)>> GetBurnsFromBlock(BlockWithTransactions block);
+        Task<List<(string TransactionHash, BurnFunction Burn)>> GetWStraxBurnsFromBlockAsync(BlockWithTransactions block);
 
-        List<(string TransactionHash, string TransferContractAddress, TransferFunction Transfer)> GetTransfersFromBlock(BlockWithTransactions block, HashSet<string> tokens);
-
-        /// <summary>
-        /// Queries the previously created event filter for any new events matching the filter criteria.
-        /// </summary>
-        /// <returns>A list of event logs.</returns>
-        Task<List<EventLog<TransferEventDTO>>> GetTransferEventsForWrappedStraxAsync();
+        Task<List<(string TransactionHash, string TransferContractAddress, TransferDetails Transfer)>> GetTransfersFromBlockAsync(BlockWithTransactions block, HashSet<string> erc20tokens, HashSet<string> erc721tokens);
 
         /// <summary>
         /// Retrieves the STRAX address that was recorded in the wrapped STRAX contract when a given account
@@ -279,7 +273,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
             return await this.web3.Eth.Blocks.GetBlockWithTransactionsByNumber.SendRequestAsync(new HexBigInteger(blockNumber)).ConfigureAwait(false);
         }
 
-        public async Task<List<(string TransactionHash, BurnFunction Burn)>> GetBurnsFromBlock(BlockWithTransactions block)
+        public async Task<List<(string TransactionHash, BurnFunction Burn)>> GetWStraxBurnsFromBlockAsync(BlockWithTransactions block)
         {
             var burns = new List<(string TransactionHash, BurnFunction Burn)>();
 
@@ -292,6 +286,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
                 try
                 {
+                    // It is known that there is only one 'valid' way of burning wSTRAX, so we can use a function instead of an event here.
                     burn = tx.DecodeTransactionToFunctionMessage<BurnFunction>();
                 }
                 catch
@@ -317,70 +312,101 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
             return burns;
         }
 
-        public List<(string TransactionHash, string TransferContractAddress, TransferFunction Transfer)> GetTransfersFromBlock(BlockWithTransactions block, HashSet<string> tokens)
+        public async Task<List<(string TransactionHash, string TransferContractAddress, TransferDetails Transfer)>> GetTransfersFromBlockAsync(BlockWithTransactions block, HashSet<string> erc20Tokens, HashSet<string> erc721Tokens)
         {
-            var transfers = new List<(string TransactionHash, string TransferContractAddress, TransferFunction Transfer)>();
+            var transfers = new List<(string TransactionHash, string TransferContractAddress, TransferDetails Transfer)>();
 
             foreach (Transaction tx in block.Transactions)
             {
-                this.logger.Debug($"Checking tx '{tx.TransactionHash}'");
-
                 // The transfer call obviously isn't made against the federation's multisig wallet contract itself. So we need to check against the list of previously added token contracts.
-                if (!tokens.Contains(tx.To))
+                if (!erc20Tokens.Contains(tx.To) && !erc721Tokens.Contains(tx.To))
                     continue;
-
-                // TODO: Need to abstract out the needed and common fields rather than storing the function - there will be multiple 'Transfer' equivalents in the various token contract standards
-                TransferFunction transfer;
 
                 try
                 {
-                    this.logger.Debug($"Decoding tx '{tx.TransactionHash}'");
-                    transfer = tx.DecodeTransactionToFunctionMessage<TransferFunction>();
+                    this.logger.Debug($"Decoding transaction of interest '{tx.TransactionHash}'");
+
+                    TransactionReceipt receipt = await web3.Eth.Transactions.GetTransactionReceipt.SendRequestAsync(tx.TransactionHash).ConfigureAwait(false);
+
+                    IEnumerable<FilterLogVO> logs = tx.GetTransactionLogs(receipt);
+
+                    foreach (FilterLogVO log in logs)
+                    {
+                        // By looking for the emitted event instead of looking for actual function calls we cater for a much wider variety of ERC20 implementations.
+                        EventLog<TransferEventDTO> eventLog = log?.Log?.DecodeEvent<TransferEventDTO>();
+
+                        // TODO: We could probably optimise this even further by only trying to decode the event as the expected type, not both when the first attempt fails.
+                        if (eventLog != null)
+                        {
+                            if (eventLog.Event.To != this.settings.MultisigWalletAddress)
+                            {
+                                // Ignoring transfers that are made to any address except the federation's multisig wallet.
+                                continue;
+                            }
+
+                            if (eventLog.Event.Value == BigInteger.Zero)
+                            {
+                                // Ignoring zero-valued transfer.
+                                continue;
+                            }
+
+                            if (eventLog.Event.Value < BigInteger.Zero)
+                            {
+                                // Ignoring negative-valued transfer.
+                                continue;
+                            }
+
+                            transfers.Add((tx.TransactionHash, tx.To, new TransferDetails
+                            {
+                                ContractType = ContractType.ERC20,
+                                TransferType = TransferType.Transfer,
+                                From = eventLog.Event.From,
+                                To = eventLog.Event.To,
+                                Value = eventLog.Event.Value
+                            }));
+
+                            continue;
+                        }
+
+                        EventLog<NftTransferEventDTO> nftEventLog = log?.Log?.DecodeEvent<NftTransferEventDTO>();
+
+                        if (nftEventLog != null)
+                        {
+                            if (nftEventLog.Event.To != this.settings.MultisigWalletAddress)
+                            {
+                                // Ignoring transfers that are made to any address except the federation's multisig wallet.
+                                continue;
+                            }
+
+                            if (nftEventLog.Event.TokenId == BigInteger.Zero)
+                            {
+                                // Ignoring zero-valued transfer.
+                                continue;
+                            }
+
+                            if (nftEventLog.Event.TokenId < BigInteger.Zero)
+                            {
+                                continue;
+                            }
+
+                            transfers.Add((tx.TransactionHash, tx.To, new TransferDetails
+                            {
+                                ContractType = ContractType.ERC721,
+                                TransferType = TransferType.Transfer,
+                                From = nftEventLog.Event.From,
+                                To = nftEventLog.Event.To,
+                                Value = nftEventLog.Event.TokenId
+                            }));
+                        }
+                    }
                 }
                 catch
                 {
                     continue;
                 }
-
-                if (transfer.To != this.settings.MultisigWalletAddress)
-                {
-                    // Ignoring transfers that are made to any address except the federation's multisig wallet.
-                    continue;
-                }
-
-                if (transfer.TokenAmount == BigInteger.Zero)
-                {
-                    // Ignoring zero-valued transfer.
-                    continue;
-                }
-
-                if (transfer.TokenAmount < BigInteger.Zero)
-                {
-                    // Ignoring negative-valued transfer.
-                    continue;
-                }
-
-                transfers.Add((tx.TransactionHash, tx.To, transfer));
             }
 
             return transfers;
-        }
-
-        /// <inheritdoc />
-        public async Task<List<EventLog<TransferEventDTO>>> GetTransferEventsForWrappedStraxAsync()
-        {
-            try
-            {
-                // Note: this will only return events from after the filter is created.
-                return await this.transferEventHandler.GetFilterChanges(this.filterId).ConfigureAwait(false);
-            }
-            catch (RpcResponseException)
-            {
-                // If the filter is no longer available it may need to be re-created.
-                await this.CreateTransferEventFilterAsync().ConfigureAwait(false);
-            }
-
-            return await this.transferEventHandler.GetFilterChanges(this.filterId).ConfigureAwait(false);
         }
 
         /// <inheritdoc />

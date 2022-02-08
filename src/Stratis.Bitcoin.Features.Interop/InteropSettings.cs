@@ -65,6 +65,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         /// <summary>The amount of nodes that needs to agree on conversion transaction before it is released.</summary>
         public int MultisigWalletQuorum { get; set; }
+
         private const string MultisigWalletContractQuorumKey = "ethereummultisigwalletquorum";
 
         /// <summary>This should be set to the address of the multisig wallet contract deployed on the Ethereum blockchain.</summary>
@@ -98,6 +99,10 @@ namespace Stratis.Bitcoin.Features.Interop
         /// against the federation multisig wallet. These are mapped to their corresponding SRC20 contract.</summary>
         public Dictionary<string, string> WatchedErc20Contracts { get; set; }
 
+        /// <summary>A collection of contract addresses for ERC721 tokens that should be monitored for Transfer events
+        /// against the federation multisig wallet. These are mapped to their corresponding SRC721 contract.</summary>
+        public Dictionary<string, string> WatchedErc721Contracts { get; set; }
+
         #region unused
 
         /// <summary>This is intended for future functionality and should therefore not be provided/set yet.</summary>
@@ -123,10 +128,9 @@ namespace Stratis.Bitcoin.Features.Interop
             this.InteropContractCirrusAddress = nodeSettings.ConfigReader.GetOrDefault(this.GetSettingsPrefix() + "interopcontractcirrusaddress", "");
             this.InteropContractAddress = nodeSettings.ConfigReader.GetOrDefault(this.GetSettingsPrefix() + "interopcontractaddress", "");
             this.WatchedErc20Contracts = new Dictionary<string, string>();
+            this.WatchedErc721Contracts = new Dictionary<string, string>();
 
             string watchErc20Key = this.GetSettingsPrefix() + "watcherc20";
-
-            this.WatchedErc20Contracts = new Dictionary<string, string>();
 
             foreach (string watched in nodeSettings.ConfigReader.GetAll(watchErc20Key))
             {
@@ -146,6 +150,28 @@ namespace Stratis.Bitcoin.Features.Interop
                 BitcoinAddress.Create(splitWatched[1], nodeSettings.Network);
 
                 this.WatchedErc20Contracts[splitWatched[0]] = splitWatched[1];
+            }
+
+            string watchErc721Key = this.GetSettingsPrefix() + "watcherc721";
+
+            foreach (string watched in nodeSettings.ConfigReader.GetAll(watchErc721Key))
+            {
+                if (!watched.Contains(","))
+                {
+                    throw new Exception($"Value of -{watchErc721Key} invalid, should be -{watchErc721Key}=<ERC721address>,<SRC721address>: {watched}");
+                }
+
+                string[] splitWatched = watched.Split(",");
+
+                if (splitWatched.Length != 2)
+                {
+                    throw new Exception($"Value of -{watchErc721Key} invalid, should be -{watchErc721Key}=<ERC721address>,<SRC721address>: {watched}");
+                }
+
+                // Ensure that a valid Cirrus address was provided.
+                BitcoinAddress.Create(splitWatched[1], nodeSettings.Network);
+
+                this.WatchedErc721Contracts[splitWatched[0]] = splitWatched[1];
             }
 
             this.MultisigWalletQuorum = nodeSettings.ConfigReader.GetOrDefault(MultisigWalletContractQuorumKey, 6);
