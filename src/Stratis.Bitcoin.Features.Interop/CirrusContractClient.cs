@@ -41,11 +41,11 @@ namespace Stratis.Bitcoin.Features.Interop
         Task<CirrusReceiptResponse> GetReceiptAsync(string txHash);
 
         /// <summary>
-        /// Returns the hex representation of the block.
+        /// Returns a block at the requested height.
         /// </summary>
         /// <param name="blockHeight">The requested height.</param>
-        /// <returns>Hex string</returns>
-        Task<string> GetBlockByHeightAsync(int blockHeight);
+        /// <returns>The requested block</returns>
+        Task<NBitcoin.Block> GetBlockByHeightAsync(int blockHeight);
 
         Task<ConsensusTipModel> GetConsensusTipAsync();
 
@@ -187,7 +187,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 return null;
         }
 
-        public async Task<string> GetBlockByHeightAsync(int blockHeight)
+        public async Task<NBitcoin.Block> GetBlockByHeightAsync(int blockHeight)
         {
             string blockHash = await this.interopSettings.CirrusClientUrl
                 .AppendPathSegment("api/Consensus/getblockhash")
@@ -198,7 +198,7 @@ namespace Stratis.Bitcoin.Features.Interop
             if (blockHash == null)
                 return null;
 
-            string response = await this.interopSettings.CirrusClientUrl
+            string hexResponse = await this.interopSettings.CirrusClientUrl
                 .AppendPathSegment("api/BlockStore/block")
                 .SetQueryParam("Hash", blockHash)
                 .SetQueryParam("ShowTransactionDetails", false)
@@ -206,7 +206,8 @@ namespace Stratis.Bitcoin.Features.Interop
                 .GetStringAsync()
                 .ConfigureAwait(false);
 
-            return response;
+            var block = NBitcoin.Block.Parse(hexResponse, this.chainIndexer.Network.Consensus.ConsensusFactory);
+            return block;
         }
 
         public async Task<ConsensusTipModel> GetConsensusTipAsync()

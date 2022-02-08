@@ -326,16 +326,14 @@ namespace Stratis.Bitcoin.Features.Interop
         {
             this.logger.Info("Polling Cirrus block at height {0} for burn transactions.", blockHeight);
 
-            var blockHex = await this.cirrusClient.GetBlockByHeightAsync((int)blockHeight).ConfigureAwait(false);
-            if (string.IsNullOrEmpty(blockHex))
+            NBitcoin.Block block = await this.cirrusClient.GetBlockByHeightAsync((int)blockHeight).ConfigureAwait(false);
+            if (block == null)
             {
                 this.logger.Info($"Unable to retrieve block with height {blockHeight}.");
 
                 // We shouldn't update the block height before returning because we might skip a block. 
                 return;
             }
-
-            var block = NBitcoin.Block.Parse(blockHex, this.network.Consensus.ConsensusFactory);
 
             // TODO: Need to build these sets across all supported chains
             HashSet<string> watchedSrc20Contracts = this.interopSettings.GetSettingsByChain(DestinationChain.ETH).WatchedErc20Contracts.Values.ToHashSet();
