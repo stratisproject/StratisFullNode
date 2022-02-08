@@ -179,14 +179,13 @@ namespace Stratis.Bitcoin.Features.PoA
             PoABlockHeader[] headers = lastHeader.EnumerateToGenesis().Take(count).Reverse().Select(h => (PoABlockHeader)h.Header).ToArray();
 
             IFederationMember[] miners = new IFederationMember[headers.Length];
-            List<IFederationMember>[] federations = new List<IFederationMember>[headers.Length];
 
             // Reading chainedHeader's "Header" does not play well with asynchronocity so we will load the block times here.
             int votingManagerV2ActivationHeight = (this.network.Consensus.Options as PoAConsensusOptions).VotingManagerV2ActivationHeight;
 
             int startHeight = lastHeader.Height + 1 - count;
 
-            federations = GetFederationsForHeights(startHeight, lastHeader.Height).Select(i => i.members).ToArray();
+            List<IFederationMember>[] federations = GetFederationsForHeights(startHeight, lastHeader.Height).Select(i => i.members).ToArray();
 
             Parallel.For(0, headers.Length, i => miners[i] = GetFederationMemberForBlock(headers[i], federations[i], (i + startHeight) >= votingManagerV2ActivationHeight));
 
