@@ -138,7 +138,7 @@ namespace Stratis.Bitcoin.Features.Interop
             if (!this.ethClientProvider.GetAllSupportedChains().Any())
             {
                 // There are no chains that are supported and enabled, exit.
-                this.logger.Debug("Interop disabled.");
+                this.logger.Info("Interop disabled.");
                 return;
             }
 
@@ -190,8 +190,14 @@ namespace Stratis.Bitcoin.Features.Interop
             repeatEvery: TimeSpans.TenSeconds,
             startAfter: TimeSpans.Second);
 
-            // Load the last polled block for each chain.
-            await LoadLastPolledBlockForBurnAndTransferRequestsAsync().ConfigureAwait(false);
+            foreach (KeyValuePair<DestinationChain, IETHClient> supportedChain in this.ethClientProvider.GetAllSupportedChains())
+            {
+                await LoadLastPolledBlockForBurnAndTransferRequestsAsync(supportedChain.Key).ConfigureAwait(false);
+            }
+
+            // Call this explicitly for Cirrus as it does not fall into the ethClientProvider group.
+            // TODO: This could be refactored in the future. 
+            await LoadLastPolledBlockForBurnAndTransferRequestsAsync(DestinationChain.CIRRUS).ConfigureAwait(false);
 
             this.conversionBurnTransferLoop = this.asyncProvider.CreateAndRunAsyncLoop("PeriodicCheckForBurnsAndTransfers", async (cancellation) =>
             {
@@ -270,22 +276,27 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <summary>
         /// Loads the last polled block from the store.
         /// </summary>
-        private async Task LoadLastPolledBlockForBurnAndTransferRequestsAsync()
+        private async Task LoadLastPolledBlockForBurnAndTransferRequestsAsync(DestinationChain destinationChain)
         {
-            foreach (KeyValuePair<DestinationChain, IETHClient> supportedChain in this.ethClientProvider.GetAllSupportedChains())
+            var loaded = this.keyValueRepository.LoadValueJson<int>(string.Format(LastPolledBlockKey, destinationChain));
+
+            // If this has never been loaded, set this to the current height of the applicable chain.
+            if (loaded == 0)
             {
-                var loaded = this.keyValueRepository.LoadValueJson<int>(string.Format(LastPolledBlockKey, supportedChain.Key));
-
-                // If this has never been loaded, set this to the current height of the applicable chain.
-                if (loaded == 0)
-                    this.lastPolledBlock[supportedChain.Key] = await this.ethClientProvider.GetClientForChain(supportedChain.Key).GetBlockHeightAsync().ConfigureAwait(false);
+                if (destinationChain == DestinationChain.CIRRUS)
+                {
+                    ConsensusTipModel model = await this.cirrusClient.GetConsensusTipAsync().ConfigureAwait(false);
+                    this.lastPolledBlock[DestinationChain.CIRRUS] = model.TipHeight;
+                }
                 else
-                    this.lastPolledBlock[supportedChain.Key] = loaded;
-
-                this.overrideLastPolledBlock[supportedChain.Key] = BigInteger.MinusOne;
-
-                this.logger.Info($"Last polled block for burns and transfers on chain {supportedChain.Key} set to {this.lastPolledBlock[supportedChain.Key]}.");
+                    this.lastPolledBlock[destinationChain] = await this.ethClientProvider.GetClientForChain(destinationChain).GetBlockHeightAsync().ConfigureAwait(false);
             }
+            else
+                this.lastPolledBlock[destinationChain] = loaded;
+
+            this.overrideLastPolledBlock[destinationChain] = BigInteger.MinusOne;
+
+            this.logger.Info($"Last polled block for burns and transfers on chain {destinationChain} set to {this.lastPolledBlock[destinationChain]}.");
         }
 
         private void SaveLastPolledBlockForBurnsAndTransfers(DestinationChain destinationChain)
