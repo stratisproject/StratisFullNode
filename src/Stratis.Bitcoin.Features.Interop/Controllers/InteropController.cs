@@ -32,7 +32,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         private readonly InteropPoller interopPoller;
         private readonly ILogger logger;
         private readonly Network network;
-        
+
         public InteropController(
             Network network,
             IConversionRequestCoordinationService conversionRequestCoordinationService,
@@ -57,7 +57,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public async Task<IActionResult> InitializeInterfluxAsync([FromBody] InitializeInterfluxRequestModel model)
+        public IActionResult InitializeInterflux([FromBody] InitializeInterfluxRequestModel model)
         {
             try
             {
@@ -67,6 +67,8 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                     WalletPassword = model.WalletPassword,
                     AccountName = model.AccountName
                 };
+
+                this.logger.LogInformation("Interop wallet credentials set.");
 
                 return this.Json(true);
             }
