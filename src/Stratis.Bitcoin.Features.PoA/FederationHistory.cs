@@ -119,14 +119,6 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private IEnumerable<(List<IFederationMember> members, HashSet<IFederationMember> whoJoined)> GetFederationsForHeights(int startHeight, int endHeight)
         {
-            if (startHeight < this.lastFederationTip)
-            {
-                foreach ((List<IFederationMember>, HashSet<IFederationMember>) item in this.GetFederationsForHeightsNoCache(startHeight, this.lastFederationTip - 1))
-                    yield return item;
-
-                startHeight = this.lastFederationTip;
-            }
-
             for (int height = startHeight; height <= endHeight; height++)
             {
                 if (this.federationHistory.TryGetValue(height, out (List<IFederationMember> modifiedFederation, HashSet<IFederationMember> whoJoined, IFederationMember miner) item))
