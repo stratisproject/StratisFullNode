@@ -5,7 +5,6 @@ using System.Numerics;
 using System.Threading.Tasks;
 using Flurl;
 using Flurl.Http;
-using Microsoft.AspNetCore.Mvc;
 using NBitcoin;
 using Newtonsoft.Json;
 using Stratis.Bitcoin.Controllers.Models;
@@ -199,15 +198,15 @@ namespace Stratis.Bitcoin.Features.Interop
             if (blockHash == null)
                 return null;
 
-            JsonResult hexResponse = await this.interopSettings.CirrusClientUrl
+            var hexResponse = await this.interopSettings.CirrusClientUrl
                 .AppendPathSegment("api/BlockStore/block")
                 .SetQueryParam("Hash", blockHash)
                 .SetQueryParam("ShowTransactionDetails", false)
                 .SetQueryParam("OutputJson", false)
-                .GetJsonAsync()
+                .GetStringAsync()
                 .ConfigureAwait(false);
 
-            var block = NBitcoin.Block.Parse(hexResponse.Value as string, this.chainIndexer.Network.Consensus.ConsensusFactory);
+            var block = NBitcoin.Block.Parse(JsonConvert.DeserializeObject<string>(hexResponse), this.chainIndexer.Network.Consensus.ConsensusFactory);
             return block;
         }
 
