@@ -248,7 +248,10 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public void CheckForBlockHeightOverrides(DestinationChain chain)
         {
-            if (this.overrideLastPolledBlock[chain] == BigInteger.MinusOne)
+            if (!this.overrideLastPolledBlock.TryGetValue(chain, out BigInteger blockHeight))
+                return;
+
+            if (blockHeight == BigInteger.MinusOne)
                 return;
 
             this.logger.Info($"Resetting scan height for burns and transfers on chain {chain} to {this.overrideLastPolledBlock[chain]}.");
@@ -312,7 +315,7 @@ namespace Stratis.Bitcoin.Features.Interop
         private async Task PollCirrusForBurnsAsync(BigInteger blockHeight)
         {
             this.logger.Info("Polling Cirrus block at height {0} for burn transactions.", blockHeight);
-            
+
             BlockModel block = await this.cirrusClient.GetBlockByHeightAsync((int)blockHeight).ConfigureAwait(false);
 
             if (block == null)
@@ -488,7 +491,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 this.ProcessWStraxBurn(block.BlockHash, TransactionHash, Burn);
             }
 
-            if (this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts.Any() || 
+            if (this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts.Any() ||
                 this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc721Contracts.Any())
             {
                 List<(string TransactionHash, string TransferContractAddress, TransferDetails Transfer)> transfers = await supportedChain.Value.GetTransfersFromBlockAsync(block,
