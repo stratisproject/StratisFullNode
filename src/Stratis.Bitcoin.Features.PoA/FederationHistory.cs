@@ -127,7 +127,7 @@ namespace Stratis.Bitcoin.Features.PoA
                 startHeight = this.lastFederationTip;
             }
 
-            for (int height = startHeight; height < endHeight; height++)
+            for (int height = startHeight; height <= endHeight; height++)
             {
                 if (this.federationHistory.TryGetValue(height, out (List<IFederationMember> modifiedFederation, HashSet<IFederationMember> whoJoined, IFederationMember miner) item))
                 {
