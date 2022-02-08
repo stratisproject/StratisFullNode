@@ -198,7 +198,7 @@ namespace Stratis.Bitcoin.Features.Interop
             if (blockHash == null)
                 return null;
 
-            string hexResponse = await this.interopSettings.CirrusClientUrl
+            var hexResponse = await this.interopSettings.CirrusClientUrl
                 .AppendPathSegment("api/BlockStore/block")
                 .SetQueryParam("Hash", blockHash)
                 .SetQueryParam("ShowTransactionDetails", false)
@@ -206,7 +206,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 .GetStringAsync()
                 .ConfigureAwait(false);
 
-            var block = NBitcoin.Block.Parse(hexResponse, this.chainIndexer.Network.Consensus.ConsensusFactory);
+            var block = NBitcoin.Block.Parse(JsonConvert.DeserializeObject<string>(hexResponse), this.chainIndexer.Network.Consensus.ConsensusFactory);
             return block;
         }
 
