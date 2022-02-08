@@ -13,7 +13,6 @@ using Nethereum.Web3;
 using NLog;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
 using Stratis.Bitcoin.Features.Interop.Exceptions;
@@ -327,15 +326,16 @@ namespace Stratis.Bitcoin.Features.Interop
         {
             this.logger.Info("Polling Cirrus block at height {0} for burn transactions.", blockHeight);
 
-            BlockModel block = await this.cirrusClient.GetBlockByHeightAsync((int)blockHeight).ConfigureAwait(false);
-
-            if (block == null)
+            var blockHex = await this.cirrusClient.GetBlockByHeightAsync((int)blockHeight).ConfigureAwait(false);
+            if (string.IsNullOrEmpty(blockHex))
             {
                 this.logger.Info($"Unable to retrieve block with height {blockHeight}.");
 
                 // We shouldn't update the block height before returning because we might skip a block. 
                 return;
             }
+
+            var block = NBitcoin.Block.Parse(blockHex, this.network.Consensus.ConsensusFactory);
 
             // TODO: Need to build these sets across all supported chains
             HashSet<string> watchedSrc20Contracts = this.interopSettings.GetSettingsByChain(DestinationChain.ETH).WatchedErc20Contracts.Values.ToHashSet();
@@ -344,24 +344,16 @@ namespace Stratis.Bitcoin.Features.Interop
             var zeroAddressRaw = new uint160(Address.Zero.ToBytes());
             string zeroAddress = zeroAddressRaw.ToBase58Address(this.network);
 
-            foreach (object transaction in block.Transactions)
+            foreach (NBitcoin.Transaction transaction in block.Transactions.Where(t => t.IsSmartContractExecTransaction()))
             {
                 try
                 {
-                    if (!(transaction is string transactionId))
-                    {
-                        this.logger.Info($"Malformed transaction ID in block {blockHeight} {block.Hash}: {transaction}.");
-
-                        continue;
-                    }
-
-                    CirrusReceiptResponse receipt = await this.cirrusClient.GetReceiptAsync(transactionId).ConfigureAwait(false);
+                    CirrusReceiptResponse receipt = await this.cirrusClient.GetReceiptAsync(transaction.GetHash().ToString()).ConfigureAwait(false);
 
                     // This is probably a normal Cirrus transfer (if null), or a failed contract call that should be ignored.
                     if (receipt == null || !receipt.Success)
                     {
-                        this.logger.Info($"Transaction {transactionId} did not contain a successful receipt.");
-
+                        this.logger.Debug($"Transaction {transaction.GetHash()} did not contain a receipt.");
                         continue;
                     }
 

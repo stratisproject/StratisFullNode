@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Numerics;
 using System.Threading.Tasks;
 using Flurl;
@@ -39,7 +40,12 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <returns>The <see cref="CirrusReceiptResponse"/> of the given receipt.</returns>
         Task<CirrusReceiptResponse> GetReceiptAsync(string txHash);
 
-        Task<BlockModel> GetBlockByHeightAsync(int blockHeight);
+        /// <summary>
+        /// Returns the hex representation of the block.
+        /// </summary>
+        /// <param name="blockHeight">The requested height.</param>
+        /// <returns>Hex string</returns>
+        Task<string> GetBlockByHeightAsync(int blockHeight);
 
         Task<ConsensusTipModel> GetConsensusTipAsync();
 
@@ -100,7 +106,7 @@ namespace Stratis.Bitcoin.Features.Interop
             byte[] accountBytesPadded = new byte[accountBytes.Length + 1];
             accountBytesPadded[0] = 9; // 9 = Address
             Array.Copy(accountBytes, 0, accountBytesPadded, 1, accountBytes.Length);
-            
+
             byte[] amountBytes = this.serializer.Serialize((UInt256)amount.Satoshi);
             byte[] amountBytesPadded = new byte[amountBytes.Length + 1];
             amountBytesPadded[0] = 12; // 12 = UInt256
@@ -111,7 +117,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 accountBytesPadded,
                 amountBytesPadded
             });
-            
+
             string mintDataHex = BitConverter.ToString(output).Replace("-", "");
 
             var request = new BuildCallContractTransactionRequest
@@ -153,7 +159,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     TransactionId = -1
                 };
             }
-            
+
             return new MultisigTransactionIdentifiers
             {
                 TransactionHash = receipt.TransactionHash,
@@ -165,16 +171,23 @@ namespace Stratis.Bitcoin.Features.Interop
         public async Task<CirrusReceiptResponse> GetReceiptAsync(string txHash)
         {
             // We have to use our own model for this, as the ReceiptResponse used inside the node does not have public setters on its properties.
-            CirrusReceiptResponse response = await this.interopSettings.CirrusClientUrl
+            IFlurlResponse response = await this.interopSettings.CirrusClientUrl
                 .AppendPathSegment("api/smartcontracts/receipt")
                 .SetQueryParam("txHash", txHash)
-                .GetJsonAsync<CirrusReceiptResponse>()
+                .AllowAnyHttpStatus()
+                .GetAsync()
                 .ConfigureAwait(false);
 
-            return response;
+            if (response.StatusCode == (int)HttpStatusCode.OK)
+            {
+                CirrusReceiptResponse result = await response.GetJsonAsync<CirrusReceiptResponse>().ConfigureAwait(false);
+                return result;
+            }
+            else
+                return null;
         }
 
-        public async Task<BlockModel> GetBlockByHeightAsync(int blockHeight)
+        public async Task<string> GetBlockByHeightAsync(int blockHeight)
         {
             string blockHash = await this.interopSettings.CirrusClientUrl
                 .AppendPathSegment("api/Consensus/getblockhash")
@@ -185,12 +198,12 @@ namespace Stratis.Bitcoin.Features.Interop
             if (blockHash == null)
                 return null;
 
-            BlockModel response = await this.interopSettings.CirrusClientUrl
+            string response = await this.interopSettings.CirrusClientUrl
                 .AppendPathSegment("api/BlockStore/block")
                 .SetQueryParam("Hash", blockHash)
-                .SetQueryParam("ShowTransactionDetails", true)
-                .SetQueryParam("OutputJson", true)
-                .GetJsonAsync<BlockModel>()
+                .SetQueryParam("ShowTransactionDetails", false)
+                .SetQueryParam("OutputJson", false)
+                .GetStringAsync()
                 .ConfigureAwait(false);
 
             return response;
