@@ -492,8 +492,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 this.ProcessWStraxBurn(block.BlockHash, TransactionHash, Burn);
             }
 
-            if (this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts.Any() ||
-                this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc721Contracts.Any())
+            if (this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts.Any() || this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc721Contracts.Any())
             {
                 List<(string TransactionHash, string TransferContractAddress, TransferDetails Transfer)> transfers = await supportedChain.Value.GetTransfersFromBlockAsync(block,
                     this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts.Keys.ToHashSet(),

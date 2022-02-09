@@ -34,5 +34,11 @@ namespace Stratis.Bitcoin.Features.Interop.Models
 
         [JsonProperty(PropertyName = "tokenContract")]
         public string TokenContract { get; set; }
+
+        [JsonProperty(PropertyName = "externalChainTxEventId")]
+        public string ExternalChainTxEventId { get; set; }
+
+        [JsonProperty(PropertyName = "externalChainTxHash")]
+        public string ExternalChainTxHash { get; internal set; }
     }
 }
