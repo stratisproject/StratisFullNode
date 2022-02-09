@@ -127,13 +127,20 @@ namespace Stratis.Features.FederatedPeg.Conversion
                 stream.ReadWrite(ref this.destinationChain);
                 stream.ReadWrite(ref this.externalChainTxHash);
                 stream.ReadWrite(ref this.externalChainTxEventId);
+            }
+            catch (Exception)
+            {
+                // The above fields were not present in InterFlux v1.
+            }
 
+            try
+            {
                 // InterFlux v3 fields
                 stream.ReadWrite(ref this.tokenContract);
             }
             catch (Exception)
             {
-                // The above fields were not present in InterFlux v1.
+                // The above fields were not present in InterFlux v1/2.
             }
         }
     }
