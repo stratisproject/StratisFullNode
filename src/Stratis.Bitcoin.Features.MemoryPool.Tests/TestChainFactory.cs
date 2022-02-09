@@ -190,6 +190,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
         /// </summary>
         /// <param name="network">Network to create the chain on.</param>
         /// <param name="scriptPubKey">Public key to create blocks/txs with.</param>
+        /// <param name="dataDir">The path of the data directory.</param>
         /// <param name="requireStandard">By default testnet and regtest networks do not require transactions to be standard. This changes that default.</param>
         /// <returns>Context object representing the test chain.</returns>
         public static async Task<ITestChainContext> CreateAsync(Network network, Script scriptPubKey, string dataDir, bool requireStandard = true)
