@@ -158,18 +158,18 @@ function Get-Median($numberSeries)
 		}
 }
 
-function Check-TimeDifference
+function Check-TimeDifference3
 {
     Write-Host "Checking UTC Time Difference (unixtime.co.za)" -ForegroundColor Cyan
     $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
     $SystemTime0 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime0 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -ErrorAction SilentlyContinue| Select-Object -ExpandProperty content).replace('"','')
+    $RemoteTime0 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -TimeoutSec 3 -ErrorAction SilentlyContinue| Select-Object -ExpandProperty content).replace('"','')
     $timeDifSamples[0] = $RemoteTime0 - $SystemTime0
     $SystemTime1 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime1 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -ErrorAction SilentlyContinue | Select-Object -ExpandProperty content).replace('"','')
+    $RemoteTime1 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -TimeoutSec 3 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty content).replace('"','')
     $timeDifSamples[1] = $RemoteTime1 - $SystemTime1
     $SystemTime2 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime2 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -ErrorAction SilentlyContinue | Select-Object -ExpandProperty content).replace('"','')
+    $RemoteTime2 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -TimeoutSec 3 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty content).replace('"','')
     $timeDifSamples[2] = $RemoteTime2 - $SystemTime2
     $timeDif = Get-Median -numberSeries $timeDifSamples
 
@@ -190,13 +190,13 @@ function Check-TimeDifference2
     Write-Host "Checking UTC Time Difference (unixtimestamp.com)" -ForegroundColor Cyan
     $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
     $SystemTime0 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime0 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -UseBasicParsing -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
+    $RemoteTime0 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -TimeoutSec 3 -UseBasicParsing -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[0] = $RemoteTime0 - $SystemTime0
     $SystemTime1 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime1 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
+    $RemoteTime1 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -TimeoutSec 3 -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[1] = $RemoteTime1 - $SystemTime1
     $SystemTime2 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime2 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
+    $RemoteTime2 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -TimeoutSec 3 -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[2] = $RemoteTime2 - $SystemTime2
     $timeDif = Get-Median -numberSeries $timeDifSamples
 
@@ -212,18 +212,18 @@ function Check-TimeDifference2
         }
 }
 
-function Check-TimeDifference3
+function Check-TimeDifference
 {
     Write-Host "Checking UTC Time Difference (google.com)" -ForegroundColor Cyan
     $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
     $SystemTime0 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime0 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -UseBasicParsing -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
+    $RemoteTime0 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -TimeoutSec 3 -UseBasicParsing -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[0] = $RemoteTime0 - $SystemTime0
     $SystemTime1 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime1 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
+    $RemoteTime1 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -TimeoutSec 3 -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[1] = $RemoteTime1 - $SystemTime1
     $SystemTime2 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime2 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
+    $RemoteTime2 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -TimeoutSec 3 -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[2] = $RemoteTime2 - $SystemTime2
     $timeDif = Get-Median -numberSeries $timeDifSamples
 
@@ -704,8 +704,8 @@ Exit
 # SIG # Begin signature block
 # MIIO+gYJKoZIhvcNAQcCoIIO6zCCDucCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU6SkKvZm9lMqG1hK5IeK0CnGd
-# rJOgggxCMIIFfjCCBGagAwIBAgIQCrk836uc/wPyOiuycqPb5zANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU1EaWDGpoaK7k4e2zBPDkuV6j
+# 5umgggxCMIIFfjCCBGagAwIBAgIQCrk836uc/wPyOiuycqPb5zANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTIxMDQyMjAwMDAwMFoXDTI0MDcxOTIzNTk1
@@ -775,11 +775,11 @@ Exit
 # ZXJ0LmNvbTErMCkGA1UEAxMiRGlnaUNlcnQgRVYgQ29kZSBTaWduaW5nIENBIChT
 # SEEyKQIQCrk836uc/wPyOiuycqPb5zAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIB
 # DDEKMAigAoAAoQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEE
-# AYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUK3D6We+cF1CI
-# mVNcrocg5rY6WMQwDQYJKoZIhvcNAQEBBQAEggEAIL5pQjErOqJs4uEObjXQAd8j
-# SoVlUDGvL50BcAkRkjCoHzJvIn1uKHWgX+DqLBDfS8MifM8xyEIKIr4Bi4IcTj01
-# zWNgp6atroXxDKyC9mx1hYB+fjTq8ozYd7sV6JoEJRV8ZOobGv4gr30tNskpvPuY
-# jV+kZT4ZsLk+YDrE+zKo0nV/+aH1Z82MBRQ6YsTo9GYANBW5ZOW0K2cRkptiOCFl
-# uznDsuY8dF4TxE0REDsmsSyBIp1uH7l4qpfUdKsd3LF8fT1FmyQiVZdSSlCGOYQn
-# 6u9Lnvjwuwfa5sH+3e8QBaPMEPvBThSsxkQDVawoHpGiXEM+xbSgtP9KAxDl2w==
+# AYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUNiysCpBBfJBx
+# J3Q7A9EnEyJLf+gwDQYJKoZIhvcNAQEBBQAEggEAGyvP7/B5JFIE9ZGjt16kSDWR
+# IkdKs67US8UnYuCp/bqfUNKmeQ3P0Toe3IRqYA+TKRD9HEiy9bIzKEU1gE5S0qqh
+# f3aA/yPUOyqMfjAtcq0jDig4WDNbBSrSqRh9tdfNzG7wyRDyQm9QYwgjyv8CeN7G
+# 2cSyK530SjMWWgXWMGBCbqpMOmlFvgrTwigeEGkF/ORF9f00hOeII0eNq6ajivfy
+# 5MlS8Du1D/MMA7lXWdx/LeIUE+QCU/V5pPergXiIp38XVTFBeae1yYLtxhgMnAlp
+# v7Y6N7Rj/KgDdspTeAIKqsb6MVJ1fu3UzSYV8eT2vDTxJuOBIxHzjDEOXNAQfw==
 # SIG # End signature block
