@@ -659,9 +659,10 @@ namespace Stratis.Bitcoin.Features.Interop
             if (!this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts.TryGetValue(transferContractAddress, out string destinationContract))
             {
                 this.logger.Error("Unknown ERC20 contract address '{0}'; unable to map it to an SRC20 contract", transferContractAddress);
-
                 return;
             }
+
+            this.logger.Info($"Conversion transfer transaction '{transactionHash}' with transfer contract address {transferContractAddress} has destination contract destination address {destinationContract}.");
 
             lock (this.repositoryLock)
             {
