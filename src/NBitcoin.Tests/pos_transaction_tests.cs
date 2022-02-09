@@ -1458,7 +1458,7 @@ namespace NBitcoin.Tests
             Assert.Equal(4, tx.Outputs.Count); //+ Change
 
             txBuilder.Send(destinations[4], Money.Parse("1"));
-            var ex = Assert.Throws<NotEnoughFundsException>(() => txBuilder.BuildTransaction(true));
+            NotEnoughFundsException ex = Assert.Throws<NotEnoughFundsException>(() => txBuilder.BuildTransaction(true));
             Assert.True(ex.Group == "test");
             Assert.True((Money)ex.Missing == Money.Parse("0.9999"));
             //Can sign partially
@@ -2389,13 +2389,13 @@ namespace NBitcoin.Tests
                     }
                     scriptParts.Add(scriptOutput.ToString());
                 }
-                coinOutput.Append(String.Join(" ", scriptParts));
+                coinOutput.Append(string.Join(" ", scriptParts));
                 coinOutput.Append("\", ");
                 coinOutput.Append(coin.Amount.Satoshi);
                 coinOutput.Append("]");
                 coinParts.Add(coinOutput.ToString());
             }
-            output.Append(String.Join(",\n", coinParts));
+            output.Append(string.Join(",\n", coinParts));
             output.Append("],\n\"");
             output.Append(result.ToHex());
             output.Append("\", \"P2SH,WITNESS\"],\n\n");
