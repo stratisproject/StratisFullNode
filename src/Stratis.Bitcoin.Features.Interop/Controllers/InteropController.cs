@@ -80,6 +80,24 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             }
         }
 
+        [Route("configuration")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult Configuration(DestinationChain destinationChain)
+        {
+            try
+            {
+                return this.Json(this.interopSettings.GetSettingsByChain(destinationChain));
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
         [Route("status/burns")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
