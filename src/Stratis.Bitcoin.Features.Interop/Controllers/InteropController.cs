@@ -145,6 +145,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                         DestinationChain = request.DestinationChain.ToString(),
                         Amount = request.Amount,
                         Processed = request.Processed,
+                        TokenContract = request.TokenContract,
                         Status = request.RequestStatus.ToString(),
                     });
                 }

@@ -31,5 +31,8 @@ namespace Stratis.Bitcoin.Features.Interop.Models
 
         [JsonProperty(PropertyName = "status")]
         public string Status { get; set; }
+
+        [JsonProperty(PropertyName = "tokenContract")]
+        public string TokenContract { get; set; }
     }
 }
