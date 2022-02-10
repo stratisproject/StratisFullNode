@@ -98,7 +98,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             }
         }
 
-        [Route("status/burns")]
+        [Route("burns")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -138,7 +138,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             }
         }
 
-        [Route("status/mints")]
+        [Route("mints")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -173,6 +173,26 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                 response.MintRequests = mintRequests.OrderByDescending(m => m.BlockHeight).ToList();
 
                 return this.Json(response);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        [Route("mint/delete")]
+        [HttpDelete]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult DeleteMintRequest(string requestId)
+        {
+            try
+            {
+                this.conversionRequestRepository.DeleteConversionRequest(requestId);
+
+                return this.Ok($"{requestId} has been deleted.");
             }
             catch (Exception e)
             {
