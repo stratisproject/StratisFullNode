@@ -111,8 +111,6 @@ namespace Stratis.Features.FederatedPeg.Conversion
 
         private string tokenContract;
 
-        public const string MigrationCharacter = "-";
-
         public void ReadWrite(BitcoinStream stream)
         {
             stream.ReadWrite(ref this.requestId);
@@ -128,53 +126,42 @@ namespace Stratis.Features.FederatedPeg.Conversion
             ReadWriteNullStringField(stream, ref this.externalChainTxHash);
             ReadWriteNullStringField(stream, ref this.externalChainTxEventId);
             ReadWriteNullStringField(stream, ref this.tokenContract);
-
-            //try
-            //{
-            //    // InterFlux v2 fields
-            //    stream.ReadWrite(ref this.destinationChain);
-            //    stream.ReadWrite(ref this.externalChainTxHash);
-            //    stream.ReadWrite(ref this.externalChainTxEventId);
-            //}
-            //catch (Exception)
-            //{
-            //    // The above fields were not present in InterFlux v1.
-            //}
-
-            //try
-            //{
-            //    // InterFlux v3 fields
-            //    stream.ReadWrite(ref this.tokenContract);
-            //}
-            //catch (Exception)
-            //{
-            //    // The above fields were not present in InterFlux v1/2.
-            //}
         }
 
         private void ReadWriteNullIntField(BitcoinStream stream, ref int nullField)
         {
-            try
-            {
+            if (stream.Serializing)
                 stream.ReadWrite(ref nullField);
-            }
-            catch (Exception)
+            else
             {
-                nullField = -1;
-                stream.ReadWrite(ref nullField);
+                try
+                {
+                    stream.ReadWrite(ref nullField);
+                }
+                catch (Exception)
+                {
+                }
             }
         }
 
         private void ReadWriteNullStringField(BitcoinStream stream, ref string nullField)
         {
-            try
+            if (stream.Serializing)
             {
+                if (string.IsNullOrWhiteSpace(nullField))
+                    nullField = "";
+
                 stream.ReadWrite(ref nullField);
             }
-            catch (Exception)
+            else
             {
-                nullField = MigrationCharacter;
-                stream.ReadWrite(ref nullField);
+                try
+                {
+                    stream.ReadWrite(ref nullField);
+                }
+                catch (Exception)
+                {
+                }
             }
         }
     }
