@@ -498,7 +498,7 @@ if ( $NodeType -eq "50K" )
 {
     if ( $ethGasPrice )
     {
-        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -eth_interopenabled=1 -eth_account=$ethAddress -eth_passphrase=$ethPassword -eth_multisigwalletcontractaddress=$ethMultiSigContract -eth_wrappedstraxcontractaddress=$ethWrappedStraxContract -eth_keyvaluestorecontractaddress=$ethKeyValueStoreContractAddress -eth_gasprice=$ethGasPrice -eth_gas=$ethGasLimit -cirrusmultisigcontractaddress=$cirrusMultiSig -cirrussmartcontractactiveaddress=$walletAddress0 -eth_watcherc20=$Token1 -eth_watcherc20=$Token2 -eth_watcherc20=$Token3 -eth_watcherc20=$Token4" -PassThru
+        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -eth_interopenabled=1 -ethereumgaspricetracking -pricetracking -eth_account=$ethAddress -eth_passphrase=$ethPassword -eth_multisigwalletcontractaddress=$ethMultiSigContract -eth_wrappedstraxcontractaddress=$ethWrappedStraxContract -eth_keyvaluestorecontractaddress=$ethKeyValueStoreContractAddress -eth_gasprice=$ethGasPrice -eth_gas=$ethGasLimit -cirrusmultisigcontractaddress=$cirrusMultiSig -cirrussmartcontractactiveaddress=$walletAddress0 -eth_watcherc20=$Token1 -eth_watcherc20=$Token2 -eth_watcherc20=$Token3 -eth_watcherc20=$Token4" -PassThru
     }
         Else
         {
