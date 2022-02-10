@@ -121,26 +121,56 @@ namespace Stratis.Features.FederatedPeg.Conversion
             stream.ReadWrite(ref this.amount);
             stream.ReadWrite(ref this.processed);
 
-            try
-            {
-                // InterFlux v2 fields
-                stream.ReadWrite(ref this.destinationChain);
-                stream.ReadWrite(ref this.externalChainTxHash);
-                stream.ReadWrite(ref this.externalChainTxEventId);
-            }
-            catch (Exception)
-            {
-                // The above fields were not present in InterFlux v1.
-            }
 
+            ReadWriteNullIntField(stream, ref this.destinationChain);
+            ReadWriteNullStringField(stream, ref this.externalChainTxHash);
+            ReadWriteNullStringField(stream, ref this.externalChainTxEventId);
+            ReadWriteNullStringField(stream, ref this.tokenContract);
+
+            //try
+            //{
+            //    // InterFlux v2 fields
+            //    stream.ReadWrite(ref this.destinationChain);
+            //    stream.ReadWrite(ref this.externalChainTxHash);
+            //    stream.ReadWrite(ref this.externalChainTxEventId);
+            //}
+            //catch (Exception)
+            //{
+            //    // The above fields were not present in InterFlux v1.
+            //}
+
+            //try
+            //{
+            //    // InterFlux v3 fields
+            //    stream.ReadWrite(ref this.tokenContract);
+            //}
+            //catch (Exception)
+            //{
+            //    // The above fields were not present in InterFlux v1/2.
+            //}
+        }
+
+        private void ReadWriteNullIntField(BitcoinStream stream, ref int nullField)
+        {
             try
             {
-                // InterFlux v3 fields
-                stream.ReadWrite(ref this.tokenContract);
+                stream.ReadWrite(ref nullField);
             }
             catch (Exception)
             {
-                // The above fields were not present in InterFlux v1/2.
+                nullField = -1;
+            }
+        }
+
+        private void ReadWriteNullStringField(BitcoinStream stream, ref string nullField)
+        {
+            try
+            {
+                stream.ReadWrite(ref nullField);
+            }
+            catch (Exception)
+            {
+                nullField = "";
             }
         }
     }
