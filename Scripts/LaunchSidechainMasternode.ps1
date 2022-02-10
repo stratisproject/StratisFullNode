@@ -628,6 +628,24 @@ if ( $WalletNames -eq $null )
 }
 if ( $NodeType -eq "50K" )
 {
+	#Initialize InterFlux
+    Write-Host (Get-TimeStamp) "Initializing InterFlux" -ForegroundColor Cyan 
+
+    $requstBody = ConvertTo-Json @{
+
+        walletName = $miningWalletName
+        walletPassword = $miningPassword
+        account = "account 0"
+    }
+
+    $initializeInterFlux = Invoke-RestMethod -Uri http://localhost:$API/api/Interop/initializeinterflux -Method Post -Body $requstBody -ContentType "application/json-patch+json"
+    if ( $initializeInterFlux -ne $true )
+    {
+        Write-Host (Get-TimeStamp) "ERROR: Something went wrong. Cannot Initialize InterFlux! Please contact support in Discord" -ForegroundColor Red
+        Start-Sleep 30
+        Exit
+    }
+	
     #Enable Federation
     Write-Host (Get-TimeStamp) "Enabling Federation" -ForegroundColor Cyan
 
