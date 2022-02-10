@@ -159,6 +159,7 @@ namespace Stratis.Features.FederatedPeg.Conversion
             catch (Exception)
             {
                 nullField = -1;
+                stream.ReadWrite(ref nullField);
             }
         }
 
@@ -171,6 +172,7 @@ namespace Stratis.Features.FederatedPeg.Conversion
             catch (Exception)
             {
                 nullField = "";
+                stream.ReadWrite(ref nullField);
             }
         }
     }
