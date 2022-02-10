@@ -89,9 +89,9 @@ namespace Stratis.Bitcoin.Features.Interop
         /// The constructor.
         /// </summary>
         /// <param name="interopSettings">The settings for the interoperability feature.</param>
-        public CirrusContractClient(CirrusInteropSettings interopSettings, IBlockStore blockStore, ChainIndexer chainIndexer)
+        public CirrusContractClient(InteropSettings interopSettings, IBlockStore blockStore, ChainIndexer chainIndexer)
         {
-            this.cirrusInteropSettings = interopSettings;
+            this.cirrusInteropSettings = interopSettings.GetSettings<CirrusInteropSettings>();
             this.blockStore = blockStore;
             this.chainIndexer = chainIndexer;
             this.serializer = new Serializer(new ContractPrimitiveSerializerV2(this.chainIndexer.Network));

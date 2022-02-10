@@ -62,7 +62,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         {
             try
             {
-                this.interopSettings.GetSettingsByChain<CirrusInteropSettings>().CirrusWalletCredentials = new WalletCredentials()
+                this.interopSettings.GetSettings<CirrusInteropSettings>().CirrusWalletCredentials = new WalletCredentials()
                 {
                     WalletName = model.WalletName,
                     WalletPassword = model.WalletPassword,

@@ -51,7 +51,7 @@ namespace Stratis.Bitcoin.Features.Interop.Settings
             throw new NotImplementedException("Provided chain type not supported: " + chain);
         }
 
-        public T GetSettingsByChain<T>() where T : ETHInteropSettings
+        public T GetSettings<T>() where T : ETHInteropSettings
         {
             if (typeof(T) == typeof(CirrusInteropSettings))
                 return this.CirrusSettings as T;

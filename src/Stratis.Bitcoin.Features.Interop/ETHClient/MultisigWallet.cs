@@ -137,7 +137,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         public BigInteger TransactionId { get; set; }
 
         /// <summary>
-        /// Any messages related to the call (this will be used primarily for minting on Cirrus.
+        /// Any messages related to the call (this will be used primarily for minting on Cirrus).
         /// </summary>
         public string Message { get; set; }
     }
