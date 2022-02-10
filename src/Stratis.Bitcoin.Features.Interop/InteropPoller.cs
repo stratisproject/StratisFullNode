@@ -730,7 +730,9 @@ namespace Stratis.Bitcoin.Features.Interop
                 }
 
                 bool isTransfer = false;
-                if (!string.IsNullOrWhiteSpace(request.TokenContract) && request.DestinationChain == DestinationChain.CIRRUS)
+                if (!string.IsNullOrWhiteSpace(request.TokenContract) &&
+                    request.TokenContract != ConversionRequest.MigrationCharacter &&
+                    request.DestinationChain == DestinationChain.CIRRUS)
                 {
                     // This is an ERC20 -> SRC20 minting request, and therefore needs to be handled differently to wSTRAX.
                     this.logger.Info("Processing ERC20 to SRC20 transfer request {0}.", request.RequestId);

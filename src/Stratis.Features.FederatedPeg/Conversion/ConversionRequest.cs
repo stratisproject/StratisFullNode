@@ -111,6 +111,8 @@ namespace Stratis.Features.FederatedPeg.Conversion
 
         private string tokenContract;
 
+        public const string MigrationCharacter = "-";
+
         public void ReadWrite(BitcoinStream stream)
         {
             stream.ReadWrite(ref this.requestId);
@@ -171,7 +173,7 @@ namespace Stratis.Features.FederatedPeg.Conversion
             }
             catch (Exception)
             {
-                nullField = "";
+                nullField = MigrationCharacter;
                 stream.ReadWrite(ref nullField);
             }
         }
