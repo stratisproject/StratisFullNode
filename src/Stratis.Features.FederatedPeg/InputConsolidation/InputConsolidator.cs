@@ -172,7 +172,7 @@ namespace Stratis.Features.FederatedPeg.InputConsolidation
         /// </remarks>
         /// <param name="amount">The consolidation amount.</param>
         /// <returns>A list of consolidation transactions.</returns>
-        public List<ConsolidationTransaction> CreateRequiredConsolidationTransactions(Money amount)
+        private List<ConsolidationTransaction> CreateRequiredConsolidationTransactions(Money amount)
         {
             // TODO: This method doesn't need to be public.
 

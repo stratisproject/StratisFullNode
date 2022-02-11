@@ -6,7 +6,7 @@ namespace Stratis.Features.Diagnostic.Utils
     /// <summary>
     /// Provides an extension with methods to access private properties.
     /// </summary>
-    internal static class ReflectionExtension
+    public static class ReflectionExtension
     {
         /// <summary>
         /// Gets the private property value.
@@ -53,6 +53,19 @@ namespace Stratis.Features.Diagnostic.Utils
         {
             FieldInfo field = obj.GetType().GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Instance);
             return (T)field?.GetValue(obj);
+        }
+
+        /// <summary>
+        /// Using reflection, calls a private method passing along the supplied parameters.
+        /// </summary>
+        /// <param name="obj">Object from where the Property Value is set</param>
+        /// <param name="methodName">Name of the method.</param>
+        /// <param name="parameters">Parameters for the method.</param>
+        /// <returns>The method return value.</returns>
+        public static object CallPrivateMethod(this object obj, string methodName, params object[] parameters)
+        {
+            MethodInfo methodInfo = obj.GetType().GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Instance);
+            return methodInfo.Invoke(obj, parameters);
         }
     }
 }
