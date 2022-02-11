@@ -21,7 +21,9 @@ namespace Stratis.Features.FederatedPeg.Conversion
         OriginatorSubmitted,
         VoteFinalised,
         NotOriginator,
-        OriginatorSubmitting
+        OriginatorSubmitting,
+
+        Failed
     }
 
     /// <summary>Request to mint or burn wSTRAX.</summary>
@@ -87,6 +89,11 @@ namespace Stratis.Features.FederatedPeg.Conversion
         /// </summary>
         public bool Processed { get { return this.processed; } set { this.processed = value; } }
 
+        /// <summary>
+        /// Should the request failed, this field can be used for any error messages.
+        /// </summary>
+        public string StatusMessage { get { return this.statusMessage; } set { this.statusMessage = value; } }
+
         public string TokenContract { get { return this.tokenContract; } set { this.tokenContract = value; } }
 
         private string requestId;
@@ -109,6 +116,8 @@ namespace Stratis.Features.FederatedPeg.Conversion
 
         private bool processed;
 
+        private string statusMessage;
+
         private string tokenContract;
 
         public void ReadWrite(BitcoinStream stream)
@@ -121,11 +130,11 @@ namespace Stratis.Features.FederatedPeg.Conversion
             stream.ReadWrite(ref this.amount);
             stream.ReadWrite(ref this.processed);
 
-
             ReadWriteNullIntField(stream, ref this.destinationChain);
             ReadWriteNullStringField(stream, ref this.externalChainTxHash);
             ReadWriteNullStringField(stream, ref this.externalChainTxEventId);
             ReadWriteNullStringField(stream, ref this.tokenContract);
+            ReadWriteNullStringField(stream, ref this.statusMessage);
         }
 
         private void ReadWriteNullIntField(BitcoinStream stream, ref int nullField)
