@@ -100,83 +100,109 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <inheritdoc />
         public async Task<MultisigTransactionIdentifiers> MintAsync(string contractAddress, string destinationAddress, Money amount)
         {
-            Address mintRecipient = destinationAddress.ToAddress(this.chainIndexer.Network);
+            BuildCallContractTransactionResponse response = null;
 
-            // Pack the parameters of the Mint method invocation into the format used by the multisig contract.
-            byte[] accountBytes = this.serializer.Serialize(mintRecipient);
-            byte[] accountBytesPadded = new byte[accountBytes.Length + 1];
-            accountBytesPadded[0] = 9; // 9 = Address
-            Array.Copy(accountBytes, 0, accountBytesPadded, 1, accountBytes.Length);
-
-            byte[] amountBytes = this.serializer.Serialize((UInt256)amount.Satoshi);
-            byte[] amountBytesPadded = new byte[amountBytes.Length + 1];
-            amountBytesPadded[0] = 12; // 12 = UInt256
-            Array.Copy(amountBytes, 0, amountBytesPadded, 1, amountBytes.Length);
-
-            byte[] output = this.serializer.Serialize(new byte[][]
+            try
             {
+                Address mintRecipient = destinationAddress.ToAddress(this.chainIndexer.Network);
+
+                // Pack the parameters of the Mint method invocation into the format used by the multisig contract.
+                byte[] accountBytes = this.serializer.Serialize(mintRecipient);
+                byte[] accountBytesPadded = new byte[accountBytes.Length + 1];
+                accountBytesPadded[0] = 9; // 9 = Address
+                Array.Copy(accountBytes, 0, accountBytesPadded, 1, accountBytes.Length);
+
+                byte[] amountBytes = this.serializer.Serialize((UInt256)amount.Satoshi);
+                byte[] amountBytesPadded = new byte[amountBytes.Length + 1];
+                amountBytesPadded[0] = 12; // 12 = UInt256
+                Array.Copy(amountBytes, 0, amountBytesPadded, 1, amountBytes.Length);
+
+                byte[] output = this.serializer.Serialize(new byte[][]
+                {
                 accountBytesPadded,
                 amountBytesPadded
-            });
+                });
 
-            string mintDataHex = BitConverter.ToString(output).Replace("-", "");
+                string mintDataHex = BitConverter.ToString(output).Replace("-", "");
 
-            var request = new BuildCallContractTransactionRequest
-            {
-                WalletName = this.cirrusInteropSettings.CirrusWalletCredentials.WalletName,
-                AccountName = this.cirrusInteropSettings.CirrusWalletCredentials.AccountName,
-                ContractAddress = this.cirrusInteropSettings.CirrusMultisigContractAddress,
-                MethodName = MultisigSubmitMethodName,
-                Amount = "0",
-                FeeAmount = "0.04", // TODO: Use proper fee estimation, as the fee may be higher with larger multisigs
-                Password = this.cirrusInteropSettings.CirrusWalletCredentials.WalletPassword,
-                GasPrice = 100,
-                GasLimit = 250_000,
-                Sender = this.cirrusInteropSettings.CirrusSmartContractActiveAddress,
-                Parameters = new string[]
+                var request = new BuildCallContractTransactionRequest
                 {
+                    WalletName = this.cirrusInteropSettings.CirrusWalletCredentials.WalletName,
+                    AccountName = this.cirrusInteropSettings.CirrusWalletCredentials.AccountName,
+                    ContractAddress = this.cirrusInteropSettings.CirrusMultisigContractAddress,
+                    MethodName = MultisigSubmitMethodName,
+                    Amount = "0",
+                    FeeAmount = "0.04", // TODO: Use proper fee estimation, as the fee may be higher with larger multisigs
+                    Password = this.cirrusInteropSettings.CirrusWalletCredentials.WalletPassword,
+                    GasPrice = 100,
+                    GasLimit = 250_000,
+                    Sender = this.cirrusInteropSettings.CirrusSmartContractActiveAddress,
+                    Parameters = new string[]
+                    {
                     // Destination - this is the SRC20 contract that the mint will be invoked against, *not* the Cirrus address the minted tokens will be sent to
                     "9#" + contractAddress,
                     // MethodName
                     "4#" + SRC20MintMethodName,
                     // Data - this is an analogue of the ABI-encoded data used in Ethereum contract calls
                     "10#" + mintDataHex
+                    }
+                };
+
+                response = await this.cirrusInteropSettings.CirrusClientUrl
+                    .AppendPathSegment("api/smartcontracts/build-and-send-call")
+                    .PostJsonAsync(request)
+                    .ReceiveJson<BuildCallContractTransactionResponse>()
+                    .ConfigureAwait(false);
+
+                if (!response.Success)
+                {
+                    return new MultisigTransactionIdentifiers
+                    {
+                        Message = response.Message,
+                        TransactionHash = "",
+                        TransactionId = -1
+                    };
                 }
-            };
-
-            BuildCallContractTransactionResponse response = await this.cirrusInteropSettings.CirrusClientUrl
-                .AppendPathSegment("api/smartcontracts/build-and-send-call")
-                .PostJsonAsync(request)
-                .ReceiveJson<BuildCallContractTransactionResponse>()
-                .ConfigureAwait(false);
-
-            if (!response.Success)
+            }
+            catch (Exception ex)
             {
                 return new MultisigTransactionIdentifiers
                 {
-                    Message = response.Message,
+                    Message = $"Exception occurred trying to build and send the mint transaction: {ex.Message}",
                     TransactionHash = "",
                     TransactionId = -1
                 };
             }
 
-            CirrusReceiptResponse receipt = await this.GetReceiptAsync(response.TransactionId.ToString()).ConfigureAwait(false);
+            try
+            {
+                CirrusReceiptResponse receipt = await this.GetReceiptAsync(response.TransactionId.ToString()).ConfigureAwait(false);
 
-            if (receipt == null || !receipt.Success)
+                if (receipt == null || !receipt.Success)
+                {
+                    return new MultisigTransactionIdentifiers
+                    {
+                        Message = receipt == null ? $"Receipt could not be returned for '{response.TransactionId}'." : receipt.Error,
+                        TransactionHash = "",
+                        TransactionId = -1
+                    };
+                }
+
+                return new MultisigTransactionIdentifiers
+                {
+                    TransactionHash = receipt.TransactionHash,
+                    TransactionId = int.Parse(receipt.ReturnValue)
+                };
+            }
+            catch (Exception ex)
             {
                 return new MultisigTransactionIdentifiers
                 {
-                    Message = receipt == null ? $"Receipt could not be returned for '{response.TransactionId}'." : receipt.Error,
+                    Message = $"Exception occurred trying to retrieve the receipt: {ex.Message}",
                     TransactionHash = "",
                     TransactionId = -1
                 };
             }
-
-            return new MultisigTransactionIdentifiers
-            {
-                TransactionHash = receipt.TransactionHash,
-                TransactionId = int.Parse(receipt.ReturnValue)
-            };
         }
 
         /// <inheritdoc />
