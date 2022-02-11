@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using NBitcoin;
+using NBitcoin.Protocol;
 
 namespace Stratis.Bitcoin.Features.PoA
 {
@@ -98,7 +99,9 @@ namespace Stratis.Bitcoin.Features.PoA
             uint targetSpacingSeconds,
             bool votingEnabled,
             bool autoKickIdleMembers,
-            uint federationMemberMaxIdleTimeSeconds = 60 * 60 * 24 * 7)
+            uint federationMemberMaxIdleTimeSeconds = 60 * 60 * 24 * 7,
+            int? enforceMinProtocolVersionAtBlockHeight = null,
+            ProtocolVersion? enforcedMinProtocolVersion = null)
                 : base(maxBlockBaseSize, maxStandardVersion, maxStandardTxWeight, maxBlockSigopsCost, maxStandardTxSigopsCost, witnessScaleFactor: 1)
         {
             this.GenesisFederationMembers = genesisFederationMembers;
@@ -107,6 +110,10 @@ namespace Stratis.Bitcoin.Features.PoA
             this.AutoKickIdleMembers = autoKickIdleMembers;
             this.FederationMemberMaxIdleTimeSeconds = federationMemberMaxIdleTimeSeconds;
             this.InterFluxV2MainChainActivationHeight = 0;
+            if (enforceMinProtocolVersionAtBlockHeight.HasValue)
+                this.EnforceMinProtocolVersionAtBlockHeight = enforceMinProtocolVersionAtBlockHeight.Value;
+            if (enforcedMinProtocolVersion.HasValue)
+                this.EnforcedMinProtocolVersion = enforcedMinProtocolVersion.Value;
 
             if (this.AutoKickIdleMembers && !this.VotingEnabled)
                 throw new ArgumentException("Voting should be enabled for automatic kicking to work.");

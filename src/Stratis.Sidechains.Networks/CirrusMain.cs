@@ -170,11 +170,11 @@ namespace Stratis.Sidechains.Networks
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
                 autoKickIdleMembers: true,
-                federationMemberMaxIdleTimeSeconds: 60 * 60 * 24 * 2 // 2 days
+                federationMemberMaxIdleTimeSeconds: 60 * 60 * 24 * 2, // 2 days
+                enforceMinProtocolVersionAtBlockHeight: 384675, // setting the value to zero makes the functionality inactive
+                enforcedMinProtocolVersion: ProtocolVersion.CIRRUS_VERSION // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
             )
             {
-                EnforceMinProtocolVersionAtBlockHeight = 384675, // setting the value to zero makes the functionality inactive
-                EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
                 FederationMemberActivationTime = 1605862800, // Friday, November 20, 2020 9:00:00 AM
                 InterFluxV2MainChainActivationHeight = 460_000,
                 VotingManagerV2ActivationHeight = 1_683_000, // Tuesday, 12 January 2021 9:00:00 AM (Estimated)
