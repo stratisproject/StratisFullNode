@@ -9,6 +9,7 @@ using NBitcoin;
 using Newtonsoft.Json;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
+using Stratis.Bitcoin.Features.Interop.Settings;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.SmartContracts;
@@ -79,7 +80,7 @@ namespace Stratis.Bitcoin.Features.Interop
         public const string MultisigSubmitMethodName = "Submit";
         public const string SRC20MintMethodName = "Mint";
 
-        private readonly InteropSettings interopSettings;
+        private readonly CirrusInteropSettings cirrusInteropSettings;
         private readonly IBlockStore blockStore;
         private readonly ChainIndexer chainIndexer;
         private readonly Serializer serializer;
@@ -90,7 +91,7 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <param name="interopSettings">The settings for the interoperability feature.</param>
         public CirrusContractClient(InteropSettings interopSettings, IBlockStore blockStore, ChainIndexer chainIndexer)
         {
-            this.interopSettings = interopSettings;
+            this.cirrusInteropSettings = interopSettings.GetSettings<CirrusInteropSettings>();
             this.blockStore = blockStore;
             this.chainIndexer = chainIndexer;
             this.serializer = new Serializer(new ContractPrimitiveSerializerV2(this.chainIndexer.Network));
@@ -122,16 +123,16 @@ namespace Stratis.Bitcoin.Features.Interop
 
             var request = new BuildCallContractTransactionRequest
             {
-                WalletName = this.interopSettings.WalletCredentials.WalletName,
-                AccountName = this.interopSettings.WalletCredentials.AccountName,
-                ContractAddress = this.interopSettings.CirrusMultisigContractAddress,
+                WalletName = this.cirrusInteropSettings.CirrusWalletCredentials.WalletName,
+                AccountName = this.cirrusInteropSettings.CirrusWalletCredentials.AccountName,
+                ContractAddress = this.cirrusInteropSettings.CirrusMultisigContractAddress,
                 MethodName = MultisigSubmitMethodName,
                 Amount = "0",
                 FeeAmount = "0.04", // TODO: Use proper fee estimation, as the fee may be higher with larger multisigs
-                Password = this.interopSettings.WalletCredentials.WalletPassword,
+                Password = this.cirrusInteropSettings.CirrusWalletCredentials.WalletPassword,
                 GasPrice = 100,
                 GasLimit = 250_000,
-                Sender = this.interopSettings.CirrusSmartContractActiveAddress,
+                Sender = this.cirrusInteropSettings.CirrusSmartContractActiveAddress,
                 Parameters = new string[]
                 {
                     // Destination - this is the SRC20 contract that the mint will be invoked against, *not* the Cirrus address the minted tokens will be sent to
@@ -143,18 +144,29 @@ namespace Stratis.Bitcoin.Features.Interop
                 }
             };
 
-            BuildCallContractTransactionResponse response = await this.interopSettings.CirrusClientUrl
+            BuildCallContractTransactionResponse response = await this.cirrusInteropSettings.CirrusClientUrl
                 .AppendPathSegment("api/smartcontracts/build-and-send-call")
                 .PostJsonAsync(request)
                 .ReceiveJson<BuildCallContractTransactionResponse>()
                 .ConfigureAwait(false);
 
-            CirrusReceiptResponse receipt = await this.GetReceiptAsync(response.TransactionId.ToString()).ConfigureAwait(false);
-
-            if (!receipt.Success)
+            if (!response.Success)
             {
                 return new MultisigTransactionIdentifiers
                 {
+                    Message = response.Message,
+                    TransactionHash = "",
+                    TransactionId = -1
+                };
+            }
+
+            CirrusReceiptResponse receipt = await this.GetReceiptAsync(response.TransactionId.ToString()).ConfigureAwait(false);
+
+            if (receipt == null || !receipt.Success)
+            {
+                return new MultisigTransactionIdentifiers
+                {
+                    Message = receipt == null ? $"Receipt could not be returned for '{response.TransactionId}'." : receipt.Error,
                     TransactionHash = "",
                     TransactionId = -1
                 };
@@ -171,7 +183,7 @@ namespace Stratis.Bitcoin.Features.Interop
         public async Task<CirrusReceiptResponse> GetReceiptAsync(string txHash)
         {
             // We have to use our own model for this, as the ReceiptResponse used inside the node does not have public setters on its properties.
-            IFlurlResponse response = await this.interopSettings.CirrusClientUrl
+            IFlurlResponse response = await this.cirrusInteropSettings.CirrusClientUrl
                 .AppendPathSegment("api/smartcontracts/receipt")
                 .SetQueryParam("txHash", txHash)
                 .AllowAnyHttpStatus()
@@ -189,7 +201,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public async Task<NBitcoin.Block> GetBlockByHeightAsync(int blockHeight)
         {
-            string blockHash = await this.interopSettings.CirrusClientUrl
+            string blockHash = await this.cirrusInteropSettings.CirrusClientUrl
                 .AppendPathSegment("api/Consensus/getblockhash")
                 .SetQueryParam("height", blockHeight)
                 .GetJsonAsync<string>()
@@ -198,7 +210,7 @@ namespace Stratis.Bitcoin.Features.Interop
             if (blockHash == null)
                 return null;
 
-            var hexResponse = await this.interopSettings.CirrusClientUrl
+            var hexResponse = await this.cirrusInteropSettings.CirrusClientUrl
                 .AppendPathSegment("api/BlockStore/block")
                 .SetQueryParam("Hash", blockHash)
                 .SetQueryParam("ShowTransactionDetails", false)
@@ -212,7 +224,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public async Task<ConsensusTipModel> GetConsensusTipAsync()
         {
-            ConsensusTipModel response = await this.interopSettings.CirrusClientUrl
+            ConsensusTipModel response = await this.cirrusInteropSettings.CirrusClientUrl
                 .AppendPathSegment("api/Consensus/tip")
                 .GetJsonAsync<ConsensusTipModel>()
                 .ConfigureAwait(false);
@@ -222,7 +234,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public async Task<TransactionVerboseModel> GetRawTransactionAsync(string transactionId)
         {
-            TransactionVerboseModel response = await this.interopSettings.CirrusClientUrl
+            TransactionVerboseModel response = await this.cirrusInteropSettings.CirrusClientUrl
                 .AppendPathSegment("api/Node/getrawtransaction")
                 .SetQueryParam("trxid", transactionId)
                 .SetQueryParam("verbose", true)
@@ -253,15 +265,15 @@ namespace Stratis.Bitcoin.Features.Interop
             var request = new LocalCallContractRequest
             {
                 Amount = "0",
-                ContractAddress = this.interopSettings.CirrusMultisigContractAddress,
+                ContractAddress = this.cirrusInteropSettings.CirrusMultisigContractAddress,
                 GasLimit = 250_000,
                 GasPrice = 100,
                 MethodName = "Confirmations",
                 Parameters = new[] { "7#" + transactionId },
-                Sender = this.interopSettings.CirrusSmartContractActiveAddress
+                Sender = this.cirrusInteropSettings.CirrusSmartContractActiveAddress
             };
 
-            int confirmationCount = await this.interopSettings.CirrusClientUrl
+            int confirmationCount = await this.cirrusInteropSettings.CirrusClientUrl
                 .AppendPathSegment("api/smartcontracts/local-call")
                 .PostJsonAsync(request)
                 .ReceiveJson<int>()
@@ -275,16 +287,16 @@ namespace Stratis.Bitcoin.Features.Interop
         {
             var request = new BuildCallContractTransactionRequest
             {
-                WalletName = this.interopSettings.WalletCredentials.WalletName,
-                AccountName = this.interopSettings.WalletCredentials.AccountName,
-                ContractAddress = this.interopSettings.CirrusMultisigContractAddress,
+                WalletName = this.cirrusInteropSettings.CirrusWalletCredentials.WalletName,
+                AccountName = this.cirrusInteropSettings.CirrusWalletCredentials.AccountName,
+                ContractAddress = this.cirrusInteropSettings.CirrusMultisigContractAddress,
                 MethodName = MultisigConfirmMethodName,
                 Amount = "0",
                 FeeAmount = "0.04", // TODO: Use proper fee estimation, as the fee may be higher with larger multisigs
-                Password = this.interopSettings.WalletCredentials.WalletPassword,
+                Password = this.cirrusInteropSettings.CirrusWalletCredentials.WalletPassword,
                 GasPrice = 100,
                 GasLimit = 250_000,
-                Sender = this.interopSettings.CirrusSmartContractActiveAddress,
+                Sender = this.cirrusInteropSettings.CirrusSmartContractActiveAddress,
                 Parameters = new string[]
                 {
                     // TransactionId - this is the integer assigned by the multisig contract that is used to identify which request is being confirmed
@@ -292,7 +304,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 }
             };
 
-            BuildCallContractTransactionResponse response = await this.interopSettings.CirrusClientUrl
+            BuildCallContractTransactionResponse response = await this.cirrusInteropSettings.CirrusClientUrl
                 .AppendPathSegment("api/smartcontracts/build-and-send-call")
                 .PostJsonAsync(request)
                 .ReceiveJson<BuildCallContractTransactionResponse>()

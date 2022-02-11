@@ -5,12 +5,12 @@ using Nethereum.ABI;
 using Nethereum.Contracts;
 using Nethereum.Hex.HexConvertors.Extensions;
 using Nethereum.Hex.HexTypes;
-using Nethereum.JsonRpc.Client;
 using Nethereum.RPC.Eth.Blocks;
 using Nethereum.RPC.Eth.DTOs;
 using Nethereum.Web3;
 using Nethereum.Web3.Accounts.Managed;
 using NLog;
+using Stratis.Bitcoin.Features.Interop.Settings;
 
 namespace Stratis.Bitcoin.Features.Interop.ETHClient
 {

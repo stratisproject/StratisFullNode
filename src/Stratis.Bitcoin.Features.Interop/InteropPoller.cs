@@ -17,6 +17,7 @@ using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
 using Stratis.Bitcoin.Features.Interop.Exceptions;
 using Stratis.Bitcoin.Features.Interop.Payloads;
+using Stratis.Bitcoin.Features.Interop.Settings;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Interfaces;
@@ -203,9 +204,9 @@ namespace Stratis.Bitcoin.Features.Interop
                 if (this.initialBlockDownloadState.IsInitialBlockDownload())
                     return;
 
-                if (this.interopSettings.WalletCredentials == null)
+                if (this.interopSettings.GetSettings<CirrusInteropSettings>().CirrusWalletCredentials == null)
                 {
-                    this.logger.Warn("Interop wallet credentials not set, please call the initialize interflux endpoint first so that burns and transfers can be checked.");
+                    this.logger.Warn("Cirrus interop wallet credentials not set, please call the initialize interflux endpoint first so that burns and transfers can be checked.");
                     return;
                 }
 
@@ -734,7 +735,6 @@ namespace Stratis.Bitcoin.Features.Interop
                 {
                     // This is an ERC20 -> SRC20 minting request, and therefore needs to be handled differently to wSTRAX.
                     this.logger.Info("Processing ERC20 to SRC20 transfer request {0}.", request.RequestId);
-
                     isTransfer = true;
                 }
 
@@ -793,7 +793,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             if (isTransfer)
                             {
                                 // TODO: Make a Cirrus version of SubmitTransactionAsync that can handle more generic operations than just minting
-                                identifiers = await this.cirrusClient.MintAsync(this.interopSettings.GetSettingsByChain(request.DestinationChain).MultisigWalletAddress, request.DestinationAddress, Money.Satoshis(request.Amount)).ConfigureAwait(false);
+                                identifiers = await this.cirrusClient.MintAsync(this.interopSettings.GetSettings<CirrusInteropSettings>().CirrusMultisigContractAddress, request.DestinationAddress, Money.Satoshis(request.Amount)).ConfigureAwait(false);
                             }
                             else
                             {
@@ -819,6 +819,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                             if (identifiers.TransactionId == BigInteger.MinusOne)
                             {
+                                this.logger.Error($"Minting on {request.DestinationChain} to address '{request.DestinationAddress}' for {request.Amount} failed.");
                                 // TODO: Submitting the transaction failed, this needs to be handled
                             }
 
@@ -1230,7 +1231,6 @@ namespace Stratis.Bitcoin.Features.Interop
         private BigInteger CoinsToWei(Money coins)
         {
             BigInteger baseCurrencyUnits = Web3.Convert.ToWei(coins.ToUnit(MoneyUnit.BTC), UnitConversion.EthUnit.Ether);
-
             return baseCurrencyUnits;
         }
 
@@ -1252,7 +1252,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             foreach (ConversionRequest request in requests)
             {
-                benchLog.AppendLine($"Destination: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Processed: {request.Processed} Amount: {new Money(request.Amount)} Eth Hash: {request.ExternalChainTxHash}");
+                benchLog.AppendLine($"Destination: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Chain: {request.DestinationChain} Status: {request.RequestStatus} Amount: {new Money(request.Amount)} Eth Hash: {request.ExternalChainTxHash}");
             }
 
             benchLog.AppendLine();

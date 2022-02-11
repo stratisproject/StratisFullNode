@@ -11,6 +11,7 @@ using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
 using Stratis.Bitcoin.Features.Interop.Models;
+using Stratis.Bitcoin.Features.Interop.Settings;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Utilities;
@@ -61,7 +62,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         {
             try
             {
-                this.interopSettings.WalletCredentials = new WalletCredentials()
+                this.interopSettings.GetSettings<CirrusInteropSettings>().CirrusWalletCredentials = new WalletCredentials()
                 {
                     WalletName = model.WalletName,
                     WalletPassword = model.WalletPassword,

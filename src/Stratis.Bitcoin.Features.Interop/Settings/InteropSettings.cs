@@ -2,14 +2,14 @@
 using System.Collections.Generic;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Features.Interop.Models;
 using Stratis.Bitcoin.Features.Wallet;
-using Stratis.Bitcoin.Utilities;
 
-namespace Stratis.Bitcoin.Features.Interop
+namespace Stratis.Bitcoin.Features.Interop.Settings
 {
     public class InteropSettings
     {
+        public CirrusInteropSettings CirrusSettings { get; set; }
+
         public ETHInteropSettings ETHSettings { get; set; }
 
         public BNBInteropSettings BNBSettings { get; set; }
@@ -20,31 +20,24 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <summary> If this value is set, override this node as the originator.</summary>
         public bool OverrideOriginator { get; set; }
 
-        /// <summary>This is the URL of the Cirrus node's API, for actioning SRC20 contract calls.</summary>
-        public string CirrusClientUrl { get; set; }
-
-        public string CirrusSmartContractActiveAddress { get; set; }
-
-        public string CirrusMultisigContractAddress { get; set; }
-
-        public WalletCredentials WalletCredentials { get; set; }
-
         public InteropSettings(NodeSettings nodeSettings)
         {
+            this.CirrusSettings = new CirrusInteropSettings(nodeSettings);
             this.ETHSettings = new ETHInteropSettings(nodeSettings);
             this.BNBSettings = new BNBInteropSettings(nodeSettings);
 
             this.OverrideOriginatorEnabled = nodeSettings.ConfigReader.GetOrDefault("overrideoriginatorenabled", false);
             this.OverrideOriginator = nodeSettings.ConfigReader.GetOrDefault("overrideoriginator", false);
-            this.CirrusClientUrl = nodeSettings.ConfigReader.GetOrDefault("cirrusclienturl", nodeSettings.Network.IsTest() ? "http://localhost:38223" : "http://localhost:37223");
-            this.CirrusSmartContractActiveAddress = nodeSettings.ConfigReader.GetOrDefault<string>("cirrussmartcontractactiveaddress", null);
-            this.CirrusMultisigContractAddress = nodeSettings.ConfigReader.GetOrDefault<string>("cirrusmultisigcontractaddress", null);
         }
 
         public ETHInteropSettings GetSettingsByChain(DestinationChain chain)
         {
             switch (chain)
             {
+                case DestinationChain.CIRRUS:
+                    {
+                        return this.CirrusSettings;
+                    }
                 case DestinationChain.ETH:
                     {
                         return this.ETHSettings;
@@ -56,6 +49,14 @@ namespace Stratis.Bitcoin.Features.Interop
             }
 
             throw new NotImplementedException("Provided chain type not supported: " + chain);
+        }
+
+        public T GetSettings<T>() where T : ETHInteropSettings
+        {
+            if (typeof(T) == typeof(CirrusInteropSettings))
+                return this.CirrusSettings as T;
+
+            return null;
         }
     }
 
@@ -76,7 +77,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         /// <summary>This should be set to the address of the Key Value Store contract deployed on the Ethereum blockchain.</summary>
         public string KeyValueStoreContractAddress { get; set; }
-        
+
         /// <summary>This is the RPC address of the geth node running on the local machine. It is normally defaulted to http://localhost:8545</summary>
         public string ClientUrl { get; set; }
 
