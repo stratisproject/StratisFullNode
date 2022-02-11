@@ -124,7 +124,7 @@ namespace Stratis.Sidechains.Networks
             var bip9Deployments = new CirrusBIP9Deployments()
             {
                 // Deployment will go active once 75% of nodes are on 1.2.1.0 or later.
-                [CirrusBIP9Deployments.Release1210] = new BIP9DeploymentsParameters("Release1210", 0, 0 /* Voting starts immediately */, 999999999, BIP9DeploymentsParameters.DefaultMainnetThreshold)
+                [CirrusBIP9Deployments.Release1300] = new BIP9DeploymentsParameters("Release1300", 0, 0 /* Voting starts immediately */, 999999999, BIP9DeploymentsParameters.DefaultMainnetThreshold)
             };
 
             this.Consensus = new Consensus(
