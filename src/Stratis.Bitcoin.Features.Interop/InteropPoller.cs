@@ -819,7 +819,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                             if (identifiers.TransactionId == BigInteger.MinusOne)
                             {
-                                this.logger.Error($"Minting on {request.DestinationChain} to address '{request.DestinationAddress}' for {request.Amount} failed.");
+                                this.logger.Error($"Minting on {request.DestinationChain} to address '{request.DestinationAddress}' for {request.Amount} failed: {identifiers.Message}");
                                 // TODO: Submitting the transaction failed, this needs to be handled
                             }
 
