@@ -174,8 +174,6 @@ namespace Stratis.Features.FederatedPeg.InputConsolidation
         /// <returns>A list of consolidation transactions.</returns>
         private List<ConsolidationTransaction> CreateRequiredConsolidationTransactions(Money amount)
         {
-            // TODO: This method doesn't need to be public.
-
             lock (this.txLock)
             {
                 // Get all of the inputs
