@@ -635,7 +635,7 @@ if ( $NodeType -eq "50K" )
 
         walletName = $miningWalletName
         walletPassword = $miningPassword
-        account = "account 0"
+        accountName = "account 0"
     }
 
     $initializeInterFlux = Invoke-RestMethod -Uri http://localhost:$API/api/Interop/initializeinterflux -Method Post -Body $requstBody -ContentType "application/json-patch+json"
