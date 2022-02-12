@@ -216,8 +216,8 @@ namespace Stratis.Bitcoin.Features.Interop
                         return new MultisigTransactionIdentifiers
                         {
                             Message = $"The mint smart contract transaction did not get mined in 180secs or something else went wrong, txid '{response.TransactionId}'.",
-                            TransactionHash = receipt.TransactionHash,
-                            TransactionId = int.Parse(receipt.ReturnValue)
+                            TransactionHash = "",
+                            TransactionId = -1
                         };
                     }
                     // Else return the receipt result details.
