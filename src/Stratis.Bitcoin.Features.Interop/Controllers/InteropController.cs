@@ -168,6 +168,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                         Processed = request.Processed,
                         TokenContract = request.TokenContract,
                         Status = request.RequestStatus.ToString(),
+                        Message = request.StatusMessage
                     });
                 }
 
