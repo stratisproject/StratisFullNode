@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Numerics;
+using System.Threading;
 using System.Threading.Tasks;
 using Flurl;
 using Flurl.Http;
@@ -100,8 +101,7 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <inheritdoc />
         public async Task<MultisigTransactionIdentifiers> MintAsync(string contractAddress, string destinationAddress, Money amount)
         {
-            BuildCallContractTransactionResponse response = null;
-
+            BuildCallContractTransactionResponse response;
             try
             {
                 Address mintRecipient = destinationAddress.ToAddress(this.chainIndexer.Network);
@@ -148,27 +148,30 @@ namespace Stratis.Bitcoin.Features.Interop
                     }
                 };
 
-                response = await this.cirrusInteropSettings.CirrusClientUrl
+                using (CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(180)))
+                {
+                    response = await this.cirrusInteropSettings.CirrusClientUrl
                     .AppendPathSegment("api/smartcontracts/build-and-send-call")
-                    .PostJsonAsync(request)
+                    .PostJsonAsync(request, cancellation.Token)
                     .ReceiveJson<BuildCallContractTransactionResponse>()
                     .ConfigureAwait(false);
 
-                if (!response.Success)
-                {
-                    return new MultisigTransactionIdentifiers
+                    if (!response.Success)
                     {
-                        Message = response.Message,
-                        TransactionHash = "",
-                        TransactionId = -1
-                    };
+                        return new MultisigTransactionIdentifiers
+                        {
+                            Message = response.Message,
+                            TransactionHash = "",
+                            TransactionId = -1
+                        };
+                    }
                 }
             }
             catch (Exception ex)
             {
                 return new MultisigTransactionIdentifiers
                 {
-                    Message = $"Exception occurred trying to build and send the mint transaction: {ex.Message}",
+                    Message = $"Exception occurred trying to build and send the mint transaction: {ex}",
                     TransactionHash = "",
                     TransactionId = -1
                 };
@@ -198,7 +201,7 @@ namespace Stratis.Bitcoin.Features.Interop
             {
                 return new MultisigTransactionIdentifiers
                 {
-                    Message = $"Exception occurred trying to retrieve the receipt: {ex.Message}",
+                    Message = $"Exception occurred trying to retrieve the receipt: {ex}",
                     TransactionHash = "",
                     TransactionId = -1
                 };

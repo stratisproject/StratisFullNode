@@ -820,15 +820,16 @@ namespace Stratis.Bitcoin.Features.Interop
                             if (identifiers.TransactionId == BigInteger.MinusOne)
                             {
                                 this.logger.Error($"Minting on {request.DestinationChain} to address '{request.DestinationAddress}' for {request.Amount} failed: {identifiers.Message}");
-                                request.StatusMessage = identifiers.Message;
                                 request.RequestStatus = ConversionRequestStatus.Failed;
+                                request.StatusMessage = identifiers.Message;
 
                                 // TODO: Submitting the transaction failed, this needs to be handled
                             }
+                            else
+                                request.RequestStatus = ConversionRequestStatus.OriginatorSubmitting;
 
                             request.ExternalChainTxHash = identifiers.TransactionHash;
                             request.ExternalChainTxEventId = identifiers.TransactionId.ToString();
-                            request.RequestStatus = ConversionRequestStatus.OriginatorSubmitting;
 
                             break;
                         }
