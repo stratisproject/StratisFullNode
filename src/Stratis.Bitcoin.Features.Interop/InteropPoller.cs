@@ -828,6 +828,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             else
                                 request.RequestStatus = ConversionRequestStatus.OriginatorSubmitting;
 
+                            request.ExternalChainBlockHeight = identifiers.BlockHeight;
                             request.ExternalChainTxHash = identifiers.TransactionHash;
                             request.ExternalChainTxEventId = identifiers.TransactionId.ToString();
 
@@ -835,7 +836,7 @@ namespace Stratis.Bitcoin.Features.Interop
                         }
                     case ConversionRequestStatus.OriginatorSubmitting:
                         {
-                            (BigInteger confirmationCount, string blockHash) = isTransfer ? await this.cirrusClient.GetConfirmationsAsync(request.ExternalChainTxHash).ConfigureAwait(false) : await clientForDestChain.GetConfirmationsAsync(request.ExternalChainTxHash).ConfigureAwait(false);
+                            (BigInteger confirmationCount, string blockHash) = isTransfer ? this.cirrusClient.GetConfirmations(request.ExternalChainBlockHeight) : await clientForDestChain.GetConfirmationsAsync(request.ExternalChainTxHash).ConfigureAwait(false);
 
                             this.logger.Info($"Originator confirming transaction id '{request.ExternalChainTxHash}' '({request.ExternalChainTxEventId})' before broadcasting; confirmations: {confirmationCount}; Block Hash {blockHash}.");
 

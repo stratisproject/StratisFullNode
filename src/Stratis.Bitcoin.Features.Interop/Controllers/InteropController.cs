@@ -162,6 +162,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                         BlockHeight = request.BlockHeight,
                         DestinationAddress = request.DestinationAddress,
                         DestinationChain = request.DestinationChain.ToString(),
+                        ExternalChainBlockHeight = request.ExternalChainBlockHeight,
                         ExternalChainTxEventId = request.ExternalChainTxEventId,
                         ExternalChainTxHash = request.ExternalChainTxHash,
                         Amount = request.Amount,
