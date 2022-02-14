@@ -19,6 +19,7 @@ namespace Stratis.Bitcoin.Features.Interop
 {
     public sealed class InteropBehavior : NetworkPeerBehavior
     {
+        private readonly ICirrusContractClient cirrusClient;
         private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
         private readonly IConversionRequestFeeService conversionRequestFeeService;
         private readonly IConversionRequestRepository conversionRequestRepository;
@@ -29,12 +30,14 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public InteropBehavior(
             Network network,
+            ICirrusContractClient cirrusClient,
             IConversionRequestCoordinationService conversionRequestCoordinationService,
             IConversionRequestFeeService conversionRequestFeeService,
             IConversionRequestRepository conversionRequestRepository,
             IETHCompatibleClientProvider ethClientProvider,
             IFederationManager federationManager)
         {
+            this.cirrusClient = cirrusClient;
             this.conversionRequestCoordinationService = conversionRequestCoordinationService;
             this.conversionRequestFeeService = conversionRequestFeeService;
             this.conversionRequestRepository = conversionRequestRepository;
@@ -49,7 +52,7 @@ namespace Stratis.Bitcoin.Features.Interop
         [NoTrace]
         public override object Clone()
         {
-            return new InteropBehavior(this.network, this.conversionRequestCoordinationService, this.conversionRequestFeeService, this.conversionRequestRepository, this.ethClientProvider, this.federationManager);
+            return new InteropBehavior(this.network, this.cirrusClient, this.conversionRequestCoordinationService, this.conversionRequestFeeService, this.conversionRequestRepository, this.ethClientProvider, this.federationManager);
         }
 
         /// <inheritdoc/>
@@ -114,7 +117,7 @@ namespace Stratis.Bitcoin.Features.Interop
             if (!this.federationManager.IsFederationMember)
                 return;
 
-            this.logger.LogDebug("Conversion request payload request for id '{0}' received from '{1}':'{2}' proposing transaction ID '{4}'.", payload.RequestId, peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, payload.RequestId, payload.TransactionId);
+            this.logger.LogDebug("Conversion request payload request for id '{0}' received from '{1}':'{2}' proposing transaction ID '{4}', (IsTransfer: {5}).", payload.RequestId, peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, payload.RequestId, payload.TransactionId, payload.IsTransfer);
 
             if (payload.TransactionId == BigInteger.MinusOne)
                 return;
@@ -144,10 +147,14 @@ namespace Stratis.Bitcoin.Features.Interop
             try
             {
                 // Check that the transaction ID in the payload actually exists, and is unconfirmed.
-                confirmationCount = await this.ethClientProvider.GetClientForChain(payload.DestinationChain).GetMultisigConfirmationCountAsync(payload.TransactionId).ConfigureAwait(false);
+                if (payload.IsTransfer)
+                    confirmationCount = await this.cirrusClient.GetMultisigConfirmationCountAsync(payload.TransactionId).ConfigureAwait(false);
+                else
+                    confirmationCount = await this.ethClientProvider.GetClientForChain(payload.DestinationChain).GetMultisigConfirmationCountAsync(payload.TransactionId).ConfigureAwait(false);
             }
             catch (Exception)
             {
+                this.logger.LogError($"An exception occurred trying to retrieve the confirmation count for multsig transaction id '{payload.TransactionId}', request id'{payload.RequestId}'.");
                 return;
             }
 
@@ -166,7 +173,7 @@ namespace Stratis.Bitcoin.Features.Interop
             if (payload.IsRequesting)
             {
                 string signature = this.federationManager.CurrentFederationKey.SignMessage(payload.RequestId + payload.TransactionId);
-                await this.AttachedPeer.SendMessageAsync(ConversionRequestPayload.Reply(payload.RequestId, payload.TransactionId, signature, payload.DestinationChain)).ConfigureAwait(false);
+                await this.AttachedPeer.SendMessageAsync(ConversionRequestPayload.Reply(payload.RequestId, payload.TransactionId, signature, payload.DestinationChain, payload.IsTransfer)).ConfigureAwait(false);
             }
         }
 
