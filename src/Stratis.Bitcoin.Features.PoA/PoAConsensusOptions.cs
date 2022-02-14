@@ -89,6 +89,8 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <param name="votingEnabled">See <see cref="VotingEnabled"/>.</param>
         /// <param name="autoKickIdleMembers">See <see cref="AutoKickIdleMembers"/>.</param>
         /// <param name="federationMemberMaxIdleTimeSeconds">See <see cref="FederationMemberMaxIdleTimeSeconds"/>.</param>
+        /// <param name="enforceMinProtocolVersionAtBlockHeight">See <see cref="ConsensusOptions.EnforceMinProtocolVersionAtBlockHeight"/>.</param>
+        /// <param name="enforcedMinProtocolVersion"><see cref="ConsensusOptions.EnforcedMinProtocolVersion"/>.</param>
         public PoAConsensusOptions(
             uint maxBlockBaseSize,
             int maxStandardVersion,
