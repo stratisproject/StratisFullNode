@@ -123,11 +123,11 @@ namespace Stratis.Features.Collateral
                         Data = federationMemberBytes
                     };
 
-                    int release1210ActivationHeight = 0;
+                    int release1300ActivationHeight = 0;
                     if (this.nodeDeployments?.BIP9.ArraySize > 0 /* Not NoBIP9Deployments */)
-                        release1210ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[0 /* Release1210 */].ActivationHeight;
+                        release1300ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[0 /* Release1300 */].ActivationHeight;
 
-                    if (blockConnectedData.ConnectedBlock.ChainedHeader.Height >= release1210ActivationHeight)
+                    if (blockConnectedData.ConnectedBlock.ChainedHeader.Height >= release1300ActivationHeight)
                     {
                         // Create a pending poll so that the scheduled vote is not "sanitized" away.
                         this.votingManager.PollsRepository.WithTransaction(transaction =>

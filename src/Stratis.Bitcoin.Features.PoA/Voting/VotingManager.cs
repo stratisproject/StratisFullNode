@@ -192,9 +192,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 List<Poll> pendingPolls = this.GetPendingPolls().ToList();
                 List<Poll> approvedPolls = this.GetApprovedPolls().Where(x => !x.IsExecuted).ToList();
 
-                int release1210ActivationHeight = 0;
+                int release1300ActivationHeight = 0;
                 if (this.nodeDeployments?.BIP9.ArraySize > 0 /* Not NoBIP9Deployments */)
-                    release1210ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[0 /* Release1210 */].ActivationHeight;
+                    release1300ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[0 /* Release1300 */].ActivationHeight;
 
                 bool IsTooOldToVoteOn(Poll poll) => poll.IsPending && (this.chainIndexer.Tip.Height - poll.PollStartBlockData.Height) >= this.poaConsensusOptions.PollExpiryBlocks;
 
@@ -203,7 +203,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     if (currentScheduledData.Key == VoteKey.AddFederationMember)
                     {
                         // "Add member" votes must have pending polls created by the JoinFederationRequestMonitor (if this behavior was active in the monitor).
-                        if (!pendingPolls.Any(x => x.VotingData == currentScheduledData && x.PollStartBlockData.Height >= release1210ActivationHeight))
+                        if (!pendingPolls.Any(x => x.VotingData == currentScheduledData && x.PollStartBlockData.Height >= release1300ActivationHeight))
                             return false;
                     }
 
@@ -594,11 +594,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                                 // Hence, if the poll does not exist then this is not a valid vote.
                                 if (data.Key == VoteKey.AddFederationMember)
                                 {
-                                    int release1210ActivationHeight = 0;
+                                    int release1300ActivationHeight = 0;
                                     if (this.nodeDeployments?.BIP9.ArraySize > 0  /* Not NoBIP9Deployments */)
-                                        release1210ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[0 /* Release1210 */].ActivationHeight;
+                                        release1300ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[0 /* Release1300 */].ActivationHeight;
 
-                                    if (chBlock.ChainedHeader.Height >= release1210ActivationHeight)
+                                    if (chBlock.ChainedHeader.Height >= release1300ActivationHeight)
                                         continue;
                                 }
 
