@@ -29,7 +29,7 @@ namespace Stratis.Bitcoin.Features.Interop.Payloads
         public bool IsRequesting { get { return this.isTransfer; } }
 
         /// <summary>
-        /// <c>True</c> if the request in quiestion is a transfer (e.g. ETH to Cirrus).
+        /// <c>True</c> if the request in question is a transfer (e.g. ETH to Cirrus).
         /// <c>False</c> if not.
         /// </summary>
         public bool IsTransfer { get { return this.isTransfer; } }
