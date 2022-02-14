@@ -19,6 +19,7 @@ namespace Stratis.Bitcoin.Features.Interop
 {
     public sealed class InteropBehavior : NetworkPeerBehavior
     {
+        private readonly ChainIndexer chainIndexer;
         private readonly ICirrusContractClient cirrusClient;
         private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
         private readonly IConversionRequestFeeService conversionRequestFeeService;
@@ -30,6 +31,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public InteropBehavior(
             Network network,
+            ChainIndexer chainIndexer,
             ICirrusContractClient cirrusClient,
             IConversionRequestCoordinationService conversionRequestCoordinationService,
             IConversionRequestFeeService conversionRequestFeeService,
@@ -37,6 +39,7 @@ namespace Stratis.Bitcoin.Features.Interop
             IETHCompatibleClientProvider ethClientProvider,
             IFederationManager federationManager)
         {
+            this.chainIndexer = chainIndexer;
             this.cirrusClient = cirrusClient;
             this.conversionRequestCoordinationService = conversionRequestCoordinationService;
             this.conversionRequestFeeService = conversionRequestFeeService;
@@ -52,7 +55,7 @@ namespace Stratis.Bitcoin.Features.Interop
         [NoTrace]
         public override object Clone()
         {
-            return new InteropBehavior(this.network, this.cirrusClient, this.conversionRequestCoordinationService, this.conversionRequestFeeService, this.conversionRequestRepository, this.ethClientProvider, this.federationManager);
+            return new InteropBehavior(this.network, this.chainIndexer, this.cirrusClient, this.conversionRequestCoordinationService, this.conversionRequestFeeService, this.conversionRequestRepository, this.ethClientProvider, this.federationManager);
         }
 
         /// <inheritdoc/>
@@ -148,7 +151,7 @@ namespace Stratis.Bitcoin.Features.Interop
             {
                 // Check that the transaction ID in the payload actually exists, and is unconfirmed.
                 if (payload.IsTransfer)
-                    confirmationCount = await this.cirrusClient.GetMultisigConfirmationCountAsync(payload.TransactionId).ConfigureAwait(false);
+                    confirmationCount = await this.cirrusClient.GetMultisigConfirmationCountAsync(payload.TransactionId, (ulong)this.chainIndexer.Tip.Height).ConfigureAwait(false);
                 else
                     confirmationCount = await this.ethClientProvider.GetClientForChain(payload.DestinationChain).GetMultisigConfirmationCountAsync(payload.TransactionId).ConfigureAwait(false);
             }

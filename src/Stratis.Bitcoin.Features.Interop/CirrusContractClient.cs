@@ -65,7 +65,7 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <param name="transactionId">The integer multisig contract transaction identifier to retrieve the number of multisig confirmations for.</param>
         /// <returns>The number of confirmations.</returns>
         /// <remarks>This does not relate to the number of elapsed blocks.</remarks>
-        Task<int> GetMultisigConfirmationCountAsync(BigInteger transactionId);
+        Task<int> GetMultisigConfirmationCountAsync(BigInteger transactionId, ulong blockHeight);
 
         /// <summary>
         /// Calls the Confirm method on the Cirrus multisig contract, adding a confirmation for the supplied transactionId if invoked by one of the contract owners.
@@ -318,10 +318,11 @@ namespace Stratis.Bitcoin.Features.Interop
         }
 
         /// <inheritdoc />
-        public async Task<int> GetMultisigConfirmationCountAsync(BigInteger transactionId)
+        public async Task<int> GetMultisigConfirmationCountAsync(BigInteger transactionId, ulong blockHeight)
         {
             var request = new LocalCallContractRequest
             {
+                BlockHeight = blockHeight,
                 Amount = "0",
                 ContractAddress = this.cirrusInteropSettings.CirrusMultisigContractAddress,
                 GasLimit = 250_000,
@@ -331,13 +332,21 @@ namespace Stratis.Bitcoin.Features.Interop
                 Sender = this.cirrusInteropSettings.CirrusSmartContractActiveAddress
             };
 
-            int confirmationCount = await this.cirrusInteropSettings.CirrusClientUrl
-                .AppendPathSegment("api/smartcontracts/local-call")
-                .PostJsonAsync(request)
-                .ReceiveJson<int>()
-                .ConfigureAwait(false);
+            try
+            {
+                LocalExecutionResponse result = await this.cirrusInteropSettings.CirrusClientUrl
+                    .AppendPathSegment("api/smartcontracts/local-call")
+                    .AllowAnyHttpStatus()
+                    .PostJsonAsync(request)
+                    .ReceiveJson<LocalExecutionResponse>()
+                    .ConfigureAwait(false);
 
-            return confirmationCount;
+                return (int)result.Return;
+            }
+            catch (Exception)
+            {
+                return 0;
+            }
         }
 
         /// <inheritdoc />
