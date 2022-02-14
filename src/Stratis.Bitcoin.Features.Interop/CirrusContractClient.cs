@@ -348,7 +348,7 @@ namespace Stratis.Bitcoin.Features.Interop
             }
             catch (Exception)
             {
-                return 0;
+                throw;
             }
         }
 
