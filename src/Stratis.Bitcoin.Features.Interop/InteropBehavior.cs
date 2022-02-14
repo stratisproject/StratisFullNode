@@ -154,9 +154,9 @@ namespace Stratis.Bitcoin.Features.Interop
                 else
                     confirmationCount = await this.ethClientProvider.GetClientForChain(payload.DestinationChain).GetMultisigConfirmationCountAsync(payload.TransactionId).ConfigureAwait(false);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                this.logger.LogError($"An exception occurred trying to retrieve the confirmation count for multsig transaction id '{payload.TransactionId}', request id'{payload.RequestId}'.");
+                this.logger.LogError($"An exception occurred trying to retrieve the confirmation count for multsig transaction id '{payload.TransactionId}', request id'{payload.RequestId}': {ex}");
                 return;
             }
 
