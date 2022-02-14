@@ -344,7 +344,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 if (result.Return == null)
                     return 0;
 
-                return (int)result.Return;
+                return (int)(long)result.Return;
             }
             catch (Exception)
             {
