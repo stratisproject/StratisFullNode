@@ -124,16 +124,14 @@ namespace Stratis.Sidechains.Networks
                 autoKickIdleMembers: true,
                 federationMemberMaxIdleTimeSeconds: 60 * 30, // 30 minutes                
                 enforceMinProtocolVersionAtBlockHeight: 505900, // setting the value to zero makes the functionality inactive
-                enforcedMinProtocolVersion: ProtocolVersion.CIRRUS_VERSION // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
-            )
-            {
-                InterFluxV2MainChainActivationHeight = 500_000,
-                VotingManagerV2ActivationHeight = 1_999_500,
-                Release1100ActivationHeight = 2_796_000,
-                PollExpiryBlocks = 450, // 2 hours,
-                GetMiningTimestampV2ActivationHeight = 3_000_000, // 15 January 2022
-                ContractSerializerV2ActivationHeight = 2_842_681
-            };
+                enforcedMinProtocolVersion: ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
+                interFluxV2MainChainActivationHeight: 500_000,
+                votingManagerV2ActivationHeight: 1_999_500,
+                release1100ActivationHeight: 2_796_000,
+                getMiningTimestampV2ActivationHeight: 3_000_000, // 15 January 2022
+                pollExpiryBlocks: 450, // 2 hours
+                contractSerializerV2ActivationHeight: 2_842_681
+            );
 
             var buriedDeployments = new BuriedDeploymentsArray
             {
