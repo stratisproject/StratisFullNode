@@ -22,6 +22,7 @@ namespace Stratis.Bitcoin.Features.Interop
     /// </summary>
     public sealed class InteropFeature : FullNodeFeature
     {
+        private readonly ICirrusContractClient cirrusClient;
         private readonly IConnectionManager connectionManager;
         private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
         private readonly IConversionRequestFeeService conversionRequestFeeService;
@@ -33,6 +34,7 @@ namespace Stratis.Bitcoin.Features.Interop
         private readonly Network network;
 
         public InteropFeature(
+            ICirrusContractClient cirrusClient,
             IConnectionManager connectionManager,
             IConversionRequestCoordinationService conversionRequestCoordinationService,
             IConversionRequestFeeService conversionRequestFeeService,
@@ -44,6 +46,7 @@ namespace Stratis.Bitcoin.Features.Interop
             InteropSettings interopSettings,
             Network network)
         {
+            this.cirrusClient = cirrusClient;
             this.connectionManager = connectionManager;
             this.conversionRequestCoordinationService = conversionRequestCoordinationService;
             this.conversionRequestFeeService = conversionRequestFeeService;
@@ -71,7 +74,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.interopPoller?.InitializeAsync();
 
             NetworkPeerConnectionParameters networkPeerConnectionParameters = this.connectionManager.Parameters;
-            networkPeerConnectionParameters.TemplateBehaviors.Add(new InteropBehavior(this.network, this.conversionRequestCoordinationService, this.conversionRequestFeeService, this.conversionRequestRepository, this.ethClientProvider, this.federationManager));
+            networkPeerConnectionParameters.TemplateBehaviors.Add(new InteropBehavior(this.network, this.cirrusClient, this.conversionRequestCoordinationService, this.conversionRequestFeeService, this.conversionRequestRepository, this.ethClientProvider, this.federationManager));
 
             return Task.CompletedTask;
         }

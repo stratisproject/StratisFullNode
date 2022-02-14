@@ -12,6 +12,7 @@ namespace Stratis.Bitcoin.Features.Interop.Payloads
         private string signature;
         private int destinationChain;
         private bool isRequesting;
+        private bool isTransfer;
 
         public string RequestId { get { return this.requestId; } }
 
@@ -25,20 +26,27 @@ namespace Stratis.Bitcoin.Features.Interop.Payloads
         /// <c>True</c> if this payload is requesting a proposal from the other node.
         /// <c>False</c> if it is replying.
         /// </summary>
-        public bool IsRequesting { get { return this.isRequesting; } }
+        public bool IsRequesting { get { return this.isTransfer; } }
+
+        /// <summary>
+        /// <c>True</c> if the request in question is a transfer (e.g. ETH to Cirrus).
+        /// <c>False</c> if not.
+        /// </summary>
+        public bool IsTransfer { get { return this.isTransfer; } }
 
         /// <summary>Parameterless constructor needed for deserialization.</summary>
         public ConversionRequestPayload()
         {
         }
 
-        private ConversionRequestPayload(string requestId, int transactionId, string signature, DestinationChain destinationChain, bool isRequesting)
+        private ConversionRequestPayload(string requestId, int transactionId, string signature, DestinationChain destinationChain, bool isRequesting, bool isTransfer)
         {
             this.requestId = requestId;
             this.transactionId = transactionId;
             this.signature = signature;
             this.destinationChain = (int)destinationChain;
             this.isRequesting = isRequesting;
+            this.isTransfer = isTransfer;
         }
 
         /// <inheritdoc/>
@@ -49,16 +57,17 @@ namespace Stratis.Bitcoin.Features.Interop.Payloads
             stream.ReadWrite(ref this.signature);
             stream.ReadWrite(ref this.destinationChain);
             stream.ReadWrite(ref this.isRequesting);
+            stream.ReadWrite(ref this.isTransfer);
         }
 
-        public static ConversionRequestPayload Request(string requestId, int transactionId, string signature, DestinationChain destinationChain)
+        public static ConversionRequestPayload Request(string requestId, int transactionId, string signature, DestinationChain destinationChain, bool isTransfer)
         {
-            return new ConversionRequestPayload(requestId, transactionId, signature, destinationChain, true);
+            return new ConversionRequestPayload(requestId, transactionId, signature, destinationChain, true, isTransfer);
         }
 
-        public static ConversionRequestPayload Reply(string requestId, int transactionId, string signature, DestinationChain destinationChain)
+        public static ConversionRequestPayload Reply(string requestId, int transactionId, string signature, DestinationChain destinationChain, bool isTransfer)
         {
-            return new ConversionRequestPayload(requestId, transactionId, signature, destinationChain, false);
+            return new ConversionRequestPayload(requestId, transactionId, signature, destinationChain, false, isTransfer);
         }
 
         /// <inheritdoc/>

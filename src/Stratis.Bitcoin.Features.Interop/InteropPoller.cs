@@ -864,7 +864,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                             if (transactionId2 != BigInteger.MinusOne)
                             {
-                                await this.BroadcastCoordinationVoteRequestAsync(request.RequestId, transactionId2, request.DestinationChain).ConfigureAwait(false);
+                                await this.BroadcastCoordinationVoteRequestAsync(request.RequestId, transactionId2, request.DestinationChain, isTransfer).ConfigureAwait(false);
 
                                 BigInteger agreedTransactionId = this.conversionRequestCoordinationService.GetAgreedTransactionId(request.RequestId, this.interopSettings.GetSettingsByChain(request.DestinationChain).MultisigWalletQuorum);
 
@@ -906,7 +906,7 @@ namespace Stratis.Bitcoin.Features.Interop
                                     // Even though the vote is finalised, other nodes may come and go. So we re-broadcast the finalised votes to all federation peers.
                                     // Nodes will simply ignore the messages if they are not relevant.
 
-                                    await this.BroadcastCoordinationVoteRequestAsync(request.RequestId, transactionId3, request.DestinationChain).ConfigureAwait(false);
+                                    await this.BroadcastCoordinationVoteRequestAsync(request.RequestId, transactionId3, request.DestinationChain, isTransfer).ConfigureAwait(false);
 
                                     // No state transition here, we are waiting for sufficient confirmations.
                                 }
@@ -965,7 +965,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                                     this.conversionRequestCoordinationService.AddVote(request.RequestId, transactionId4, this.federationManager.CurrentFederationKey.PubKey);
 
-                                    await this.BroadcastCoordinationVoteRequestAsync(request.RequestId, transactionId4, request.DestinationChain).ConfigureAwait(false);
+                                    await this.BroadcastCoordinationVoteRequestAsync(request.RequestId, transactionId4, request.DestinationChain, isTransfer).ConfigureAwait(false);
                                 }
 
                                 // No state transition here, as we are waiting for the candidate transactionId to progress to an agreed upon transactionId via a quorum.
@@ -1123,7 +1123,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 // Now we need to broadcast the mint transactionId to the other multisig nodes so that they can sign it off.
                 // TODO: The other multisig nodes must be careful not to blindly trust that any given transactionId relates to a mint transaction. Need to validate the recipient
 
-                await this.BroadcastCoordinationVoteRequestAsync(mintRequestId, mintTransactionId, request.DestinationChain).ConfigureAwait(false);
+                await this.BroadcastCoordinationVoteRequestAsync(mintRequestId, mintTransactionId, request.DestinationChain, false).ConfigureAwait(false);
             }
             else
                 this.logger.Info("Insufficient reserve balance remaining, waiting for originator to initiate mint transaction to replenish reserve.");
@@ -1150,7 +1150,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 {
                     this.logger.Debug("Originator broadcasting id {0}.", mintTransactionId);
 
-                    await this.BroadcastCoordinationVoteRequestAsync(mintRequestId, mintTransactionId, request.DestinationChain).ConfigureAwait(false);
+                    await this.BroadcastCoordinationVoteRequestAsync(mintRequestId, mintTransactionId, request.DestinationChain, false).ConfigureAwait(false);
                 }
                 else
                 {
@@ -1166,7 +1166,7 @@ namespace Stratis.Bitcoin.Features.Interop
                         this.conversionRequestCoordinationService.AddVote(mintRequestId, ourTransactionId, this.federationManager.CurrentFederationKey.PubKey);
 
                         // Broadcast our vote.
-                        await this.BroadcastCoordinationVoteRequestAsync(mintRequestId, ourTransactionId, request.DestinationChain).ConfigureAwait(false);
+                        await this.BroadcastCoordinationVoteRequestAsync(mintRequestId, ourTransactionId, request.DestinationChain, false).ConfigureAwait(false);
                     }
                 }
 
@@ -1227,10 +1227,10 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
-        private async Task BroadcastCoordinationVoteRequestAsync(string requestId, BigInteger transactionId, DestinationChain destinationChain)
+        private async Task BroadcastCoordinationVoteRequestAsync(string requestId, BigInteger transactionId, DestinationChain destinationChain, bool isTransfer)
         {
             string signature = this.federationManager.CurrentFederationKey.SignMessage(requestId + ((int)transactionId));
-            await this.federatedPegBroadcaster.BroadcastAsync(ConversionRequestPayload.Request(requestId, (int)transactionId, signature, destinationChain)).ConfigureAwait(false);
+            await this.federatedPegBroadcaster.BroadcastAsync(ConversionRequestPayload.Request(requestId, (int)transactionId, signature, destinationChain, isTransfer)).ConfigureAwait(false);
         }
 
         private BigInteger CoinsToWei(Money coins)
@@ -1257,7 +1257,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             foreach (ConversionRequest request in requests)
             {
-                benchLog.AppendLine($"Destination: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Chain: {request.DestinationChain} Status: {request.RequestStatus} Amount: {new Money(request.Amount)} Eth Hash: {request.ExternalChainTxHash}");
+                benchLog.AppendLine($"Destination: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Chain: {request.DestinationChain} Status: {request.RequestStatus} Amount: {new Money(request.Amount)} Ext Hash: {request.ExternalChainTxHash}");
             }
 
             benchLog.AppendLine();
