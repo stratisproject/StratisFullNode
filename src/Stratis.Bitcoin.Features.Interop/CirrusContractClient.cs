@@ -341,6 +341,9 @@ namespace Stratis.Bitcoin.Features.Interop
                     .ReceiveJson<LocalExecutionResponse>()
                     .ConfigureAwait(false);
 
+                if (result.Return == null)
+                    return 0;
+
                 return (int)result.Return;
             }
             catch (Exception)
