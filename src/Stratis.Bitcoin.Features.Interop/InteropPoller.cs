@@ -887,7 +887,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             {
                                 // The originator isn't responsible for anything further at this point, except for periodically checking the confirmation count.
                                 // The non-originators also need to monitor the confirmation count so that they know when to mark the transaction as processed locally.
-                                BigInteger confirmationCount = isTransfer ? await this.cirrusClient.GetMultisigConfirmationCountAsync(transactionId3).ConfigureAwait(false) : await clientForDestChain.GetMultisigConfirmationCountAsync(transactionId3).ConfigureAwait(false);
+                                BigInteger confirmationCount = isTransfer ? await this.cirrusClient.GetMultisigConfirmationCountAsync(transactionId3, (ulong)this.chainIndexer.Tip.Height).ConfigureAwait(false) : await clientForDestChain.GetMultisigConfirmationCountAsync(transactionId3).ConfigureAwait(false);
 
                                 if (confirmationCount >= this.interopSettings.GetSettingsByChain(request.DestinationChain).MultisigWalletQuorum)
                                 {
