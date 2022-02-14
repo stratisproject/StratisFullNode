@@ -127,6 +127,11 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
     public class MultisigTransactionIdentifiers
     {
         /// <summary>
+        /// The height of the block which included the transaction containing the multisig contract call (Cirrus or Ethereum).
+        /// </summary>
+        public int BlockHeight { get; internal set; }
+
+        /// <summary>
         /// The hash of the Ethereum transaction containing the multisig contract call.
         /// </summary>
         public string TransactionHash { get; set; }

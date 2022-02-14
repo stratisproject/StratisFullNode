@@ -12,7 +12,6 @@ using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
 using Stratis.Bitcoin.Features.Interop.Settings;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
-using Stratis.Bitcoin.Interfaces;
 using Stratis.SmartContracts;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Serialization;
@@ -56,9 +55,9 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <summary>
         /// Gets the number of on-chain confirmations a given txid has. This would be the number of confirmations on the Cirrus chain.
         /// </summary>
-        /// <param name="transactionHash">The txid of the Cirrus transaction to retrieve the number of confirmations for.</param>
+        /// <param name="blockHeight">The height of the block that included the Cirrus transaction to retrieve the number of confirmations for.</param>
         /// <returns>The number of confirmations, and the block hash the transaction appears in, if any.</returns>
-        Task<(int ConfirmationCount, string BlockHash)> GetConfirmationsAsync(string transactionHash);
+        public (int ConfirmationCount, string BlockHash) GetConfirmations(int blockHeight);
 
         /// <summary>
         /// Retrieves the number of confirmations a given multisig transactionId has. This is retrieved by invoking the Confirmations method of the multisig contract.
@@ -82,7 +81,6 @@ namespace Stratis.Bitcoin.Features.Interop
         public const string SRC20MintMethodName = "Mint";
 
         private readonly CirrusInteropSettings cirrusInteropSettings;
-        private readonly IBlockStore blockStore;
         private readonly ChainIndexer chainIndexer;
         private readonly Serializer serializer;
 
@@ -90,10 +88,9 @@ namespace Stratis.Bitcoin.Features.Interop
         /// The constructor.
         /// </summary>
         /// <param name="interopSettings">The settings for the interoperability feature.</param>
-        public CirrusContractClient(InteropSettings interopSettings, IBlockStore blockStore, ChainIndexer chainIndexer)
+        public CirrusContractClient(InteropSettings interopSettings, ChainIndexer chainIndexer)
         {
             this.cirrusInteropSettings = interopSettings.GetSettings<CirrusInteropSettings>();
-            this.blockStore = blockStore;
             this.chainIndexer = chainIndexer;
             this.serializer = new Serializer(new ContractPrimitiveSerializerV2(this.chainIndexer.Network));
         }
@@ -161,7 +158,7 @@ namespace Stratis.Bitcoin.Features.Interop
                         return new MultisigTransactionIdentifiers
                         {
                             Message = response.Message,
-                            TransactionHash = "",
+                            TransactionHash = response.TransactionId?.ToString(),
                             TransactionId = -1
                         };
                     }
@@ -201,8 +198,9 @@ namespace Stratis.Bitcoin.Features.Interop
                         {
                             return new MultisigTransactionIdentifiers
                             {
+                                BlockHeight = receipt.BlockNumber.HasValue ? (int)receipt.BlockNumber : -1,
                                 Message = $"Error calling the mint smart contract method for '{response.TransactionId}': {receipt.Error}",
-                                TransactionHash = "",
+                                TransactionHash = receipt.TransactionHash,
                                 TransactionId = -1
                             };
                         }
@@ -224,6 +222,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     else
                         return new MultisigTransactionIdentifiers
                         {
+                            BlockHeight = receipt.BlockNumber.HasValue ? (int)receipt.BlockNumber : -1,
                             TransactionHash = receipt.TransactionHash,
                             TransactionId = int.Parse(receipt.ReturnValue)
                         };
@@ -306,14 +305,12 @@ namespace Stratis.Bitcoin.Features.Interop
         }
 
         /// <inheritdoc />
-        public async Task<(int ConfirmationCount, string BlockHash)> GetConfirmationsAsync(string txId)
+        public (int ConfirmationCount, string BlockHash) GetConfirmations(int blockHeight)
         {
-            uint256 block = this.blockStore.GetBlockIdByTransactionId(uint256.Parse(txId));
-
-            if (block == null)
+            if (blockHeight == 0 || blockHeight == -1)
                 return (0, string.Empty);
 
-            ChainedHeader header = this.chainIndexer.GetHeader(block);
+            ChainedHeader header = this.chainIndexer.GetHeader(blockHeight);
 
             int confirmationCount = this.chainIndexer.Height - header.Height;
 
