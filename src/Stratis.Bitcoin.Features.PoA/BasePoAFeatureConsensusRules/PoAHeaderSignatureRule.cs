@@ -76,7 +76,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
             if (diff != 0)
             {
-                this.Logger.LogDebug("Block {0} was mined in the wrong slot the miner '{1}'.", chainedHeader.HashBlock, pubKey.ToHex());
+                this.Logger.LogDebug("Block {0} was mined in the wrong slot by miner '{1}'.", chainedHeader.HashBlock, pubKey.ToHex());
                 this.Logger.LogTrace("(-)[TIME_TOO_EARLY]");
                 ConsensusErrors.BlockTimestampTooEarly.Throw();
             }
