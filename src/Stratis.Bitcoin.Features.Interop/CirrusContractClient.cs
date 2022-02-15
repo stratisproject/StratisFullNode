@@ -70,7 +70,8 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <summary>
         /// Calls the Confirm method on the Cirrus multisig contract, adding a confirmation for the supplied transactionId if invoked by one of the contract owners.
         /// </summary>
-        Task<string> ConfirmTransactionAsync(BigInteger transactionId);
+        /// <returns>If succesfull, the transaction hash of the confirmation transaction, else null and the error message.</returns>
+        Task<(string TransactionHash, string Message)> ConfirmTransactionAsync(BigInteger transactionId);
     }
 
     /// <inheritdoc />
@@ -353,36 +354,84 @@ namespace Stratis.Bitcoin.Features.Interop
         }
 
         /// <inheritdoc />
-        public async Task<string> ConfirmTransactionAsync(BigInteger transactionId)
+        public async Task<(string TransactionHash, string Message)> ConfirmTransactionAsync(BigInteger transactionId)
         {
-            var request = new BuildCallContractTransactionRequest
+            BuildCallContractTransactionResponse response;
+
+            try
             {
-                WalletName = this.cirrusInteropSettings.CirrusWalletCredentials.WalletName,
-                AccountName = this.cirrusInteropSettings.CirrusWalletCredentials.AccountName,
-                ContractAddress = this.cirrusInteropSettings.CirrusMultisigContractAddress,
-                MethodName = MultisigConfirmMethodName,
-                Amount = "0",
-                FeeAmount = "0.04", // TODO: Use proper fee estimation, as the fee may be higher with larger multisigs
-                Password = this.cirrusInteropSettings.CirrusWalletCredentials.WalletPassword,
-                GasPrice = 100,
-                GasLimit = 250_000,
-                Sender = this.cirrusInteropSettings.CirrusSmartContractActiveAddress,
-                Parameters = new string[]
+                var request = new BuildCallContractTransactionRequest
                 {
+                    WalletName = this.cirrusInteropSettings.CirrusWalletCredentials.WalletName,
+                    AccountName = this.cirrusInteropSettings.CirrusWalletCredentials.AccountName,
+                    ContractAddress = this.cirrusInteropSettings.CirrusMultisigContractAddress,
+                    MethodName = MultisigConfirmMethodName,
+                    Amount = "0",
+                    FeeAmount = "0.04", // TODO: Use proper fee estimation, as the fee may be higher with larger multisigs
+                    Password = this.cirrusInteropSettings.CirrusWalletCredentials.WalletPassword,
+                    GasPrice = 100,
+                    GasLimit = 250_000,
+                    Sender = this.cirrusInteropSettings.CirrusSmartContractActiveAddress,
+                    Parameters = new string[]
+                    {
                     // TransactionId - this is the integer assigned by the multisig contract that is used to identify which request is being confirmed
                     "7#" + ((ulong)transactionId).ToString()
+                    }
+                };
+
+                response = await this.cirrusInteropSettings.CirrusClientUrl
+                    .AppendPathSegment("api/smartcontracts/build-and-send-call")
+                    .PostJsonAsync(request)
+                    .ReceiveJson<BuildCallContractTransactionResponse>()
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                return (null, $"Exception occurred trying to build and call the confirmation transaction for '{transactionId}': {ex}");
+            }
+
+            try
+            {
+                // We have to wait for the transaction to be mined.
+                using (CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(180)))
+                {
+                    CirrusReceiptResponse receipt = null;
+
+                    while (true)
+                    {
+                        if (cancellation.IsCancellationRequested)
+                            break;
+
+                        await Task.Delay(TimeSpan.FromSeconds(5));
+
+                        receipt = await this.GetReceiptAsync(response.TransactionId.ToString()).ConfigureAwait(false);
+
+                        if (receipt == null)
+                            continue;
+
+                        // This indicates an issue with the smart contract call, so return the receipt message.
+                        if (!receipt.Success)
+                        {
+                            return (null, $"Error confirming the transfer '{response.TransactionId}': {receipt.Error}");
+                        }
+                        else
+                            break;
+                    }
+
+                    // If we still haven't mined the tx, return a message and fail the transfer.
+                    if (receipt == null)
+                    {
+                        return (null, $"The confirm transaction did not get mined in 180secs or something else went wrong, txid '{response.TransactionId}'.");
+                    }
+                    // Else return the receipt result details.
+                    else
+                        return (receipt.TransactionHash, null);
                 }
-            };
-
-            BuildCallContractTransactionResponse response = await this.cirrusInteropSettings.CirrusClientUrl
-                .AppendPathSegment("api/smartcontracts/build-and-send-call")
-                .PostJsonAsync(request)
-                .ReceiveJson<BuildCallContractTransactionResponse>()
-                .ConfigureAwait(false);
-
-            CirrusReceiptResponse receipt = await this.GetReceiptAsync(response.TransactionId.ToString()).ConfigureAwait(false);
-
-            return receipt.TransactionHash;
+            }
+            catch (Exception ex)
+            {
+                return (null, $"Exception occurred trying to retrieve the receipt: {ex}");
+            }
         }
     }
 

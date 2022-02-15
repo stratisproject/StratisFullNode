@@ -932,7 +932,17 @@ namespace Stratis.Bitcoin.Features.Interop
                                 string confirmationHash;
                                 if (isTransfer)
                                 {
-                                    confirmationHash = await this.cirrusClient.ConfirmTransactionAsync(agreedUponId).ConfigureAwait(false);
+                                    (string TransactionHash, string Message) result = await this.cirrusClient.ConfirmTransactionAsync(agreedUponId).ConfigureAwait(false);
+                                    if (!string.IsNullOrEmpty(result.Message))
+                                    {
+                                        this.logger.Error(result.Message);
+
+                                        request.StatusMessage = result.Message;
+                                        request.RequestStatus = ConversionRequestStatus.Failed;
+                                        break;
+                                    }
+                                    else
+                                        confirmationHash = result.TransactionHash;
                                 }
                                 else
                                 {
