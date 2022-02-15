@@ -174,6 +174,9 @@ namespace Stratis.Bitcoin.Features.Interop
 
             if (payload.IsRequesting)
             {
+                // Execute a small delay to prevent network congestion.
+                await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+
                 string signature = this.federationManager.CurrentFederationKey.SignMessage(payload.RequestId + payload.TransactionId);
                 await this.AttachedPeer.SendMessageAsync(ConversionRequestPayload.Reply(payload.RequestId, payload.TransactionId, signature, payload.DestinationChain, payload.IsTransfer)).ConfigureAwait(false);
             }
@@ -206,7 +209,12 @@ namespace Stratis.Bitcoin.Features.Interop
             // Reply back to the peer with this node's proposal.
             FeeProposalPayload replyToPayload = await this.conversionRequestFeeService.MultiSigMemberProposedInteropFeeAsync(payload.RequestId, payload.FeeAmount, pubKey).ConfigureAwait(false);
             if (payload.IsRequesting && replyToPayload != null)
+            {
+                // Execute a small delay to prevent network congestion.
+                await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+
                 await this.AttachedPeer.SendMessageAsync(replyToPayload).ConfigureAwait(false);
+            }
         }
 
         private async Task ProcessFeeAgreeAsync(FeeAgreePayload payload)
@@ -236,7 +244,12 @@ namespace Stratis.Bitcoin.Features.Interop
             // Reply back to the peer with this node's amount.
             FeeAgreePayload replyToPayload = await this.conversionRequestFeeService.MultiSigMemberAgreedOnInteropFeeAsync(payload.RequestId, payload.FeeAmount, pubKey).ConfigureAwait(false);
             if (payload.IsRequesting && replyToPayload != null)
+            {
+                // Execute a small delay to prevent network congestion.
+                await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+
                 await this.AttachedPeer.SendMessageAsync(replyToPayload).ConfigureAwait(false);
+            }
         }
     }
 }
