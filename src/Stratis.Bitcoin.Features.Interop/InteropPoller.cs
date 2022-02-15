@@ -793,7 +793,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             if (isTransfer)
                             {
                                 // TODO: Make a Cirrus version of SubmitTransactionAsync that can handle more generic operations than just minting
-                                identifiers = await this.cirrusClient.MintAsync(this.interopSettings.GetSettings<CirrusInteropSettings>().CirrusMultisigContractAddress, request.DestinationAddress, Money.Satoshis(request.Amount)).ConfigureAwait(false);
+                                identifiers = await this.cirrusClient.MintAsync(request.TokenContract, request.DestinationAddress, Money.Satoshis(request.Amount)).ConfigureAwait(false);
                             }
                             else
                             {

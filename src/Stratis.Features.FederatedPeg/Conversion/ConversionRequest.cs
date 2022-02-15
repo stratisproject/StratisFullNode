@@ -75,7 +75,9 @@ namespace Stratis.Features.FederatedPeg.Conversion
         public int BlockHeight { get { return this.blockHeight; } set { this.blockHeight = value; } }
 
         /// <summary>
-        /// Either the Ethereum address to send the minted funds to, or the STRAX address to send unwrapped wSTRAX funds to.
+        /// This could be either:
+        /// 1. The Ethereum address to send the minted funds to, or the STRAX address to send unwrapped wSTRAX funds to.
+        /// 2. The Cirrus address to send transfers to.
         /// </summary>
         public string DestinationAddress { get { return this.destinationAddress; } set { this.destinationAddress = value; } }
 
