@@ -820,6 +820,8 @@ namespace Stratis.Bitcoin.Features.Interop
                             if (identifiers.TransactionId == BigInteger.MinusOne)
                             {
                                 this.logger.Error($"Minting on {request.DestinationChain} to address '{request.DestinationAddress}' for {request.Amount} failed: {identifiers.Message}");
+
+                                request.Processed = true;
                                 request.RequestStatus = ConversionRequestStatus.Failed;
                                 request.StatusMessage = identifiers.Message;
 
@@ -934,11 +936,12 @@ namespace Stratis.Bitcoin.Features.Interop
                                 {
                                     (string TransactionHash, string Message) result = await this.cirrusClient.ConfirmTransactionAsync(agreedUponId).ConfigureAwait(false);
 
-                                    // TODO: This needs to be doner better.
-                                    if (!string.IsNullOrEmpty(result.Message) && result.Message != "Cannot confirm an already-executed transaction.")
+                                    // TODO: This needs to be done better.
+                                    if (!string.IsNullOrEmpty(result.Message) && !result.Message.Contains("Cannot confirm an already-executed transaction"))
                                     {
                                         this.logger.Error(result.Message);
 
+                                        request.Processed = true;
                                         request.StatusMessage = result.Message;
                                         request.RequestStatus = ConversionRequestStatus.Failed;
 
