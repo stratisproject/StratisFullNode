@@ -933,12 +933,15 @@ namespace Stratis.Bitcoin.Features.Interop
                                 if (isTransfer)
                                 {
                                     (string TransactionHash, string Message) result = await this.cirrusClient.ConfirmTransactionAsync(agreedUponId).ConfigureAwait(false);
-                                    if (!string.IsNullOrEmpty(result.Message))
+
+                                    // TODO: This needs to be doner better.
+                                    if (!string.IsNullOrEmpty(result.Message) && result.Message != "Cannot confirm an already-executed transaction.")
                                     {
                                         this.logger.Error(result.Message);
 
                                         request.StatusMessage = result.Message;
                                         request.RequestStatus = ConversionRequestStatus.Failed;
+
                                         break;
                                     }
                                     else
