@@ -278,7 +278,7 @@ namespace Stratis.Sidechains.Networks
                 { 3_000_000, new CheckpointInfo(new uint256("0x79afa4a91a24b5e72632ad01d2a18330aecd1bc2cd4eea82eda5e3945fb0b238")) },
                 { 3_200_000, new CheckpointInfo(new uint256("0x6ec55b3b252f45e6677abf553601fb7bc97637319a9646e84d787769afe65988")) },
                 { 3_500_000, new CheckpointInfo(new uint256("0x1772356d6498935ab93cbd5eaf1b868c5265480edeef2b5fec133fbc21b292cb")) },
-                { 3_714_917, new CheckpointInfo(new uint256("0xf116a62f1f736fe30a9257c0020e9ac4699408ebf521634a537333f96a95b174")) }
+                { 3_718_682, new CheckpointInfo(new uint256("0x6aecd4d0e841b64c62d14aa9e84ffbcdf85d3f1e90a077dc0dbd863949c698b4")) }
             };
 
             this.DNSSeeds = new List<DNSSeedData>
