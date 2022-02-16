@@ -181,6 +181,7 @@ namespace Stratis.Sidechains.Networks
                 Release1100ActivationHeight = 3_426_950, // Monday, 20 December 2021 10:00:00 AM (Estimated)
                 PollExpiryBlocks = 50_000, // Roughly 9 days
                 GetMiningTimestampV2ActivationHeight = 3_709_000, // Monday 14 February 00:00:00 (Estimated)
+                GetMiningTimestampV2ActivationStrictHeight = 3_719_500, // Monday 14 February 00:00:00 (Estimated)
                 ContractSerializerV2ActivationHeight = 3_386_335 // Monday 13 December 16:00:00 (Estimated)
             };
 
@@ -277,8 +278,7 @@ namespace Stratis.Sidechains.Networks
                 { 2_827_550, new CheckpointInfo(new uint256("0xcf0ebdd99ec04ef260d22befe70ef7b948e50b5fcc18d9d37376d49e872372a0")) },
                 { 3_000_000, new CheckpointInfo(new uint256("0x79afa4a91a24b5e72632ad01d2a18330aecd1bc2cd4eea82eda5e3945fb0b238")) },
                 { 3_200_000, new CheckpointInfo(new uint256("0x6ec55b3b252f45e6677abf553601fb7bc97637319a9646e84d787769afe65988")) },
-                { 3_500_000, new CheckpointInfo(new uint256("0x1772356d6498935ab93cbd5eaf1b868c5265480edeef2b5fec133fbc21b292cb")) },
-                { 3_718_682, new CheckpointInfo(new uint256("0x6aecd4d0e841b64c62d14aa9e84ffbcdf85d3f1e90a077dc0dbd863949c698b4")) }
+                { 3_500_000, new CheckpointInfo(new uint256("0x1772356d6498935ab93cbd5eaf1b868c5265480edeef2b5fec133fbc21b292cb")) } 
             };
 
             this.DNSSeeds = new List<DNSSeedData>

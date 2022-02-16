@@ -24,6 +24,8 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
         private HashHeightPair lastCheckPoint;
 
+        private PoAConsensusOptions poAConsensusOptions;
+
         /// <inheritdoc />
         public override void Initialize()
         {
@@ -35,6 +37,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             this.slotsManager = engine.SlotsManager;
             this.federationHistory = engine.FederationHistory;
             this.validator = engine.PoaHeaderValidator;
+            this.poAConsensusOptions = engine.Network.Consensus.Options as PoAConsensusOptions;
 
             KeyValuePair<int, CheckpointInfo> lastCheckPoint = engine.Network.Checkpoints.LastOrDefault();
             this.lastCheckPoint = (lastCheckPoint.Value != null) ? new HashHeightPair(lastCheckPoint.Value.Hash, lastCheckPoint.Key) : null;
@@ -78,7 +81,8 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             {
                 this.Logger.LogDebug("Block {0} was mined in the wrong slot by miner '{1}'. The timestamp on the miner's block is {2} seconds earlier than expected.", chainedHeader.Height, pubKey.ToHex(), expectedSlot - chainedHeader.Header.Time);
                 this.Logger.LogTrace("(-)[TIME_TOO_EARLY]");
-                ConsensusErrors.BlockTimestampTooEarly.Throw();
+                if (chainedHeader.Height >= this.poAConsensusOptions.GetMiningTimestampV2ActivationStrictHeight)
+                    ConsensusErrors.BlockTimestampTooEarly.Throw();
             }
 
             return Task.CompletedTask;
