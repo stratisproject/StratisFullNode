@@ -938,6 +938,7 @@ namespace Stratis.Bitcoin.Features.Interop
                                         this.logger.Error(result.Message);
 
                                         request.Processed = true;
+                                        request.StatusMessage = "View log for message.";
                                         request.StatusMessage = result.Message;
                                         request.RequestStatus = ConversionRequestStatus.Failed;
 
