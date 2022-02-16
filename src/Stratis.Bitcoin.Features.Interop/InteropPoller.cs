@@ -224,8 +224,6 @@ namespace Stratis.Bitcoin.Features.Interop
 
                         BigInteger blockHeight = await supportedChain.Value.GetBlockHeightAsync().ConfigureAwait(false);
 
-                        this.logger.Info($"Last polled block for burns and transfers: {this.lastPolledBlock[supportedChain.Key]}; current {supportedChain.Key} chain height: {blockHeight}");
-
                         if (this.lastPolledBlock[supportedChain.Key] < (blockHeight - DestinationChainReorgWindow))
                             await PollBlockForBurnsAndTransfersAsync(supportedChain, blockHeight).ConfigureAwait(false);
                     }
@@ -236,8 +234,6 @@ namespace Stratis.Bitcoin.Features.Interop
                     ConsensusTipModel cirrusTip = await this.cirrusClient.GetConsensusTipAsync().ConfigureAwait(false);
 
                     BigInteger cirrusBlockHeight = cirrusTip.TipHeight;
-
-                    this.logger.Info($"Last polled Cirrus block for burns and transfers: {this.lastPolledBlock[DestinationChain.CIRRUS]}; current Cirrus chain height: {cirrusBlockHeight}");
 
                     if (this.lastPolledBlock[DestinationChain.CIRRUS] < (cirrusBlockHeight - DestinationChainReorgWindow))
                         await PollCirrusForBurnsAsync(cirrusBlockHeight).ConfigureAwait(false);
@@ -325,7 +321,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private async Task PollCirrusForBurnsAsync(BigInteger blockHeight)
         {
-            this.logger.Info("Polling Cirrus block at height {0} for burn transactions.", blockHeight);
+            this.logger.Info($"[CIRRUS] Polling for burns and transfers, last polled block: {this.lastPolledBlock[DestinationChain.CIRRUS]}; chain height: {blockHeight}");
 
             NBitcoin.Block block = await this.cirrusClient.GetBlockByHeightAsync((int)blockHeight).ConfigureAwait(false);
             if (block == null)
@@ -481,7 +477,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private async Task PollBlockForBurnsAndTransfersAsync(KeyValuePair<DestinationChain, IETHClient> supportedChain, BigInteger blockHeight)
         {
-            this.logger.Info("Polling {0} block at height {1} for burn or transfer transactions.", supportedChain.Key, blockHeight);
+            this.logger.Info($"[{supportedChain.Key}] Polling for burns and transfers, last polled block: {this.lastPolledBlock[supportedChain.Key]}; chain height: {blockHeight}");
 
             BlockWithTransactions block = await supportedChain.Value.GetBlockAsync(this.lastPolledBlock[supportedChain.Key]).ConfigureAwait(false);
 
@@ -1273,7 +1269,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             foreach (ConversionRequest request in requests)
             {
-                benchLog.AppendLine($"Destination: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Chain: {request.DestinationChain} Status: {request.RequestStatus} Amount: {new Money(request.Amount)} Ext Hash: {request.ExternalChainTxHash}");
+                benchLog.AppendLine($"Mint To: {request.DestinationChain}] Address: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Amount: {new Money(request.Amount)} Ext Hash: {request.ExternalChainTxHash}");
             }
 
             benchLog.AppendLine();
@@ -1283,6 +1279,7 @@ namespace Stratis.Bitcoin.Features.Interop
             {
                 requests = this.conversionRequestRepository.GetAllBurn(false).OrderByDescending(i => i.BlockHeight).Take(5).ToList();
             }
+
             foreach (ConversionRequest request in requests)
             {
                 benchLog.AppendLine($"Destination: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Processed: {request.Processed} Amount: {new Money(request.Amount)} Height: {request.BlockHeight}");
