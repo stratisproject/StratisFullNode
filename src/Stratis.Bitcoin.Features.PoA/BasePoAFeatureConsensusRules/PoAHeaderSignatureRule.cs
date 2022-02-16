@@ -72,11 +72,11 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 PoAConsensusErrors.InvalidHeaderSignature.Throw();
             }
 
-            uint diff = this.slotsManager.GetMiningTimestamp(chainedHeader.Previous, (uint)(chainedHeader.Previous.Header.Time + this.Parent.ConsensusParams.TargetSpacing.TotalSeconds), pubKey) - chainedHeader.Header.Time;
+            uint expectedSlot = this.slotsManager.GetMiningTimestamp(chainedHeader.Previous, chainedHeader.Header.Time, pubKey);
 
-            if (diff != 0)
+            if (chainedHeader.Header.Time != expectedSlot)
             {
-                this.Logger.LogDebug("Block {0} was mined in the wrong slot by miner '{1}'.", chainedHeader.HashBlock, pubKey.ToHex());
+                this.Logger.LogDebug("Block {0} was mined in the wrong slot by miner '{1}'. The miner was expected to mine at {2}.", chainedHeader.HashBlock, pubKey.ToHex(), expectedSlot);
                 this.Logger.LogTrace("(-)[TIME_TOO_EARLY]");
                 ConsensusErrors.BlockTimestampTooEarly.Throw();
             }
