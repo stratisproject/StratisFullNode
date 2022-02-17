@@ -75,39 +75,13 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 PoAConsensusErrors.InvalidHeaderSignature.Throw();
             }
 
-            // TODO: Remove this code once the last checkpoint exceeds 'GetMiningTimestampV2ActivationStrictHeight'.
-            if (chainedHeader.Height < this.poAConsensusOptions.GetMiningTimestampV2ActivationStrictHeight)
+            if (chainedHeader.Height >= this.poAConsensusOptions.GetMiningTimestampV2ActivationStrictHeight)
             {
-                // Look at the last round of blocks to find the previous time that the miner mined.
-                TimeSpan roundTime = this.slotsManager.GetRoundLength(this.federationHistory.GetFederationForBlock(chainedHeader).Count);
+                uint expectedSlot = this.slotsManager.GetMiningTimestamp(chainedHeader.Previous, chainedHeader.Header.Time, pubKey);
 
-                // Quick check for optimisation.
-                this.federationHistory.GetLastActiveTime(federationMember, chainedHeader.Previous, out uint lastActiveTime);
-                if ((chainedHeader.Header.Time - lastActiveTime) >= roundTime.TotalSeconds)
-                    return Task.CompletedTask;
-
-                int blockCounter = 0;
-
-                for (ChainedHeader prevHeader = chainedHeader.Previous; prevHeader.Previous != null; prevHeader = prevHeader.Previous)
+                if (chainedHeader.Header.Time != expectedSlot)
                 {
-                    blockCounter += 1;
-
-                    if ((header.BlockTime - prevHeader.Header.BlockTime) >= roundTime)
-                        break;
-
-                    // If the miner is found again within the same round then throw a consensus error.
-                    if (this.federationHistory.GetFederationMemberForBlock(prevHeader)?.PubKey != pubKey)
-                        continue;
-
-                    // Mining slots shift when the federation changes. 
-                    // Only raise an error if the federation did not change.
-                    if (this.slotsManager.GetRoundLength(this.federationHistory.GetFederationForBlock(prevHeader).Count) != roundTime)
-                        break;
-
-                    if (this.slotsManager.GetRoundLength(this.federationHistory.GetFederationForBlock(prevHeader.Previous).Count) != roundTime)
-                        break;
-
-                    this.Logger.LogDebug("Block {0} was mined by the same miner '{1}' as {2} blocks ({3})s ago and there was no federation change.", prevHeader.HashBlock, pubKey.ToHex(), blockCounter, header.Time - prevHeader.Header.Time);
+                    this.Logger.LogWarning("Block {0} was mined in the wrong slot by miner '{1}'. The timestamp on the miner's block is {2} seconds earlier than expected.", chainedHeader.Height, pubKey.ToHex(), expectedSlot - chainedHeader.Header.Time);
                     this.Logger.LogTrace("(-)[TIME_TOO_EARLY]");
                     ConsensusErrors.BlockTimestampTooEarly.Throw();
                 }
@@ -115,11 +89,37 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 return Task.CompletedTask;
             }
 
-            uint expectedSlot = this.slotsManager.GetMiningTimestamp(chainedHeader.Previous, chainedHeader.Header.Time, pubKey);
+            // TODO: Remove this code once the last checkpoint exceeds 'GetMiningTimestampV2ActivationStrictHeight'.
+            // Look at the last round of blocks to find the previous time that the miner mined.
+            TimeSpan roundTime = this.slotsManager.GetRoundLength(this.federationHistory.GetFederationForBlock(chainedHeader).Count);
 
-            if (chainedHeader.Header.Time != expectedSlot)
+            // Quick check for optimisation.
+            this.federationHistory.GetLastActiveTime(federationMember, chainedHeader.Previous, out uint lastActiveTime);
+            if ((chainedHeader.Header.Time - lastActiveTime) >= roundTime.TotalSeconds)
+                return Task.CompletedTask;
+
+            int blockCounter = 0;
+
+            for (ChainedHeader prevHeader = chainedHeader.Previous; prevHeader.Previous != null; prevHeader = prevHeader.Previous)
             {
-                this.Logger.LogWarning("Block {0} was mined in the wrong slot by miner '{1}'. The timestamp on the miner's block is {2} seconds earlier than expected.", chainedHeader.Height, pubKey.ToHex(), expectedSlot - chainedHeader.Header.Time);
+                blockCounter += 1;
+
+                if ((header.BlockTime - prevHeader.Header.BlockTime) >= roundTime)
+                    break;
+
+                // If the miner is found again within the same round then throw a consensus error.
+                if (this.federationHistory.GetFederationMemberForBlock(prevHeader)?.PubKey != pubKey)
+                    continue;
+
+                // Mining slots shift when the federation changes. 
+                // Only raise an error if the federation did not change.
+                if (this.slotsManager.GetRoundLength(this.federationHistory.GetFederationForBlock(prevHeader).Count) != roundTime)
+                    break;
+
+                if (this.slotsManager.GetRoundLength(this.federationHistory.GetFederationForBlock(prevHeader.Previous).Count) != roundTime)
+                    break;
+
+                this.Logger.LogDebug("Block {0} was mined by the same miner '{1}' as {2} blocks ({3})s ago and there was no federation change.", prevHeader.HashBlock, pubKey.ToHex(), blockCounter, header.Time - prevHeader.Header.Time);
                 this.Logger.LogTrace("(-)[TIME_TOO_EARLY]");
                 ConsensusErrors.BlockTimestampTooEarly.Throw();
             }
