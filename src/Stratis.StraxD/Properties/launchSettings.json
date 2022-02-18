@@ -1,7 +1,7 @@
 {
   "profiles": {
     "Stratis.StraxD": {
-      "commandName": "Project",
+      "commandName": "Project"
     },
     "Stratis.StraxD Test": {
       "commandName": "Project",
