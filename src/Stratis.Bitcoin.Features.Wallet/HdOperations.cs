@@ -38,6 +38,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <param name="chainCode">The chain code used in creating the extended private key.</param>
         /// <param name="hdPath">The HD path of the account for which to get the extended private key.</param>
         /// <param name="network">The network for which to generate this extended private key.</param>
+        /// <returns>The extended private key for the account.</returns>
         [NoTrace]
         public static ISecret GetExtendedPrivateKey(Key privateKey, byte[] chainCode, string hdPath, Network network)
         {

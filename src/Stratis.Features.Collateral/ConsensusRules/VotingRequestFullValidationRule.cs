@@ -30,6 +30,8 @@ namespace Stratis.Features.Collateral.ConsensusRules
         }
 
         /// <summary>Checks that any voting requests that are present can be decoded and prohibits re-use of collateral addresses.</summary>
+        /// <param name="context">See <see cref="RuleContext"/>.</param>
+        /// <returns>The asynchronous task.</returns>
         public override Task RunAsync(RuleContext context)
         {
             if (this.ibdState.IsInitialBlockDownload())
