@@ -85,11 +85,13 @@ namespace Stratis.Features.FederatedPeg.Conversion
         public DestinationChain DestinationChain { get { return (DestinationChain)this.destinationChain; } set { this.destinationChain = (int)value; } }
 
         /// <summary>
-        /// Amount of the conversion, this is always denominated in satoshi. This needs to be converted to wei for submitting mint transactions.
-        /// Burn transactions are already denominated in wei on the Ethereum chain and thus need to be converted back into satoshi when the
-        /// conversion request is created. Conversions are currently processed 1 ether : 1 STRAX.
+        /// Amount of the conversion, for wSTRAX conversions this is always denominated in satoshi.
+        /// This needs to be converted to wei for submitting wSTRAX mint transactions.
+        /// wSTRAX burn transactions are already denominated in wei on the Ethereum chain and thus need to be converted back into satoshi when the
+        /// conversion request is created.
+        /// For ERC20-SRC20 transfers this amount field is the full-precision integral token amount being transferred, typically 18 decimal places for ERC20.
         /// </summary>
-        public ulong Amount { get { return this.amount; } set { this.amount = value; } }
+        public uint256 Amount { get { return this.amount; } set { this.amount = value; } }
 
         /// <summary>
         /// Indicates whether or not this request has been processed by the interop poller.
@@ -103,13 +105,15 @@ namespace Stratis.Features.FederatedPeg.Conversion
 
         public string TokenContract { get { return this.tokenContract; } set { this.tokenContract = value; } }
 
-        private ulong amount;
+        private uint256 amount;
 
         private int blockHeight;
 
         private string destinationAddress;
 
         private int destinationChain;
+
+        private ulong dummyAmount;
 
         private int externalChainBlockHeight;
 
@@ -136,7 +140,10 @@ namespace Stratis.Features.FederatedPeg.Conversion
             stream.ReadWrite(ref this.requestStatus);
             stream.ReadWrite(ref this.blockHeight);
             stream.ReadWrite(ref this.destinationAddress);
-            stream.ReadWrite(ref this.amount);
+            
+            // This field cannot be removed as it would break the (de)serialisation.
+            stream.ReadWrite(ref this.dummyAmount);
+
             stream.ReadWrite(ref this.processed);
 
             // All new fields MUST be added to the back.
@@ -146,6 +153,14 @@ namespace Stratis.Features.FederatedPeg.Conversion
             ReadWriteNullStringField(stream, ref this.tokenContract);
             ReadWriteNullStringField(stream, ref this.statusMessage);
             ReadWriteNullIntField(stream, ref this.externalChainBlockHeight);
+            ReadWriteNullUInt256Field(stream, ref this.amount);
+
+            // There will be a quantity of conversions that were performed before the introduction of the larger amount field.
+            // So we need to transparently substitute the original ulong amount when deserialising.
+            if (!stream.Serializing && this.amount == null)
+            {
+                this.amount = this.dummyAmount;
+            }
         }
 
         private void ReadWriteNullIntField(BitcoinStream stream, ref int nullField)
@@ -173,6 +188,22 @@ namespace Stratis.Features.FederatedPeg.Conversion
 
                 stream.ReadWrite(ref nullField);
             }
+            else
+            {
+                try
+                {
+                    stream.ReadWrite(ref nullField);
+                }
+                catch (Exception)
+                {
+                }
+            }
+        }
+
+        private void ReadWriteNullUInt256Field(BitcoinStream stream, ref uint256 nullField)
+        {
+            if (stream.Serializing)
+                stream.ReadWrite(ref nullField);
             else
             {
                 try

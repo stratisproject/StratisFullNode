@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using System.Numerics;
+using Newtonsoft.Json;
 using Stratis.Features.FederatedPeg.Conversion;
 
 namespace Stratis.Bitcoin.Features.Interop.Models
@@ -24,7 +25,7 @@ namespace Stratis.Bitcoin.Features.Interop.Models
         public string DestinationChain { get; set; }
 
         [JsonProperty(PropertyName = "amount")]
-        public ulong Amount { get; set; }
+        public BigInteger Amount { get; set; }
 
         [JsonProperty(PropertyName = "processed")]
         public bool Processed { get; set; }
