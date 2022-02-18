@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Utilities;
@@ -26,6 +27,8 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
         private PoAConsensusOptions poAConsensusOptions;
 
+        private NodeDeployments nodeDeployments;
+
         /// <inheritdoc />
         public override void Initialize()
         {
@@ -38,6 +41,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             this.federationHistory = engine.FederationHistory;
             this.validator = engine.PoaHeaderValidator;
             this.poAConsensusOptions = engine.Network.Consensus.Options as PoAConsensusOptions;
+            this.nodeDeployments = engine.NodeDeployments;
 
             KeyValuePair<int, CheckpointInfo> lastCheckPoint = engine.Network.Checkpoints.LastOrDefault();
             this.lastCheckPoint = (lastCheckPoint.Value != null) ? new HashHeightPair(lastCheckPoint.Value.Hash, lastCheckPoint.Key) : null;
@@ -75,7 +79,11 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 PoAConsensusErrors.InvalidHeaderSignature.Throw();
             }
 
-            if (chainedHeader.Height >= this.poAConsensusOptions.GetMiningTimestampV2ActivationStrictHeight)
+            int release1210ActivationHeight = 0;
+            if (this.nodeDeployments?.BIP9.ArraySize > 0 /* Not NoBIP9Deployments */)
+                release1210ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[0 /* Release1210 */].ActivationHeight;
+
+            if (chainedHeader.Height >= release1210ActivationHeight)
             {
                 uint expectedSlot = this.slotsManager.GetMiningTimestamp(chainedHeader.Previous, chainedHeader.Header.Time, pubKey);
 
@@ -89,7 +97,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 return Task.CompletedTask;
             }
 
-            // TODO: Remove this code once the last checkpoint exceeds 'GetMiningTimestampV2ActivationStrictHeight'.
+            // TODO: Remove this code once the last checkpoint exceeds the 1.2.1.0 activation height.
             // Look at the last round of blocks to find the previous time that the miner mined.
             TimeSpan roundTime = this.slotsManager.GetRoundLength(this.federationHistory.GetFederationForBlock(chainedHeader).Count);
 
