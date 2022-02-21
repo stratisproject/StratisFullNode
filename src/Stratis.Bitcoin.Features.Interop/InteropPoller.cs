@@ -1276,7 +1276,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             foreach (ConversionRequest request in requests)
             {
-                benchLog.AppendLine($"Mint To: {request.DestinationChain}] Address: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Amount: {request.Amount.FormatAsFractionalValue(request.DestinationChain == DestinationChain.ETH ? 8 : 18)} Ext Hash: {request.ExternalChainTxHash}");
+                benchLog.AppendLine($"Mint To: {request.DestinationChain} Address: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Amount: {request.Amount.FormatAsFractionalValue(request.DestinationChain == DestinationChain.ETH ? 8 : 18)} Ext Hash: {request.ExternalChainTxHash}");
             }
 
             benchLog.AppendLine();
