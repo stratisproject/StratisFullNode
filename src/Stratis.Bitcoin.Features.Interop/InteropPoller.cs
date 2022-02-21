@@ -548,7 +548,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 }
             }
 
-            this.logger.Info("Conversion burn transaction '{0}' has value {1}.", transactionHash, burn.Amount);
+            this.logger.Info("Conversion burn transaction '{0}' has value {1:F18}.", transactionHash, (decimal)burn.Amount / ((long)Math.Pow(10, 18)));
 
             // Get the destination address recorded in the contract call itself. This has the benefit that subsequent burn calls from the same account providing different addresses will not interfere with this call.
             string destinationAddress = burn.StraxAddress;
@@ -593,7 +593,7 @@ namespace Stratis.Bitcoin.Features.Interop
         }
 
         /// <summary>
-        /// Processes transfer() contract calls made against one of the ERC20 token contracts being monitored by the poller.
+        /// Processes Transfer contract call events made against one of the ERC20 token contracts being monitored by the poller.
         /// </summary>
         /// <remarks>Only transfers affecting the federation multisig wallet contract are processed.</remarks>
         /// <param name="blockHash">The hash of the block the transfer transaction appeared in.</param>
@@ -662,13 +662,17 @@ namespace Stratis.Bitcoin.Features.Interop
 
             lock (this.repositoryLock)
             {
+                byte[] valueBytes = transfer.Value.ToByteArray();
+                byte[] paddedArray = new byte[32];
+                Array.Copy(valueBytes, 0, paddedArray, 0, valueBytes.Length);
+
                 this.conversionRequestRepository.Save(new ConversionRequest()
                 {
                     RequestId = transactionHash,
                     RequestType = ConversionRequestType.Mint,
                     Processed = false,
                     RequestStatus = ConversionRequestStatus.Unprocessed,
-                    Amount = this.ConvertWeiToSatoshi(transfer.Value),
+                    Amount = new uint256(paddedArray),
                     BlockHeight = (int)blockHeight,
                     DestinationAddress = destinationAddress,
                     DestinationChain = DestinationChain.CIRRUS,
@@ -751,7 +755,9 @@ namespace Stratis.Bitcoin.Features.Interop
                     BigInteger balanceRemaining = await clientForDestChain.GetErc20BalanceAsync(this.interopSettings.GetSettingsByChain(request.DestinationChain).MultisigWalletAddress).ConfigureAwait(false);
 
                     // The request is denominated in satoshi and needs to be converted to wei.
-                    BigInteger conversionAmountInWei = this.CoinsToWei(Money.Satoshis(request.Amount));
+
+                    // The request amount is denominated in satoshi, we need to translate this into wei. Following the rule that 1 STRAX = 100_000_000 stratoshi = 1 wSTRAX = 10^18 wei
+                    BigInteger conversionAmountInWei = this.CoinsToWei(request.Amount.GetLow64());
 
                     // We expect that every node will eventually enter this area of the code when the reserve balance is depleted.
                     if (conversionAmountInWei >= balanceRemaining)
@@ -789,7 +795,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             if (isTransfer)
                             {
                                 // TODO: Make a Cirrus version of SubmitTransactionAsync that can handle more generic operations than just minting
-                                identifiers = await this.cirrusClient.MintAsync(request.TokenContract, request.DestinationAddress, Money.Satoshis(request.Amount)).ConfigureAwait(false);
+                                identifiers = await this.cirrusClient.MintAsync(request.TokenContract, request.DestinationAddress, new BigInteger(request.Amount.ToBytes())).ConfigureAwait(false);
                             }
                             else
                             {
@@ -797,7 +803,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                                 // First construct the necessary transfer() transaction data, utilising the ABI of the wrapped STRAX ERC20 contract.
                                 // When this constructed transaction is actually executed, the transfer's source account will be the account executing the transaction i.e. the multisig contract address.
-                                string abiData = clientForDestChain.EncodeTransferParams(request.DestinationAddress, this.CoinsToWei(Money.Satoshis(request.Amount)));
+                                string abiData = clientForDestChain.EncodeTransferParams(request.DestinationAddress, this.CoinsToWei(request.Amount.GetLow64()));
 
                                 int gasPrice = this.externalApiPoller.GetGasPrice();
 
@@ -1246,9 +1252,9 @@ namespace Stratis.Bitcoin.Features.Interop
             await this.federatedPegBroadcaster.BroadcastAsync(ConversionRequestPayload.Request(requestId, (int)transactionId, signature, destinationChain, isTransfer)).ConfigureAwait(false);
         }
 
-        private BigInteger CoinsToWei(Money coins)
+        private BigInteger CoinsToWei(ulong satoshi)
         {
-            BigInteger baseCurrencyUnits = Web3.Convert.ToWei(coins.ToUnit(MoneyUnit.BTC), UnitConversion.EthUnit.Ether);
+            BigInteger baseCurrencyUnits = Web3.Convert.ToWei(Money.Satoshis(satoshi), UnitConversion.EthUnit.Ether);
             return baseCurrencyUnits;
         }
 
@@ -1270,7 +1276,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             foreach (ConversionRequest request in requests)
             {
-                benchLog.AppendLine($"Mint To: {request.DestinationChain} Address: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Amount: {new Money(request.Amount)} Ext Hash: {request.ExternalChainTxHash}");
+                benchLog.AppendLine($"Mint To: {request.DestinationChain}] Address: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Amount: {request.Amount.FormatAsFractionalValue()} Ext Hash: {request.ExternalChainTxHash}");
             }
 
             benchLog.AppendLine();
@@ -1283,7 +1289,8 @@ namespace Stratis.Bitcoin.Features.Interop
 
             foreach (ConversionRequest request in requests)
             {
-                benchLog.AppendLine($"Destination: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Processed: {request.Processed} Amount: {new Money(request.Amount)} Height: {request.BlockHeight}");
+                // TODO: Improve the readability of the amount field
+                benchLog.AppendLine($"Destination: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Processed: {request.Processed} Amount: {request.Amount} Height: {request.BlockHeight}");
             }
 
             benchLog.AppendLine();

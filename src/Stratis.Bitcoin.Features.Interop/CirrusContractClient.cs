@@ -29,10 +29,10 @@ namespace Stratis.Bitcoin.Features.Interop
         /// </summary>
         /// <param name="contractAddress">The SRC20 contract address that tokens should be minted for.</param>
         /// <param name="destinationAddress">The Cirrus address that the SRC20 tokens should be minted and assigned to.</param>
-        /// <param name="amount">The amount of SRC20 tokens that should be minted.</param>
+        /// <param name="amount">The amount of SRC20 tokens that should be minted. This is the full-precision amount multiplied by 10^contract_specific_decimals to give an integral amount.</param>
         /// <returns>The transactionId of the mint request submitted to the Cirrus multisig wallet contract.</returns>
         /// <remarks>The target SRC20 contract must obviously support the IMintable interface.</remarks>
-        Task<MultisigTransactionIdentifiers> MintAsync(string contractAddress, string destinationAddress, Money amount);
+        Task<MultisigTransactionIdentifiers> MintAsync(string contractAddress, string destinationAddress, BigInteger amount);
 
         /// <summary>
         /// Retrieves the receipt for a given smart contract invocation.
@@ -97,7 +97,7 @@ namespace Stratis.Bitcoin.Features.Interop
         }
 
         /// <inheritdoc />
-        public async Task<MultisigTransactionIdentifiers> MintAsync(string contractAddress, string destinationAddress, Money amount)
+        public async Task<MultisigTransactionIdentifiers> MintAsync(string contractAddress, string destinationAddress, BigInteger amount)
         {
             BuildCallContractTransactionResponse response;
             try
@@ -110,7 +110,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 accountBytesPadded[0] = 9; // 9 = Address
                 Array.Copy(accountBytes, 0, accountBytesPadded, 1, accountBytes.Length);
 
-                byte[] amountBytes = this.serializer.Serialize((UInt256)amount.Satoshi);
+                byte[] amountBytes = this.serializer.Serialize(new UInt256(amount.ToByteArray()));
                 byte[] amountBytesPadded = new byte[amountBytes.Length + 1];
                 amountBytesPadded[0] = 12; // 12 = UInt256
                 Array.Copy(amountBytes, 0, amountBytesPadded, 1, amountBytes.Length);
