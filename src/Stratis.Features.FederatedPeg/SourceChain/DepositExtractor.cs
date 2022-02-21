@@ -121,7 +121,8 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             {
                 if (inspectForDepositsAtHeight == burnRequest.BlockHeight)
                 {
-                    this.logger.LogInformation($"Processing burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' for {burnRequest.Amount} STRAX at height {inspectForDepositsAtHeight}.");
+                    // Note: the wei-to-satoshi scaling has already been performed inside the InteropPoller.
+                    this.logger.LogInformation($"Processing burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' for {burnRequest.Amount.FormatAsFractionalValue(8)} STRAX at height {inspectForDepositsAtHeight}.");
 
                     Deposit deposit = CreateDeposit(burnRequest, inspectForDepositsAtHeight);
                     if (deposit == null)

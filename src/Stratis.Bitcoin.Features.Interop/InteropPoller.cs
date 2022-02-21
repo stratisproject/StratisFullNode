@@ -548,7 +548,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 }
             }
 
-            this.logger.Info("Conversion burn transaction '{0}' has value {1}.", transactionHash, burn.Amount);
+            this.logger.Info("Conversion burn transaction '{0}' has value {1:F18}.", transactionHash, (decimal)burn.Amount / ((long)Math.Pow(10, 18)));
 
             // Get the destination address recorded in the contract call itself. This has the benefit that subsequent burn calls from the same account providing different addresses will not interfere with this call.
             string destinationAddress = burn.StraxAddress;
@@ -1276,8 +1276,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             foreach (ConversionRequest request in requests)
             {
-                // TODO: Improve the readability of the amount field
-                benchLog.AppendLine($"Mint To: {request.DestinationChain}] Address: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Amount: {request.Amount} Ext Hash: {request.ExternalChainTxHash}");
+                benchLog.AppendLine($"Mint To: {request.DestinationChain}] Address: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Amount: {request.Amount.FormatAsFractionalValue()} Ext Hash: {request.ExternalChainTxHash}");
             }
 
             benchLog.AppendLine();
