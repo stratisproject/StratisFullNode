@@ -157,7 +157,7 @@ namespace Stratis.Features.FederatedPeg.Conversion
 
             // There will be a quantity of conversions that were performed before the introduction of the larger amount field.
             // So we need to transparently substitute the original ulong amount when deserialising.
-            if (!stream.Serializing && this.amount == null)
+            if (!stream.Serializing && this.amount == uint256.Zero)
             {
                 this.amount = this.dummyAmount;
             }
