@@ -24,6 +24,8 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
         private HashHeightPair lastCheckPoint;
 
+        private PoAConsensusOptions poAConsensusOptions;
+
         /// <inheritdoc />
         public override void Initialize()
         {
@@ -35,6 +37,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             this.slotsManager = engine.SlotsManager;
             this.federationHistory = engine.FederationHistory;
             this.validator = engine.PoaHeaderValidator;
+            this.poAConsensusOptions = engine.Network.Consensus.Options as PoAConsensusOptions;
 
             KeyValuePair<int, CheckpointInfo> lastCheckPoint = engine.Network.Checkpoints.LastOrDefault();
             this.lastCheckPoint = (lastCheckPoint.Value != null) ? new HashHeightPair(lastCheckPoint.Value.Hash, lastCheckPoint.Key) : null;
@@ -72,6 +75,21 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 PoAConsensusErrors.InvalidHeaderSignature.Throw();
             }
 
+            if (chainedHeader.Height >= this.poAConsensusOptions.GetMiningTimestampV2ActivationStrictHeight)
+            {
+                uint expectedSlot = this.slotsManager.GetMiningTimestamp(chainedHeader.Previous, chainedHeader.Header.Time, pubKey);
+
+                if (chainedHeader.Header.Time != expectedSlot)
+                {
+                    this.Logger.LogWarning("Block {0} was mined in the wrong slot by miner '{1}'. The timestamp on the miner's block is {2} seconds earlier than expected.", chainedHeader.Height, pubKey.ToHex(), expectedSlot - chainedHeader.Header.Time);
+                    this.Logger.LogTrace("(-)[TIME_TOO_EARLY]");
+                    ConsensusErrors.BlockTimestampTooEarly.Throw();
+                }
+
+                return Task.CompletedTask;
+            }
+
+            // TODO: Remove this code once the last checkpoint exceeds 'GetMiningTimestampV2ActivationStrictHeight'.
             // Look at the last round of blocks to find the previous time that the miner mined.
             TimeSpan roundTime = this.slotsManager.GetRoundLength(this.federationHistory.GetFederationForBlock(chainedHeader).Count);
 
