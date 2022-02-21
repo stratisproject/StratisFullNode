@@ -18,6 +18,13 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <returns>The next timestamp at which current node can produce a block.</returns>
         uint GetMiningTimestamp(uint currentTime);
 
+        /// <summary>Gets next timestamp at which the miner can produce a block.</summary>
+        /// <param name="tip">The previous/last block produced.</param>
+        /// <param name="currentTime">The current unix timestamp.</param>
+        /// <param name="currentMiner">The miner to find the timestamp for.</param>
+        /// <returns>The next timestamp at which the miner can produce a block.</returns>
+        uint GetMiningTimestamp(ChainedHeader tip, uint currentTime, PubKey currentMiner);
+
         /// <summary>Determines whether timestamp is valid according to the network rules.</summary>
         /// <param name="headerUnixTimestamp">The unix timstamp of a block header.</param>
         /// <returns><c>True</c> if the timestamp is valid and <c>false</c> otherwise.</returns>
@@ -46,7 +53,17 @@ namespace Stratis.Bitcoin.Features.PoA
             this.consensusOptions = (network as PoANetwork).ConsensusOptions;
         }
 
+        /// <inheritdoc/>
         public uint GetMiningTimestamp(uint currentTime)
+        {
+            if (!this.federationManager.IsFederationMember)
+                throw new NotAFederationMemberException();
+
+            return GetMiningTimestamp(this.chainIndexer.Tip, currentTime, this.federationManager.CurrentFederationKey?.PubKey);
+        }
+
+        /// <inheritdoc/>
+        public uint GetMiningTimestamp(ChainedHeader tip, uint currentTime, PubKey currentMiner)
         {
             /*
             A miner can calculate when its expected to mine by looking at the ordered list of federation members
@@ -56,15 +73,14 @@ namespace Stratis.Bitcoin.Features.PoA
             The miner that mined the last block may no longer exist when the next block is about to be mined. As such
             we may need to look a bit further back to find a "reference miner" that still occurs in the latest federation.
             */
-            ChainedHeader tip = this.chainIndexer.Tip;
             if (tip.Height < this.consensusOptions.GetMiningTimestampV2ActivationHeight)
-                return GetMiningTimestampLegacy(currentTime);
+                return GetMiningTimestampLegacy(tip, currentTime, currentMiner);
 
             List<IFederationMember> federationMembers = this.federationHistory.GetFederationForBlock(tip, 1);
             if (federationMembers == null)
                 throw new Exception($"Could not determine the federation at block { tip.Height } + 1.");
 
-            int myIndex = federationMembers.FindIndex(m => m.PubKey == this.federationManager.CurrentFederationKey?.PubKey);
+            int myIndex = federationMembers.FindIndex(m => m.PubKey == currentMiner);
             if (myIndex < 0)
                 throw new NotAFederationMemberException();
 
@@ -110,18 +126,15 @@ namespace Stratis.Bitcoin.Features.PoA
             return nextTimestampForMining;
         }
 
-        private uint GetMiningTimestampLegacy(uint currentTime)
+        private uint GetMiningTimestampLegacy(ChainedHeader tip, uint currentTime, PubKey currentMiner)
         {
-            if (!this.federationManager.IsFederationMember)
-                throw new NotAFederationMemberException();
-
-            List<IFederationMember> federationMembers = this.federationManager.GetFederationMembers();
+            List<IFederationMember> federationMembers = this.federationHistory.GetFederationForBlock(tip, 1);
 
             // Round length in seconds.
             uint roundTime = (uint)this.GetRoundLength(federationMembers.Count).TotalSeconds;
 
             // Index of a slot that current node can take in each round.
-            uint slotIndex = (uint)federationMembers.FindIndex(x => x.PubKey == this.federationManager.CurrentFederationKey.PubKey);
+            uint slotIndex = (uint)federationMembers.FindIndex(x => x.PubKey == currentMiner);
 
             // Time when current round started.
             uint roundStartTimestamp = (currentTime / roundTime) * roundTime;
@@ -131,7 +144,7 @@ namespace Stratis.Bitcoin.Features.PoA
             // We still consider ourselves "in a turn" if we are in the first half of the turn and we haven't mined there yet.
             // This might happen when starting the node for the first time or if there was a problem when mining.
             if (currentTime > nextTimestampForMining + (this.consensusOptions.TargetSpacingSeconds / 2) // We are closer to the next turn than our own
-                  || this.chainIndexer.Tip.Header.Time == nextTimestampForMining) // We have already mined in that slot
+                  || tip.Header.Time == nextTimestampForMining) // We have already mined in that slot
             {
                 // Get timestamp for next round.
                 nextTimestampForMining = roundStartTimestamp + roundTime + slotIndex * this.consensusOptions.TargetSpacingSeconds;
