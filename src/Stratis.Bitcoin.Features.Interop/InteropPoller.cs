@@ -1276,7 +1276,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             foreach (ConversionRequest request in requests)
             {
-                benchLog.AppendLine($"Mint To: {request.DestinationChain} Address: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Amount: {request.Amount.FormatAsFractionalValue()} Ext Hash: {request.ExternalChainTxHash}");
+                benchLog.AppendLine($"Mint To: {request.DestinationChain} Address: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Amount: {request.Amount.FormatAsFractionalValue(request.DestinationChain == DestinationChain.ETH ? 8 : 18)} Ext Hash: {request.ExternalChainTxHash}");
             }
 
             benchLog.AppendLine();
@@ -1289,10 +1289,9 @@ namespace Stratis.Bitcoin.Features.Interop
 
             foreach (ConversionRequest request in requests)
             {
-                // TODO: Improve the readability of the amount field
-                benchLog.AppendLine($"Destination: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Processed: {request.Processed} Amount: {request.Amount} Height: {request.BlockHeight}");
+                benchLog.AppendLine($"Destination: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Processed: {request.Processed} Amount: {request.Amount.FormatAsFractionalValue(request.DestinationChain == DestinationChain.STRAX ? 8 : 18)} Height: {request.BlockHeight}");
             }
-
+            
             benchLog.AppendLine();
         }
 
