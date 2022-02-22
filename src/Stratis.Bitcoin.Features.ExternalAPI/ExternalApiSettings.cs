@@ -66,9 +66,9 @@ namespace Stratis.Bitcoin.Features.ExternalApi
             // To avoid any rate limiting by Etherscan it is better to have an API key defined, but the API is still supposed to work to a limited extent without one.
             this.EtherscanApiKey = nodeSettings.ConfigReader.GetOrDefault(EtherscanApiKeyKey, "YourApiKeyToken");
             this.EtherscanGasOracleUrl = nodeSettings.ConfigReader.GetOrDefault(EtherscanGasOracleUrlKey, "https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=" + this.EtherscanApiKey);
-            this.EthereumGasPriceTracking = nodeSettings.ConfigReader.GetOrDefault(EthereumGasPriceTrackingKey, true);
+            this.EthereumGasPriceTracking = nodeSettings.ConfigReader.GetOrDefault(EthereumGasPriceTrackingKey, false);
             this.PriceUrl = nodeSettings.ConfigReader.GetOrDefault(PriceUrlKey, "https://api.coingecko.com/api/v3/simple/price?ids=stratis,ethereum&vs_currencies=usd");
-            this.PriceTracking = nodeSettings.ConfigReader.GetOrDefault(PriceTrackingKey, true);
+            this.PriceTracking = nodeSettings.ConfigReader.GetOrDefault(PriceTrackingKey, false);
         }
     }
 }

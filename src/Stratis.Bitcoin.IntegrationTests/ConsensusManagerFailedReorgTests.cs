@@ -362,6 +362,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         /// 12 -> Header Only
         /// 13 -> Header Only
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task Reorg_FailsFV_ChainHasBlocksAndHeadersOnly_DisconnectedAsync()
         {
