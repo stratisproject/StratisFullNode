@@ -42,9 +42,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
                     TxIndex = true
                 })
                 .AddService(new DataFolder(TestBase.CreateTestDir(this)))
-                .AddService(new ChainIndexer(this.network))
-                .AddService<IDateTimeProvider>(new DateTimeProvider())
-                .AddService<IConsensusManager>();
+                .AddService<ChainIndexer>(typeof(ChainIndexer).GetConstructor(new[] { typeof(Network) }))
+                .AddService<IDateTimeProvider>(new DateTimeProvider());
 
             this.addressIndexer = mockingContext.GetService<IAddressIndexer>(typeof(AddressIndexer));
 

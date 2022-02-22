@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 
@@ -22,6 +23,8 @@ namespace Stratis.Bitcoin.Tests.Common
 
         private object GetMock(Type serviceType)
         {
+            GetService(serviceType);
+
             Type mockType = MockType(serviceType);
             return this.serviceCollection.SingleOrDefault(s => s.ServiceType == mockType)?.ImplementationInstance;
         }
@@ -31,7 +34,7 @@ namespace Stratis.Bitcoin.Tests.Common
             return (Mock<T>)GetMock(typeof(T));
         }
 
-        private object GetService(Type serviceType, Type implementationType = null)
+        private object GetService(Type serviceType, Type implementationType = null, ConstructorInfo constructorInfo = null)
         {
             var service = this.serviceCollection.SingleOrDefault(s => s.ServiceType == serviceType)?.ImplementationInstance;
             if (service != null)
@@ -48,7 +51,7 @@ namespace Stratis.Bitcoin.Tests.Common
             }
             else
             {
-                object[] args = implementationType.GetConstructors().Single().GetParameters().Select(p => GetService(p.ParameterType)).ToArray();
+                object[] args = (constructorInfo ?? implementationType.GetConstructors().Single()).GetParameters().Select(p => GetService(p.ParameterType)).ToArray();
                 service = Activator.CreateInstance(implementationType, args);
             }
 
@@ -64,13 +67,26 @@ namespace Stratis.Bitcoin.Tests.Common
 
         public MockingContext AddService<T>() where T : class
         {
-            this.serviceCollection.AddSingleton(typeof(T));
+            GetService(typeof(T));
+            return this;
+        }
+
+        public MockingContext AddService<T>(ConstructorInfo constructorInfo) where T : class
+        {
+            GetService(typeof(T), constructorInfo.DeclaringType, constructorInfo);
+            return this;
+        }
+
+        public MockingContext AddService<T>(Type implementationType) where T : class
+        {
+            GetService(typeof(T), implementationType);
             return this;
         }
 
         public MockingContext AddService<T>(T implementationInstance) where T : class
         {
             this.serviceCollection.AddSingleton(typeof(T), implementationInstance);
+
             return this;
         }
 
