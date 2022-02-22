@@ -29,8 +29,6 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
         private readonly ChainedHeader genesisHeader;
 
-        private readonly MockingContext mockingContext;
-
         public AddressIndexerTests()
         {
             this.network = new StraxMain();
@@ -42,14 +40,12 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
                     TxIndex = true
                 })
                 .AddService(new DataFolder(TestBase.CreateTestDir(this)))
-                .AddService<ChainIndexer>(typeof(ChainIndexer).GetConstructor(new[] { typeof(Network) }))
+                .AddService(new ChainIndexer(this.network))
                 .AddService<IDateTimeProvider>(new DateTimeProvider());
 
-            this.addressIndexer = mockingContext.GetService<IAddressIndexer>(typeof(AddressIndexer));
-
-            this.genesisHeader = new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().Header.GetHash(), 0);
-            this.mockingContext = mockingContext;
-            this.consensusManagerMock = this.mockingContext.GetMock<IConsensusManager>();
+            this.addressIndexer = mockingContext.GetService<IAddressIndexer>(typeof(AddressIndexer), addIfNotExists: true);
+            this.genesisHeader = mockingContext.GetService<ChainIndexer>().GetHeader(0);
+            this.consensusManagerMock = mockingContext.GetMock<IConsensusManager>();
         }
 
         [Fact]

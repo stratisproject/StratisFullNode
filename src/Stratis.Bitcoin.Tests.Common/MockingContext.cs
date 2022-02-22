@@ -3,6 +3,7 @@ using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Tests.Common
 {
@@ -23,7 +24,7 @@ namespace Stratis.Bitcoin.Tests.Common
 
         private object GetMock(Type serviceType)
         {
-            GetService(serviceType);
+            GetOrAddService(serviceType);
 
             Type mockType = MockType(serviceType);
             return this.serviceCollection.SingleOrDefault(s => s.ServiceType == mockType)?.ImplementationInstance;
@@ -31,13 +32,19 @@ namespace Stratis.Bitcoin.Tests.Common
 
         public Mock<T> GetMock<T>() where T : class
         {
+            Guard.Assert(typeof(T).IsInterface);
+
             return (Mock<T>)GetMock(typeof(T));
         }
 
-        private object GetService(Type serviceType, Type implementationType = null, ConstructorInfo constructorInfo = null)
+        private object GetOrAddService(Type serviceType, Type implementationType = null, ConstructorInfo constructorInfo = null, bool allowAdd = true)
         {
-            var service = this.serviceCollection.SingleOrDefault(s => s.ServiceType == serviceType)?.ImplementationInstance;
-            if (service != null)
+            var service = this.serviceCollection
+                .Where(s => s.ServiceType == serviceType)
+                .Where(s => (implementationType == null && constructorInfo == null) || s.ImplementationType == (implementationType ?? constructorInfo.DeclaringType))
+                .SingleOrDefault()?.ImplementationInstance;
+
+            if (service != null || !allowAdd)
                 return service;
 
             implementationType ??= serviceType;
@@ -51,7 +58,7 @@ namespace Stratis.Bitcoin.Tests.Common
             }
             else
             {
-                object[] args = (constructorInfo ?? implementationType.GetConstructors().Single()).GetParameters().Select(p => GetService(p.ParameterType)).ToArray();
+                object[] args = (constructorInfo ?? implementationType.GetConstructors().Single()).GetParameters().Select(p => GetOrAddService(p.ParameterType)).ToArray();
                 service = Activator.CreateInstance(implementationType, args);
             }
 
@@ -60,26 +67,28 @@ namespace Stratis.Bitcoin.Tests.Common
             return service;
         }
 
-        public T GetService<T>(Type implementationType = null) where T : class
+        public T GetService<T>(Type implementationType = null, bool addIfNotExists = false) where T : class
         {
-            return (T)GetService(typeof(T), implementationType);
+            return (T)GetOrAddService(typeof(T), implementationType, allowAdd: addIfNotExists);
         }
 
         public MockingContext AddService<T>() where T : class
         {
-            GetService(typeof(T));
+            Guard.Assert(typeof(T).IsInterface);
+
+            GetOrAddService(typeof(T));
             return this;
         }
 
         public MockingContext AddService<T>(ConstructorInfo constructorInfo) where T : class
         {
-            GetService(typeof(T), constructorInfo.DeclaringType, constructorInfo);
+            GetOrAddService(typeof(T), constructorInfo.DeclaringType, constructorInfo);
             return this;
         }
 
         public MockingContext AddService<T>(Type implementationType) where T : class
         {
-            GetService(typeof(T), implementationType);
+            GetOrAddService(typeof(T), implementationType);
             return this;
         }
 
