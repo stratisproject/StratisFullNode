@@ -120,7 +120,8 @@ namespace Stratis.Bitcoin.Features.Interop
             if (!this.federationManager.IsFederationMember)
                 return;
 
-            this.logger.LogDebug("Conversion request payload request for id '{0}' received from '{1}':'{2}' proposing transaction ID '{3}', (IsTransfer: {4}).", payload.RequestId, peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, payload.RequestId, payload.TransactionId, payload.IsTransfer);
+            this.logger.LogDebug($"Conversion request payload request for id '{payload.RequestId}' received from '{peer.PeerEndPoint.Address}':'{peer.RemoteSocketEndpoint.Address}' proposing transaction ID '{payload.TransactionId}', (IsTransfer: {payload.IsTransfer}).");
+
             if (payload.TransactionId == BigInteger.MinusOne)
                 return;
 
