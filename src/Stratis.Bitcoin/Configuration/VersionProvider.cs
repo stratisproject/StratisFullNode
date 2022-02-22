@@ -12,7 +12,7 @@ namespace Stratis.Bitcoin.Configuration
             string minor = match.Groups[3].Value;
             string build = match.Groups[5].Value;
             string revision = match.Groups[7].Value;
-            return $"{major}.{minor}.{build}.{revision}";
+            return $"{major}.{minor}.{build}.{revision}-dev";
         }
     }
 }
