@@ -129,6 +129,7 @@ namespace Stratis.Sidechains.Networks
                 votingManagerV2ActivationHeight: 1_999_500,
                 release1100ActivationHeight: 2_796_000,
                 getMiningTimestampV2ActivationHeight: 3_000_000, // 15 January 2022
+                getMiningTimestampV2ActivationStrictHeight: 3_121_500, // 17 January 2022
                 pollExpiryBlocks: 450, // 2 hours
                 contractSerializerV2ActivationHeight: 2_842_681
             );

@@ -62,6 +62,12 @@ namespace Stratis.Bitcoin.Features.PoA
         public int GetMiningTimestampV2ActivationHeight { get; protected set; }
 
         /// <summary>
+        /// The height at which inituitive mining slots are enfored without any lenience.
+        /// Currently errors are sometimes suppressed if a federation change occurred.
+        /// </summary>
+        public int GetMiningTimestampV2ActivationStrictHeight { get; set; }
+
+        /// <summary>
         /// Logic related to release 1.1.0.0 will activate at this height, this includes Poll Expiry and the Join Federation Voting Request consensus rule.
         /// </summary>
         public int Release1100ActivationHeight { get; protected set; }
@@ -95,6 +101,7 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <param name="votingManagerV2ActivationHeight"><see cref="VotingManagerV2ActivationHeight"/>.</param>
         /// <param name="interFluxV2MainChainActivationHeight"><see cref="InterFluxV2MainChainActivationHeight"/>.</param>
         /// <param name="getMiningTimestampV2ActivationHeight"><see cref="GetMiningTimestampV2ActivationHeight"/>.</param>
+        /// <param name="getMiningTimestampV2ActivationStrictHeight"><see cref="GetMiningTimestampV2ActivationStrictHeight"/>.</param>
         /// <param name="release1100ActivationHeight"><see cref="Release1100ActivationHeight"/>.</param>
         /// <param name="pollExpiryBlocks"><see cref="PollExpiryBlocks"/>.</param>
         /// <param name="contractSerializerV2ActivationHeight"><see cref="ContractSerializerV2ActivationHeight"/>.</param>
@@ -115,6 +122,7 @@ namespace Stratis.Bitcoin.Features.PoA
             int? votingManagerV2ActivationHeight = null,
             int? interFluxV2MainChainActivationHeight = null,
             int? getMiningTimestampV2ActivationHeight = null,
+            int? getMiningTimestampV2ActivationStrictHeight = null,
             int? release1100ActivationHeight = null,
             int? pollExpiryBlocks = null,
             int? contractSerializerV2ActivationHeight = null)
@@ -137,6 +145,8 @@ namespace Stratis.Bitcoin.Features.PoA
                 this.InterFluxV2MainChainActivationHeight = interFluxV2MainChainActivationHeight.Value;
             if (getMiningTimestampV2ActivationHeight.HasValue)
                 this.GetMiningTimestampV2ActivationHeight = getMiningTimestampV2ActivationHeight.Value;
+            if (getMiningTimestampV2ActivationStrictHeight.HasValue)
+                this.GetMiningTimestampV2ActivationStrictHeight = getMiningTimestampV2ActivationStrictHeight.Value;
             if (votingManagerV2ActivationHeight.HasValue)
                 this.VotingManagerV2ActivationHeight = votingManagerV2ActivationHeight.Value;
             if (release1100ActivationHeight.HasValue)
