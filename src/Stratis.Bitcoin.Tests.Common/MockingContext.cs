@@ -75,11 +75,6 @@ namespace Stratis.Bitcoin.Tests.Common
             return this;
         }
 
-        public MockingContext AddService<T>(Func<T> implementationInstance) where T : class
-        {
-            return AddService<T>(implementationInstance?.Invoke());
-        }
-
         public void Dispose()
         {
             this.serviceCollection.Clear();
