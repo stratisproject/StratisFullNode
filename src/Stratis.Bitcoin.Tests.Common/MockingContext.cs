@@ -31,7 +31,7 @@ namespace Stratis.Bitcoin.Tests.Common
             return (Mock<T>)GetMock(typeof(T));
         }
 
-        public object GetService(Type serviceType, Type? implementationType = null)
+        public object GetService(Type serviceType, Type implementationType = null)
         {
             var service = this.serviceCollection.SingleOrDefault(s => s.ServiceType == serviceType)?.ImplementationInstance;
             if (service != null)
@@ -58,7 +58,7 @@ namespace Stratis.Bitcoin.Tests.Common
             return service;
         }
 
-        public T GetService<T>(Type? implementationType = null) where T : class
+        public T GetService<T>(Type implementationType = null) where T : class
         {
             return (T)GetService(typeof(T), implementationType);
         }
