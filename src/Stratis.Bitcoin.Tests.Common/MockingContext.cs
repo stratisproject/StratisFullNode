@@ -20,7 +20,7 @@ namespace Stratis.Bitcoin.Tests.Common
 
         private Type MockType(Type serviceType) => typeof(Mock<>).MakeGenericType(serviceType);
 
-        public object GetMock(Type serviceType)
+        private object GetMock(Type serviceType)
         {
             Type mockType = MockType(serviceType);
             return this.serviceCollection.SingleOrDefault(s => s.ServiceType == mockType)?.ImplementationInstance;
@@ -31,7 +31,7 @@ namespace Stratis.Bitcoin.Tests.Common
             return (Mock<T>)GetMock(typeof(T));
         }
 
-        public object GetService(Type serviceType, Type implementationType = null)
+        private object GetService(Type serviceType, Type implementationType = null)
         {
             var service = this.serviceCollection.SingleOrDefault(s => s.ServiceType == serviceType)?.ImplementationInstance;
             if (service != null)
@@ -39,20 +39,19 @@ namespace Stratis.Bitcoin.Tests.Common
 
             implementationType ??= serviceType;
 
-            if (!implementationType.IsInterface)
+            if (implementationType.IsInterface)
+            {
+                Type mockType = MockType(implementationType);
+                var mock = Activator.CreateInstance(mockType);
+                service = ((dynamic)mock).Object;
+                this.serviceCollection.AddSingleton(mockType, mock);
+            }
+            else
             {
                 object[] args = implementationType.GetConstructors().Single().GetParameters().Select(p => GetService(p.ParameterType)).ToArray();
                 service = Activator.CreateInstance(implementationType, args);
-                this.serviceCollection.AddSingleton(serviceType, service);
-                return service;
             }
 
-            Type mockType = MockType(implementationType);
-            var mock = Activator.CreateInstance(mockType);
-
-            service = ((dynamic)mock).Object;
-
-            this.serviceCollection.AddSingleton(mockType, mock);
             this.serviceCollection.AddSingleton(serviceType, service);
 
             return service;
