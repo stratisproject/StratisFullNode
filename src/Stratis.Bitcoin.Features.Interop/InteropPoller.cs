@@ -144,7 +144,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             if (!this.federationManager.IsFederationMember)
             {
-                this.logger.Debug("Not a federation member.");
+                this.logger.Warn("Not a federation member.");
                 return;
             }
 
@@ -210,7 +210,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     return;
                 }
 
-                this.logger.Info("Executing check for any burns or transfers.");
+                this.logger.Debug("Executing check for any burns or transfers.");
 
                 // In the event that the last polled block was set back a considerable distance from the tip, we need to first catch up faster.
                 // If we are already in the acceptable range, the usual logic will apply.
@@ -761,7 +761,10 @@ namespace Stratis.Bitcoin.Features.Interop
 
                     // We expect that every node will eventually enter this area of the code when the reserve balance is depleted.
                     if (conversionAmountInWei >= balanceRemaining)
+                    {
+                        this.logger.Debug($"Initiating replenishment; {nameof(conversionAmountInWei)}={conversionAmountInWei} {nameof(balanceRemaining)}={balanceRemaining}");
                         await this.PerformReplenishmentAsync(request, conversionAmountInWei, balanceRemaining, originator).ConfigureAwait(false);
+                    }
                 }
 
                 // The state machine gets shared between wSTRAX minting transactions, and ERC20/SRC20 transfers.
@@ -1108,7 +1111,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             if (originator)
             {
-                this.logger.Info("Insufficient reserve balance remaining, initiating mint transaction to replenish reserve.");
+                this.logger.Info($"Insufficient reserve balance remaining, initiating mint transaction to replenish reserve.");
 
                 // By minting the request amount + the reserve requirement, we cater for arbitrarily large amounts in the request.
                 string mintData = this.ethClientProvider.GetClientForChain(request.DestinationChain).EncodeMintParams(this.interopSettings.GetSettingsByChain(request.DestinationChain).MultisigWalletAddress, amountInWei + this.ReserveBalanceTarget);
@@ -1291,7 +1294,7 @@ namespace Stratis.Bitcoin.Features.Interop
             {
                 benchLog.AppendLine($"Destination: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Processed: {request.Processed} Amount: {request.Amount.FormatAsFractionalValue(request.DestinationChain == DestinationChain.STRAX ? 8 : 18)} Height: {request.BlockHeight}");
             }
-            
+
             benchLog.AppendLine();
         }
 
