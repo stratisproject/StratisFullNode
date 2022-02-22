@@ -257,8 +257,8 @@ namespace Stratis.Bitcoin.Consensus
 
             uint256 hashToBan = validationContext.ChainedHeaderToValidate.HashBlock;
 
-            this.logger.LogWarning("Marking '{0}' invalid.", hashToBan);
-            this.invalidBlockHashStore.MarkInvalid(hashToBan, validationContext.RejectUntil);
+            this.logger.LogWarning("Marking '{0}' invalid with reason '{1}'.", hashToBan, validationContext.Error.Message);
+            this.invalidBlockHashStore.MarkInvalid(hashToBan, validationContext.RejectUntil, validationContext.Error);
         }
 
         private void ExecuteRules(IEnumerable<SyncConsensusRule> rules, RuleContext ruleContext)
