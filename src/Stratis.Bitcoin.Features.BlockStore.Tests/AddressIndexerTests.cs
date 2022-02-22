@@ -34,11 +34,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
         public AddressIndexerTests()
         {
             this.network = new StraxMain();
-            var nodeSettings = NodeSettings.Default(this.network);
             var mockingContext = new MockingContext()
                 .AddService(this.network)
-                .AddService(nodeSettings)
-                .AddService(new StoreSettings(nodeSettings)
+                .AddService(new StoreSettings(NodeSettings.Default(this.network))
                 {
                     AddressIndex = true,
                     TxIndex = true
@@ -49,6 +47,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
                 .AddService<IConsensusManager>();
 
             this.addressIndexer = mockingContext.GetService<IAddressIndexer>(typeof(AddressIndexer));
+
             this.genesisHeader = new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().Header.GetHash(), 0);
             this.mockingContext = mockingContext;
             this.consensusManagerMock = this.mockingContext.GetMock<IConsensusManager>();
