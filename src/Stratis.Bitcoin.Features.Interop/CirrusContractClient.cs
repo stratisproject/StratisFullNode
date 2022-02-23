@@ -306,53 +306,59 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public async Task<WalletStatsModel> GetWalletStatsAsync(string walletName, string accountName, int minConfirmations = 1, bool verbose = false)
         {
-            WalletStatsModel response = await this.cirrusInteropSettings.CirrusClientUrl
-                .AppendPathSegment("api/Wallet/wallet-stats")
-                .SetQueryParam("WalletName", walletName)
-                .SetQueryParam("AccountName", accountName)
-                .SetQueryParam("MinConfirmations", minConfirmations)
-                .SetQueryParam("Verbose", verbose)
-                .GetJsonAsync<WalletStatsModel>()
-                .ConfigureAwait(false);
+            using (CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(180)))
+            {
+                WalletStatsModel response = await this.cirrusInteropSettings.CirrusClientUrl
+                    .AppendPathSegment("api/Wallet/wallet-stats")
+                    .SetQueryParam("WalletName", walletName)
+                    .SetQueryParam("AccountName", accountName)
+                    .SetQueryParam("MinConfirmations", minConfirmations)
+                    .SetQueryParam("Verbose", verbose)
+                    .GetJsonAsync<WalletStatsModel>(cancellation.Token)
+                    .ConfigureAwait(false);
 
-            return response;
+                return response;
+            }
         }
 
         public async Task<bool> ConsolidateAsync(string walletName, string accountName, string walletPassword, int utxoValueThreshold = 1, bool broadcast = true)
         {
-            try
+            using (CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(600)))
             {
-                var consolidate = new ConsolidationRequest
+                try
                 {
-                    WalletName = walletName,
-                    AccountName = accountName,
-                    WalletPassword = walletPassword,
-                    DestinationAddress = this.cirrusInteropSettings.CirrusSmartContractActiveAddress,
-                    UtxoValueThreshold = utxoValueThreshold.ToString(),
-                    Broadcast = broadcast
-                };
+                    var consolidate = new ConsolidationRequest
+                    {
+                        WalletName = walletName,
+                        AccountName = accountName,
+                        WalletPassword = walletPassword,
+                        DestinationAddress = this.cirrusInteropSettings.CirrusSmartContractActiveAddress,
+                        UtxoValueThreshold = utxoValueThreshold.ToString(),
+                        Broadcast = broadcast
+                    };
 
-                IFlurlResponse response = await this.cirrusInteropSettings.CirrusClientUrl
-                    .AppendPathSegment("api/Wallet/consolidate")
-                    .AllowAnyHttpStatus()
-                    .PostJsonAsync(consolidate)
-                    .ConfigureAwait(false);
+                    IFlurlResponse response = await this.cirrusInteropSettings.CirrusClientUrl
+                        .AppendPathSegment("api/Wallet/consolidate")
+                        .AllowAnyHttpStatus()
+                        .PostJsonAsync(consolidate, cancellation.Token)
+                        .ConfigureAwait(false);
 
-                if (response.StatusCode == (int)HttpStatusCode.OK)
-                {
-                    string result = await response.GetJsonAsync<string>().ConfigureAwait(false);
+                    if (response.StatusCode == (int)HttpStatusCode.OK)
+                    {
+                        string result = await response.GetJsonAsync<string>().ConfigureAwait(false);
 
-                    // Ensure the response is a valid transaction so that we can return success.
-                    this.chainIndexer.Network.Consensus.ConsensusFactory.CreateTransaction(result);
+                        // Ensure the response is a valid transaction so that we can return success.
+                        this.chainIndexer.Network.Consensus.ConsensusFactory.CreateTransaction(result);
 
-                    return true;
+                        return true;
+                    }
                 }
-            }
-            catch
-            {
-            }
+                catch
+                {
+                }
 
-            return false;
+                return false;
+            }
         }
 
         /// <inheritdoc />

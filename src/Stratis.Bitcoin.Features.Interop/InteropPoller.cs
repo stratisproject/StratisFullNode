@@ -57,7 +57,7 @@ namespace Stratis.Bitcoin.Features.Interop
         public readonly BigInteger SubmissionConfirmationThreshold = 12;
 
         /// <summary>Once the node's personal Cirrus rewards wallet has more UTXOs than this, an automatic consolidation will be triggered.</summary>
-        public const int UtxoCountThreshold = 500;
+        public const int UtxoCountThreshold = 100;
 
         private readonly IAsyncProvider asyncProvider;
         private readonly ChainIndexer chainIndexer;
