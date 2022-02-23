@@ -61,6 +61,12 @@ namespace Stratis.Bitcoin.Features.PoA
         public int GetMiningTimestampV2ActivationHeight { get; set; }
 
         /// <summary>
+        /// The height at which inituitive mining slots are enfored without any lenience.
+        /// Currently errors are sometimes suppressed if a federation change occurred.
+        /// </summary>
+        public int GetMiningTimestampV2ActivationStrictHeight { get; set; }
+
+        /// <summary>
         /// Logic related to release 1.1.0.0 will activate at this height, this includes Poll Expiry and the Join Federation Voting Request consensus rule.
         /// </summary>
         public int Release1100ActivationHeight { get; set; }

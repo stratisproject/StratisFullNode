@@ -151,8 +151,8 @@ namespace NBitcoin.Tests
             var secret = new BitcoinSecret(privateKey, this.stratisMain);
 
             Transaction tx = this.stratisMain.CreateTransaction();
-            var p2pkh = new TxOut(new Money((UInt64)45000000), secret.GetAddress());
-            var p2pk = new TxOut(new Money((UInt64)80000000), secret.PrivateKey.PubKey);
+            var p2pkh = new TxOut(new Money((ulong)45000000), secret.GetAddress());
+            var p2pk = new TxOut(new Money((ulong)80000000), secret.PrivateKey.PubKey);
 
             tx.AddOutput(p2pkh);
             tx.AddOutput(p2pk);
@@ -1340,10 +1340,10 @@ namespace NBitcoin.Tests
 
             foreach (int pushSize in new[] { 2, 10, 20, 32 })
             {
-                a = new Script("1 " + String.Concat(Enumerable.Range(0, pushSize * 2).Select(_ => "0").ToArray()));
+                a = new Script("1 " + string.Concat(Enumerable.Range(0, pushSize * 2).Select(_ => "0").ToArray()));
                 Assert.True(PayToWitTemplate.Instance.CheckScriptPubKey(a));
             }
-            a = new Script("1 " + String.Concat(Enumerable.Range(0, 33 * 2).Select(_ => "0").ToArray()));
+            a = new Script("1 " + string.Concat(Enumerable.Range(0, 33 * 2).Select(_ => "0").ToArray()));
             Assert.False(PayToWitTemplate.Instance.CheckScriptPubKey(a));
         }
 
@@ -1458,7 +1458,7 @@ namespace NBitcoin.Tests
             Assert.Equal(4, tx.Outputs.Count); //+ Change
 
             txBuilder.Send(destinations[4], Money.Parse("1"));
-            var ex = Assert.Throws<NotEnoughFundsException>(() => txBuilder.BuildTransaction(true));
+            NotEnoughFundsException ex = Assert.Throws<NotEnoughFundsException>(() => txBuilder.BuildTransaction(true));
             Assert.True(ex.Group == "test");
             Assert.True((Money)ex.Missing == Money.Parse("0.9999"));
             //Can sign partially
@@ -2338,7 +2338,7 @@ namespace NBitcoin.Tests
                                 }
                                 else if (transactions.Count == 2 && modification == HashModification.Invalid)
                                 {
-                                    string changes = String.Join(", ", invalidChanges);
+                                    string changes = string.Join(", ", invalidChanges);
                                     output.Append(" (" + changes + ")");
                                 }
 
@@ -2389,13 +2389,13 @@ namespace NBitcoin.Tests
                     }
                     scriptParts.Add(scriptOutput.ToString());
                 }
-                coinOutput.Append(String.Join(" ", scriptParts));
+                coinOutput.Append(string.Join(" ", scriptParts));
                 coinOutput.Append("\", ");
                 coinOutput.Append(coin.Amount.Satoshi);
                 coinOutput.Append("]");
                 coinParts.Add(coinOutput.ToString());
             }
-            output.Append(String.Join(",\n", coinParts));
+            output.Append(string.Join(",\n", coinParts));
             output.Append("],\n\"");
             output.Append(result.ToHex());
             output.Append("\", \"P2SH,WITNESS\"],\n\n");

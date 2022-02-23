@@ -198,7 +198,11 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.ProvenHeaderRules
             }
         }
 
-        /// <see cref="IStakeValidator.VerifySignature"/>
+        /// <summary>
+        /// Verifies the signature of <see cref="ProvenBlockHeader"/>'s coinstake transaction. See <see cref="IStakeValidator.VerifySignature"/>.
+        /// </summary>
+        /// <param name="header">Header containing coinstake transaction.</param>
+        /// <param name="unspentOutputs">UTXO that is spent in the transaction.</param>
         /// <exception cref="ConsensusException">
         /// Throws exception with error <see cref="ConsensusErrors.CoinstakeVerifySignatureFailed" /> if check fails.
         /// </exception>
@@ -264,7 +268,11 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.ProvenHeaderRules
             return previousStakeModifier;
         }
 
-        /// <see cref="IStakeValidator.CheckStakeKernelHash"/>
+        /// <summary>See <see cref="IStakeValidator.CheckStakeKernelHash"/>.</summary>
+        /// <param name="context">Staking context.</param>
+        /// <param name="stakingCoins">Coins that participate in staking.</param>
+        /// <param name="header">See <see cref="ProvenBlockHeader"/></param>
+        /// <param name="chainedHeader">Identifies the header with the header bits.</param>
         /// <exception cref="ConsensusException">
         /// Throws exception with error <see cref="ConsensusErrors.PrevStakeNull" /> if check fails.
         /// </exception>

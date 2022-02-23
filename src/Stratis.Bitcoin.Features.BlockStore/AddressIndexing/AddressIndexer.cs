@@ -83,9 +83,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         /// </summary>
         private const int DelayTimeMs = 2000;
 
-        private const int CompactionThreshold = 8000;
+        private int compactionThreshold;
 
-        private const int CompactionAmount = CompactionThreshold / 2;
+        private int compactionAmount => this.compactionThreshold / 2;
 
         /// <summary>Max distance between consensus and indexer tip to consider indexer synced.</summary>
         private const int ConsiderSyncedMaxDistance = 10;
@@ -162,6 +162,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             this.chainIndexer = chainIndexer;
             this.logger = LogManager.GetCurrentClassLogger();
 
+            this.compactionThreshold = storeSettings.AddressIndexerCompactionThreshold;
             this.averageTimePerBlock = new AverageCalculator(200);
             int maxReorgLength = GetMaxReorgOrFallbackMaxReorg(this.network);
 
@@ -548,7 +549,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             // Anything less than that should be compacted.
             int heightThreshold = this.consensusManager.Tip.Height - this.compactionTriggerDistance;
 
-            bool compact = (indexData.BalanceChanges.Count > CompactionThreshold) && (indexData.BalanceChanges[1].BalanceChangedHeight < heightThreshold);
+            bool compact = (indexData.BalanceChanges.Count > this.compactionThreshold) && (indexData.BalanceChanges[1].BalanceChangedHeight < heightThreshold);
 
             if (!compact)
             {
@@ -558,7 +559,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                 return;
             }
 
-            var compacted = new List<AddressBalanceChange>(CompactionThreshold / 2)
+            var compacted = new List<AddressBalanceChange>(this.compactionThreshold / 2)
             {
                 new AddressBalanceChange()
                 {
@@ -572,7 +573,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             {
                 AddressBalanceChange change = indexData.BalanceChanges[i];
 
-                if ((change.BalanceChangedHeight) < heightThreshold && i < CompactionAmount)
+                if ((change.BalanceChangedHeight) < heightThreshold && i < this.compactionAmount)
                 {
                     this.logger.LogDebug("Balance change: {0} was selected for compaction. Compacted balance now: {1}.", change, compacted[0].Satoshi);
 

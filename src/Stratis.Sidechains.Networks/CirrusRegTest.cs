@@ -110,6 +110,7 @@ namespace Stratis.Sidechains.Networks
                 autoKickIdleMembers: true)
             {
                 GetMiningTimestampV2ActivationHeight = 100,
+                GetMiningTimestampV2ActivationStrictHeight = 100,
                 PollExpiryBlocks = 450 // 2 hours
             };
 

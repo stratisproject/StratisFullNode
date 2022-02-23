@@ -244,6 +244,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <summary>
         /// Gets the first receiving address that contains no transaction.
         /// </summary>
+        /// <param name="isChange">If set returns a change address.</param>
         /// <returns>An unused address</returns>
         private HdAddress GetFirstUnusedAddress(bool isChange)
         {
@@ -266,7 +267,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// Gets the last address that contains transactions.
         /// </summary>
         /// <param name="isChange">Whether the address is a change (internal) address or receiving (external) address.</param>
-        /// <returns></returns>
+        /// <returns>The last address that contains transactions</returns>
         public HdAddress GetLastUsedAddress(bool isChange)
         {
             IEnumerable<HdAddress> addresses = isChange ? this.InternalAddresses : this.ExternalAddresses;
@@ -288,7 +289,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// Gets a collection of transactions by id.
         /// </summary>
         /// <param name="id">The identifier.</param>
-        /// <returns></returns>
+        /// <returns>A collection of matching transactions, or an empty collection if no matches are found.</returns>
         public IEnumerable<TransactionData> GetTransactionsById(uint256 id)
         {
             Guard.NotNull(id, nameof(id));
@@ -300,6 +301,8 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <summary>
         /// Get the accounts total spendable value for both confirmed and unconfirmed UTXO.
         /// </summary>
+        /// <param name="excludeColdStakeUtxo">Set this to exclude cold staking UTXOs.</param>
+        /// <returns>A tuple containing the confirmed and unconfirmed amounts.</returns>
         public (Money ConfirmedAmount, Money UnConfirmedAmount) GetBalances(bool excludeColdStakeUtxo)
         {
             List<TransactionData> allTransactions = this.ExternalAddresses.SelectMany(a => a.Transactions)
@@ -328,7 +331,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// Returns a collection because a transaction can be contained in a change address as well as in a receive address (as a spend).
         /// </remarks>
         /// <param name="predicate">A predicate by which to filter the transactions.</param>
-        /// <returns></returns>
+        /// <returns>The addresses in which a transaction is contained or an empty collection if none are found.</returns>
         public IEnumerable<HdAddress> FindAddressesForTransaction(Func<TransactionData, bool> predicate)
         {
             Guard.NotNull(predicate, nameof(predicate));

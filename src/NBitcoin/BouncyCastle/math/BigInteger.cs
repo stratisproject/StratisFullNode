@@ -183,7 +183,7 @@ namespace NBitcoin.BouncyCastle.Math
          * They are calculated according to the expected savings in multiplications.
          * Some squares will also be saved on average, but we offset these against the extra storage costs.
          */
-        private static readonly int[] ExpWindowThresholds = { 7, 25, 81, 241, 673, 1793, 4609, Int32.MaxValue };
+        private static readonly int[] ExpWindowThresholds = { 7, 25, 81, 241, 673, 1793, 4609, int.MaxValue };
 
         private const int BitsPerByte = 8;
         private const int BitsPerInt = 32;
@@ -356,7 +356,7 @@ namespace NBitcoin.BouncyCastle.Math
             }
 
             // strip leading zeros from the string str
-            while(index < str.Length && Int32.Parse(str[index].ToString(), style) == 0)
+            while(index < str.Length && int.Parse(str[index].ToString(), style) == 0)
             {
                 index++;
             }
@@ -2544,7 +2544,7 @@ namespace NBitcoin.BouncyCastle.Math
             if(QuickPow2Check())
             {
                 long powOf2 = (long)exp * (this.BitLength - 1);
-                if(powOf2 > Int32.MaxValue)
+                if(powOf2 > int.MaxValue)
                 {
                     throw new ArithmeticException("Result too large");
                 }
@@ -2763,7 +2763,7 @@ namespace NBitcoin.BouncyCastle.Math
             int excessBits = (numWords << 5) - n;
             if(excessBits > 0)
             {
-                result[0] &= (int)(UInt32.MaxValue >> excessBits);
+                result[0] &= (int)(uint.MaxValue >> excessBits);
             }
 
             return result;
@@ -3275,7 +3275,7 @@ namespace NBitcoin.BouncyCastle.Math
 
                         // Work out the largest power of 'rdx' that is a positive 64-bit integer
                         // TODO possibly cache power/exponent against radix?
-                        long limit = Int64.MaxValue / radix;
+                        long limit = long.MaxValue / radix;
                         long power = radix;
                         int exponent = 1;
                         while(power <= limit)
