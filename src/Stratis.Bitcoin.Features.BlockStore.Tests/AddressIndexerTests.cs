@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using LiteDB;
 using Moq;
 using NBitcoin;
-using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers.Models;
@@ -26,8 +25,6 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
         private readonly Mock<IConsensusManager> consensusManagerMock;
 
-        private readonly Mock<IAsyncProvider> asyncProviderMock;
-
         private readonly Network network;
 
         private readonly ChainedHeader genesisHeader;
@@ -35,26 +32,20 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
         public AddressIndexerTests()
         {
             this.network = new StraxMain();
-            var storeSettings = new StoreSettings(NodeSettings.Default(this.network))
-            {
-                AddressIndex = true,
-                TxIndex = true
-            };
+            var mockingContext = new MockingContext()
+                .AddService(this.network)
+                .AddService(new StoreSettings(NodeSettings.Default(this.network))
+                {
+                    AddressIndex = true,
+                    TxIndex = true
+                })
+                .AddService(new DataFolder(TestBase.CreateTestDir(this)))
+                .AddService(new ChainIndexer(this.network))
+                .AddService<IDateTimeProvider>(new DateTimeProvider());
 
-            var dataFolder = new DataFolder(TestBase.CreateTestDir(this));
-            var stats = new Mock<INodeStats>();
-            var indexer = new ChainIndexer(this.network);
-
-            this.consensusManagerMock = new Mock<IConsensusManager>();
-
-            this.asyncProviderMock = new Mock<IAsyncProvider>();
-
-            var utxoIndexerMock = new Mock<IUtxoIndexer>();
-
-            this.addressIndexer = new AddressIndexer(storeSettings, dataFolder, this.network, stats.Object,
-                this.consensusManagerMock.Object, this.asyncProviderMock.Object, indexer, new DateTimeProvider(), utxoIndexerMock.Object);
-
-            this.genesisHeader = new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().Header.GetHash(), 0);
+            this.addressIndexer = mockingContext.GetService<IAddressIndexer>(typeof(AddressIndexer), addIfNotExists: true);
+            this.genesisHeader = mockingContext.GetService<ChainIndexer>().GetHeader(0);
+            this.consensusManagerMock = mockingContext.GetMock<IConsensusManager>();
         }
 
         [Fact]
