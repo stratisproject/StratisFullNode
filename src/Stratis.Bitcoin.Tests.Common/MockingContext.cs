@@ -38,10 +38,9 @@ namespace Stratis.Bitcoin.Tests.Common
         }
 
         private object GetOrAddService(Type serviceType, Type implementationType = null, ConstructorInfo constructorInfo = null, bool allowAdd = true)
-        {
+        {            
             var service = this.serviceCollection
-                .Where(s => s.ServiceType == serviceType)
-                .Where(s => (implementationType == null && constructorInfo == null) || s.ImplementationType == (implementationType ?? constructorInfo.DeclaringType))
+                .Where(s => s.ServiceType == serviceType && (implementationType == null || s.ImplementationType == implementationType))
                 .SingleOrDefault()?.ImplementationInstance;
 
             if (service != null || !allowAdd)
@@ -58,7 +57,8 @@ namespace Stratis.Bitcoin.Tests.Common
             }
             else
             {
-                object[] args = (constructorInfo ?? implementationType.GetConstructors().Single()).GetParameters().Select(p => GetOrAddService(p.ParameterType)).ToArray();
+                constructorInfo ??= implementationType.GetConstructors().Single();
+                object[] args = constructorInfo.GetParameters().Select(p => GetOrAddService(p.ParameterType)).ToArray();
                 service = Activator.CreateInstance(implementationType, args);
             }
 
