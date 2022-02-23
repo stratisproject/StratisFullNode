@@ -4,7 +4,6 @@ using NBitcoin;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Tests.Common;
-using Stratis.Features.Diagnostic.Utils;
 using Stratis.Features.FederatedPeg.InputConsolidation;
 using Xunit;
 
