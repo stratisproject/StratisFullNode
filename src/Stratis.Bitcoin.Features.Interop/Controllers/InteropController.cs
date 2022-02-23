@@ -122,7 +122,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                         BlockHeight = request.BlockHeight,
                         DestinationAddress = request.DestinationAddress,
                         DestinationChain = request.DestinationChain.ToString(),
-                        Amount = request.Amount,
+                        Amount = new BigInteger(request.Amount.ToBytes()),
                         Processed = request.Processed,
                         Status = request.RequestStatus.ToString(),
                     });
@@ -165,7 +165,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                         ExternalChainBlockHeight = request.ExternalChainBlockHeight,
                         ExternalChainTxEventId = request.ExternalChainTxEventId,
                         ExternalChainTxHash = request.ExternalChainTxHash,
-                        Amount = request.Amount,
+                        Amount = new BigInteger(request.Amount.ToBytes()),
                         Processed = request.Processed,
                         TokenContract = request.TokenContract,
                         Status = request.RequestStatus.ToString(),

@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using NBitcoin.BouncyCastle.Math;
 using Stratis.Bitcoin.Tests.Common;
 using Xunit;
 
@@ -58,11 +60,31 @@ namespace NBitcoin.Tests
             Assert.Equal(0x00, v.GetByte(31));
             Assert.Equal(0x39, new uint256("39000001ffffffffffffffffffffffffffffffffffffffffffffffffffffffff").GetByte(31));
             Assert.Throws<ArgumentOutOfRangeException>(() => v.GetByte(32));
+
+            // Test conversions between uint256 and BigInteger
+            var a = System.Numerics.BigInteger.Parse("00010000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff", NumberStyles.AllowHexSpecifier);
+            var b = new uint256("00010000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff").ToBytes();
+
+            // Conversion from the uint256 byte representation to BigInteger can be done directly.
+            var c = new System.Numerics.BigInteger(b);
+            
+            Assert.True(a == c);
+            
+            var a1 = new uint256("00010000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+            var b1 = System.Numerics.BigInteger.Parse("00010000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff", NumberStyles.AllowHexSpecifier).ToByteArray();
+
+            // The uint256 constructor requires a 256 bit array, so we have to right-pad the BigInteger byte array representation.
+            var newArray = new byte[32];
+            Array.Copy(b1, 0, newArray, 0, b1.Length);
+
+            var c1 = new uint256(newArray);
+
+            Assert.True(a1 == c1);
         }
 
         [Fact]
         [Trait("UnitTest", "UnitTest")]
-        public void uitnSerializationTests()
+        public void uintSerializationTests()
         {
             var ms = new MemoryStream();
             var stream = new BitcoinStream(ms, true);

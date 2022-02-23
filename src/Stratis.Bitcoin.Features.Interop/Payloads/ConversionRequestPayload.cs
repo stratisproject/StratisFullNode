@@ -26,7 +26,7 @@ namespace Stratis.Bitcoin.Features.Interop.Payloads
         /// <c>True</c> if this payload is requesting a proposal from the other node.
         /// <c>False</c> if it is replying.
         /// </summary>
-        public bool IsRequesting { get { return this.isTransfer; } }
+        public bool IsRequesting { get { return this.isRequesting; } }
 
         /// <summary>
         /// <c>True</c> if the request in question is a transfer (e.g. ETH to Cirrus).

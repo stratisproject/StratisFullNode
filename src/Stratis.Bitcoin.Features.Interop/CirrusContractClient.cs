@@ -30,10 +30,10 @@ namespace Stratis.Bitcoin.Features.Interop
         /// </summary>
         /// <param name="contractAddress">The SRC20 contract address that tokens should be minted for.</param>
         /// <param name="destinationAddress">The Cirrus address that the SRC20 tokens should be minted and assigned to.</param>
-        /// <param name="amount">The amount of SRC20 tokens that should be minted.</param>
+        /// <param name="amount">The amount of SRC20 tokens that should be minted. This is the full-precision amount multiplied by 10^contract_specific_decimals to give an integral amount.</param>
         /// <returns>The transactionId of the mint request submitted to the Cirrus multisig wallet contract.</returns>
         /// <remarks>The target SRC20 contract must obviously support the IMintable interface.</remarks>
-        Task<MultisigTransactionIdentifiers> MintAsync(string contractAddress, string destinationAddress, Money amount);
+        Task<MultisigTransactionIdentifiers> MintAsync(string contractAddress, string destinationAddress, BigInteger amount);
 
         /// <summary>
         /// Retrieves the receipt for a given smart contract invocation.
@@ -75,12 +75,14 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <summary>
         /// Calls the Confirm method on the Cirrus multisig contract, adding a confirmation for the supplied transactionId if invoked by one of the contract owners.
         /// </summary>
-        Task<string> ConfirmTransactionAsync(BigInteger transactionId);
+        /// <returns>If succesfull, the transaction hash of the confirmation transaction, else null and the error message.</returns>
+        Task<(string TransactionHash, string Message)> ConfirmTransactionAsync(BigInteger transactionId);
     }
 
     /// <inheritdoc />
     public class CirrusContractClient : ICirrusContractClient
     {
+        private const int GetReceiptWaitTimeSeconds = 180;
         public const string MultisigConfirmMethodName = "Confirm";
         public const string MultisigSubmitMethodName = "Submit";
         public const string SRC20MintMethodName = "Mint";
@@ -93,6 +95,7 @@ namespace Stratis.Bitcoin.Features.Interop
         /// The constructor.
         /// </summary>
         /// <param name="interopSettings">The settings for the interoperability feature.</param>
+        /// <param name="chainIndexer">The chain indexer instance so that we can retrieve the current chain height.</param>
         public CirrusContractClient(InteropSettings interopSettings, ChainIndexer chainIndexer)
         {
             this.cirrusInteropSettings = interopSettings.GetSettings<CirrusInteropSettings>();
@@ -101,7 +104,7 @@ namespace Stratis.Bitcoin.Features.Interop
         }
 
         /// <inheritdoc />
-        public async Task<MultisigTransactionIdentifiers> MintAsync(string contractAddress, string destinationAddress, Money amount)
+        public async Task<MultisigTransactionIdentifiers> MintAsync(string contractAddress, string destinationAddress, BigInteger amount)
         {
             BuildCallContractTransactionResponse response;
             try
@@ -114,7 +117,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 accountBytesPadded[0] = 9; // 9 = Address
                 Array.Copy(accountBytes, 0, accountBytesPadded, 1, accountBytes.Length);
 
-                byte[] amountBytes = this.serializer.Serialize((UInt256)amount.Satoshi);
+                byte[] amountBytes = this.serializer.Serialize(new UInt256(amount.ToByteArray()));
                 byte[] amountBytesPadded = new byte[amountBytes.Length + 1];
                 amountBytesPadded[0] = 12; // 12 = UInt256
                 Array.Copy(amountBytes, 0, amountBytesPadded, 1, amountBytes.Length);
@@ -181,57 +184,33 @@ namespace Stratis.Bitcoin.Features.Interop
 
             try
             {
-                // We have to wait for the transaction to be mined.
-                using (CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(180)))
+                CirrusReceiptResponse receipt = await this.GetReceiptAsync(response.TransactionId.ToString()).ConfigureAwait(false);
+
+                // If we still haven't mined the tx, return a message and fail the transfer.
+                if (receipt == null)
+                    return new MultisigTransactionIdentifiers
+                    {
+                        Message = $"The mint smart contract transaction did not get mined in {GetReceiptWaitTimeSeconds} seconds or something else went wrong, txid '{response.TransactionId}'.",
+                        TransactionHash = "",
+                        TransactionId = -1
+                    };
+
+                // This indicates an issue with the smart contract call, so return the receipt message.
+                if (!receipt.Success)
+                    return new MultisigTransactionIdentifiers
+                    {
+                        BlockHeight = receipt.BlockNumber.HasValue ? (int)receipt.BlockNumber : -1,
+                        Message = $"Error calling the mint smart contract method for '{response.TransactionId}': {receipt.Error}",
+                        TransactionHash = receipt.TransactionHash,
+                        TransactionId = -1
+                    };
+
+                return new MultisigTransactionIdentifiers
                 {
-                    CirrusReceiptResponse receipt = null;
-
-                    while (true)
-                    {
-                        if (cancellation.IsCancellationRequested)
-                            break;
-
-                        await Task.Delay(TimeSpan.FromSeconds(5));
-
-                        receipt = await this.GetReceiptAsync(response.TransactionId.ToString()).ConfigureAwait(false);
-
-                        if (receipt == null)
-                            continue;
-
-                        // This indicates an issue with the smart contract call, so return the receipt message.
-                        if (!receipt.Success)
-                        {
-                            return new MultisigTransactionIdentifiers
-                            {
-                                BlockHeight = receipt.BlockNumber.HasValue ? (int)receipt.BlockNumber : -1,
-                                Message = $"Error calling the mint smart contract method for '{response.TransactionId}': {receipt.Error}",
-                                TransactionHash = receipt.TransactionHash,
-                                TransactionId = -1
-                            };
-                        }
-                        else
-                            break;
-                    }
-
-                    // If we still haven't mined the tx, return a message and fail the transfer.
-                    if (receipt == null)
-                    {
-                        return new MultisigTransactionIdentifiers
-                        {
-                            Message = $"The mint smart contract transaction did not get mined in 180secs or something else went wrong, txid '{response.TransactionId}'.",
-                            TransactionHash = "",
-                            TransactionId = -1
-                        };
-                    }
-                    // Else return the receipt result details.
-                    else
-                        return new MultisigTransactionIdentifiers
-                        {
-                            BlockHeight = receipt.BlockNumber.HasValue ? (int)receipt.BlockNumber : -1,
-                            TransactionHash = receipt.TransactionHash,
-                            TransactionId = int.Parse(receipt.ReturnValue)
-                        };
-                }
+                    BlockHeight = receipt.BlockNumber.HasValue ? (int)receipt.BlockNumber : -1,
+                    TransactionHash = receipt.TransactionHash,
+                    TransactionId = int.Parse(receipt.ReturnValue)
+                };
             }
             catch (Exception ex)
             {
@@ -247,21 +226,37 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <inheritdoc />
         public async Task<CirrusReceiptResponse> GetReceiptAsync(string txHash)
         {
-            // We have to use our own model for this, as the ReceiptResponse used inside the node does not have public setters on its properties.
-            IFlurlResponse response = await this.cirrusInteropSettings.CirrusClientUrl
-                .AppendPathSegment("api/smartcontracts/receipt")
-                .SetQueryParam("txHash", txHash)
-                .AllowAnyHttpStatus()
-                .GetAsync()
-                .ConfigureAwait(false);
+            CirrusReceiptResponse result = null;
 
-            if (response.StatusCode == (int)HttpStatusCode.OK)
+            // We have to wait for the transaction to be mined.
+            using (CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(GetReceiptWaitTimeSeconds)))
             {
-                CirrusReceiptResponse result = await response.GetJsonAsync<CirrusReceiptResponse>().ConfigureAwait(false);
-                return result;
+                while (true)
+                {
+                    if (cancellation.IsCancellationRequested)
+                        break;
+
+                    // We have to use our own model for this, as the ReceiptResponse used inside the node does not have public setters on its properties.
+                    IFlurlResponse response = await this.cirrusInteropSettings.CirrusClientUrl
+                        .AppendPathSegment("api/smartcontracts/receipt")
+                        .SetQueryParam("txHash", txHash)
+                        .AllowAnyHttpStatus()
+                        .GetAsync()
+                        .ConfigureAwait(false);
+
+                    if (response.StatusCode == (int)HttpStatusCode.OK)
+                    {
+                        result = await response.GetJsonAsync<CirrusReceiptResponse>().ConfigureAwait(false);
+                        break;
+                    }
+
+                    await Task.Delay(TimeSpan.FromSeconds(5));
+
+                    continue;
+                }
             }
-            else
-                return null;
+
+            return result;
         }
 
         public async Task<NBitcoin.Block> GetBlockByHeightAsync(int blockHeight)
@@ -409,36 +404,60 @@ namespace Stratis.Bitcoin.Features.Interop
         }
 
         /// <inheritdoc />
-        public async Task<string> ConfirmTransactionAsync(BigInteger transactionId)
+        public async Task<(string TransactionHash, string Message)> ConfirmTransactionAsync(BigInteger transactionId)
         {
-            var request = new BuildCallContractTransactionRequest
+            BuildCallContractTransactionResponse response;
+
+            try
             {
-                WalletName = this.cirrusInteropSettings.CirrusWalletCredentials.WalletName,
-                AccountName = this.cirrusInteropSettings.CirrusWalletCredentials.AccountName,
-                ContractAddress = this.cirrusInteropSettings.CirrusMultisigContractAddress,
-                MethodName = MultisigConfirmMethodName,
-                Amount = "0",
-                FeeAmount = "0.04", // TODO: Use proper fee estimation, as the fee may be higher with larger multisigs
-                Password = this.cirrusInteropSettings.CirrusWalletCredentials.WalletPassword,
-                GasPrice = 100,
-                GasLimit = 250_000,
-                Sender = this.cirrusInteropSettings.CirrusSmartContractActiveAddress,
-                Parameters = new string[]
+                var request = new BuildCallContractTransactionRequest
                 {
+                    WalletName = this.cirrusInteropSettings.CirrusWalletCredentials.WalletName,
+                    AccountName = this.cirrusInteropSettings.CirrusWalletCredentials.AccountName,
+                    ContractAddress = this.cirrusInteropSettings.CirrusMultisigContractAddress,
+                    MethodName = MultisigConfirmMethodName,
+                    Amount = "0",
+                    FeeAmount = "0.04", // TODO: Use proper fee estimation, as the fee may be higher with larger multisigs
+                    Password = this.cirrusInteropSettings.CirrusWalletCredentials.WalletPassword,
+                    GasPrice = 100,
+                    GasLimit = 250_000,
+                    Sender = this.cirrusInteropSettings.CirrusSmartContractActiveAddress,
+                    Parameters = new string[]
+                    {
                     // TransactionId - this is the integer assigned by the multisig contract that is used to identify which request is being confirmed
                     "7#" + ((ulong)transactionId).ToString()
-                }
-            };
+                    }
+                };
 
-            BuildCallContractTransactionResponse response = await this.cirrusInteropSettings.CirrusClientUrl
-                .AppendPathSegment("api/smartcontracts/build-and-send-call")
-                .PostJsonAsync(request)
-                .ReceiveJson<BuildCallContractTransactionResponse>()
-                .ConfigureAwait(false);
+                response = await this.cirrusInteropSettings.CirrusClientUrl
+                    .AppendPathSegment("api/smartcontracts/build-and-send-call")
+                    .PostJsonAsync(request)
+                    .ReceiveJson<BuildCallContractTransactionResponse>()
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                return (null, $"Exception occurred trying to build and call the confirmation transaction for '{transactionId}': {ex}");
+            }
 
-            CirrusReceiptResponse receipt = await this.GetReceiptAsync(response.TransactionId.ToString()).ConfigureAwait(false);
+            try
+            {
+                CirrusReceiptResponse receipt = await GetReceiptAsync(response.TransactionId.ToString()).ConfigureAwait(false);
 
-            return receipt.TransactionHash;
+                // If we still haven't mined the tx, return a message and fail the transfer.
+                if (receipt == null)
+                    return (null, $"The confirm transaction did not get mined in {GetReceiptWaitTimeSeconds} seconds or something else went wrong, txid '{response.TransactionId}'.");
+
+                // This indicates an issue with the smart contract call, so return the receipt message.
+                if (!receipt.Success)
+                    return (null, $"Error confirming the transfer '{response.TransactionId}': {receipt.Error}");
+
+                return (receipt.TransactionHash, null);
+            }
+            catch (Exception ex)
+            {
+                return (null, $"Exception occurred trying to retrieve the receipt: {ex}");
+            }
         }
     }
 
