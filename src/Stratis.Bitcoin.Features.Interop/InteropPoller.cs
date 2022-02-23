@@ -16,10 +16,12 @@ using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
 using Stratis.Bitcoin.Features.Interop.Exceptions;
+using Stratis.Bitcoin.Features.Interop.Models;
 using Stratis.Bitcoin.Features.Interop.Payloads;
 using Stratis.Bitcoin.Features.Interop.Settings;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.Wallet;
+using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Utilities;
@@ -54,6 +56,9 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <summary>The number of blocks deep a submission transaction needs to be before it should start getting confirmed by the non-originating nodes.</summary>
         public readonly BigInteger SubmissionConfirmationThreshold = 12;
 
+        /// <summary>Once the node's personal Cirrus rewards wallet has more UTXOs than this, an automatic consolidation will be triggered.</summary>
+        public const int UtxoCountThreshold = 100;
+
         private readonly IAsyncProvider asyncProvider;
         private readonly ChainIndexer chainIndexer;
         private readonly Network counterChainNetwork;
@@ -75,6 +80,7 @@ namespace Stratis.Bitcoin.Features.Interop
         private IAsyncLoop interopLoop;
         private IAsyncLoop conversionLoop;
         private IAsyncLoop conversionBurnTransferLoop;
+        private IAsyncLoop consolidationLoop;
 
         private readonly Dictionary<DestinationChain, BigInteger> lastPolledBlock;
 
@@ -246,6 +252,26 @@ namespace Stratis.Bitcoin.Features.Interop
             this.nodeLifetime.ApplicationStopping,
             repeatEvery: TimeSpans.TenSeconds,
             startAfter: TimeSpans.Second);
+
+            this.consolidationLoop = this.asyncProvider.CreateAndRunAsyncLoop("PeriodicConsolidation", async (cancellation) =>
+                {
+                    if (this.initialBlockDownloadState.IsInitialBlockDownload())
+                        return;
+
+                    this.logger.Debug("Executing Cirrus rewards wallet consolidation loop.");
+
+                    try
+                    {
+                        await this.CheckCirrusWalletConsolidationAsync().ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        this.logger.Warn("Exception raised when consolidating Cirrus rewards wallet. {0}", e);
+                    }
+                },
+                this.nodeLifetime.ApplicationStopping,
+                repeatEvery: TimeSpans.Minute,
+                startAfter: TimeSpans.Second);
         }
 
         public void CheckForBlockHeightOverrides(DestinationChain chain)
@@ -526,6 +552,30 @@ namespace Stratis.Bitcoin.Features.Interop
                     this.logger.Error("Error checking {0} node status: {1}", clientForChain.Key, e);
                 }
             }
+        }
+
+        private async Task CheckCirrusWalletConsolidationAsync()
+        {
+            WalletCredentials walletCredentials = this.interopSettings.CirrusSettings.CirrusWalletCredentials;
+
+            if (walletCredentials == null)
+                return;
+
+            this.logger.Info("Checking wallet statistics for wallet {0} account {1}.", walletCredentials.WalletName, walletCredentials.AccountName);
+
+            WalletStatsModel walletStats = await this.cirrusClient.GetWalletStatsAsync(walletCredentials.WalletName, walletCredentials.AccountName).ConfigureAwait(false);
+
+            if (walletStats == null)
+                return;
+
+            if (walletStats.TotalUtxoCount < UtxoCountThreshold)
+                return;
+
+            this.logger.Info("Performing consolidation for wallet {0} account {1}.", walletCredentials.WalletName, walletCredentials.AccountName);
+
+            bool success = await this.cirrusClient.ConsolidateAsync(walletCredentials.WalletName, walletCredentials.AccountName, walletCredentials.WalletPassword).ConfigureAwait(false);
+
+            this.logger.Info("Result of consolidation: {0}", success);
         }
 
         /// <summary>
@@ -1304,6 +1354,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.interopLoop?.Dispose();
             this.conversionLoop?.Dispose();
             this.conversionBurnTransferLoop?.Dispose();
+            this.consolidationLoop?.Dispose();
         }
     }
 }

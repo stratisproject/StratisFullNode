@@ -12,6 +12,7 @@ using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
 using Stratis.Bitcoin.Features.Interop.Settings;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
+using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.SmartContracts;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Serialization;
@@ -51,6 +52,10 @@ namespace Stratis.Bitcoin.Features.Interop
         Task<ConsensusTipModel> GetConsensusTipAsync();
 
         Task<TransactionVerboseModel> GetRawTransactionAsync(string transactionId);
+
+        Task<WalletStatsModel> GetWalletStatsAsync(string walletName, string accountName, int minConfirmations = 1, bool verbose = false);
+
+        Task<bool> ConsolidateAsync(string walletName, string accountName, string walletPassword, int utxoValueThreshold = 1, bool broadcast = true);
 
         /// <summary>
         /// Gets the number of on-chain confirmations a given txid has. This would be the number of confirmations on the Cirrus chain.
@@ -297,6 +302,63 @@ namespace Stratis.Bitcoin.Features.Interop
                 .ConfigureAwait(false);
 
             return response;
+        }
+
+        public async Task<WalletStatsModel> GetWalletStatsAsync(string walletName, string accountName, int minConfirmations = 1, bool verbose = false)
+        {
+            using (CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(180)))
+            {
+                WalletStatsModel response = await this.cirrusInteropSettings.CirrusClientUrl
+                    .AppendPathSegment("api/Wallet/wallet-stats")
+                    .SetQueryParam("WalletName", walletName)
+                    .SetQueryParam("AccountName", accountName)
+                    .SetQueryParam("MinConfirmations", minConfirmations)
+                    .SetQueryParam("Verbose", verbose)
+                    .GetJsonAsync<WalletStatsModel>(cancellation.Token)
+                    .ConfigureAwait(false);
+
+                return response;
+            }
+        }
+
+        public async Task<bool> ConsolidateAsync(string walletName, string accountName, string walletPassword, int utxoValueThreshold = 1, bool broadcast = true)
+        {
+            using (CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(600)))
+            {
+                try
+                {
+                    var consolidate = new ConsolidationRequest
+                    {
+                        WalletName = walletName,
+                        AccountName = accountName,
+                        WalletPassword = walletPassword,
+                        DestinationAddress = this.cirrusInteropSettings.CirrusSmartContractActiveAddress,
+                        UtxoValueThreshold = utxoValueThreshold.ToString(),
+                        Broadcast = broadcast
+                    };
+
+                    IFlurlResponse response = await this.cirrusInteropSettings.CirrusClientUrl
+                        .AppendPathSegment("api/Wallet/consolidate")
+                        .AllowAnyHttpStatus()
+                        .PostJsonAsync(consolidate, cancellation.Token)
+                        .ConfigureAwait(false);
+
+                    if (response.StatusCode == (int)HttpStatusCode.OK)
+                    {
+                        string result = await response.GetJsonAsync<string>().ConfigureAwait(false);
+
+                        // Ensure the response is a valid transaction so that we can return success.
+                        this.chainIndexer.Network.Consensus.ConsensusFactory.CreateTransaction(result);
+
+                        return true;
+                    }
+                }
+                catch
+                {
+                }
+
+                return false;
+            }
         }
 
         /// <inheritdoc />
