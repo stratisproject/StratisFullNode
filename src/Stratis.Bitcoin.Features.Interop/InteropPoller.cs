@@ -1257,7 +1257,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private BigInteger CoinsToWei(ulong satoshi)
         {
-            BigInteger baseCurrencyUnits = Web3.Convert.ToWei(Money.Satoshis(satoshi), UnitConversion.EthUnit.Ether);
+            BigInteger baseCurrencyUnits = Web3.Convert.ToWei(Money.Satoshis(satoshi).ToDecimal(MoneyUnit.BTC), UnitConversion.EthUnit.Ether);
             return baseCurrencyUnits;
         }
 
