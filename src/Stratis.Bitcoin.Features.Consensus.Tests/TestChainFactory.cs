@@ -41,7 +41,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
     {
         public List<Block> Blocks { get; set; }
 
-        public ConsensusManager Consensus { get; set; }
+        public IConsensusManager Consensus { get; set; }
 
         public ConsensusRuleEngine ConsensusRules { get; set; }
 

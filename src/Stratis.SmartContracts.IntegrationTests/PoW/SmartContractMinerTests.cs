@@ -143,7 +143,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
             public uint256 hash;
             public TestMemPoolEntryHelper entry;
             public ChainIndexer ChainIndexer;
-            public ConsensusManager consensusManager;
+            public IConsensusManager consensusManager;
             public ConsensusRuleEngine consensusRules;
             public TxMempool mempool;
             public MempoolSchedulerLock mempoolLock;

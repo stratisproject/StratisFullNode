@@ -31,7 +31,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
         public void Given_SyncActionIsCalled_When_QueryParameterIsNullOrEmpty_Then_ReturnBadRequest(string from)
         {
             var chain = new Mock<ChainIndexer>();
-            ConsensusManager consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network);
+            IConsensusManager consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network);
 
             var loggerFactory = new Mock<LoggerFactory>();
             var signals = new Signals.Signals(loggerFactory.Object, null);
@@ -62,7 +62,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
             var chain = new Mock<ChainIndexer>();
             chain.Setup(c => c.GetHeader(heightLocation)).Returns(chainedHeader);
 
-            ConsensusManager consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network);
+            IConsensusManager consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network);
             var loggerFactory = new Mock<LoggerFactory>();
             var signals = new Signals.Signals(loggerFactory.Object, null);
             var nodeLifetime = new NodeLifetime();
@@ -90,7 +90,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
             var chainedHeader = new ChainedHeader(this.network.Consensus.ConsensusFactory.CreateBlockHeader(), hash, null);
             var chain = new Mock<ChainIndexer>();
             chain.Setup(c => c.GetHeader(uint256.Parse(hashLocation))).Returns(chainedHeader);
-            ConsensusManager consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network);
+            IConsensusManager consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network);
 
             var loggerFactory = new Mock<LoggerFactory>();
             var signals = new Signals.Signals(loggerFactory.Object, null);
@@ -115,7 +115,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
 
             var chain = new Mock<ChainIndexer>();
             chain.Setup(c => c.GetHeader(uint256.Parse(hashLocation))).Returns((ChainedHeader)null);
-            ConsensusManager consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network);
+            IConsensusManager consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network);
 
             var loggerFactory = new Mock<LoggerFactory>();
             var signals = new Signals.Signals(loggerFactory.Object, null);
@@ -143,7 +143,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
             // Set up
             string hashLocation = "notAValidHash";
             var chain = new Mock<ChainIndexer>();
-            ConsensusManager consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network);
+            IConsensusManager consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network);
 
             var loggerFactory = new Mock<LoggerFactory>();
             var signals = new Signals.Signals(loggerFactory.Object, null);
@@ -164,7 +164,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
             // Set up
             var chain = new Mock<ChainIndexer>();
             chain.Setup(c => c.GetHeader(15)).Returns((ChainedHeader)null);
-            ConsensusManager consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network);
+            IConsensusManager consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network);
 
             var loggerFactory = new Mock<LoggerFactory>();
             var signals = new Signals.Signals(loggerFactory.Object, null);

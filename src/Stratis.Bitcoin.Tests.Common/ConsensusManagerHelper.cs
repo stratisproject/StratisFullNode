@@ -20,7 +20,7 @@ namespace Stratis.Bitcoin.Tests.Common
 {
     public static class ConsensusManagerHelper
     {
-        public static ConsensusManager CreateConsensusManager(
+        public static IConsensusManager CreateConsensusManager(
             Network network,
             string dataDir = null,
             ChainState chainState = null,
@@ -85,9 +85,9 @@ namespace Stratis.Bitcoin.Tests.Common
                 .AddService<IChainWorkComparer>(typeof(ChainWorkComparer))
                 .AddService<IChainedHeaderTree>(typeof(ChainedHeaderTree));
 
-            mockingContext.AddService<ConsensusManager>(typeof(ConsensusManager).GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic)[0]);
+            mockingContext.AddService<IConsensusManager>(typeof(ConsensusManager).GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic)[0]);
 
-            return mockingContext.GetService<ConsensusManager>();
+            return mockingContext.GetService<IConsensusManager>();
         }
     }
 }
