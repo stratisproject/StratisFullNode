@@ -38,10 +38,15 @@ namespace Stratis.Bitcoin.Tests.Common
         }
 
         private object GetOrAddService(Type serviceType, Type implementationType = null, ConstructorInfo constructorInfo = null, bool allowAdd = true)
-        {            
-            var service = this.serviceCollection
+        {
+            ServiceDescriptor[] services = this.serviceCollection
                 .Where(s => s.ServiceType == serviceType && (implementationType == null || s.ImplementationType == implementationType))
-                .SingleOrDefault()?.ImplementationInstance;
+                .ToArray();
+
+            if (services.Length > 1)
+                throw new InvalidOperationException($"There are {services.Length} services of type {serviceType}.");
+
+            var service = (services.Length == 0) ? null : services[0].ImplementationInstance;
 
             if (service != null || !allowAdd)
                 return service;
@@ -57,9 +62,16 @@ namespace Stratis.Bitcoin.Tests.Common
             }
             else
             {
-                constructorInfo ??= implementationType.GetConstructors().Single();
-                object[] args = constructorInfo.GetParameters().Select(p => GetOrAddService(p.ParameterType)).ToArray();
-                service = Activator.CreateInstance(implementationType, args);
+                if (constructorInfo == null)
+                {
+                    ConstructorInfo[] constructors = implementationType.GetConstructors();
+                    if (constructors.Length != 1)
+                        throw new InvalidOperationException($"There are {constructors.Length} constructors for {implementationType}.");
+                    constructorInfo = constructors.Single();
+                }
+
+                object[] args = constructorInfo.GetParameters().Select(p => p.ParameterType.IsValueType ? p.DefaultValue : GetOrAddService(p.ParameterType)).ToArray();
+                service = constructorInfo.Invoke(args);
             }
 
             this.serviceCollection.AddSingleton(serviceType, service);

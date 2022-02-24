@@ -1,15 +1,10 @@
-﻿using Microsoft.Extensions.Logging;
-using Moq;
+﻿using System.Reflection;
 using NBitcoin;
-using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Base;
-using Stratis.Bitcoin.Base.Deployments;
-using Stratis.Bitcoin.BlockPulling;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
-using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Consensus.Validators;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Consensus.Rules;
@@ -18,6 +13,7 @@ using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.P2P;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
+using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Tests.Common
@@ -36,12 +32,6 @@ namespace Stratis.Bitcoin.Tests.Common
 
             var nodeSettings = new NodeSettings(network, args: param);
 
-            ILoggerFactory loggerFactory = nodeSettings.LoggerFactory;
-            IDateTimeProvider dateTimeProvider = DateTimeProvider.Default;
-
-            var signals = new Signals.Signals(loggerFactory, null);
-            var asyncProvider = new AsyncProvider(loggerFactory, signals);
-
             network.Consensus.Options = new ConsensusOptions();
 
             // Dont check PoW of a header in this test.
@@ -55,45 +45,49 @@ namespace Stratis.Bitcoin.Tests.Common
             if (inMemoryCoinView == null)
                 inMemoryCoinView = new InMemoryCoinView(new HashHeightPair(chainIndexer.Tip));
 
-            var connectionManagerSettings = new ConnectionManagerSettings(nodeSettings);
-
-            var selfEndpointTracker = new SelfEndpointTracker(loggerFactory, connectionManagerSettings);
-            var peerAddressManager = new PeerAddressManager(DateTimeProvider.Default, nodeSettings.DataFolder, loggerFactory, selfEndpointTracker);
-            var networkPeerFactory = new NetworkPeerFactory(network,
-                dateTimeProvider,
-                loggerFactory, new PayloadProvider().DiscoverPayloads(),
-                new SelfEndpointTracker(loggerFactory, connectionManagerSettings),
-                new Mock<IInitialBlockDownloadState>().Object,
-                connectionManagerSettings,
-                asyncProvider,
-                peerAddressManager);
-
-            var peerDiscovery = new PeerDiscovery(asyncProvider, loggerFactory, network, networkPeerFactory, new NodeLifetime(), nodeSettings, peerAddressManager);
-            var connectionSettings = new ConnectionManagerSettings(nodeSettings);
-            var connectionManager = new ConnectionManager(dateTimeProvider, loggerFactory, network, networkPeerFactory, nodeSettings,
-                new NodeLifetime(), new NetworkPeerConnectionParameters(), peerAddressManager, new IPeerConnector[] { },
-                peerDiscovery, selfEndpointTracker, connectionSettings, new VersionProvider(), new Mock<INodeStats>().Object, asyncProvider, new PayloadProvider());
-
             if (chainState == null)
                 chainState = new ChainState();
-            var peerBanning = new PeerBanning(connectionManager, loggerFactory, dateTimeProvider, peerAddressManager);
-            var deployments = new NodeDeployments(network, chainIndexer);
+
+            var mockingContext = new MockingContext()
+                .AddService(network)
+                .AddService(nodeSettings)
+                .AddService(nodeSettings.DataFolder)
+                .AddService(nodeSettings.LoggerFactory)
+                .AddService(DateTimeProvider.Default)
+                .AddService<INodeLifetime>(typeof(NodeLifetime))
+                .AddService<IVersionProvider>(typeof(VersionProvider))
+                .AddService<INodeStats>(typeof(NodeStats))
+                .AddService<ISignals>(typeof(Signals.Signals))
+                .AddService<ISelfEndpointTracker>(typeof(SelfEndpointTracker))
+                .AddService<IPeerAddressManager>(typeof(PeerAddressManager))
+                .AddService(new PayloadProvider().DiscoverPayloads())
+                .AddService<INetworkPeerFactory>(typeof(NetworkPeerFactory))
+                .AddService<IPeerDiscovery>(typeof(PeerDiscovery))
+                .AddService(new PeerConnector[] { })
+                .AddService(chainIndexer)
+                .AddService<ICoinView>(inMemoryCoinView)
+                .AddService<IChainState>(chainState)
+                .AddService<IConnectionManager>(typeof(ConnectionManager))
+                .AddService<IPeerBanning>(typeof(PeerBanning))
+                .AddService<ICheckpoints>(typeof(Checkpoints).GetConstructor(new[] { typeof(Network), typeof(ConsensusSettings) }))
+                .AddService<IInvalidBlockHashStore>(typeof(InvalidBlockHashStore));
 
             if (consensusRules == null)
-            {
-                consensusRules = new PowConsensusRuleEngine(network, loggerFactory, dateTimeProvider, chainIndexer, deployments, consensusSettings,
-                    new Checkpoints(), inMemoryCoinView, chainState, new InvalidBlockHashStore(dateTimeProvider), new NodeStats(dateTimeProvider, nodeSettings, new Mock<IVersionProvider>().Object), asyncProvider, new ConsensusRulesContainer()).SetupRulesEngineParent();
-            }
+                consensusRules = mockingContext.GetService<IConsensusRuleEngine>(typeof(PowConsensusRuleEngine), addIfNotExists: true).SetupRulesEngineParent();
+            else
+                mockingContext.AddService<IConsensusRuleEngine>(consensusRules);
 
-            var tree = new ChainedHeaderTree(network, loggerFactory, new HeaderValidator(consensusRules, loggerFactory), new Checkpoints(),
-                new ChainState(), new Mock<IFinalizedBlockInfoRepository>().Object, consensusSettings, new InvalidBlockHashStore(new DateTimeProvider()), new ChainWorkComparer());
+            mockingContext
+                .AddService<IIntegrityValidator>(typeof(IntegrityValidator))
+                .AddService<IPartialValidator>(typeof(PartialValidator))
+                .AddService<IFullValidator>(typeof(FullValidator))
+                .AddService<IHeaderValidator>(typeof(HeaderValidator))
+                .AddService<IChainWorkComparer>(typeof(ChainWorkComparer))
+                .AddService<IChainedHeaderTree>(typeof(ChainedHeaderTree));
 
-            var consensus = new ConsensusManager(tree, network, loggerFactory, chainState, new IntegrityValidator(consensusRules, loggerFactory),
-                new PartialValidator(asyncProvider, consensusRules, loggerFactory), new FullValidator(consensusRules, loggerFactory), consensusRules,
-                new Mock<IFinalizedBlockInfoRepository>().Object, new Signals.Signals(loggerFactory, null), peerBanning, new Mock<IInitialBlockDownloadState>().Object, chainIndexer,
-                new Mock<IBlockPuller>().Object, new Mock<IBlockStore>().Object, new Mock<IConnectionManager>().Object, new Mock<INodeStats>().Object, new NodeLifetime(), consensusSettings, dateTimeProvider);
+            mockingContext.AddService<ConsensusManager>(typeof(ConsensusManager).GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic)[0]);
 
-            return consensus;
+            return mockingContext.GetService<ConsensusManager>();
         }
     }
 }
