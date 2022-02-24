@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,7 +8,7 @@ using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Tests.Common
 {
-    public class MockingContext : IDisposable
+    public class MockingContext : IServiceProvider
     {
         private IServiceCollection serviceCollection;
 
@@ -37,19 +38,30 @@ namespace Stratis.Bitcoin.Tests.Common
             return (Mock<T>)GetMock(typeof(T));
         }
 
+        private ServiceDescriptor[] FindServices(Type serviceType, Type implementationType = null)
+        {
+            return this.serviceCollection.Where(s => s.ServiceType == serviceType && (implementationType == null || s.ImplementationType == implementationType)).ToArray();
+        }
+
         private object GetOrAddService(Type serviceType, Type implementationType = null, ConstructorInfo constructorInfo = null, bool allowAdd = true)
         {
-            ServiceDescriptor[] services = this.serviceCollection
-                .Where(s => s.ServiceType == serviceType && (implementationType == null || s.ImplementationType == implementationType))
-                .ToArray();
+            ServiceDescriptor[] services = FindServices(serviceType, implementationType);
 
             if (services.Length > 1)
                 throw new InvalidOperationException($"There are {services.Length} services of type {serviceType}.");
 
             var service = (services.Length == 0) ? null : services[0].ImplementationInstance;
 
-            if (service != null || !allowAdd)
+            if (service != null || (services.Length == 0 && !allowAdd))
                 return service;
+
+            if (services.Length == 1 && services[0].ImplementationInstance == null && services[0].ImplementationFactory != null)
+            {
+                service = services[0].ImplementationFactory(this);
+                this.serviceCollection.Remove(services[0]);
+                this.serviceCollection.AddSingleton(serviceType, service);
+                return service;
+            }
 
             implementationType ??= serviceType;
 
@@ -62,15 +74,8 @@ namespace Stratis.Bitcoin.Tests.Common
             }
             else
             {
-                if (constructorInfo == null)
-                {
-                    ConstructorInfo[] constructors = implementationType.GetConstructors();
-                    if (constructors.Length != 1)
-                        throw new InvalidOperationException($"There are {constructors.Length} constructors for {implementationType}.");
-                    constructorInfo = constructors.Single();
-                }
-
-                object[] args = constructorInfo.GetParameters().Select(p => p.ParameterType.IsValueType ? p.DefaultValue : GetOrAddService(p.ParameterType)).ToArray();
+                constructorInfo ??= GetConstructor(implementationType);
+                object[] args = GetConstructorArguments(this, constructorInfo);
                 service = constructorInfo.Invoke(args);
             }
 
@@ -84,24 +89,60 @@ namespace Stratis.Bitcoin.Tests.Common
             return (T)GetOrAddService(typeof(T), implementationType, allowAdd: addIfNotExists);
         }
 
-        public MockingContext AddService<T>() where T : class
+        private static ConstructorInfo GetConstructor(Type implementationType)
         {
-            Guard.Assert(typeof(T).IsInterface);
+            ConstructorInfo[] constructors = implementationType.GetConstructors();
 
-            GetOrAddService(typeof(T));
-            return this;
+            // If there is a choice of two then ignore the parameterless constructor.
+            if (constructors.Length == 2)
+                constructors = constructors.Where(c => c.GetParameters().Length != 0).ToArray();
+
+            // Too much ambiguity.
+            if (constructors.Length != 1)
+                throw new InvalidOperationException($"There are {constructors.Length} constructors for {implementationType}.");
+
+            return constructors.Single();
+        }
+
+        private static object ResolveParameter(IServiceProvider serviceProvider, ParameterInfo parameterInfo)
+        {
+            // Some constructors have value type arguments with default values.
+            if (parameterInfo.ParameterType.IsValueType)
+                return parameterInfo.DefaultValue;
+            
+            // Need to do a bit more work to inject IEnumerable parameters.
+            if (parameterInfo.ParameterType.GetInterface("IEnumerable") != null)
+            {
+                Type elementType = parameterInfo.ParameterType.GetGenericArguments().First();
+                Type collectionType = typeof(List<>).MakeGenericType(elementType);
+                var collection = Activator.CreateInstance(collectionType);
+                MockingContext mockingContext = serviceProvider as MockingContext;
+                MethodInfo addMethod = collectionType.GetMethod("Add");
+                foreach (var element in mockingContext.FindServices(elementType).Select(s => s.ImplementationInstance).Where(i => i != null))
+                {
+                    addMethod.Invoke(collection, new object[] { element });
+                }
+                return collection;
+            }
+
+            // Default path.
+            return serviceProvider.GetService(parameterInfo.ParameterType);
+        }
+
+        private static object[] GetConstructorArguments(IServiceProvider serviceProvider, ConstructorInfo constructorInfo)
+        {
+            return constructorInfo.GetParameters().Select(p => ResolveParameter(serviceProvider, p)).ToArray();
         }
 
         public MockingContext AddService<T>(ConstructorInfo constructorInfo) where T : class
         {
-            GetOrAddService(typeof(T), constructorInfo.DeclaringType, constructorInfo);
+            this.serviceCollection.AddSingleton(typeof(T), (s) => constructorInfo.Invoke(GetConstructorArguments(s, constructorInfo)));
             return this;
         }
 
         public MockingContext AddService<T>(Type implementationType) where T : class
         {
-            GetOrAddService(typeof(T), implementationType);
-            return this;
+            return AddService<T>(GetConstructor(implementationType));            
         }
 
         public MockingContext AddService<T>(T implementationInstance) where T : class
@@ -111,9 +152,9 @@ namespace Stratis.Bitcoin.Tests.Common
             return this;
         }
 
-        public void Dispose()
+        public object GetService(Type serviceType)
         {
-            this.serviceCollection.Clear();
+            return GetOrAddService(serviceType);
         }
     }
 }
