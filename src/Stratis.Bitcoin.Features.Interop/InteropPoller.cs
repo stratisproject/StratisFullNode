@@ -488,7 +488,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             string amountString = (string)amount;
 
-            if (!int.TryParse(amountString, out int transferAmount))
+            if (!BigInteger.TryParse(amountString, out BigInteger transferAmount))
                 return null;
 
             var transfer = new TransferDetails()
