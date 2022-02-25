@@ -467,6 +467,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                 IDeposit deposit = deposits[i];
                                 Transaction transaction = null;
                                 CrossChainTransferStatus status = CrossChainTransferStatus.Suspended;
+
+                                // Log the target address in the event that it fails.
+                                this.logger.LogDebug($"Attemting to create script pubkey from target address '{deposit.TargetAddress}'.");
                                 Script scriptPubKey = BitcoinAddress.Create(deposit.TargetAddress, this.network).ScriptPubKey;
 
                                 if (!haveSuspendedTransfers)
