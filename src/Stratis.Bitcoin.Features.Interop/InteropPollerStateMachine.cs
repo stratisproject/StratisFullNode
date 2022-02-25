@@ -52,7 +52,7 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
-        public async Task OriginatorNotSubmittedAsync(ConversionRequest request, IETHClient clientForDestChain, InteropSettings interopSettings)
+        public async Task OriginatorNotSubmittedAsync(ConversionRequest request, IETHClient clientForDestChain, InteropSettings interopSettings, BigInteger submissionAmount, string contractToSubmit)
         {
             string transactionType = request.RequestType == ConversionRequestType.Burn ? "SRC20->ERC20" : "CRS->WSTRAX";
 
@@ -60,7 +60,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             // First construct the necessary transfer() transaction data, utilising the ABI of a standard ERC20 contract.
             // When this constructed transaction is actually executed, the transfer's source account will be the account executing the transaction i.e. the multisig contract address.
-            string abiData = clientForDestChain.EncodeTransferParams(request.DestinationAddress, new BigInteger(request.Amount.ToBytes()));
+            string abiData = clientForDestChain.EncodeTransferParams(request.DestinationAddress, submissionAmount);
 
             int gasPrice = this.externalApiPoller.GetGasPrice();
 
@@ -73,7 +73,7 @@ namespace Stratis.Bitcoin.Features.Interop
             // Submit the unconfirmed transaction data to the multisig contract, returning a transactionId used to refer to it.
             // Once sufficient multisig owners have confirmed the transaction the multisig contract will execute it.
             // Note that by submitting the transaction to the multisig wallet contract, the originator is implicitly granting it one confirmation.
-            MultisigTransactionIdentifiers identifiers = await clientForDestChain.SubmitTransactionAsync(request.TokenContract, 0, abiData, gasPrice).ConfigureAwait(false);
+            MultisigTransactionIdentifiers identifiers = await clientForDestChain.SubmitTransactionAsync(contractToSubmit, 0, abiData, gasPrice).ConfigureAwait(false);
 
             if (identifiers.TransactionId == BigInteger.MinusOne)
             {
@@ -111,7 +111,7 @@ namespace Stratis.Bitcoin.Features.Interop
             request.RequestStatus = ConversionRequestStatus.OriginatorSubmitted;
         }
 
-        public async Task OriginatorSubmittedAsync(ConversionRequest request, InteropSettings interopSettings)
+        public async Task OriginatorSubmittedAsync(ConversionRequest request, InteropSettings interopSettings, bool isTransfer)
         {
             string transactionType = request.RequestType == ConversionRequestType.Burn ? "SRC20->ERC20" : "CRS->WSTRAX";
 
@@ -119,7 +119,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             if (transactionId2 != BigInteger.MinusOne)
             {
-                await this.BroadcastCoordinationVoteRequestAsync(request.RequestId, transactionId2, request.DestinationChain, false).ConfigureAwait(false);
+                await this.BroadcastCoordinationVoteRequestAsync(request.RequestId, transactionId2, request.DestinationChain, isTransfer).ConfigureAwait(false);
 
                 BigInteger agreedTransactionId = this.conversionRequestCoordinationService.GetAgreedTransactionId(request.RequestId, interopSettings.GetSettingsByChain(request.DestinationChain).MultisigWalletQuorum);
 

@@ -813,6 +813,8 @@ namespace Stratis.Bitcoin.Features.Interop
 
             this.logger.Info("There are {0} unprocessed conversion mint requests.", mintRequests.Count);
 
+            var stateMachine = new InteropPollerStateMachine(this.logger, this.externalApiPoller, this.conversionRequestCoordinationService, this.federationManager, this.federatedPegBroadcaster);
+
             foreach (ConversionRequest request in mintRequests)
             {
                 // Ignore old conversion requests for the time being.
@@ -875,19 +877,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 {
                     case ConversionRequestStatus.Unprocessed:
                         {
-                            if (originator)
-                            {
-                                // If this node is the designated transaction originator, it must create and submit the transaction to the multisig.
-                                this.logger.Info("This node selected as originator for transaction '{0}'.", request.RequestId);
-
-                                request.RequestStatus = ConversionRequestStatus.OriginatorNotSubmitted;
-                            }
-                            else
-                            {
-                                this.logger.Info("This node was not selected as the originator for transaction '{0}'. The originator is: '{1}'.", request.RequestId, designatedMember == null ? "N/A (Overridden)" : designatedMember.PubKey?.ToHex());
-
-                                request.RequestStatus = ConversionRequestStatus.NotOriginator;
-                            }
+                            await stateMachine.UnprocessedAsync(request, originator, designatedMember).ConfigureAwait(false);
 
                             break;
                         }
@@ -900,49 +890,36 @@ namespace Stratis.Bitcoin.Features.Interop
                             {
                                 // TODO: Make a Cirrus version of SubmitTransactionAsync that can handle more generic operations than just minting
                                 identifiers = await this.cirrusClient.MintAsync(request.TokenContract, request.DestinationAddress, new BigInteger(request.Amount.ToBytes())).ConfigureAwait(false);
+
+                                if (identifiers.TransactionId == BigInteger.MinusOne)
+                                {
+                                    this.logger.Error($"Minting on {request.DestinationChain} to address '{request.DestinationAddress}' for {request.Amount} failed: {identifiers.Message}");
+
+                                    request.Processed = true;
+                                    request.RequestStatus = ConversionRequestStatus.Failed;
+                                    request.StatusMessage = identifiers.Message;
+
+                                    // TODO: Submitting the transaction failed, this needs to be handled
+                                }
+                                else
+                                    request.RequestStatus = ConversionRequestStatus.OriginatorSubmitting;
+
+                                request.ExternalChainBlockHeight = identifiers.BlockHeight;
+                                request.ExternalChainTxHash = identifiers.TransactionHash;
+                                request.ExternalChainTxEventId = identifiers.TransactionId.ToString();
                             }
                             else
                             {
-                                this.logger.Info("Conversion not yet submitted, checking which gas price to use.");
+                                BigInteger amountToSubmit = this.CoinsToWei(request.Amount.GetLow64());
+                                string contractToSubmit = this.interopSettings.GetSettingsByChain(request.DestinationChain).WrappedStraxContractAddress;
 
-                                // First construct the necessary transfer() transaction data, utilising the ABI of the wrapped STRAX ERC20 contract.
-                                // When this constructed transaction is actually executed, the transfer's source account will be the account executing the transaction i.e. the multisig contract address.
-                                string abiData = clientForDestChain.EncodeTransferParams(request.DestinationAddress, this.CoinsToWei(request.Amount.GetLow64()));
-
-                                int gasPrice = this.externalApiPoller.GetGasPrice();
-
-                                // If a gas price is not currently available then fall back to the value specified on the command line.
-                                if (gasPrice == -1)
-                                    gasPrice = this.interopSettings.GetSettingsByChain(request.DestinationChain).GasPrice;
-
-                                this.logger.Info("Originator will use a gas price of {0} to submit the transaction.", gasPrice);
-
-                                // Submit the unconfirmed transaction data to the multisig contract, returning a transactionId used to refer to it.
-                                // Once sufficient multisig owners have confirmed the transaction the multisig contract will execute it.
-                                // Note that by submitting the transaction to the multisig wallet contract, the originator is implicitly granting it one confirmation.
-                                identifiers = await clientForDestChain.SubmitTransactionAsync(this.interopSettings.GetSettingsByChain(request.DestinationChain).WrappedStraxContractAddress, 0, abiData, gasPrice).ConfigureAwait(false);
+                                await stateMachine.OriginatorNotSubmittedAsync(request, clientForDestChain, this.interopSettings, amountToSubmit, contractToSubmit).ConfigureAwait(false);
                             }
-
-                            if (identifiers.TransactionId == BigInteger.MinusOne)
-                            {
-                                this.logger.Error($"Minting on {request.DestinationChain} to address '{request.DestinationAddress}' for {request.Amount} failed: {identifiers.Message}");
-
-                                request.Processed = true;
-                                request.RequestStatus = ConversionRequestStatus.Failed;
-                                request.StatusMessage = identifiers.Message;
-
-                                // TODO: Submitting the transaction failed, this needs to be handled
-                            }
-                            else
-                                request.RequestStatus = ConversionRequestStatus.OriginatorSubmitting;
-
-                            request.ExternalChainBlockHeight = identifiers.BlockHeight;
-                            request.ExternalChainTxHash = identifiers.TransactionHash;
-                            request.ExternalChainTxEventId = identifiers.TransactionId.ToString();
 
                             break;
                         }
-                    case ConversionRequestStatus.OriginatorSubmitting:
+                    
+                   case ConversionRequestStatus.OriginatorSubmitting:
                         {
                             (BigInteger confirmationCount, string blockHash) = isTransfer ? this.cirrusClient.GetConfirmations(request.ExternalChainBlockHeight) : await clientForDestChain.GetConfirmationsAsync(request.ExternalChainTxHash).ConfigureAwait(false);
 
@@ -968,21 +945,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             // The coordination mechanism safeguards against this, as any such spurious transaction will not receive acceptance votes.
                             // TODO: The transactionId should be accompanied by the hash of the submission transaction on the Ethereum chain so that it can be verified
 
-                            BigInteger transactionId2 = this.conversionRequestCoordinationService.GetCandidateTransactionId(request.RequestId);
-
-                            if (transactionId2 != BigInteger.MinusOne)
-                            {
-                                await this.BroadcastCoordinationVoteRequestAsync(request.RequestId, transactionId2, request.DestinationChain, isTransfer).ConfigureAwait(false);
-
-                                BigInteger agreedTransactionId = this.conversionRequestCoordinationService.GetAgreedTransactionId(request.RequestId, this.interopSettings.GetSettingsByChain(request.DestinationChain).MultisigWalletQuorum);
-
-                                if (agreedTransactionId != BigInteger.MinusOne)
-                                {
-                                    this.logger.Info("Transaction '{0}' has received sufficient votes, it should now start getting confirmed by each peer.", agreedTransactionId);
-
-                                    request.RequestStatus = ConversionRequestStatus.VoteFinalised;
-                                }
-                            }
+                            await stateMachine.OriginatorSubmittedAsync(request, this.interopSettings, isTransfer).ConfigureAwait(false);
 
                             break;
                         }
@@ -1188,7 +1151,9 @@ namespace Stratis.Bitcoin.Features.Interop
 
                     case ConversionRequestStatus.OriginatorNotSubmitted:
                         {
-                            await stateMachine.OriginatorNotSubmittedAsync(request, clientForDestChain, this.interopSettings).ConfigureAwait(false);
+                            BigInteger amountToSubmit = new BigInteger(request.Amount.ToBytes());
+
+                            await stateMachine.OriginatorNotSubmittedAsync(request, clientForDestChain, this.interopSettings, amountToSubmit, request.TokenContract).ConfigureAwait(false);
 
                             break;
                         }
@@ -1208,7 +1173,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             // The coordination mechanism safeguards against this, as any such spurious transaction will not receive acceptance votes.
                             // TODO: The transactionId should be accompanied by the hash of the submission transaction on the Ethereum chain so that it can be verified
 
-                            await stateMachine.OriginatorSubmittedAsync(request, this.interopSettings).ConfigureAwait(false);
+                            await stateMachine.OriginatorSubmittedAsync(request, this.interopSettings, false).ConfigureAwait(false);
                             
                             break;
                         }
