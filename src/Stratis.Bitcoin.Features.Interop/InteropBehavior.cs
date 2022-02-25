@@ -157,7 +157,7 @@ namespace Stratis.Bitcoin.Features.Interop
             }
             catch (Exception ex)
             {
-                this.logger.LogError($"An exception occurred trying to retrieve the confirmation count for multsig transaction id '{payload.TransactionId}', request id'{payload.RequestId}': {ex}");
+                this.logger.LogError($"An exception occurred trying to retrieve the confirmation count for multisig transaction id '{payload.TransactionId}', request id'{payload.RequestId}': {ex}");
                 return;
             }
 

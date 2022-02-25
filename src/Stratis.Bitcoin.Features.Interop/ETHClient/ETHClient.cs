@@ -121,7 +121,9 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// </summary>
         /// <param name="addressToQuery">The account to retrieve the ERC20 balance of.</param>
         /// <returns>The balance of the account.</returns>
-        Task<BigInteger> GetErc20BalanceAsync(string addressToQuery);
+        Task<BigInteger> GetWStraxBalanceAsync(string addressToQuery);
+
+        Task<BigInteger> GetErc20BalanceAsync(string addressToQuery, string contractAddress);
 
         /// <summary>
         /// Retrieves a string from the Key Value Store contract.
@@ -493,9 +495,15 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         }
 
         /// <inheritdoc />
-        public async Task<BigInteger> GetErc20BalanceAsync(string addressToQuery)
+        public async Task<BigInteger> GetWStraxBalanceAsync(string addressToQuery)
         {
             return await WrappedStrax.GetErc20BalanceAsync(this.web3, this.settings.WrappedStraxContractAddress, addressToQuery).ConfigureAwait(false);
+        }
+
+        public async Task<BigInteger> GetErc20BalanceAsync(string addressToQuery, string contractAddress)
+        {
+            // TODO: Make a generic ERC20 contract interface for the necessary methods, rather than sharing this
+            return await WrappedStrax.GetErc20BalanceAsync(this.web3, contractAddress, addressToQuery).ConfigureAwait(false);
         }
 
         /// <inheritdoc />
