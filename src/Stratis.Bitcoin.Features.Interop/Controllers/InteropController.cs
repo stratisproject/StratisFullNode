@@ -709,7 +709,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult ReprocessBurnRequest(NetworkType networkType)
+        public IActionResult ContractAddresses(NetworkType networkType)
         {
             try
             {
