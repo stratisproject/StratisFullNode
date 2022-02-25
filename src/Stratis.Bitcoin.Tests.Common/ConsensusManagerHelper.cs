@@ -26,7 +26,7 @@ namespace Stratis.Bitcoin.Tests.Common
             ChainState chainState = null,
             InMemoryCoinView inMemoryCoinView = null,
             ChainIndexer chainIndexer = null,
-            ConsensusRuleEngine consensusRules = null)
+            IConsensusRuleEngine consensusRules = null)
         {
             string[] param = dataDir == null ? new string[] { } : new string[] { $"-datadir={dataDir}" };
 
@@ -72,9 +72,14 @@ namespace Stratis.Bitcoin.Tests.Common
                 .AddService<IInvalidBlockHashStore>(typeof(InvalidBlockHashStore));
 
             if (consensusRules == null)
-                consensusRules = mockingContext.GetService<IConsensusRuleEngine>(typeof(PowConsensusRuleEngine)).SetupRulesEngineParent();
+            {
+                mockingContext.AddService<IConsensusRuleEngine>(typeof(PowConsensusRuleEngine));
+                mockingContext.GetService<IConsensusRuleEngine>().SetupRulesEngineParent();
+            }
             else
-                mockingContext.AddService<IConsensusRuleEngine>(consensusRules);
+            {
+                mockingContext.AddService(consensusRules);
+            }
 
             mockingContext
                 .AddService<IIntegrityValidator>(typeof(IntegrityValidator))
