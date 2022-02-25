@@ -69,11 +69,11 @@ namespace Stratis.Bitcoin.Tests.Common
                 .AddService<IChainState>(chainState)
                 .AddService<IConnectionManager>(typeof(ConnectionManager))
                 .AddService<IPeerBanning>(typeof(PeerBanning))
-                .AddService<ICheckpoints>(typeof(Checkpoints).GetConstructor(new[] { typeof(Network), typeof(ConsensusSettings) }))
+                .AddService<ICheckpoints>(typeof(Checkpoints))
                 .AddService<IInvalidBlockHashStore>(typeof(InvalidBlockHashStore));
 
             if (consensusRules == null)
-                consensusRules = mockingContext.GetService<IConsensusRuleEngine>(typeof(PowConsensusRuleEngine), addIfNotExists: true).SetupRulesEngineParent();
+                consensusRules = mockingContext.GetService<IConsensusRuleEngine>(typeof(PowConsensusRuleEngine)).SetupRulesEngineParent();
             else
                 mockingContext.AddService<IConsensusRuleEngine>(consensusRules);
 

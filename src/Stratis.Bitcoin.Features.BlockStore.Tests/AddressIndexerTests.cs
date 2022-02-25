@@ -43,7 +43,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
                 .AddService(new ChainIndexer(this.network))
                 .AddService<IDateTimeProvider>(new DateTimeProvider());
 
-            this.addressIndexer = mockingContext.GetService<IAddressIndexer>(typeof(AddressIndexer), addIfNotExists: true);
+            this.addressIndexer = mockingContext.GetService<IAddressIndexer>(typeof(AddressIndexer));
             this.genesisHeader = mockingContext.GetService<ChainIndexer>().GetHeader(0);
             this.consensusManagerMock = mockingContext.GetMock<IConsensusManager>();
         }
