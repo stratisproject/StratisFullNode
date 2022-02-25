@@ -54,9 +54,9 @@ namespace Stratis.Bitcoin.Tests.Common
             return this;
         }
 
-        public MockingContext AddService<T>(Type implementationType) where T : class
+        public MockingContext AddService<T>(Type implementationType = null) where T : class
         {
-            this.serviceCollection.AddSingleton(typeof(T), implementationType);
+            this.serviceCollection.AddSingleton(typeof(T), implementationType ?? typeof(T));
             return this;
         }
 

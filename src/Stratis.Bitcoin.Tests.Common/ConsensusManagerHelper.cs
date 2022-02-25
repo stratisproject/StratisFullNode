@@ -1,8 +1,8 @@
 ﻿using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 using NBitcoin;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Validators;
@@ -37,17 +37,6 @@ namespace Stratis.Bitcoin.Tests.Common
             // Dont check PoW of a header in this test.
             network.Consensus.ConsensusRules.HeaderValidationRules.RemoveAll(x => x == typeof(CheckDifficultyPowRule));
 
-            var consensusSettings = new ConsensusSettings(nodeSettings);
-
-            if (chainIndexer == null)
-                chainIndexer = new ChainIndexer(network);
-
-            if (inMemoryCoinView == null)
-                inMemoryCoinView = new InMemoryCoinView(new HashHeightPair(chainIndexer.Tip));
-
-            if (chainState == null)
-                chainState = new ChainState();
-
             var mockingContext = new MockingContext()
                 .AddService(network)
                 .AddService(nodeSettings)
@@ -63,33 +52,22 @@ namespace Stratis.Bitcoin.Tests.Common
                 .AddService(new PayloadProvider().DiscoverPayloads())
                 .AddService<INetworkPeerFactory>(typeof(NetworkPeerFactory))
                 .AddService<IPeerDiscovery>(typeof(PeerDiscovery))
-                .AddService(chainIndexer)
-                .AddService<ICoinView>(inMemoryCoinView)
-                .AddService<IChainState>(chainState)
+                .AddService(chainIndexer ?? new ChainIndexer(network))
+                .AddService<ICoinView>(ctx => inMemoryCoinView ?? new InMemoryCoinView(new HashHeightPair(ctx.GetService<ChainIndexer>().Tip)))
+                .AddService<IChainState>(chainState ?? new ChainState())
                 .AddService<IConnectionManager>(typeof(ConnectionManager))
                 .AddService<IPeerBanning>(typeof(PeerBanning))
                 .AddService<ICheckpoints>(typeof(Checkpoints))
-                .AddService<IInvalidBlockHashStore>(typeof(InvalidBlockHashStore));
-
-            if (consensusRules == null)
-            {
-                mockingContext.AddService<IConsensusRuleEngine>(typeof(PowConsensusRuleEngine));
-                mockingContext.GetService<IConsensusRuleEngine>().SetupRulesEngineParent();
-            }
-            else
-            {
-                mockingContext.AddService(consensusRules);
-            }
-
-            mockingContext
+                .AddService<IInvalidBlockHashStore>(typeof(InvalidBlockHashStore))
+                .AddService<PowConsensusRuleEngine>()
+                .AddService(ctx => (consensusRules ?? ctx.GetService<PowConsensusRuleEngine>()))
                 .AddService<IIntegrityValidator>(typeof(IntegrityValidator))
                 .AddService<IPartialValidator>(typeof(PartialValidator))
                 .AddService<IFullValidator>(typeof(FullValidator))
                 .AddService<IHeaderValidator>(typeof(HeaderValidator))
                 .AddService<IChainWorkComparer>(typeof(ChainWorkComparer))
-                .AddService<IChainedHeaderTree>(typeof(ChainedHeaderTree));
-
-            mockingContext.AddService<IConsensusManager>(typeof(ConsensusManager).GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic)[0]);
+                .AddService<IChainedHeaderTree>(typeof(ChainedHeaderTree))
+                .AddService<IConsensusManager>(typeof(ConsensusManager).GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic)[0]);
 
             return mockingContext.GetService<IConsensusManager>();
         }
