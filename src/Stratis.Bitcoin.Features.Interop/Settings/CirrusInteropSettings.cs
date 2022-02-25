@@ -51,7 +51,7 @@ namespace Stratis.Bitcoin.Features.Interop.Settings
                     new CirrusContractAddress()
                     {
                         TokenName = "TST4",
-                        NetworkName = "CrrusTest",
+                        NetworkName = "CirrusTest",
                         ERC20Address = "0x5da5cfe7d4ce1cc0712ebc0bb58eff93817a6801",
                         SRC20Address = "tQhh41Z6LCbiJEF78c2myQHqvbptsfPmSu"
                     },
