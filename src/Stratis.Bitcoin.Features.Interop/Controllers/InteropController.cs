@@ -518,7 +518,38 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
 
-                return this.Json((await client.GetErc20BalanceAsync(account).ConfigureAwait(false)).ToString());
+                return this.Json((await client.GetWStraxBalanceAsync(account).ConfigureAwait(false)).ToString());
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Retrieves the balance of a given account on a given ERC20 contract.
+        /// </summary>
+        /// <param name="destinationChain">The chain the ERC20 contract is deployed to.</param>
+        /// <param name="account">The account to retrieve the balance for.</param>
+        /// <param name="contractAddress">The address of the contract on the given chain.</param>
+        /// <returns>The account balance.</returns>
+        [Route("erc20balance")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public async Task<IActionResult> Erc20BalanceAsync(DestinationChain destinationChain, string account, string contractAddress)
+        {
+            try
+            {
+                if (!this.ethCompatibleClientProvider.IsChainSupportedAndEnabled(destinationChain))
+                    return this.Json($"{destinationChain} not enabled or supported!");
+
+                IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
+
+                return this.Json((await client.GetErc20BalanceAsync(account, contractAddress).ConfigureAwait(false)).ToString());
             }
             catch (Exception e)
             {
