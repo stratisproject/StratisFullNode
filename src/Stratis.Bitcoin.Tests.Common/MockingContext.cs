@@ -66,6 +66,12 @@ namespace Stratis.Bitcoin.Tests.Common
             return this;
         }
 
+        public MockingContext AddService<T>(Func<IServiceProvider, T> implementationFactory) where T : class
+        {
+            this.serviceCollection.AddSingleton(typeof(T), (s) => implementationFactory(s));
+            return this;
+        }
+
         private ServiceDescriptor[] FindServices(Type serviceType, Type implementationType = null)
         {
             return this.serviceCollection.Where(s => s.ServiceType == serviceType && (implementationType == null || s.ImplementationType == implementationType)).ToArray();

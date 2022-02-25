@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using LiteDB;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
@@ -34,7 +35,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             this.network = new StraxMain();
             var mockingContext = new MockingContext()
                 .AddService(this.network)
-                .AddService(new StoreSettings(NodeSettings.Default(this.network))
+                .AddService(ctx => new StoreSettings(NodeSettings.Default(ctx.GetService<Network>()))
                 {
                     AddressIndex = true,
                     TxIndex = true
