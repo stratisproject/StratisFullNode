@@ -63,7 +63,6 @@ namespace Stratis.Bitcoin.Tests.Common
                 .AddService(new PayloadProvider().DiscoverPayloads())
                 .AddService<INetworkPeerFactory>(typeof(NetworkPeerFactory))
                 .AddService<IPeerDiscovery>(typeof(PeerDiscovery))
-                .AddService(new PeerConnector[] { })
                 .AddService(chainIndexer)
                 .AddService<ICoinView>(inMemoryCoinView)
                 .AddService<IChainState>(chainState)
