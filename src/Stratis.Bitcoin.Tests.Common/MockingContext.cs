@@ -38,11 +38,6 @@ namespace Stratis.Bitcoin.Tests.Common
             return (Mock<T>)GetMock(typeof(T));
         }
 
-        public T GetService<T>(Type implementationType) where T : class
-        {
-            return (T)GetOrAddService(typeof(T), implementationType);
-        }
-
         public T GetService<T>() where T : class
         {
             return (T)GetOrAddService(typeof(T));
