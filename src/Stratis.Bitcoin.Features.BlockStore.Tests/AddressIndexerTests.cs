@@ -34,7 +34,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             this.network = new StraxMain();
             var mockingContext = new MockingContext()
                 .AddService(this.network)
-                .AddService(ctx => new StoreSettings(NodeSettings.Default(this.network))
+                .AddService(new StoreSettings(NodeSettings.Default(this.network))
                 {
                     AddressIndex = true,
                     TxIndex = true
