@@ -699,5 +699,30 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
             }
         }
+
+        /// <summary>
+        /// Endpoint that returns the supported/official ERC20/SRC20 token contract addresses for the given network type.
+        /// </summary>
+        /// <param name="networkType">The network type to return the addresses for.</param>
+        [Route("contractaddresses")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult ContractAddresses(NetworkType networkType)
+        {
+            try
+            {
+                List<CirrusContractAddress> result = CirrusContractAddresses.GetForNetwork(networkType);
+                return this.Json(result);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred trying to retrieve the token addresses for '{0}' : {1}.", networkType, e.ToString());
+
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
+            }
+        }
+
     }
 }
