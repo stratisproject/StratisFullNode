@@ -79,17 +79,16 @@ namespace Stratis.Bitcoin.Tests.Common
 
         private object MakeConcrete(Type serviceType, ServiceDescriptor serviceDescriptor = null)
         {
-            if (serviceDescriptor?.ImplementationInstance != null)
-                return serviceDescriptor.ImplementationInstance;
-
-            object service = null;
+            object service = serviceDescriptor?.ImplementationInstance;
+            if (service != null)
+                return service;
 
             Type implementationType = serviceDescriptor?.ImplementationType;
 
             if (serviceDescriptor?.ImplementationFactory != null)
             {
                 service = serviceDescriptor.ImplementationFactory.Invoke(this);
-                implementationType = service?.GetType() ?? implementationType;
+                implementationType = service?.GetType();
             }
 
             implementationType ??= serviceType;
@@ -126,7 +125,7 @@ namespace Stratis.Bitcoin.Tests.Common
                 Type collectionType = typeof(List<>).MakeGenericType(elementType);
                 var collection = Activator.CreateInstance(collectionType);
                 MethodInfo addMethod = collectionType.GetMethod("Add");
-                foreach (var serviceDescriptor in services)
+                foreach (ServiceDescriptor serviceDescriptor in services)
                 {
                     var element = MakeConcrete(serviceType, serviceDescriptor);
                     addMethod.Invoke(collection, new object[] { element });

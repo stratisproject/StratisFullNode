@@ -60,7 +60,7 @@ namespace Stratis.Bitcoin.Tests.Common
                 .AddService<ICheckpoints>(typeof(Checkpoints))
                 .AddService<IInvalidBlockHashStore>(typeof(InvalidBlockHashStore))
                 .AddService<PowConsensusRuleEngine>()
-                .AddService(ctx => (consensusRules ?? ctx.GetService<PowConsensusRuleEngine>()))
+                .AddService(ctx => consensusRules ?? ctx.GetService<PowConsensusRuleEngine>())
                 .AddService<IIntegrityValidator>(typeof(IntegrityValidator))
                 .AddService<IPartialValidator>(typeof(PartialValidator))
                 .AddService<IFullValidator>(typeof(FullValidator))
