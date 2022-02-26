@@ -72,32 +72,29 @@ namespace Stratis.Bitcoin.Tests.Common
             return this;
         }
 
-        private ServiceDescriptor[] FindServices(Type serviceType, Type implementationType = null)
+        private ServiceDescriptor[] FindServices(Type serviceType)
         {
-            return this.serviceCollection.Where(s => s.ServiceType == serviceType && (implementationType == null || s.ImplementationType == implementationType)).ToArray();
+            return this.serviceCollection.Where(s => s.ServiceType == serviceType).ToArray();
         }
 
-        private object GetOrAddService(Type serviceType, Type implementationType = null, ConstructorInfo constructorInfo = null)
+        private object MakeConcrete(Type serviceType, ServiceDescriptor serviceDescriptor = null)
         {
-            ServiceDescriptor[] services = FindServices(serviceType, implementationType);
+            if (serviceDescriptor?.ImplementationInstance != null)
+                return serviceDescriptor.ImplementationInstance;
 
-            if (services.Length > 1)
-                throw new InvalidOperationException($"There are {services.Length} services of type {serviceType}.");
+            object service = null;
 
-            var service = services.FirstOrDefault()?.ImplementationInstance;
+            Type implementationType = serviceDescriptor?.ImplementationType;
 
-            if (service != null)
-                return service;
-
-            if (services.Length == 1)
+            if (serviceDescriptor?.ImplementationFactory != null)
             {
-                implementationType = services[0].ImplementationType;
-                service = services[0].ImplementationFactory?.Invoke(this);
-                implementationType ??= service?.GetType();
-                this.serviceCollection.Remove(services[0]);
+                service = serviceDescriptor.ImplementationFactory.Invoke(this);
+                implementationType = service?.GetType() ?? implementationType;
             }
 
             implementationType ??= serviceType;
+
+            this.serviceCollection.Remove(serviceDescriptor);
 
             if (implementationType.IsInterface)
             {
@@ -108,7 +105,7 @@ namespace Stratis.Bitcoin.Tests.Common
             }
             else if (service == null)
             {
-                constructorInfo ??= GetConstructor(implementationType);
+                ConstructorInfo constructorInfo = GetConstructor(implementationType);
                 object[] args = GetConstructorArguments(this, constructorInfo);
                 service = constructorInfo.Invoke(args);
             }
@@ -116,6 +113,32 @@ namespace Stratis.Bitcoin.Tests.Common
             this.serviceCollection.AddSingleton(serviceType, service);
 
             return service;
+        }
+
+        private object GetOrAddService(Type serviceType)
+        { 
+            ServiceDescriptor[] services = FindServices(serviceType);
+
+            // Need to do a bit more work to resolve IEnumerable types.
+            if (typeof(IEnumerable<object>).IsAssignableFrom(serviceType))
+            {
+                Type elementType = serviceType.GetGenericArguments().First();
+                Type collectionType = typeof(List<>).MakeGenericType(elementType);
+                var collection = Activator.CreateInstance(collectionType);
+                MethodInfo addMethod = collectionType.GetMethod("Add");
+                foreach (var serviceDescriptor in services)
+                {
+                    var element = MakeConcrete(serviceType, serviceDescriptor);
+                    addMethod.Invoke(collection, new object[] { element });
+                }
+
+                return collection;
+            }
+
+            if (services.Length > 1)
+                throw new InvalidOperationException($"There are {services.Length} services of type {serviceType}.");
+
+            return MakeConcrete(serviceType, services.FirstOrDefault());
         }
 
         private static ConstructorInfo GetConstructor(Type implementationType)
@@ -138,21 +161,6 @@ namespace Stratis.Bitcoin.Tests.Common
             // Some constructors have value type arguments with default values.
             if (parameterInfo.ParameterType.IsValueType)
                 return parameterInfo.DefaultValue;
-            
-            // Need to do a bit more work to inject IEnumerable parameters.
-            if (parameterInfo.ParameterType.GetInterface("IEnumerable") != null)
-            {
-                Type elementType = parameterInfo.ParameterType.GetGenericArguments().First();
-                Type collectionType = typeof(List<>).MakeGenericType(elementType);
-                var collection = Activator.CreateInstance(collectionType);
-                MockingContext mockingContext = serviceProvider as MockingContext;
-                MethodInfo addMethod = collectionType.GetMethod("Add");
-                foreach (var element in mockingContext.FindServices(elementType).Select(s => s.ImplementationInstance).Where(i => i != null))
-                {
-                    addMethod.Invoke(collection, new object[] { element });
-                }
-                return collection;
-            }
 
             // Default path.
             return serviceProvider.GetService(parameterInfo.ParameterType);
