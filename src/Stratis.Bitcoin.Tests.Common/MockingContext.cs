@@ -4,7 +4,6 @@ using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Tests.Common
 {
@@ -25,7 +24,8 @@ namespace Stratis.Bitcoin.Tests.Common
 
         private object GetMock(Type serviceType)
         {
-            GetOrAddService(serviceType);
+            if (!this.serviceCollection.Any(s => s.ServiceType == serviceType))
+                MakeConcrete(serviceType, mockIt: true);
 
             Type mockType = MockType(serviceType);
             return this.serviceCollection.SingleOrDefault(s => s.ServiceType == mockType)?.ImplementationInstance;
@@ -33,8 +33,6 @@ namespace Stratis.Bitcoin.Tests.Common
 
         public Mock<T> GetMock<T>() where T : class
         {
-            Guard.Assert(typeof(T).IsInterface);
-
             return (Mock<T>)GetMock(typeof(T));
         }
 
@@ -77,32 +75,44 @@ namespace Stratis.Bitcoin.Tests.Common
             return this.serviceCollection.Where(s => s.ServiceType == serviceType).ToArray();
         }
 
-        private object MakeConcrete(Type serviceType, ServiceDescriptor serviceDescriptor = null)
+        private object MakeConcrete(Type serviceType, ServiceDescriptor serviceDescriptor = null, bool mockIt = false)
         {
             object service = serviceDescriptor?.ImplementationInstance;
             if (service != null)
                 return service;
 
-            Type implementationType = serviceDescriptor?.ImplementationType;
+            this.serviceCollection.Remove(serviceDescriptor);
 
             if (serviceDescriptor?.ImplementationFactory != null)
             {
                 service = serviceDescriptor.ImplementationFactory.Invoke(this);
-                implementationType = service?.GetType();
+                if (service != null)
+                {
+                    this.serviceCollection.AddSingleton(serviceType, service);
+                    return service;
+                }
             }
 
-            implementationType ??= serviceType;
+            Type implementationType = serviceDescriptor?.ImplementationType ?? serviceType;
 
-            this.serviceCollection.Remove(serviceDescriptor);
-
-            if (implementationType.IsInterface)
+            if (implementationType.IsInterface || mockIt)
             {
                 Type mockType = MockType(implementationType);
-                var mock = Activator.CreateInstance(mockType);
+                object mock;
+                if (implementationType.IsInterface)
+                {
+                    mock = Activator.CreateInstance(mockType);
+                }
+                else
+                {
+                    ConstructorInfo constructorInfo = GetConstructor(implementationType);
+                    object[] args = GetConstructorArguments(this, constructorInfo);
+                    mock = Activator.CreateInstance(mockType, args);
+                }
                 service = ((dynamic)mock).Object;
                 this.serviceCollection.AddSingleton(mockType, mock);
             }
-            else if (service == null)
+            else
             {
                 ConstructorInfo constructorInfo = GetConstructor(implementationType);
                 object[] args = GetConstructorArguments(this, constructorInfo);
