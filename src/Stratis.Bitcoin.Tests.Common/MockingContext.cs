@@ -31,18 +31,11 @@ namespace Stratis.Bitcoin.Tests.Common
             return this.serviceCollection.SingleOrDefault(s => s.ServiceType == mockType)?.ImplementationInstance;
         }
 
-        public Mock<T> GetMock<T>() where T : class
-        {
-            return (Mock<T>)GetMock(typeof(T));
-        }
-
-        public T GetService<T>() where T : class
-        {
-            return (T)GetOrAddService(typeof(T));
-        }
-
         public object GetService(Type serviceType)
         {
+            if (typeof(IMock<object>).IsAssignableFrom(serviceType))
+                return GetMock(serviceType.GetGenericArguments().First());
+
             return GetOrAddService(serviceType);
         }
 

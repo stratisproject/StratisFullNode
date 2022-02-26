@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using LiteDB;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
@@ -46,7 +47,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             this.addressIndexer = mockingContext.GetService<IAddressIndexer>();
             this.genesisHeader = mockingContext.GetService<ChainIndexer>().GetHeader(0);
-            this.consensusManagerMock = mockingContext.GetMock<IConsensusManager>();
+            this.consensusManagerMock = mockingContext.GetService<Mock<IConsensusManager>>();
         }
 
         [Fact]
