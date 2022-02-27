@@ -20,31 +20,6 @@ namespace Stratis.Bitcoin.Tests.Common
             this.serviceCollection = serviceCollection;
         }
 
-        private Type MockType(Type serviceType) => typeof(Mock<>).MakeGenericType(serviceType);
-
-        private object GetMock(Type serviceType)
-        {
-            if (!this.serviceCollection.Any(s => s.ServiceType == serviceType))
-                MakeConcrete(serviceType, mockIt: true);
-
-            Type mockType = MockType(serviceType);
-            return this.serviceCollection.SingleOrDefault(s => s.ServiceType == mockType)?.ImplementationInstance;
-        }
-
-        public object GetService(Type serviceType)
-        {
-            if (typeof(IMock<object>).IsAssignableFrom(serviceType))
-                return GetMock(serviceType.GetGenericArguments().First());
-
-            return GetOrAddService(serviceType);
-        }
-
-        public MockingContext AddService<T>(ConstructorInfo constructorInfo) where T : class
-        {
-            this.serviceCollection.AddSingleton(typeof(T), (s) => constructorInfo.Invoke(GetConstructorArguments(s, constructorInfo)));
-            return this;
-        }
-
         public MockingContext AddService<T>(Type implementationType = null) where T : class
         {
             this.serviceCollection.AddSingleton(typeof(T), implementationType ?? typeof(T));
@@ -63,9 +38,48 @@ namespace Stratis.Bitcoin.Tests.Common
             return this;
         }
 
-        private ServiceDescriptor[] FindServices(Type serviceType)
+        public MockingContext AddService<T>(ConstructorInfo constructorInfo) where T : class
         {
-            return this.serviceCollection.Where(s => s.ServiceType == serviceType).ToArray();
+            this.serviceCollection.AddSingleton(typeof(T), (s) => constructorInfo.Invoke(GetConstructorArguments(s, constructorInfo)));
+            return this;
+        }
+
+        public object GetService(Type serviceType)
+        {
+            if (typeof(IMock<object>).IsAssignableFrom(serviceType))
+            {
+                Type mockType = serviceType;
+
+                serviceType = serviceType.GetGenericArguments().First();
+
+                if (!this.serviceCollection.Any(s => s.ServiceType == serviceType))
+                    MakeConcrete(serviceType, mockIt: true);
+
+                return this.serviceCollection.SingleOrDefault(s => s.ServiceType == mockType)?.ImplementationInstance;
+            }
+
+            ServiceDescriptor[] services = this.serviceCollection.Where(s => s.ServiceType == serviceType).ToArray();
+
+            // Need to do a bit more work to resolve IEnumerable types.
+            if (typeof(IEnumerable<object>).IsAssignableFrom(serviceType))
+            {
+                Type elementType = serviceType.GetGenericArguments().First();
+                Type collectionType = typeof(List<>).MakeGenericType(elementType);
+                var collection = Activator.CreateInstance(collectionType);
+                MethodInfo addMethod = collectionType.GetMethod("Add");
+                foreach (ServiceDescriptor serviceDescriptor in services)
+                {
+                    var element = MakeConcrete(serviceType, serviceDescriptor);
+                    addMethod.Invoke(collection, new object[] { element });
+                }
+
+                return collection;
+            }
+
+            if (services.Length > 1)
+                throw new InvalidOperationException($"There are {services.Length} services of type {serviceType}.");
+
+            return MakeConcrete(serviceType, services.FirstOrDefault());
         }
 
         private object MakeConcrete(Type serviceType, ServiceDescriptor serviceDescriptor = null, bool mockIt = false)
@@ -90,7 +104,7 @@ namespace Stratis.Bitcoin.Tests.Common
 
             if (implementationType.IsInterface || mockIt)
             {
-                Type mockType = MockType(implementationType);
+                Type mockType = typeof(Mock<>).MakeGenericType(implementationType);
                 object mock;
                 if (implementationType.IsInterface)
                 {
@@ -115,32 +129,6 @@ namespace Stratis.Bitcoin.Tests.Common
             this.serviceCollection.AddSingleton(serviceType, service);
 
             return service;
-        }
-
-        private object GetOrAddService(Type serviceType)
-        { 
-            ServiceDescriptor[] services = FindServices(serviceType);
-
-            // Need to do a bit more work to resolve IEnumerable types.
-            if (typeof(IEnumerable<object>).IsAssignableFrom(serviceType))
-            {
-                Type elementType = serviceType.GetGenericArguments().First();
-                Type collectionType = typeof(List<>).MakeGenericType(elementType);
-                var collection = Activator.CreateInstance(collectionType);
-                MethodInfo addMethod = collectionType.GetMethod("Add");
-                foreach (ServiceDescriptor serviceDescriptor in services)
-                {
-                    var element = MakeConcrete(serviceType, serviceDescriptor);
-                    addMethod.Invoke(collection, new object[] { element });
-                }
-
-                return collection;
-            }
-
-            if (services.Length > 1)
-                throw new InvalidOperationException($"There are {services.Length} services of type {serviceType}.");
-
-            return MakeConcrete(serviceType, services.FirstOrDefault());
         }
 
         private static ConstructorInfo GetConstructor(Type implementationType)
