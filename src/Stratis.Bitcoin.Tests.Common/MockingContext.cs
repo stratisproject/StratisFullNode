@@ -139,7 +139,12 @@ namespace Stratis.Bitcoin.Tests.Common
             }
 
             if (serviceDescriptor?.ImplementationType != null)
-                return GetService(serviceDescriptor.ImplementationType);
+            {
+                service = GetService(serviceDescriptor.ImplementationType);
+                if (service != null && serviceDescriptor.ImplementationType != serviceDescriptor.ServiceType)
+                    this.serviceCollection.AddSingleton(serviceDescriptor.ServiceType, service);
+                return service;
+            }
 
             return MakeConcrete(serviceDescriptor.ServiceType);
         }
