@@ -93,11 +93,11 @@ namespace Stratis.Bitcoin.Features.Interop
             request.ExternalChainTxEventId = identifiers.TransactionId.ToString();
         }
 
-        public async Task OriginatorSubmittingAsync(ConversionRequest request, IETHClient clientForDestChain, BigInteger submissionConfirmationThreshold)
+        public async Task OriginatorSubmittingAsync(ConversionRequest request, IETHClient clientForDestChain, ICirrusContractClient cirrusClient, BigInteger submissionConfirmationThreshold, bool isTransfer)
         {
             string transactionType = request.RequestType == ConversionRequestType.Burn ? "SRC20->ERC20" : "CRS->WSTRAX";
 
-            (BigInteger confirmationCount, string blockHash) = await clientForDestChain.GetConfirmationsAsync(request.ExternalChainTxHash).ConfigureAwait(false);
+            (BigInteger confirmationCount, string blockHash) = isTransfer ? cirrusClient.GetConfirmations(request.ExternalChainBlockHeight) : await clientForDestChain.GetConfirmationsAsync(request.ExternalChainTxHash).ConfigureAwait(false);
 
             this.logger.Info($"Originator confirming {transactionType} transaction id '{request.ExternalChainTxHash}' '({request.ExternalChainTxEventId})' before broadcasting; confirmations: {confirmationCount}; Block Hash {blockHash}.");
 

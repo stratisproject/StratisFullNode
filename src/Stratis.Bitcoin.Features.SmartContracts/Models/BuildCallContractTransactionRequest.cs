@@ -84,6 +84,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Models
         public ulong GasLimit { get; set; }
 
         /// <summary>
+        /// An optional field, this is only used in the case where a transaction needs to simultaneously call a contract as well as transfer funds to one or more recipients.
+        /// The recipient(s) are entirely independent of the contract call address and any resulting transaction outputs are separate.
+        /// </summary>
+        public List<RecipientModel> Recipients { get; set; }
+
+        /// <summary>
         /// A wallet address containing the funds to cover transaction fees, gas, and any funds specified in the
         /// Amount field. Some methods, such as a withdrawal method on an escrow smart contract,
         /// should only be executed by the deployer. In this case, it is this address that identifies

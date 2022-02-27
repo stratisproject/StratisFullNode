@@ -261,6 +261,39 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             }
 
             ulong totalFee = (request.GasPrice * request.GasLimit) + Money.Parse(request.FeeAmount);
+
+            // TODO: Add SubtractFeeFromAmount support?
+            var recipients = new List<Recipient>();
+            if (request.Recipients != null)
+            {
+                foreach (RecipientModel recipientModel in request.Recipients)
+                {
+                    Script destination;
+
+                    if (!string.IsNullOrWhiteSpace(recipientModel.DestinationAddress))
+                    {
+                        destination = BitcoinAddress.Create(recipientModel.DestinationAddress, this.network).ScriptPubKey;
+                    }
+                    else
+                    {
+                        destination = Script.FromHex(recipientModel.DestinationScript);
+                    }
+
+                    recipients.Add(new Recipient
+                    {
+                        ScriptPubKey = destination,
+                        Amount = recipientModel.Amount,
+                        SubtractFeeFromAmount = false
+                    });
+                }
+            }
+
+            recipients.Add(new Recipient
+            {
+                Amount = request.Amount,
+                ScriptPubKey = new Script(this.callDataSerializer.Serialize(txData))
+            });
+
             var context = new TransactionBuildContext(this.network)
             {
                 AccountReference = new WalletAccountReference(request.WalletName, request.AccountName),
@@ -269,7 +302,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
                 SelectedInputs = selectedInputs,
                 MinConfirmations = MinConfirmationsAllChecks,
                 WalletPassword = request.Password,
-                Recipients = new[] { new Recipient { Amount = request.Amount, ScriptPubKey = new Script(this.callDataSerializer.Serialize(txData)) } }.ToList()
+                Recipients = recipients
             };
 
             try
