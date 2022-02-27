@@ -33,17 +33,19 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
         public AddressIndexerTests()
         {
             this.network = new StraxMain();
-            var mockingContext = new MockingContext()
-                .AddService(this.network)
-                .AddService(new StoreSettings(NodeSettings.Default(this.network))
+            var mockingServices = new ServiceCollection()
+                .AddSingleton(this.network)
+                .AddSingleton(new StoreSettings(NodeSettings.Default(this.network))
                 {
                     AddressIndex = true,
                     TxIndex = true
                 })
-                .AddService(new DataFolder(TestBase.CreateTestDir(this)))
-                .AddService(new ChainIndexer(this.network))
-                .AddService<IDateTimeProvider>(new DateTimeProvider())
-                .AddService<IAddressIndexer>(typeof(AddressIndexer));
+                .AddSingleton(new DataFolder(TestBase.CreateTestDir(this)))
+                .AddSingleton(new ChainIndexer(this.network))
+                .AddSingleton<IDateTimeProvider, DateTimeProvider>()
+                .AddSingleton<IAddressIndexer, AddressIndexer>();
+            
+            var mockingContext = new MockingContext(mockingServices);
 
             this.addressIndexer = mockingContext.GetService<IAddressIndexer>();
             this.genesisHeader = mockingContext.GetService<ChainIndexer>().GetHeader(0);

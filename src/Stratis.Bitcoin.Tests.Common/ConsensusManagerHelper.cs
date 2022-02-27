@@ -1,5 +1,7 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Configuration;
@@ -28,6 +30,21 @@ namespace Stratis.Bitcoin.Tests.Common
             ChainIndexer chainIndexer = null,
             IConsensusRuleEngine consensusRules = null)
         {
+            return new MockingContext(GetMockingServices(network, dataDir, 
+                ctx => chainState, 
+                ctx => inMemoryCoinView ?? new InMemoryCoinView(new HashHeightPair(ctx.GetService<ChainIndexer>().Tip)), 
+                ctx => chainIndexer, 
+                ctx => consensusRules)).GetService<IConsensusManager>();
+        }
+
+        public static IServiceCollection GetMockingServices(
+            Network network,
+            string dataDir = null,
+            Func<IServiceProvider, IChainState> chainState = null,
+            Func<IServiceProvider, ICoinView> coinView = null,
+            Func<IServiceProvider, ChainIndexer> chainIndexer = null,
+            Func<IServiceProvider, IConsensusRuleEngine> consensusRules = null)
+        {
             string[] param = dataDir == null ? new string[] { } : new string[] { $"-datadir={dataDir}" };
 
             var nodeSettings = new NodeSettings(network, args: param);
@@ -37,39 +54,38 @@ namespace Stratis.Bitcoin.Tests.Common
             // Dont check PoW of a header in this test.
             network.Consensus.ConsensusRules.HeaderValidationRules.RemoveAll(x => x == typeof(CheckDifficultyPowRule));
 
-            var mockingContext = new MockingContext()
-                .AddService(network)
-                .AddService(nodeSettings)
-                .AddService(nodeSettings.DataFolder)
-                .AddService(nodeSettings.LoggerFactory)
-                .AddService(DateTimeProvider.Default)
-                .AddService<INodeLifetime>(typeof(NodeLifetime))
-                .AddService<IVersionProvider>(typeof(VersionProvider))
-                .AddService<INodeStats>(typeof(NodeStats))
-                .AddService<ISignals>(typeof(Signals.Signals))
-                .AddService<ISelfEndpointTracker>(typeof(SelfEndpointTracker))
-                .AddService<IPeerAddressManager>(typeof(PeerAddressManager))
-                .AddService(new PayloadProvider().DiscoverPayloads())
-                .AddService<INetworkPeerFactory>(typeof(NetworkPeerFactory))
-                .AddService<IPeerDiscovery>(typeof(PeerDiscovery))
-                .AddService(chainIndexer ?? new ChainIndexer(network))
-                .AddService<ICoinView>(ctx => inMemoryCoinView ?? new InMemoryCoinView(new HashHeightPair(ctx.GetService<ChainIndexer>().Tip)))
-                .AddService<IChainState>(chainState ?? new ChainState())
-                .AddService<IConnectionManager>(typeof(ConnectionManager))
-                .AddService<IPeerBanning>(typeof(PeerBanning))
-                .AddService<ICheckpoints>(typeof(Checkpoints))
-                .AddService<IInvalidBlockHashStore>(typeof(InvalidBlockHashStore))
-                .AddService<PowConsensusRuleEngine>()
-                .AddService(ctx => consensusRules ?? ctx.GetService<PowConsensusRuleEngine>())
-                .AddService<IIntegrityValidator>(typeof(IntegrityValidator))
-                .AddService<IPartialValidator>(typeof(PartialValidator))
-                .AddService<IFullValidator>(typeof(FullValidator))
-                .AddService<IHeaderValidator>(typeof(HeaderValidator))
-                .AddService<IChainWorkComparer>(typeof(ChainWorkComparer))
-                .AddService<IChainedHeaderTree>(typeof(ChainedHeaderTree))
-                .AddService<IConsensusManager>(typeof(ConsensusManager).GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic)[0]);
+            var mockingServices = new ServiceCollection()
+                .AddSingleton(network)
+                .AddSingleton(nodeSettings)
+                .AddSingleton(nodeSettings.DataFolder)
+                .AddSingleton(nodeSettings.LoggerFactory)
+                .AddSingleton(DateTimeProvider.Default)
+                .AddSingleton<INodeLifetime, NodeLifetime>()
+                .AddSingleton<IVersionProvider, VersionProvider>()
+                .AddSingleton<INodeStats, NodeStats>()
+                .AddSingleton<ISignals, Signals.Signals>()
+                .AddSingleton<ISelfEndpointTracker, SelfEndpointTracker>()
+                .AddSingleton<IPeerAddressManager, PeerAddressManager>()
+                .AddSingleton(new PayloadProvider().DiscoverPayloads())
+                .AddSingleton<INetworkPeerFactory, NetworkPeerFactory>()
+                .AddSingleton<IPeerDiscovery, PeerDiscovery>()
+                .AddSingleton(chainIndexer ?? (ctx => new ChainIndexer(network)))
+                .AddSingleton(coinView ?? (ctx => new Mock<ICoinView>().Object))
+                .AddSingleton(chainState ?? (ctx => new ChainState()))
+                .AddSingleton<IConnectionManager, ConnectionManager>()
+                .AddSingleton<IPeerBanning, PeerBanning>()
+                .AddSingleton<ICheckpoints, Checkpoints>()
+                .AddSingleton<IInvalidBlockHashStore, InvalidBlockHashStore>()
+                .AddSingleton(consensusRules ?? (ctx => ctx.GetService<PowConsensusRuleEngine>()))
+                .AddSingleton<IIntegrityValidator, IntegrityValidator>()
+                .AddSingleton<IPartialValidator, PartialValidator>()
+                .AddSingleton<IFullValidator, FullValidator>()
+                .AddSingleton<IHeaderValidator, HeaderValidator>()
+                .AddSingleton<IChainWorkComparer, ChainWorkComparer>()
+                .AddSingleton<IChainedHeaderTree, ChainedHeaderTree>()
+                .AddSingleton<IConsensusManager>(typeof(ConsensusManager).GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic)[0]);
 
-            return mockingContext.GetService<IConsensusManager>();
+            return mockingServices;
         }
     }
 }

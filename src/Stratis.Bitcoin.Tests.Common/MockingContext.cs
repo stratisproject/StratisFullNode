@@ -7,6 +7,16 @@ using Moq;
 
 namespace Stratis.Bitcoin.Tests.Common
 {
+    public static class IServiceCollectionExt
+    {
+        public static IServiceCollection AddSingleton<T>(this IServiceCollection serviceCollection, ConstructorInfo constructorInfo) where T : class
+        {
+            serviceCollection.AddSingleton(typeof(T), (s) => constructorInfo.Invoke(MockingContext.GetConstructorArguments(s, constructorInfo)));
+
+            return serviceCollection;
+        }
+    }
+
     /// <summary>
     /// Implements a <c>GetService</c> that concretizes services on-demand and also mocks services that can't be otherwise concretized.
     /// </summary>
@@ -14,61 +24,9 @@ namespace Stratis.Bitcoin.Tests.Common
     {
         private IServiceCollection serviceCollection;
 
-        public MockingContext() : this(new ServiceCollection())
-        {
-        }
-
         public MockingContext(IServiceCollection serviceCollection)
         {
             this.serviceCollection = serviceCollection;
-        }
-
-        /// <summary>
-        /// Adds a singleton to the underlying service collection.
-        /// </summary>
-        /// <typeparam name="T">The service type.</typeparam>
-        /// <param name="implementationType">The implementation type.</param>
-        /// <returns>The <c>this</c> instance for fluent calls.</returns>
-        public MockingContext AddService<T>(Type implementationType = null) where T : class
-        {
-            this.serviceCollection.AddSingleton(typeof(T), implementationType ?? typeof(T));
-            return this;
-        }
-
-        /// <summary>
-        /// Adds a singleton to the underlying service collection.
-        /// </summary>
-        /// <typeparam name="T">The service type.</typeparam>
-        /// <param name="implementationInstance">The implementation instance.</param>
-        /// <returns>The <c>this</c> instance for fluent calls.</returns>
-        public MockingContext AddService<T>(T implementationInstance) where T : class
-        {
-            this.serviceCollection.AddSingleton(typeof(T), implementationInstance);
-            return this;
-        }
-
-        /// <summary>
-        /// Adds a singleton to the underlying service collection.
-        /// </summary>
-        /// <typeparam name="T">The service type.</typeparam>
-        /// <param name="implementationFactory">The implementation factory.</param>
-        /// <returns>The <c>this</c> instance for fluent calls.</returns>
-        public MockingContext AddService<T>(Func<IServiceProvider, T> implementationFactory) where T : class
-        {
-            this.serviceCollection.AddSingleton(typeof(T), (s) => implementationFactory(s));
-            return this;
-        }
-
-        /// <summary>
-        /// Adds a singleton to the underlying service collection.
-        /// </summary>
-        /// <typeparam name="T">The service type.</typeparam>
-        /// <param name="constructorInfo">The constructor info.</param>
-        /// <returns>The <c>this</c> instance for fluent calls.</returns>
-        public MockingContext AddService<T>(ConstructorInfo constructorInfo) where T : class
-        {
-            this.serviceCollection.AddSingleton(typeof(T), (s) => constructorInfo.Invoke(GetConstructorArguments(s, constructorInfo)));
-            return this;
         }
 
         /// <summary>
@@ -132,10 +90,8 @@ namespace Stratis.Bitcoin.Tests.Common
             {
                 service = serviceDescriptor.ImplementationFactory.Invoke(this);
                 if (service != null)
-                {
                     this.serviceCollection.AddSingleton(serviceDescriptor.ServiceType, service);
-                    return service;
-                }
+                return service;
             }
 
             if (serviceDescriptor?.ImplementationType != null)
@@ -207,7 +163,7 @@ namespace Stratis.Bitcoin.Tests.Common
             return serviceProvider.GetService(parameterInfo.ParameterType);
         }
 
-        private static object[] GetConstructorArguments(IServiceProvider serviceProvider, ConstructorInfo constructorInfo)
+        public static object[] GetConstructorArguments(IServiceProvider serviceProvider, ConstructorInfo constructorInfo)
         {
             return constructorInfo.GetParameters().Select(p => ResolveParameter(serviceProvider, p)).ToArray();
         }
