@@ -7,6 +7,9 @@ using Moq;
 
 namespace Stratis.Bitcoin.Tests.Common
 {
+    /// <summary>
+    /// Concretizes services recursively and also mocks services that can't be otherwise concretized.
+    /// </summary>
     public class MockingContext : IServiceProvider
     {
         private IServiceCollection serviceCollection;
@@ -20,30 +23,62 @@ namespace Stratis.Bitcoin.Tests.Common
             this.serviceCollection = serviceCollection;
         }
 
+        /// <summary>
+        /// Adds a singleton to the underlying service collection.
+        /// </summary>
+        /// <typeparam name="T">The service type.</typeparam>
+        /// <param name="implementationType">The implementation type.</param>
+        /// <returns>The <c>this</c> instance for fluent calls.</returns>
         public MockingContext AddService<T>(Type implementationType = null) where T : class
         {
             this.serviceCollection.AddSingleton(typeof(T), implementationType ?? typeof(T));
             return this;
         }
 
+        /// <summary>
+        /// Adds a singleton to the underlying service collection.
+        /// </summary>
+        /// <typeparam name="T">The service type.</typeparam>
+        /// <param name="implementationInstance">The implementation instance.</param>
+        /// <returns>The <c>this</c> instance for fluent calls.</returns>
         public MockingContext AddService<T>(T implementationInstance) where T : class
         {
             this.serviceCollection.AddSingleton(typeof(T), implementationInstance);
             return this;
         }
 
+        /// <summary>
+        /// Adds a singleton to the underlying service collection.
+        /// </summary>
+        /// <typeparam name="T">The service type.</typeparam>
+        /// <param name="implementationFactory">The implementation factory.</param>
+        /// <returns>The <c>this</c> instance for fluent calls.</returns>
         public MockingContext AddService<T>(Func<IServiceProvider, T> implementationFactory) where T : class
         {
             this.serviceCollection.AddSingleton(typeof(T), (s) => implementationFactory(s));
             return this;
         }
 
+        /// <summary>
+        /// Adds a singleton to the underlying service collection.
+        /// </summary>
+        /// <typeparam name="T">The service type.</typeparam>
+        /// <param name="constructorInfo">The constructor info.</param>
+        /// <returns>The <c>this</c> instance for fluent calls.</returns>
         public MockingContext AddService<T>(ConstructorInfo constructorInfo) where T : class
         {
             this.serviceCollection.AddSingleton(typeof(T), (s) => constructorInfo.Invoke(GetConstructorArguments(s, constructorInfo)));
             return this;
         }
 
+        /// <summary>
+        /// Returns a concrete instance of the provided <paramref name="serviceType"/>.
+        /// If the service type had no associated <c>AddService</c> then a mocked instance is returned.
+        /// </summary>
+        /// <param name="serviceType">The service type.</param>
+        /// <returns>The service instance.</returns>
+        /// <remarks><para>A mocked type can be passed in which case the mock object is returned for setup purposes.</para>
+        /// <para>An enumerable type can be passed in which case multiple service instances are returned.</para></remarks>
         public object GetService(Type serviceType)
         {
             if (typeof(IMock<object>).IsAssignableFrom(serviceType))
