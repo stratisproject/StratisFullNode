@@ -8,7 +8,7 @@ using Moq;
 namespace Stratis.Bitcoin.Tests.Common
 {
     /// <summary>
-    /// Concretizes services recursively and also mocks services that can't be otherwise concretized.
+    /// Implements a <c>GetService</c> that concretizes services on-demand and also mocks services that can't be otherwise concretized.
     /// </summary>
     public class MockingContext : IServiceProvider
     {
@@ -104,7 +104,7 @@ namespace Stratis.Bitcoin.Tests.Common
                 MethodInfo addMethod = collectionType.GetMethod("Add");
                 foreach (ServiceDescriptor serviceDescriptor in services)
                 {
-                    var element = MakeConcrete(serviceType, serviceDescriptor);
+                    var element = MakeConcrete(serviceDescriptor);
                     addMethod.Invoke(collection, new object[] { element });
                 }
 
@@ -114,40 +114,51 @@ namespace Stratis.Bitcoin.Tests.Common
             if (services.Length > 1)
                 throw new InvalidOperationException($"There are {services.Length} services of type {serviceType}.");
 
-            return MakeConcrete(serviceType, services.FirstOrDefault());
+            if (services.Length == 0)
+                return MakeConcrete(serviceType);
+
+            return MakeConcrete(services[0]);
         }
 
-        private object MakeConcrete(Type serviceType, ServiceDescriptor serviceDescriptor = null, bool mockIt = false)
+        private object MakeConcrete(ServiceDescriptor serviceDescriptor)
         {
-            object service = serviceDescriptor?.ImplementationInstance;
+            object service = serviceDescriptor.ImplementationInstance;
             if (service != null)
                 return service;
 
             this.serviceCollection.Remove(serviceDescriptor);
 
-            if (serviceDescriptor?.ImplementationFactory != null)
+            if (serviceDescriptor.ImplementationFactory != null)
             {
                 service = serviceDescriptor.ImplementationFactory.Invoke(this);
                 if (service != null)
                 {
-                    this.serviceCollection.AddSingleton(serviceType, service);
+                    this.serviceCollection.AddSingleton(serviceDescriptor.ServiceType, service);
                     return service;
                 }
             }
 
-            Type implementationType = serviceDescriptor?.ImplementationType ?? serviceType;
+            if (serviceDescriptor?.ImplementationType != null)
+                return GetService(serviceDescriptor.ImplementationType);
 
-            if (implementationType.IsInterface || mockIt)
+            return MakeConcrete(serviceDescriptor.ServiceType);
+        }
+
+        private object MakeConcrete(Type serviceType, bool mockIt = false)
+        {
+            object service;
+
+            if (serviceType.IsInterface || mockIt)
             {
-                Type mockType = typeof(Mock<>).MakeGenericType(implementationType);
+                Type mockType = typeof(Mock<>).MakeGenericType(serviceType);
                 object mock;
-                if (implementationType.IsInterface)
+                if (serviceType.IsInterface)
                 {
                     mock = Activator.CreateInstance(mockType);
                 }
                 else
                 {
-                    ConstructorInfo constructorInfo = GetConstructor(implementationType);
+                    ConstructorInfo constructorInfo = GetConstructor(serviceType);
                     object[] args = GetConstructorArguments(this, constructorInfo);
                     mock = Activator.CreateInstance(mockType, args);
                 }
@@ -156,7 +167,7 @@ namespace Stratis.Bitcoin.Tests.Common
             }
             else
             {
-                ConstructorInfo constructorInfo = GetConstructor(implementationType);
+                ConstructorInfo constructorInfo = GetConstructor(serviceType);
                 object[] args = GetConstructorArguments(this, constructorInfo);
                 service = constructorInfo.Invoke(args);
             }
