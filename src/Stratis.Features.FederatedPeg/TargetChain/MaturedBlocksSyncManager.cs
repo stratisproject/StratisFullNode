@@ -139,6 +139,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     return;
                 }
 
+                this.logger.LogDebug($"Adding deposit '{deposit.Id}' for {deposit.Amount} as a fee for the multisig.");
+
                 this.interOpFeeDeposits.Add(deposit);
             }
         }
