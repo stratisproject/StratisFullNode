@@ -31,6 +31,13 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <summary>Starts requesting blocks from another chain.</summary>
         /// <returns>The asynchronous task.</returns>
         Task StartAsync();
+
+        /// <summary>
+        /// Inject a deposit that that distributes a fee to all the multisig nodes for submitting a interop transfer.
+        /// </summary>
+        /// <param name="deposit">The deposit that will be injected into the <see cref="CrossChainTransferStore"/> that distributes a fee to all the multisig nodes
+        /// for submitting a interop transfer. This is currently used for SRC20 to ERC20 transfers.</param>
+        void AddInterOpFeeDeposit(IDeposit deposit);
     }
 
     /// <inheritdoc cref="IMaturedBlocksSyncManager"/>
@@ -42,6 +49,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly IFederationWalletManager federationWalletManager;
         private readonly IInitialBlockDownloadState initialBlockDownloadState;
+        private readonly object lockObject;
         private readonly ILogger logger;
         private readonly INodeLifetime nodeLifetime;
         private readonly IConversionRequestRepository conversionRequestRepository;
@@ -50,7 +58,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly IConversionRequestFeeService conversionRequestFeeService;
         private readonly Network network;
         private readonly IFederationManager federationManager;
-
         private IAsyncLoop requestDepositsTask;
 
         /// <summary>When we are fully synced we stop asking for more blocks for this amount of time.</summary>
@@ -59,6 +66,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <summary>Delay between initialization and first request to other node.</summary>
         /// <remarks>Needed to give other node some time to start before bombing it with requests.</remarks>
         private const int InitializationDelaySeconds = 10;
+
+        /// <summary>
+        /// This list of interop fee deposits that will be distributed to the multisig nodes.
+        /// </summary>
+        private readonly List<IDeposit> interOpFeeDeposits = new List<IDeposit>();
 
         public MaturedBlocksSyncManager(
             IAsyncProvider asyncProvider,
@@ -91,6 +103,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.network = network;
             this.federationManager = federationManager;
 
+            this.lockObject = new object();
             this.logger = LogManager.GetCurrentClassLogger();
         }
 
@@ -113,6 +126,21 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             },
             this.nodeLifetime.ApplicationStopping,
             repeatEvery: TimeSpan.FromSeconds(RefreshDelaySeconds));
+        }
+
+        /// <inheritdoc />
+        public void AddInterOpFeeDeposit(IDeposit deposit)
+        {
+            lock (this.lockObject)
+            {
+                if (this.interOpFeeDeposits.Any(d => d.Id == deposit.Id))
+                {
+                    this.logger.LogDebug($"Interop fee deposit '{deposit.Id}' is already queued to be processed.");
+                    return;
+                }
+
+                this.interOpFeeDeposits.Add(deposit);
+            }
         }
 
         /// <summary>Asks for blocks from another gateway node and then processes them.</summary>
@@ -295,6 +323,22 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 foreach (IDeposit deposit in maturedBlockDeposit.Deposits)
                 {
                     this.logger.LogDebug("Deposit matured: {0}", deposit.ToString());
+                }
+            }
+
+            lock (this.lockObject)
+            {
+                // Add any fee related deposits relating to the multsig nodes
+                if (this.interOpFeeDeposits.Any())
+                {
+                    this.logger.LogDebug($"Adding {this.interOpFeeDeposits.Count} interflux fee deposits.");
+
+                    MaturedBlockDepositsModel tempModelList = matureBlockDeposits.Value.OrderByDescending(d => d.BlockInfo.BlockHeight).First();
+                    List<IDeposit> tempDepositList = tempModelList.Deposits.ToList();
+                    tempDepositList.AddRange(this.interOpFeeDeposits);
+                    tempModelList.Deposits = tempDepositList.AsReadOnly().OrderBy(x => x.Id, Comparer<uint256>.Create(DeterministicCoinOrdering.CompareUint256)).ToList();
+
+                    this.interOpFeeDeposits.Clear();
                 }
             }
 

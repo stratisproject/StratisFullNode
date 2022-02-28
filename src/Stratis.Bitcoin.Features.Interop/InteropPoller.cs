@@ -30,6 +30,8 @@ using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Coordination;
 using Stratis.Features.FederatedPeg.Distribution;
 using Stratis.Features.FederatedPeg.Interfaces;
+using Stratis.Features.FederatedPeg.SourceChain;
+using Stratis.Features.FederatedPeg.TargetChain;
 using Stratis.SmartContracts;
 using Stratis.SmartContracts.CLR;
 
@@ -61,6 +63,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private readonly IAsyncProvider asyncProvider;
         private readonly ChainIndexer chainIndexer;
+        private readonly ICirrusContractClient cirrusClient;
         private readonly Network counterChainNetwork;
         private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
         private readonly IConversionRequestFeeService conversionRequestFeeService;
@@ -74,9 +77,9 @@ namespace Stratis.Bitcoin.Features.Interop
         private readonly IInitialBlockDownloadState initialBlockDownloadState;
         private readonly IKeyValueRepository keyValueRepository;
         private readonly ILogger logger;
+        private readonly IMaturedBlocksSyncManager maturedBlocksSyncManager;
         private readonly Network network;
         private readonly INodeLifetime nodeLifetime;
-        private readonly ICirrusContractClient cirrusClient;
 
         private IAsyncLoop interopLoop;
         private IAsyncLoop conversionLoop;
@@ -110,7 +113,8 @@ namespace Stratis.Bitcoin.Features.Interop
             IFederatedPegBroadcaster federatedPegBroadcaster,
             IKeyValueRepository keyValueRepository,
             INodeStats nodeStats,
-            ICirrusContractClient cirrusClient)
+            ICirrusContractClient cirrusClient,
+            IMaturedBlocksSyncManager maturedBlocksSyncManager)
         {
             this.interopSettings = interopSettings;
             this.ethClientProvider = ethClientProvider;
@@ -128,6 +132,8 @@ namespace Stratis.Bitcoin.Features.Interop
             this.counterChainNetwork = counterChainNetworkWrapper.CounterChainNetwork;
             this.externalApiPoller = externalApiPoller;
             this.keyValueRepository = keyValueRepository;
+            this.maturedBlocksSyncManager = maturedBlocksSyncManager;
+
             this.logger = LogManager.GetCurrentClassLogger();
             this.cirrusClient = cirrusClient;
 
@@ -263,10 +269,8 @@ namespace Stratis.Bitcoin.Features.Interop
 
                     ConsensusTipModel cirrusTip = await this.cirrusClient.GetConsensusTipAsync().ConfigureAwait(false);
 
-                    BigInteger cirrusBlockHeight = cirrusTip.TipHeight;
-
-                    if (this.lastPolledBlock[DestinationChain.CIRRUS] < (cirrusBlockHeight - DestinationChainReorgWindow))
-                        await PollCirrusForBurnsAsync(cirrusBlockHeight).ConfigureAwait(false);
+                    if (this.lastPolledBlock[DestinationChain.CIRRUS] < (cirrusTip.TipHeight - DestinationChainReorgWindow))
+                        await PollCirrusForBurnsAsync(cirrusTip.TipHeight).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
@@ -369,11 +373,11 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
-        private async Task PollCirrusForBurnsAsync(BigInteger blockHeight)
+        private async Task PollCirrusForBurnsAsync(int blockHeight)
         {
             this.logger.Info($"[CIRRUS] Polling for burns and transfers, last polled block: {this.lastPolledBlock[DestinationChain.CIRRUS]}; chain height: {blockHeight}");
 
-            NBitcoin.Block block = await this.cirrusClient.GetBlockByHeightAsync((int)blockHeight).ConfigureAwait(false);
+            NBitcoin.Block block = await this.cirrusClient.GetBlockByHeightAsync(blockHeight).ConfigureAwait(false);
             if (block == null)
             {
                 this.logger.Info($"Unable to retrieve block with height {blockHeight}.");
@@ -431,7 +435,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             }
 
                             IFederation federation = this.network.Federations?.GetOnlyFederation();
-                            
+
                             Script multisigScript = PayToFederationTemplate.Instance.GenerateScriptPubKey(federation.Id).PaymentScript;
 
                             // Since we have no reliable way (yet) of extracting pricing data for all the potential tokens being transferred, there has to be a transaction output paying the multisig the conversion fee in order for the burn to be processed.
@@ -458,9 +462,16 @@ namespace Stratis.Bitcoin.Features.Interop
                                 continue;
                             }
 
-                            byte[] valueBytes = src20burn.Value.ToByteArray();
-                            byte[] paddedArray = new byte[32];
-                            Array.Copy(valueBytes, 0, paddedArray, 0, valueBytes.Length);
+                            // Add the fee to the matured block sync manager so that the CrossChainTransferStore can process it.
+                            this.maturedBlocksSyncManager.AddInterOpFeeDeposit(new Deposit(
+                                new uint256(receipt.TransactionHash),
+                                DepositRetrievalType.Distribution,
+                                Money.Satoshis(interopConversionRequestFee.Amount),
+                                this.network.ConversionTransactionFeeDistributionDummyAddress,
+                                DestinationChain.CIRRUS,
+                                (int)CalculateProcessingHeight(),
+                                block.GetHash()
+                               ));
 
                             KeyValuePair<string, string> contractMapping = this.interopSettings.GetSettingsByChain(DestinationChain.ETH).WatchedErc20Contracts.First(c => c.Value == receipt.To);
 
@@ -474,8 +485,8 @@ namespace Stratis.Bitcoin.Features.Interop
                                         RequestType = ConversionRequestType.Burn,
                                         Processed = false,
                                         RequestStatus = ConversionRequestStatus.Unprocessed,
-                                        Amount = new uint256(paddedArray),
-                                        BlockHeight = (int)blockHeight,
+                                        Amount = ConvertBigIntegerToUint256(src20burn.Value),
+                                        BlockHeight = blockHeight,
                                         DestinationAddress = src20burn.To,
                                         DestinationChain = DestinationChain.ETH,
                                         TokenContract = contractMapping.Key
@@ -708,15 +719,6 @@ namespace Stratis.Bitcoin.Features.Interop
                 return;
             }
 
-            // Schedule this transaction to be processed at the next block height that is divisible by 100. 
-            // Thus will round up to the nearest 100 then add another another 100.
-            // In this way, burns will always be scheduled at a predictable future time across the multisig.
-            // This is because we cannot predict exactly when each node is polling the Ethereum chain for events.
-            ulong blockHeight = (ulong)(this.chainIndexer.Tip.Height - (this.chainIndexer.Tip.Height % 50) + 100);
-
-            if (blockHeight <= 0)
-                blockHeight = 100;
-
             lock (this.repositoryLock)
             {
                 this.conversionRequestRepository.Save(new ConversionRequest()
@@ -726,7 +728,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     Processed = false,
                     RequestStatus = ConversionRequestStatus.Unprocessed,
                     Amount = this.ConvertWeiToSatoshi(burn.Amount),
-                    BlockHeight = (int)blockHeight,
+                    BlockHeight = (int)CalculateProcessingHeight(),
                     DestinationAddress = destinationAddress,
                     DestinationChain = DestinationChain.STRAX
                 });
@@ -784,15 +786,6 @@ namespace Stratis.Bitcoin.Features.Interop
                 return;
             }
 
-            // Schedule this transaction to be processed at the next block height that is divisible by 100. 
-            // Thus will round up to the nearest 100 then add another another 100.
-            // In this way, transfers will always be scheduled at a predictable future time across the multisig.
-            // This is because we cannot predict exactly when each node is polling the Ethereum chain for events.
-            ulong blockHeight = (ulong)(this.chainIndexer.Tip.Height - (this.chainIndexer.Tip.Height % 50) + 100);
-
-            if (blockHeight <= 0)
-                blockHeight = 100;
-
             if (!this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts.TryGetValue(transferContractAddress, out string destinationContract))
             {
                 this.logger.Error("Unknown ERC20 contract address '{0}'; unable to map it to an SRC20 contract", transferContractAddress);
@@ -803,18 +796,14 @@ namespace Stratis.Bitcoin.Features.Interop
 
             lock (this.repositoryLock)
             {
-                byte[] valueBytes = transfer.Value.ToByteArray();
-                byte[] paddedArray = new byte[32];
-                Array.Copy(valueBytes, 0, paddedArray, 0, valueBytes.Length);
-
                 this.conversionRequestRepository.Save(new ConversionRequest()
                 {
                     RequestId = transactionHash,
                     RequestType = ConversionRequestType.Mint,
                     Processed = false,
                     RequestStatus = ConversionRequestStatus.Unprocessed,
-                    Amount = new uint256(paddedArray),
-                    BlockHeight = (int)blockHeight,
+                    Amount = ConvertBigIntegerToUint256(transfer.Value),
+                    BlockHeight = (int)CalculateProcessingHeight(),
                     DestinationAddress = destinationAddress,
                     DestinationChain = DestinationChain.CIRRUS,
                     TokenContract = destinationContract // Need to record the mapping of which Cirrus token contract the minting request should be actioned against.
@@ -958,8 +947,8 @@ namespace Stratis.Bitcoin.Features.Interop
 
                             break;
                         }
-                    
-                   case ConversionRequestStatus.OriginatorSubmitting:
+
+                    case ConversionRequestStatus.OriginatorSubmitting:
                         {
                             await stateMachine.OriginatorSubmittingAsync(request, clientForDestChain, this.cirrusClient, this.SubmissionConfirmationThreshold, isTransfer).ConfigureAwait(false);
 
@@ -1203,7 +1192,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             // TODO: The transactionId should be accompanied by the hash of the submission transaction on the Ethereum chain so that it can be verified
 
                             await stateMachine.OriginatorSubmittedAsync(request, this.interopSettings, false).ConfigureAwait(false);
-                            
+
                             break;
                         }
 
@@ -1520,6 +1509,28 @@ namespace Stratis.Bitcoin.Features.Interop
             }
 
             benchLog.AppendLine();
+        }
+
+        private ulong CalculateProcessingHeight()
+        {
+            // Schedule this transaction to be processed at the next block height that is divisible by 100. 
+            // Thus will round up to the nearest 100 then add another another 100.
+            // In this way, transfers will always be scheduled at a predictable future time across the multisig.
+            // This is because we cannot predict exactly when each node is polling the Ethereum chain for events.
+            ulong blockHeight = (ulong)(this.chainIndexer.Tip.Height - (this.chainIndexer.Tip.Height % 50) + 100);
+
+            if (blockHeight <= 0)
+                blockHeight = 100;
+
+            return blockHeight;
+        }
+
+        private uint256 ConvertBigIntegerToUint256(BigInteger bigIntegerValue)
+        {
+            byte[] valueBytes = bigIntegerValue.ToByteArray();
+            byte[] paddedArray = new byte[32];
+            Array.Copy(valueBytes, 0, paddedArray, 0, valueBytes.Length);
+            return new uint256(paddedArray);
         }
 
         /// <inheritdoc />
