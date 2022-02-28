@@ -124,6 +124,8 @@ namespace Stratis.Bitcoin.Tests.Common
                 if (isMock && serviceType.IsInterface)
                     return mock;
 
+                mock.SetPrivatePropertyValue("CallBase", true);
+
                 service = ((dynamic)mock).Object;
             }
             else
