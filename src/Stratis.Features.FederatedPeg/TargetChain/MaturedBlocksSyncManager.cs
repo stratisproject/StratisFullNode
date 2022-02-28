@@ -133,7 +133,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         {
             lock (this.lockObject)
             {
-                if (this.interOpFeeDeposits.Contains(deposit))
+                if (this.interOpFeeDeposits.Any(d => d.Id == deposit.Id))
                 {
                     this.logger.LogDebug($"Interop fee deposit '{deposit.Id}' is already queued to be processed.");
                     return;
