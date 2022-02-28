@@ -60,7 +60,6 @@ namespace Stratis.Bitcoin.Tests.Common
             if (services.Length > 1)
                 throw new InvalidOperationException($"There are {services.Length} services of type {serviceType}.");
 
-
             if (services.Length == 0)
                 return MakeConcrete(serviceType);
 
@@ -87,6 +86,7 @@ namespace Stratis.Bitcoin.Tests.Common
             {
                 service = GetService(serviceDescriptor.ImplementationType);
                 if (service != null && serviceDescriptor.ImplementationType != serviceDescriptor.ServiceType)
+                    // Restore the service type singleton, with the resolved implementation instance.
                     this.serviceCollection.AddSingleton(serviceDescriptor.ServiceType, service);
                 return service;
             }
@@ -100,6 +100,7 @@ namespace Stratis.Bitcoin.Tests.Common
             object mock = null;
             bool isMock = typeof(IMock<object>).IsAssignableFrom(serviceType);
 
+            // Mock interfaces and explicit mock types.
             if (serviceType.IsInterface || isMock)
             {
                 Type mockType = isMock ? serviceType : typeof(Mock<>).MakeGenericType(serviceType);
@@ -119,6 +120,7 @@ namespace Stratis.Bitcoin.Tests.Common
 
                 this.serviceCollection.AddSingleton(mockType, mock);
 
+                // If we're mocking an interface then there is no separate singleton for the internal object.
                 if (isMock && serviceType.IsInterface)
                     return mock;
 
@@ -161,7 +163,7 @@ namespace Stratis.Bitcoin.Tests.Common
             return serviceProvider.GetService(parameterInfo.ParameterType);
         }
 
-        public static object[] GetConstructorArguments(IServiceProvider serviceProvider, ConstructorInfo constructorInfo)
+        internal static object[] GetConstructorArguments(IServiceProvider serviceProvider, ConstructorInfo constructorInfo)
         {
             return constructorInfo.GetParameters().Select(p => ResolveParameter(serviceProvider, p)).ToArray();
         }
