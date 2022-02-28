@@ -443,6 +443,8 @@ namespace Stratis.Bitcoin.Features.Interop
                             TxOut conversionFeeOutput = null;
                             foreach (TxOut txOut in transaction.Outputs)
                             {
+                                this.logger.Debug($"Output payment script '{txOut.ScriptPubKey}', multisigScript '{multisigScript}'");
+
                                 // For now, pay it directly to the multisig.
                                 if (txOut.ScriptPubKey == multisigScript)
                                 {
