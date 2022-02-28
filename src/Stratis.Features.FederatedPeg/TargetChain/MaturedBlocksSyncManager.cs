@@ -68,7 +68,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private const int InitializationDelaySeconds = 10;
 
         /// <summary>
-        /// This list of interop fee deposits that will distributed to the multisig nodes.
+        /// This list of interop fee deposits that will be distributed to the multisig nodes.
         /// </summary>
         private readonly List<IDeposit> interOpFeeDeposits = new List<IDeposit>();
 
@@ -135,7 +135,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             {
                 if (this.interOpFeeDeposits.Select(d => d.Id).Contains(deposit.Id))
                 {
-                    this.logger.LogDebug($"Interop fee deposit '{deposit.Id}' already exists.");
+                    this.logger.LogDebug($"Interop fee deposit '{deposit.Id}' is already queued to be processed.");
                     return;
                 }
 
