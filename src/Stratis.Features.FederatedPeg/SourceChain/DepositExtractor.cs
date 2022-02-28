@@ -117,7 +117,8 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             if (burnRequests == null)
                 return;
 
-            foreach (ConversionRequest burnRequest in burnRequests.Where(b => inspectForDepositsAtHeight >= b.BlockHeight))
+            // We only process burns with destination chain 'STRAX' here, as SRC20->ERC20 burns are processed separately.
+            foreach (ConversionRequest burnRequest in burnRequests.Where(b => inspectForDepositsAtHeight >= b.BlockHeight && b.DestinationChain == DestinationChain.STRAX))
             {
                 if (inspectForDepositsAtHeight == burnRequest.BlockHeight)
                 {
