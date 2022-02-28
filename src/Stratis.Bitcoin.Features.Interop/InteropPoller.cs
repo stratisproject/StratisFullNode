@@ -434,15 +434,31 @@ namespace Stratis.Bitcoin.Features.Interop
                                 this.logger.Warn($"A dynamic fee for SRC20->ERC20 request '{receipt.TransactionHash}' could not be determined, using a fixed fee of {ConversionRequestFeeService.FallBackFee} CRS.");
                             }
 
-                            // Check if the fee and transfer amount is valid.
-                            byte[] valueBytes = src20burn.Value.ToByteArray();
-                            byte[] transferRequestAmountBytes = new byte[32];
-                            Array.Copy(valueBytes, 0, transferRequestAmountBytes, 0, valueBytes.Length);
+                            IFederation federation = this.network.Federations?.GetOnlyFederation();
 
-                            var transferRequestAmount = new BigInteger(transferRequestAmountBytes);
-                            if (Money.Satoshis(interopConversionRequestFee.Amount) >= transferRequestAmount)
+                            Script multisigScript = PayToFederationTemplate.Instance.GenerateScriptPubKey(federation.Id).PaymentScript;
+
+                            // Since we have no reliable way (yet) of extracting pricing data for all the potential tokens being transferred, there has to be a transaction output paying the multisig the conversion fee in order for the burn to be processed.
+                            // In future perhaps the fee could be taken out of the token value directly e.g. calculate a dollar fee and retain the equivalent SRC20 USDT. The distribution could then be done via an updated multisig contract instead.
+                            TxOut conversionFeeOutput = null;
+                            foreach (TxOut txOut in transaction.Outputs)
                             {
-                                this.logger.Warn($"Conversion transaction '{receipt.TransactionHash}' has a transfer amount {transferRequestAmount} less than the required fee of {interopConversionRequestFee.Amount}.", receipt.TransactionHash);
+                                // For now, pay it directly to the multisig.
+                                if (txOut.ScriptPubKey == multisigScript)
+                                {
+                                    conversionFeeOutput = txOut;
+                                }
+                            }
+
+                            if (conversionFeeOutput == null)
+                            {
+                                this.logger.Warn("Conversion transaction '{0}' has no fee output.", receipt.TransactionHash);
+                                continue;
+                            }
+
+                            if (Money.Satoshis(interopConversionRequestFee.Amount) >= conversionFeeOutput.Value)
+                            {
+                                this.logger.Warn("Conversion transaction '{0}' has an insufficient fee.", receipt.TransactionHash);
                                 continue;
                             }
 
@@ -457,8 +473,9 @@ namespace Stratis.Bitcoin.Features.Interop
                                 block.GetHash()
                                ));
 
-                            // Subtract the fee from the transfer.
-                            transferRequestAmount -= interopConversionRequestFee.Amount;
+                            byte[] valueBytes = src20burn.Value.ToByteArray();
+                            byte[] paddedArray = new byte[32];
+                            Array.Copy(valueBytes, 0, paddedArray, 0, valueBytes.Length);
 
                             KeyValuePair<string, string> contractMapping = this.interopSettings.GetSettingsByChain(DestinationChain.ETH).WatchedErc20Contracts.First(c => c.Value == receipt.To);
 
@@ -472,8 +489,8 @@ namespace Stratis.Bitcoin.Features.Interop
                                         RequestType = ConversionRequestType.Burn,
                                         Processed = false,
                                         RequestStatus = ConversionRequestStatus.Unprocessed,
-                                        Amount = new uint256(transferRequestAmount.ToByteArray()),
-                                        BlockHeight = blockHeight,
+                                        Amount = new uint256(paddedArray),
+                                        BlockHeight = (int)blockHeight,
                                         DestinationAddress = src20burn.To,
                                         DestinationChain = DestinationChain.ETH,
                                         TokenContract = contractMapping.Key
