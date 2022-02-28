@@ -1,8 +1,10 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using NBitcoin;
 using Nethereum.RLP;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
+using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Compilation;
 using Stratis.SmartContracts.CLR.Serialization;
@@ -132,6 +134,54 @@ namespace Stratis.SmartContracts.IntegrationTests
 
             receipt = this.node1.GetReceipt(response.TransactionId.ToString());
             Assert.True(receipt.Success);
+        }
+
+        [Fact]
+        public void Contract_Call_And_Fund_Transfer_Allowed()
+        {
+            // Ensure fixture is funded.
+            this.mockChain.MineBlocks(1);
+
+            // Deploy an arbitrary contract.
+            ContractCompilationResult compilationResult = ContractCompiler.CompileFile("SmartContracts/BehaviourTest.cs");
+
+            Assert.True(compilationResult.Success);
+            BuildCreateContractTransactionResponse preResponse = this.node1.SendCreateContractTransaction(compilationResult.Compilation, 0);
+            this.mockChain.WaitAllMempoolCount(1);
+            this.mockChain.MineBlocks(1);
+            Assert.NotNull(this.node1.GetCode(preResponse.NewContractAddress));
+
+            uint256 currentHash = this.node1.GetLastBlock().GetHash();
+
+            Script destinationScriptPubKey = new Key().ScriptPubKey;
+
+            // Call CheckData() and confirm that it succeeds
+            BuildCallContractTransactionResponse response = this.node1.SendCallContractTransaction(
+                nameof(BehaviourTest.DataIsByte0),
+                preResponse.NewContractAddress,
+                0,
+                recipients: new List<RecipientModel>() { new RecipientModel() { Amount = "1", DestinationAddress = destinationScriptPubKey.GetDestinationAddress(this.node1.CoreNode.FullNode.Network).ToString()}});
+
+            this.mockChain.WaitAllMempoolCount(1);
+            this.mockChain.MineBlocks(1);
+
+            NBitcoin.Block lastBlock = this.node1.GetLastBlock();
+
+            // Blocks progressed
+            Assert.NotEqual(currentHash, lastBlock.GetHash());
+
+            ReceiptResponse receipt = this.node1.GetReceipt(response.TransactionId.ToString());
+            Assert.True(receipt.Success);
+
+            Transaction tx = lastBlock.Transactions.FirstOrDefault(t => t.GetHash() == response.TransactionId);
+
+            Assert.NotNull(tx);
+
+            TxOut txOut = tx.Outputs.FirstOrDefault(o => o.ScriptPubKey == destinationScriptPubKey);
+
+            Assert.NotNull(txOut);
+
+            Assert.Equal(Money.Coins(1.0m), txOut.Value);
         }
 
         [Fact]

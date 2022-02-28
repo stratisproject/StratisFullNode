@@ -63,6 +63,7 @@ namespace Stratis.Bitcoin.Features.Interop
         private readonly ChainIndexer chainIndexer;
         private readonly Network counterChainNetwork;
         private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
+        private readonly IConversionRequestFeeService conversionRequestFeeService;
         private readonly IConversionRequestRepository conversionRequestRepository;
         private readonly IExternalApiPoller externalApiPoller;
         private readonly IETHCompatibleClientProvider ethClientProvider;
@@ -99,6 +100,7 @@ namespace Stratis.Bitcoin.Features.Interop
             ChainIndexer chainIndexer,
             IConversionRequestRepository conversionRequestRepository,
             IConversionRequestCoordinationService conversionRequestCoordinationService,
+            IConversionRequestFeeService conversionRequestFeeService,
             CounterChainNetworkWrapper counterChainNetworkWrapper,
             IETHCompatibleClientProvider ethClientProvider,
             IExternalApiPoller externalApiPoller,
@@ -122,6 +124,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.federatedPegBroadcaster = federatedPegBroadcaster;
             this.conversionRequestRepository = conversionRequestRepository;
             this.conversionRequestCoordinationService = conversionRequestCoordinationService;
+            this.conversionRequestFeeService = conversionRequestFeeService;
             this.counterChainNetwork = counterChainNetworkWrapper.CounterChainNetwork;
             this.externalApiPoller = externalApiPoller;
             this.keyValueRepository = keyValueRepository;
@@ -414,7 +417,46 @@ namespace Stratis.Bitcoin.Features.Interop
 
                         if (src20burn != null && src20burn.ContractType == ContractType.ERC20)
                         {
-                            this.logger.Info($"Found a valid burn transaction with metadata: {src20burn.To}.");
+                            this.logger.Info($"Found a valid SRC20->ERC20 burn transaction with metadata: {src20burn.To}.");
+
+                            // ERC20 transfers out of the multisig wallet have the same cost structure as a wSTRAX conversion, so we can use the same fee estimation logic.
+                            InteropConversionRequestFee interopConversionRequestFee = await this.conversionRequestFeeService.AgreeFeeForConversionRequestAsync(receipt.TransactionHash, (int)receipt.BlockNumber).ConfigureAwait(false);
+
+                            // If a dynamic fee could not be determined, create a fallback fee.
+                            if (interopConversionRequestFee == null ||
+                                (interopConversionRequestFee != null && interopConversionRequestFee.State != InteropFeeState.AgreeanceConcluded))
+                            {
+                                interopConversionRequestFee.Amount = ConversionRequestFeeService.FallBackFee;
+                                this.logger.Warn($"A dynamic fee for SRC20->ERC20 request '{receipt.TransactionHash}' could not be determined, using a fixed fee of {ConversionRequestFeeService.FallBackFee} CRS.");
+                            }
+
+                            IFederation federation = this.network.Federations?.GetOnlyFederation();
+                            
+                            Script multisigScript = PayToFederationTemplate.Instance.GenerateScriptPubKey(federation.Id).PaymentScript;
+
+                            // Since we have no reliable way (yet) of extracting pricing data for all the potential tokens being transferred, there has to be a transaction output paying the multisig the conversion fee in order for the burn to be processed.
+                            // In future perhaps the fee could be taken out of the token value directly e.g. calculate a dollar fee and retain the equivalent SRC20 USDT. The distribution could then be done via an updated multisig contract instead.
+                            TxOut conversionFeeOutput = null;
+                            foreach (TxOut txOut in transaction.Outputs)
+                            {
+                                // For now, pay it directly to the multisig.
+                                if (txOut.ScriptPubKey == multisigScript)
+                                {
+                                    conversionFeeOutput = txOut;
+                                }
+                            }
+
+                            if (conversionFeeOutput == null)
+                            {
+                                this.logger.Warn("Conversion transaction '{0}' has no fee output.", receipt.TransactionHash);
+                                continue;
+                            }
+
+                            if (Money.Satoshis(interopConversionRequestFee.Amount) >= conversionFeeOutput.Value)
+                            {
+                                this.logger.Warn("Conversion transaction '{0}' has an insufficient fee.", receipt.TransactionHash);
+                                continue;
+                            }
 
                             byte[] valueBytes = src20burn.Value.ToByteArray();
                             byte[] paddedArray = new byte[32];
@@ -813,6 +855,8 @@ namespace Stratis.Bitcoin.Features.Interop
 
             this.logger.Info("There are {0} unprocessed conversion mint requests.", mintRequests.Count);
 
+            var stateMachine = new InteropPollerStateMachine(this.logger, this.externalApiPoller, this.conversionRequestCoordinationService, this.federationManager, this.federatedPegBroadcaster);
+
             foreach (ConversionRequest request in mintRequests)
             {
                 // Ignore old conversion requests for the time being.
@@ -875,87 +919,49 @@ namespace Stratis.Bitcoin.Features.Interop
                 {
                     case ConversionRequestStatus.Unprocessed:
                         {
-                            if (originator)
-                            {
-                                // If this node is the designated transaction originator, it must create and submit the transaction to the multisig.
-                                this.logger.Info("This node selected as originator for transaction '{0}'.", request.RequestId);
-
-                                request.RequestStatus = ConversionRequestStatus.OriginatorNotSubmitted;
-                            }
-                            else
-                            {
-                                this.logger.Info("This node was not selected as the originator for transaction '{0}'. The originator is: '{1}'.", request.RequestId, designatedMember == null ? "N/A (Overridden)" : designatedMember.PubKey?.ToHex());
-
-                                request.RequestStatus = ConversionRequestStatus.NotOriginator;
-                            }
+                            await stateMachine.UnprocessedAsync(request, originator, designatedMember).ConfigureAwait(false);
 
                             break;
                         }
 
                     case ConversionRequestStatus.OriginatorNotSubmitted:
                         {
-                            MultisigTransactionIdentifiers identifiers;
-
                             if (isTransfer)
                             {
                                 // TODO: Make a Cirrus version of SubmitTransactionAsync that can handle more generic operations than just minting
-                                identifiers = await this.cirrusClient.MintAsync(request.TokenContract, request.DestinationAddress, new BigInteger(request.Amount.ToBytes())).ConfigureAwait(false);
+                                MultisigTransactionIdentifiers identifiers = await this.cirrusClient.MintAsync(request.TokenContract, request.DestinationAddress, new BigInteger(request.Amount.ToBytes())).ConfigureAwait(false);
+
+                                if (identifiers.TransactionId == BigInteger.MinusOne)
+                                {
+                                    this.logger.Error($"Minting on {request.DestinationChain} to address '{request.DestinationAddress}' for {request.Amount} failed: {identifiers.Message}");
+
+                                    request.Processed = true;
+                                    request.RequestStatus = ConversionRequestStatus.Failed;
+                                    request.StatusMessage = identifiers.Message;
+
+                                    // TODO: Submitting the transaction failed, this needs to be handled
+                                }
+                                else
+                                    request.RequestStatus = ConversionRequestStatus.OriginatorSubmitting;
+
+                                request.ExternalChainBlockHeight = identifiers.BlockHeight;
+                                request.ExternalChainTxHash = identifiers.TransactionHash;
+                                request.ExternalChainTxEventId = identifiers.TransactionId.ToString();
                             }
                             else
                             {
-                                this.logger.Info("Conversion not yet submitted, checking which gas price to use.");
+                                BigInteger amountToSubmit = this.CoinsToWei(request.Amount.GetLow64());
+                                string contractToSubmit = this.interopSettings.GetSettingsByChain(request.DestinationChain).WrappedStraxContractAddress;
 
-                                // First construct the necessary transfer() transaction data, utilising the ABI of the wrapped STRAX ERC20 contract.
-                                // When this constructed transaction is actually executed, the transfer's source account will be the account executing the transaction i.e. the multisig contract address.
-                                string abiData = clientForDestChain.EncodeTransferParams(request.DestinationAddress, this.CoinsToWei(request.Amount.GetLow64()));
-
-                                int gasPrice = this.externalApiPoller.GetGasPrice();
-
-                                // If a gas price is not currently available then fall back to the value specified on the command line.
-                                if (gasPrice == -1)
-                                    gasPrice = this.interopSettings.GetSettingsByChain(request.DestinationChain).GasPrice;
-
-                                this.logger.Info("Originator will use a gas price of {0} to submit the transaction.", gasPrice);
-
-                                // Submit the unconfirmed transaction data to the multisig contract, returning a transactionId used to refer to it.
-                                // Once sufficient multisig owners have confirmed the transaction the multisig contract will execute it.
-                                // Note that by submitting the transaction to the multisig wallet contract, the originator is implicitly granting it one confirmation.
-                                identifiers = await clientForDestChain.SubmitTransactionAsync(this.interopSettings.GetSettingsByChain(request.DestinationChain).WrappedStraxContractAddress, 0, abiData, gasPrice).ConfigureAwait(false);
+                                await stateMachine.OriginatorNotSubmittedAsync(request, clientForDestChain, this.interopSettings, amountToSubmit, contractToSubmit).ConfigureAwait(false);
                             }
-
-                            if (identifiers.TransactionId == BigInteger.MinusOne)
-                            {
-                                this.logger.Error($"Minting on {request.DestinationChain} to address '{request.DestinationAddress}' for {request.Amount} failed: {identifiers.Message}");
-
-                                request.Processed = true;
-                                request.RequestStatus = ConversionRequestStatus.Failed;
-                                request.StatusMessage = identifiers.Message;
-
-                                // TODO: Submitting the transaction failed, this needs to be handled
-                            }
-                            else
-                                request.RequestStatus = ConversionRequestStatus.OriginatorSubmitting;
-
-                            request.ExternalChainBlockHeight = identifiers.BlockHeight;
-                            request.ExternalChainTxHash = identifiers.TransactionHash;
-                            request.ExternalChainTxEventId = identifiers.TransactionId.ToString();
 
                             break;
                         }
-                    case ConversionRequestStatus.OriginatorSubmitting:
+                    
+                   case ConversionRequestStatus.OriginatorSubmitting:
                         {
-                            (BigInteger confirmationCount, string blockHash) = isTransfer ? this.cirrusClient.GetConfirmations(request.ExternalChainBlockHeight) : await clientForDestChain.GetConfirmationsAsync(request.ExternalChainTxHash).ConfigureAwait(false);
-
-                            this.logger.Info($"Originator confirming transaction id '{request.ExternalChainTxHash}' '({request.ExternalChainTxEventId})' before broadcasting; confirmations: {confirmationCount}; Block Hash {blockHash}.");
-
-                            if (confirmationCount < this.SubmissionConfirmationThreshold)
-                                break;
-
-                            this.logger.Info("Originator submitted transaction to multisig in transaction '{0}' and was allocated transactionId '{1}'.", request.ExternalChainTxHash, request.ExternalChainTxEventId);
-
-                            this.conversionRequestCoordinationService.AddVote(request.RequestId, BigInteger.Parse(request.ExternalChainTxEventId), this.federationManager.CurrentFederationKey.PubKey);
-
-                            request.RequestStatus = ConversionRequestStatus.OriginatorSubmitted;
+                            await stateMachine.OriginatorSubmittingAsync(request, clientForDestChain, this.cirrusClient, this.SubmissionConfirmationThreshold, isTransfer).ConfigureAwait(false);
 
                             break;
                         }
@@ -968,21 +974,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             // The coordination mechanism safeguards against this, as any such spurious transaction will not receive acceptance votes.
                             // TODO: The transactionId should be accompanied by the hash of the submission transaction on the Ethereum chain so that it can be verified
 
-                            BigInteger transactionId2 = this.conversionRequestCoordinationService.GetCandidateTransactionId(request.RequestId);
-
-                            if (transactionId2 != BigInteger.MinusOne)
-                            {
-                                await this.BroadcastCoordinationVoteRequestAsync(request.RequestId, transactionId2, request.DestinationChain, isTransfer).ConfigureAwait(false);
-
-                                BigInteger agreedTransactionId = this.conversionRequestCoordinationService.GetAgreedTransactionId(request.RequestId, this.interopSettings.GetSettingsByChain(request.DestinationChain).MultisigWalletQuorum);
-
-                                if (agreedTransactionId != BigInteger.MinusOne)
-                                {
-                                    this.logger.Info("Transaction '{0}' has received sufficient votes, it should now start getting confirmed by each peer.", agreedTransactionId);
-
-                                    request.RequestStatus = ConversionRequestStatus.VoteFinalised;
-                                }
-                            }
+                            await stateMachine.OriginatorSubmittedAsync(request, this.interopSettings, isTransfer).ConfigureAwait(false);
 
                             break;
                         }
@@ -1188,14 +1180,16 @@ namespace Stratis.Bitcoin.Features.Interop
 
                     case ConversionRequestStatus.OriginatorNotSubmitted:
                         {
-                            await stateMachine.OriginatorNotSubmittedAsync(request, clientForDestChain, this.interopSettings).ConfigureAwait(false);
+                            BigInteger amountToSubmit = new BigInteger(request.Amount.ToBytes());
+
+                            await stateMachine.OriginatorNotSubmittedAsync(request, clientForDestChain, this.interopSettings, amountToSubmit, request.TokenContract).ConfigureAwait(false);
 
                             break;
                         }
 
                     case ConversionRequestStatus.OriginatorSubmitting:
                         {
-                            await stateMachine.OriginatorSubmittingAsync(request, clientForDestChain, this.SubmissionConfirmationThreshold).ConfigureAwait(false);
+                            await stateMachine.OriginatorSubmittingAsync(request, clientForDestChain, this.cirrusClient, this.SubmissionConfirmationThreshold, false).ConfigureAwait(false);
 
                             break;
                         }
@@ -1208,7 +1202,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             // The coordination mechanism safeguards against this, as any such spurious transaction will not receive acceptance votes.
                             // TODO: The transactionId should be accompanied by the hash of the submission transaction on the Ethereum chain so that it can be verified
 
-                            await stateMachine.OriginatorSubmittedAsync(request, this.interopSettings).ConfigureAwait(false);
+                            await stateMachine.OriginatorSubmittedAsync(request, this.interopSettings, false).ConfigureAwait(false);
                             
                             break;
                         }
