@@ -30,6 +30,8 @@ using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Coordination;
 using Stratis.Features.FederatedPeg.Distribution;
 using Stratis.Features.FederatedPeg.Interfaces;
+using Stratis.Features.FederatedPeg.SourceChain;
+using Stratis.Features.FederatedPeg.TargetChain;
 using Stratis.SmartContracts;
 using Stratis.SmartContracts.CLR;
 
@@ -61,6 +63,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private readonly IAsyncProvider asyncProvider;
         private readonly ChainIndexer chainIndexer;
+        private readonly ICirrusContractClient cirrusClient;
         private readonly Network counterChainNetwork;
         private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
         private readonly IConversionRequestFeeService conversionRequestFeeService;
@@ -74,9 +77,9 @@ namespace Stratis.Bitcoin.Features.Interop
         private readonly IInitialBlockDownloadState initialBlockDownloadState;
         private readonly IKeyValueRepository keyValueRepository;
         private readonly ILogger logger;
+        private readonly IMaturedBlocksSyncManager maturedBlocksSyncManager;
         private readonly Network network;
         private readonly INodeLifetime nodeLifetime;
-        private readonly ICirrusContractClient cirrusClient;
 
         private IAsyncLoop interopLoop;
         private IAsyncLoop conversionLoop;
@@ -110,7 +113,8 @@ namespace Stratis.Bitcoin.Features.Interop
             IFederatedPegBroadcaster federatedPegBroadcaster,
             IKeyValueRepository keyValueRepository,
             INodeStats nodeStats,
-            ICirrusContractClient cirrusClient)
+            ICirrusContractClient cirrusClient,
+            IMaturedBlocksSyncManager maturedBlocksSyncManager)
         {
             this.interopSettings = interopSettings;
             this.ethClientProvider = ethClientProvider;
@@ -128,6 +132,8 @@ namespace Stratis.Bitcoin.Features.Interop
             this.counterChainNetwork = counterChainNetworkWrapper.CounterChainNetwork;
             this.externalApiPoller = externalApiPoller;
             this.keyValueRepository = keyValueRepository;
+            this.maturedBlocksSyncManager = maturedBlocksSyncManager;
+
             this.logger = LogManager.GetCurrentClassLogger();
             this.cirrusClient = cirrusClient;
 
@@ -263,10 +269,8 @@ namespace Stratis.Bitcoin.Features.Interop
 
                     ConsensusTipModel cirrusTip = await this.cirrusClient.GetConsensusTipAsync().ConfigureAwait(false);
 
-                    BigInteger cirrusBlockHeight = cirrusTip.TipHeight;
-
-                    if (this.lastPolledBlock[DestinationChain.CIRRUS] < (cirrusBlockHeight - DestinationChainReorgWindow))
-                        await PollCirrusForBurnsAsync(cirrusBlockHeight).ConfigureAwait(false);
+                    if (this.lastPolledBlock[DestinationChain.CIRRUS] < (cirrusTip.TipHeight - DestinationChainReorgWindow))
+                        await PollCirrusForBurnsAsync(cirrusTip.TipHeight).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
@@ -369,11 +373,11 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
-        private async Task PollCirrusForBurnsAsync(BigInteger blockHeight)
+        private async Task PollCirrusForBurnsAsync(int blockHeight)
         {
             this.logger.Info($"[CIRRUS] Polling for burns and transfers, last polled block: {this.lastPolledBlock[DestinationChain.CIRRUS]}; chain height: {blockHeight}");
 
-            NBitcoin.Block block = await this.cirrusClient.GetBlockByHeightAsync((int)blockHeight).ConfigureAwait(false);
+            NBitcoin.Block block = await this.cirrusClient.GetBlockByHeightAsync(blockHeight).ConfigureAwait(false);
             if (block == null)
             {
                 this.logger.Info($"Unable to retrieve block with height {blockHeight}.");
@@ -430,37 +434,31 @@ namespace Stratis.Bitcoin.Features.Interop
                                 this.logger.Warn($"A dynamic fee for SRC20->ERC20 request '{receipt.TransactionHash}' could not be determined, using a fixed fee of {ConversionRequestFeeService.FallBackFee} CRS.");
                             }
 
-                            IFederation federation = this.network.Federations?.GetOnlyFederation();
-                            
-                            Script multisigScript = PayToFederationTemplate.Instance.GenerateScriptPubKey(federation.Id).PaymentScript;
-
-                            // Since we have no reliable way (yet) of extracting pricing data for all the potential tokens being transferred, there has to be a transaction output paying the multisig the conversion fee in order for the burn to be processed.
-                            // In future perhaps the fee could be taken out of the token value directly e.g. calculate a dollar fee and retain the equivalent SRC20 USDT. The distribution could then be done via an updated multisig contract instead.
-                            TxOut conversionFeeOutput = null;
-                            foreach (TxOut txOut in transaction.Outputs)
-                            {
-                                // For now, pay it directly to the multisig.
-                                if (txOut.ScriptPubKey == multisigScript)
-                                {
-                                    conversionFeeOutput = txOut;
-                                }
-                            }
-
-                            if (conversionFeeOutput == null)
-                            {
-                                this.logger.Warn("Conversion transaction '{0}' has no fee output.", receipt.TransactionHash);
-                                continue;
-                            }
-
-                            if (Money.Satoshis(interopConversionRequestFee.Amount) >= conversionFeeOutput.Value)
-                            {
-                                this.logger.Warn("Conversion transaction '{0}' has an insufficient fee.", receipt.TransactionHash);
-                                continue;
-                            }
-
+                            // Check if the fee and transfer amount is valid.
                             byte[] valueBytes = src20burn.Value.ToByteArray();
-                            byte[] paddedArray = new byte[32];
-                            Array.Copy(valueBytes, 0, paddedArray, 0, valueBytes.Length);
+                            byte[] transferRequestAmountBytes = new byte[32];
+                            Array.Copy(valueBytes, 0, transferRequestAmountBytes, 0, valueBytes.Length);
+
+                            var transferRequestAmount = new BigInteger(transferRequestAmountBytes);
+                            if (Money.Satoshis(interopConversionRequestFee.Amount) >= transferRequestAmount)
+                            {
+                                this.logger.Warn($"Conversion transaction '{receipt.TransactionHash}' has a transfer amount {transferRequestAmount} less than the required fee of {interopConversionRequestFee.Amount}.", receipt.TransactionHash);
+                                continue;
+                            }
+
+                            // Add the fee to the matured block sync manager so that the CrossChainTransferStore can process it.
+                            this.maturedBlocksSyncManager.AddInterOpFeeDeposit(new Deposit(
+                                new uint256(receipt.TransactionHash),
+                                DepositRetrievalType.Distribution,
+                                Money.Satoshis(interopConversionRequestFee.Amount),
+                                this.network.ConversionTransactionFeeDistributionDummyAddress,
+                                DestinationChain.CIRRUS,
+                                blockHeight,
+                                block.GetHash()
+                               ));
+
+                            // Subtract the fee from the transfer.
+                            transferRequestAmount -= interopConversionRequestFee.Amount;
 
                             KeyValuePair<string, string> contractMapping = this.interopSettings.GetSettingsByChain(DestinationChain.ETH).WatchedErc20Contracts.First(c => c.Value == receipt.To);
 
@@ -474,8 +472,8 @@ namespace Stratis.Bitcoin.Features.Interop
                                         RequestType = ConversionRequestType.Burn,
                                         Processed = false,
                                         RequestStatus = ConversionRequestStatus.Unprocessed,
-                                        Amount = new uint256(paddedArray),
-                                        BlockHeight = (int)blockHeight,
+                                        Amount = new uint256(transferRequestAmount.ToByteArray()),
+                                        BlockHeight = blockHeight,
                                         DestinationAddress = src20burn.To,
                                         DestinationChain = DestinationChain.ETH,
                                         TokenContract = contractMapping.Key
@@ -958,8 +956,8 @@ namespace Stratis.Bitcoin.Features.Interop
 
                             break;
                         }
-                    
-                   case ConversionRequestStatus.OriginatorSubmitting:
+
+                    case ConversionRequestStatus.OriginatorSubmitting:
                         {
                             await stateMachine.OriginatorSubmittingAsync(request, clientForDestChain, this.cirrusClient, this.SubmissionConfirmationThreshold, isTransfer).ConfigureAwait(false);
 
@@ -1203,7 +1201,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             // TODO: The transactionId should be accompanied by the hash of the submission transaction on the Ethereum chain so that it can be verified
 
                             await stateMachine.OriginatorSubmittedAsync(request, this.interopSettings, false).ConfigureAwait(false);
-                            
+
                             break;
                         }
 
