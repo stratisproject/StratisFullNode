@@ -34,7 +34,7 @@ namespace Stratis.Bitcoin.Tests.Common
                 ctx => chainState, 
                 ctx => inMemoryCoinView ?? new InMemoryCoinView(new HashHeightPair(ctx.GetService<ChainIndexer>().Tip)), 
                 ctx => chainIndexer, 
-                ctx => consensusRules)).GetService<IConsensusManager>();
+                ctx => consensusRules ?? ctx.GetService<PowConsensusRuleEngine>())).GetService<IConsensusManager>();
         }
 
         public static IServiceCollection GetMockingServices(
@@ -70,13 +70,13 @@ namespace Stratis.Bitcoin.Tests.Common
                 .AddSingleton<INetworkPeerFactory, NetworkPeerFactory>()
                 .AddSingleton<IPeerDiscovery, PeerDiscovery>()
                 .AddSingleton(chainIndexer ?? (ctx => new ChainIndexer(network)))
-                .AddSingleton(coinView ?? (ctx => new Mock<ICoinView>().Object))
+                .AddSingleton(coinView ?? (ctx => ctx.GetService<Mock<ICoinView>>().Object))
                 .AddSingleton(chainState ?? (ctx => new ChainState()))
                 .AddSingleton<IConnectionManager, ConnectionManager>()
                 .AddSingleton<IPeerBanning, PeerBanning>()
                 .AddSingleton<ICheckpoints, Checkpoints>()
                 .AddSingleton<IInvalidBlockHashStore, InvalidBlockHashStore>()
-                .AddSingleton(consensusRules ?? (ctx => ctx.GetService<PowConsensusRuleEngine>()))
+                .AddSingleton(consensusRules ?? (ctx => ctx.GetService<Mock<IConsensusRuleEngine>>().Object))
                 .AddSingleton<IIntegrityValidator, IntegrityValidator>()
                 .AddSingleton<IPartialValidator, PartialValidator>()
                 .AddSingleton<IFullValidator, FullValidator>()

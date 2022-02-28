@@ -39,18 +39,6 @@ namespace Stratis.Bitcoin.Tests.Common
         /// <para>An enumerable type can be passed in which case multiple service instances are returned.</para></remarks>
         public object GetService(Type serviceType)
         {
-            if (typeof(IMock<object>).IsAssignableFrom(serviceType))
-            {
-                Type mockType = serviceType;
-
-                serviceType = serviceType.GetGenericArguments().First();
-
-                if (!this.serviceCollection.Any(s => s.ServiceType == serviceType))
-                    MakeConcrete(serviceType, mockIt: true);
-
-                return this.serviceCollection.SingleOrDefault(s => s.ServiceType == mockType)?.ImplementationInstance;
-            }
-
             ServiceDescriptor[] services = this.serviceCollection.Where(s => s.ServiceType == serviceType).ToArray();
 
             // Need to do a bit more work to resolve IEnumerable types.
@@ -71,6 +59,7 @@ namespace Stratis.Bitcoin.Tests.Common
 
             if (services.Length > 1)
                 throw new InvalidOperationException($"There are {services.Length} services of type {serviceType}.");
+
 
             if (services.Length == 0)
                 return MakeConcrete(serviceType);
@@ -105,14 +94,18 @@ namespace Stratis.Bitcoin.Tests.Common
             return MakeConcrete(serviceDescriptor.ServiceType);
         }
 
-        private object MakeConcrete(Type serviceType, bool mockIt = false)
+        private object MakeConcrete(Type serviceType)
         {
             object service;
+            object mock = null;
+            bool isMock = typeof(IMock<object>).IsAssignableFrom(serviceType);
 
-            if (serviceType.IsInterface || mockIt)
+            if (serviceType.IsInterface || isMock)
             {
-                Type mockType = typeof(Mock<>).MakeGenericType(serviceType);
-                object mock;
+                Type mockType = isMock ? serviceType : typeof(Mock<>).MakeGenericType(serviceType);
+                if (isMock)
+                    serviceType = serviceType.GetGenericArguments().First();
+                
                 if (serviceType.IsInterface)
                 {
                     mock = Activator.CreateInstance(mockType);
@@ -123,8 +116,13 @@ namespace Stratis.Bitcoin.Tests.Common
                     object[] args = GetConstructorArguments(this, constructorInfo);
                     mock = Activator.CreateInstance(mockType, args);
                 }
-                service = ((dynamic)mock).Object;
+
                 this.serviceCollection.AddSingleton(mockType, mock);
+
+                if (isMock && serviceType.IsInterface)
+                    return mock;
+
+                service = ((dynamic)mock).Object;
             }
             else
             {
@@ -135,7 +133,7 @@ namespace Stratis.Bitcoin.Tests.Common
 
             this.serviceCollection.AddSingleton(serviceType, service);
 
-            return service;
+            return isMock ? mock : service;
         }
 
         private static ConstructorInfo GetConstructor(Type implementationType)
