@@ -110,6 +110,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Models
         /// </summary>
         public string[] Parameters { get; set; }
 
+        /// <summary>
+        /// A flag indicating that the output paying the multisig relates to an interop associated fee.
+        /// This will skip the OP_RETURN validation in the cross chain deposit validation helper.
+        /// </summary>
+        public bool IsInteropFeeForMultisig { get; set; }
+
         public override string ToString()
         {
             var builder = new StringBuilder();
