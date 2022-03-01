@@ -76,10 +76,9 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// </summary>
         /// <param name="network">The source network.</param>
         /// <param name="transaction">The transaction to validate.</param>
-        /// <param name="skipOpReturnValidation">If <c>true</c> don't validate the op_return data.</param>
         /// <returns><c>True</c> if its a cross-chain transfer and <c>false</c> otherwise.</returns>
         /// <exception cref="FeatureException">If the address is invalid or inappropriate for the target network.</exception>
-        public static bool ValidateCrossChainDeposit(Network network, Transaction transaction, bool skipOpReturnValidation = false)
+        public static bool ValidateCrossChainDeposit(Network network, Transaction transaction)
         {
             if (!TryGetDepositsToMultisig(network, transaction, Money.Zero, out List<TxOut> depositsToMultisig))
                 return false;
@@ -105,9 +104,6 @@ namespace Stratis.Bitcoin.Features.Wallet
                 return true;
             }
 
-            if (skipOpReturnValidation)
-                return true;
-
             IOpReturnDataReader opReturnDataReader = new OpReturnDataReader(targetNetwork);
             if (!TryGetTarget(transaction, opReturnDataReader, out _, out _, out _))
             {
@@ -118,7 +114,6 @@ namespace Stratis.Bitcoin.Features.Wallet
             return true;
         }
     }
-
 
     /// <summary>
     /// When running on Strax its difficult to get the correct Cirrus network class due to circular references.

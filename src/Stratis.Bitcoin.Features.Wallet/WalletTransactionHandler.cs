@@ -66,9 +66,12 @@ namespace Stratis.Bitcoin.Features.Wallet
 
                 Transaction transaction = context.TransactionBuilder.BuildTransaction(false);
 
-                // If there are cross chain deposits, try and validate them before
-                // we continue with signing and verification.
-                DepositValidationHelper.ValidateCrossChainDeposit(this.network, transaction, context.IsInteropFeeForMultisig);
+                if (!context.IsInteropFeeForMultisig)
+                {
+                    // If there are cross chain deposits, try and validate them before
+                    // we continue with signing and verification.
+                    DepositValidationHelper.ValidateCrossChainDeposit(this.network, transaction);
+                }
 
                 ICoin[] spentCoins = context.TransactionBuilder.FindSpentCoins(transaction);
 
