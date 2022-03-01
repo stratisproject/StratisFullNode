@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using NBitcoin;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace Stratis.Interop.Contracts
 {
@@ -64,6 +65,7 @@ namespace Stratis.Interop.Contracts
     public sealed class SupportedContractAddress
     {
         [JsonProperty(PropertyName = "nativeNetwork")]
+        [JsonConverter(typeof(StringEnumConverter))]
         public SupportedNativeChain NativeNetwork { get; set; }
 
         [JsonProperty(PropertyName = "nativeChainAddress")]
