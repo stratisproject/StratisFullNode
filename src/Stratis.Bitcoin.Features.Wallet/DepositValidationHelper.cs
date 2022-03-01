@@ -76,9 +76,10 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// </summary>
         /// <param name="network">The source network.</param>
         /// <param name="transaction">The transaction to validate.</param>
+        /// <param name="skipOpReturnValidation">If <c>true</c> don't validate the op_return data.</param>
         /// <returns><c>True</c> if its a cross-chain transfer and <c>false</c> otherwise.</returns>
         /// <exception cref="FeatureException">If the address is invalid or inappropriate for the target network.</exception>
-        public static bool ValidateCrossChainDeposit(Network network, Transaction transaction)
+        public static bool ValidateCrossChainDeposit(Network network, Transaction transaction, bool skipOpReturnValidation = false)
         {
             if (!TryGetDepositsToMultisig(network, transaction, Money.Zero, out List<TxOut> depositsToMultisig))
                 return false;
@@ -104,11 +105,14 @@ namespace Stratis.Bitcoin.Features.Wallet
                 return true;
             }
 
+            if (skipOpReturnValidation)
+                return true;
+
             IOpReturnDataReader opReturnDataReader = new OpReturnDataReader(targetNetwork);
             if (!TryGetTarget(transaction, opReturnDataReader, out _, out _, out _))
             {
                 throw new FeatureException(HttpStatusCode.BadRequest, "No valid target address.",
-                    $"The cross-chain transfer transaction contains no valid target address for the target network.");
+                    $"The cross-chain transfer transaction does not contain a valid target address for the target network.");
             }
 
             return true;

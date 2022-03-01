@@ -2,9 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using CSharpFunctionalExtensions;
-using Microsoft.AspNetCore.Mvc;
 using NBitcoin;
-using Stratis.Bitcoin.Controllers;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
@@ -302,7 +300,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
                 SelectedInputs = selectedInputs,
                 MinConfirmations = MinConfirmationsAllChecks,
                 WalletPassword = request.Password,
-                Recipients = recipients
+                Recipients = recipients,
+                IsInteropFeeForMultisig = request.IsInteropFeeForMultisig
             };
 
             try
@@ -404,7 +403,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
 
             return new ContractTxData(ReflectionVirtualMachine.VmVersion, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasPrice, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasLimit, contractAddress, request.MethodName);
         }
-        
+
         /// <inheritdoc />
         public List<ReceiptResponse> ReceiptSearch(string contractAddress, string eventName, List<string> topics = null, int fromBlock = 0, int? toBlock = null)
         {

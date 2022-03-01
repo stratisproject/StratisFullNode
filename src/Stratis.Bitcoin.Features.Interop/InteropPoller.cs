@@ -471,7 +471,7 @@ namespace Stratis.Bitcoin.Features.Interop
                                 Money.Satoshis(interopConversionRequestFee.Amount),
                                 this.network.ConversionTransactionFeeDistributionDummyAddress,
                                 DestinationChain.CIRRUS,
-                                (int)CalculateProcessingHeight(),
+                                blockHeight,
                                 block.GetHash()
                                ));
 
