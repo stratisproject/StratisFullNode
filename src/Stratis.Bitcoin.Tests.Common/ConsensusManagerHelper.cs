@@ -37,8 +37,7 @@ namespace Stratis.Bitcoin.Tests.Common
                 ctx => chainIndexer,
                 ctx => consensusRules ?? ctx.GetService<PowConsensusRuleEngine>());
 
-            if (finalizedBlockInfoRepository != null)
-                mockingServices.AddSingleton<IFinalizedBlockInfoRepository>(finalizedBlockInfoRepository);
+            mockingServices.AddSingleton(finalizedBlockInfoRepository ?? new FinalizedBlockInfoRepository(new HashHeightPair()));
             
             return new MockingContext(mockingServices).GetService<IConsensusManager>();
         }
