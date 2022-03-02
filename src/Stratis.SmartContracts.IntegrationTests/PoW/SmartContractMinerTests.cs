@@ -261,7 +261,9 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
                         consensusRulesContainer)
                     .SetupRulesEngineParent();
 
-                this.consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network, chainState: chainState, inMemoryCoinView: inMemoryCoinView, chainIndexer: this.ChainIndexer, consensusRules: this.consensusRules);
+                var finalizedBlockInfoRepository = new FinalizedBlockInfoRepository(new HashHeightPair());
+
+                this.consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network, chainState: chainState, inMemoryCoinView: inMemoryCoinView, chainIndexer: this.ChainIndexer, consensusRules: this.consensusRules, finalizedBlockInfoRepository: finalizedBlockInfoRepository);
 
                 await this.consensusManager.InitializeAsync(chainState.BlockStoreTip);
 

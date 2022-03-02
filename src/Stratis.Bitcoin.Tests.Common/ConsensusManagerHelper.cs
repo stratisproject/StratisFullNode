@@ -28,13 +28,19 @@ namespace Stratis.Bitcoin.Tests.Common
             ChainState chainState = null,
             InMemoryCoinView inMemoryCoinView = null,
             ChainIndexer chainIndexer = null,
-            IConsensusRuleEngine consensusRules = null)
+            IConsensusRuleEngine consensusRules = null,
+            IFinalizedBlockInfoRepository finalizedBlockInfoRepository = null)
         {
-            return new MockingContext(GetMockingServices(network, dataDir, 
-                ctx => chainState, 
-                ctx => inMemoryCoinView ?? new InMemoryCoinView(new HashHeightPair(ctx.GetService<ChainIndexer>().Tip)), 
-                ctx => chainIndexer, 
-                ctx => consensusRules ?? ctx.GetService<PowConsensusRuleEngine>())).GetService<IConsensusManager>();
+            var mockingServices = GetMockingServices(network, dataDir,
+                ctx => chainState,
+                ctx => inMemoryCoinView ?? new InMemoryCoinView(new HashHeightPair(ctx.GetService<ChainIndexer>().Tip)),
+                ctx => chainIndexer,
+                ctx => consensusRules ?? ctx.GetService<PowConsensusRuleEngine>());
+
+            if (finalizedBlockInfoRepository != null)
+                mockingServices.AddSingleton<IFinalizedBlockInfoRepository>(finalizedBlockInfoRepository);
+            
+            return new MockingContext(mockingServices).GetService<IConsensusManager>();
         }
 
         public static IServiceCollection GetMockingServices(
