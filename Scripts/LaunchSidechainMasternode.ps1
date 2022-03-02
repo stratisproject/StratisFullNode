@@ -498,7 +498,7 @@ if ( $NodeType -eq "50K" )
 {
     if ( $ethGasPrice )
     {
-        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -eth_interopenabled=1 -eth_account=$ethAddress -eth_passphrase=$ethPassword -eth_multisigwalletcontractaddress=$ethMultiSigContract -eth_wrappedstraxcontractaddress=$ethWrappedStraxContract -eth_gasprice=$ethGasPrice -eth_gas=$ethGasLimit" -PassThru
+        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -eth_interopenabled=1 -ethereumgaspricetracking -pricetracking -eth_account=$ethAddress -eth_passphrase=$ethPassword -eth_multisigwalletcontractaddress=$ethMultiSigContract -eth_wrappedstraxcontractaddress=$ethWrappedStraxContract -eth_keyvaluestorecontractaddress=$ethKeyValueStoreContractAddress -eth_gasprice=$ethGasPrice -eth_gas=$ethGasLimit -cirrusmultisigcontractaddress=$cirrusMultiSig -cirrussmartcontractactiveaddress=$walletAddress0 -eth_watcherc20=$Token1 -eth_watcherc20=$Token2 -eth_watcherc20=$Token3 -eth_watcherc20=$Token4" -PassThru
     }
         Else
         {
@@ -628,6 +628,24 @@ if ( $WalletNames -eq $null )
 }
 if ( $NodeType -eq "50K" )
 {
+	#Initialize InterFlux
+    Write-Host (Get-TimeStamp) "Initializing InterFlux" -ForegroundColor Cyan 
+
+    $requstBody = ConvertTo-Json @{
+
+        walletName = $miningWalletName
+        walletPassword = $miningPassword
+        accountName = "account 0"
+    }
+
+    $initializeInterFlux = Invoke-RestMethod -Uri http://localhost:$API/api/Interop/initializeinterflux -Method Post -Body $requstBody -ContentType "application/json-patch+json"
+    if ( $initializeInterFlux -ne $true )
+    {
+        Write-Host (Get-TimeStamp) "ERROR: Something went wrong. Cannot Initialize InterFlux! Please contact support in Discord" -ForegroundColor Red
+        Start-Sleep 30
+        Exit
+    }
+	
     #Enable Federation
     Write-Host (Get-TimeStamp) "Enabling Federation" -ForegroundColor Cyan
 
