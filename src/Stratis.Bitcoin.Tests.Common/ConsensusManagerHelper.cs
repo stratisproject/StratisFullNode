@@ -30,7 +30,8 @@ namespace Stratis.Bitcoin.Tests.Common
             ChainState chainState = null,
             InMemoryCoinView inMemoryCoinView = null,
             ChainIndexer chainIndexer = null,
-            ConsensusRuleEngine consensusRules = null)
+            ConsensusRuleEngine consensusRules = null,
+            IFinalizedBlockInfoRepository finalizedBlockInfoRepository = null)
         {
             string[] param = dataDir == null ? new string[] { } : new string[] { $"-datadir={dataDir}" };
 
@@ -85,12 +86,14 @@ namespace Stratis.Bitcoin.Tests.Common
                     new Checkpoints(), inMemoryCoinView, chainState, new InvalidBlockHashStore(dateTimeProvider), new NodeStats(dateTimeProvider, nodeSettings, new Mock<IVersionProvider>().Object), asyncProvider, new ConsensusRulesContainer()).SetupRulesEngineParent();
             }
 
+            finalizedBlockInfoRepository ??= new Mock<IFinalizedBlockInfoRepository>().Object;
+
             var tree = new ChainedHeaderTree(network, loggerFactory, new HeaderValidator(consensusRules, loggerFactory), new Checkpoints(),
-                new ChainState(), new Mock<IFinalizedBlockInfoRepository>().Object, consensusSettings, new InvalidBlockHashStore(new DateTimeProvider()), new ChainWorkComparer());
+                new ChainState(), finalizedBlockInfoRepository, consensusSettings, new InvalidBlockHashStore(new DateTimeProvider()), new ChainWorkComparer());
 
             var consensus = new ConsensusManager(tree, network, loggerFactory, chainState, new IntegrityValidator(consensusRules, loggerFactory),
                 new PartialValidator(asyncProvider, consensusRules, loggerFactory), new FullValidator(consensusRules, loggerFactory), consensusRules,
-                new Mock<IFinalizedBlockInfoRepository>().Object, new Signals.Signals(loggerFactory, null), peerBanning, new Mock<IInitialBlockDownloadState>().Object, chainIndexer,
+                finalizedBlockInfoRepository, new Signals.Signals(loggerFactory, null), peerBanning, new Mock<IInitialBlockDownloadState>().Object, chainIndexer,
                 new Mock<IBlockPuller>().Object, new Mock<IBlockStore>().Object, new Mock<IConnectionManager>().Object, new Mock<INodeStats>().Object, new NodeLifetime(), consensusSettings, dateTimeProvider);
 
             return consensus;
