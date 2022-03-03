@@ -114,7 +114,7 @@ namespace Stratis.Bitcoin.IntegrationTests
             public uint256 hash;
             public TestMemPoolEntryHelper entry;
             public ChainIndexer ChainIndexer;
-            public ConsensusManager consensus;
+            public IConsensusManager consensus;
             public ConsensusRuleEngine ConsensusRules;
             public DateTimeProvider DateTimeProvider;
             public TxMempool mempool;
