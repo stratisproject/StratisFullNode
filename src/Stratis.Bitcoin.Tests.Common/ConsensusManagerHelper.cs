@@ -4,13 +4,9 @@ using Microsoft.Extensions.DependencyInjection;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Base;
-using Stratis.Bitcoin.Base.Deployments;
-using Stratis.Bitcoin.BlockPulling;
 using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
-using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Consensus.Validators;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
@@ -18,19 +14,21 @@ using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.P2P;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
+using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Tests.Common
 {
     public static class ConsensusManagerHelper
     {
-        public static ConsensusManager CreateConsensusManager(
+        public static IConsensusManager CreateConsensusManager(
             Network network,
             string dataDir = null,
             ChainState chainState = null,
             InMemoryCoinView inMemoryCoinView = null,
             ChainIndexer chainIndexer = null,
-            IConsensusRuleEngine consensusRules = null)
+            IConsensusRuleEngine consensusRules = null,
+            IFinalizedBlockInfoRepository finalizedBlockInfoRepository = null)
         {
             IServiceCollection mockingServices = GetMockingServices(network,
                 ctx => new NodeSettings(network, args: ((dataDir == null) ? new string[] { } : new string[] { $"-datadir={dataDir}" })),
@@ -45,6 +43,8 @@ namespace Stratis.Bitcoin.Tests.Common
                 mockingServices.AddSingleton<ICoinView>(inMemoryCoinView);
                 mockingServices.AddSingleton<ICoindb>(inMemoryCoinView);
             }
+
+            mockingServices.AddSingleton(finalizedBlockInfoRepository ?? new FinalizedBlockInfoRepository(new HashHeightPair()));
 
             return new MockingContext(mockingServices).GetService<IConsensusManager>();
         }
@@ -90,7 +90,7 @@ namespace Stratis.Bitcoin.Tests.Common
                 .AddSingleton<IChainedHeaderTree, ChainedHeaderTree>()
                 .AddSingleton<IConsensusManager>(typeof(ConsensusManager).GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic)[0]);
 
-            return consensus;
+            return mockingServices;
         }
     }
 }

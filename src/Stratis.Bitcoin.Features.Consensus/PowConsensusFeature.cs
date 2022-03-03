@@ -45,8 +45,6 @@ namespace Stratis.Bitcoin.Features.Consensus
             this.initialBlockDownloadState = initialBlockDownloadState;
             this.peerBanning = peerBanning;
             this.loggerFactory = loggerFactory;
-
-            this.chainState.MaxReorgLength = network.Consensus.MaxReorgLength;
         }
 
         /// <summary>
