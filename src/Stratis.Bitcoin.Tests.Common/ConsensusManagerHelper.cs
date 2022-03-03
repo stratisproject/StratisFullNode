@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
-using Moq;
 using NBitcoin;
+using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Validators;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
-using Stratis.Bitcoin.Features.Consensus.Rules;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.P2P;
@@ -31,29 +30,31 @@ namespace Stratis.Bitcoin.Tests.Common
             IConsensusRuleEngine consensusRules = null,
             IFinalizedBlockInfoRepository finalizedBlockInfoRepository = null)
         {
-            var mockingServices = GetMockingServices(network, dataDir,
+            IServiceCollection mockingServices = GetMockingServices(network,
+                ctx => new NodeSettings(network, args: ((dataDir == null) ? new string[] { } : new string[] { $"-datadir={dataDir}" })),
                 ctx => chainState,
-                ctx => inMemoryCoinView ?? new InMemoryCoinView(new HashHeightPair(ctx.GetService<ChainIndexer>().Tip)),
-                ctx => chainIndexer,
-                ctx => consensusRules ?? ctx.GetService<PowConsensusRuleEngine>());
+                ctx => chainIndexer);
+
+            if (consensusRules != null)
+                mockingServices.AddSingleton(consensusRules);
+
+            if (inMemoryCoinView != null)
+            {
+                mockingServices.AddSingleton<ICoinView>(inMemoryCoinView);
+                mockingServices.AddSingleton<ICoindb>(inMemoryCoinView);
+            }
 
             mockingServices.AddSingleton(finalizedBlockInfoRepository ?? new FinalizedBlockInfoRepository(new HashHeightPair()));
-            
+
             return new MockingContext(mockingServices).GetService<IConsensusManager>();
         }
 
         public static IServiceCollection GetMockingServices(
             Network network,
-            string dataDir = null,
+            Func<IServiceProvider, NodeSettings> nodeSettings = null,
             Func<IServiceProvider, IChainState> chainState = null,
-            Func<IServiceProvider, ICoinView> coinView = null,
-            Func<IServiceProvider, ChainIndexer> chainIndexer = null,
-            Func<IServiceProvider, IConsensusRuleEngine> consensusRules = null)
+            Func<IServiceProvider, ChainIndexer> chainIndexer = null)
         {
-            string[] param = dataDir == null ? new string[] { } : new string[] { $"-datadir={dataDir}" };
-
-            var nodeSettings = new NodeSettings(network, args: param);
-
             network.Consensus.Options = new ConsensusOptions();
 
             // Dont check PoW of a header in this test.
@@ -61,10 +62,11 @@ namespace Stratis.Bitcoin.Tests.Common
 
             var mockingServices = new ServiceCollection()
                 .AddSingleton(network)
-                .AddSingleton(nodeSettings)
-                .AddSingleton(nodeSettings.DataFolder)
-                .AddSingleton(nodeSettings.LoggerFactory)
+                .AddSingleton(nodeSettings ?? (ctx => new NodeSettings(network)))
+                .AddSingleton(ctx => ctx.GetService<NodeSettings>().DataFolder)
+                .AddSingleton(ctx => ctx.GetService<NodeSettings>().LoggerFactory)
                 .AddSingleton(DateTimeProvider.Default)
+                .AddSingleton<IAsyncProvider, AsyncProvider>()
                 .AddSingleton<INodeLifetime, NodeLifetime>()
                 .AddSingleton<IVersionProvider, VersionProvider>()
                 .AddSingleton<INodeStats, NodeStats>()
@@ -75,13 +77,11 @@ namespace Stratis.Bitcoin.Tests.Common
                 .AddSingleton<INetworkPeerFactory, NetworkPeerFactory>()
                 .AddSingleton<IPeerDiscovery, PeerDiscovery>()
                 .AddSingleton(chainIndexer ?? (ctx => new ChainIndexer(network)))
-                .AddSingleton(coinView ?? (ctx => ctx.GetService<Mock<ICoinView>>().Object))
                 .AddSingleton(chainState ?? (ctx => new ChainState()))
                 .AddSingleton<IConnectionManager, ConnectionManager>()
                 .AddSingleton<IPeerBanning, PeerBanning>()
                 .AddSingleton<ICheckpoints, Checkpoints>()
                 .AddSingleton<IInvalidBlockHashStore, InvalidBlockHashStore>()
-                .AddSingleton(consensusRules ?? (ctx => ctx.GetService<Mock<IConsensusRuleEngine>>().Object))
                 .AddSingleton<IIntegrityValidator, IntegrityValidator>()
                 .AddSingleton<IPartialValidator, PartialValidator>()
                 .AddSingleton<IFullValidator, FullValidator>()
