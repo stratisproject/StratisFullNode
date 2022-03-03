@@ -9,6 +9,7 @@ using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Primitives;
@@ -104,9 +105,10 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             this.loggerFactory = new LoggerFactory();
             this.signals = new Signals.Signals(this.loggerFactory, null);
             this.asyncProvider = new AsyncProvider(this.loggerFactory, this.signals);
-
+            
             this.blockStoreQueue = new BlockStoreQueue(this.chainIndexer, this.chainState, blockStoreFlushCondition, this.storeSettings,
-                this.blockRepositoryMock.Object, this.loggerFactory, new Mock<INodeStats>().Object, this.asyncProvider, new Mock<IInitialBlockDownloadState>().Object);
+                this.blockRepositoryMock.Object, this.loggerFactory, new Mock<INodeStats>().Object, this.asyncProvider, 
+                new Mock<IInitialBlockDownloadState>().Object);
         }
 
         private ChainIndexer CreateChain(int blocksCount)
@@ -182,11 +184,17 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             ChainIndexer longChainIndexer = this.CreateChain(count);
             this.repositoryTipHashAndHeight = new HashHeightPair(longChainIndexer.Genesis.HashBlock, 0);
-
+            
             var blockStoreFlushCondition = new BlockStoreQueueFlushCondition(this.chainState, this.initialBlockDownloadState.Object);
 
             this.blockStoreQueue = new BlockStoreQueue(longChainIndexer, this.chainState, blockStoreFlushCondition, this.storeSettings,
                 this.blockRepositoryMock.Object, this.loggerFactory, new Mock<INodeStats>().Object, this.asyncProvider, new Mock<IInitialBlockDownloadState>().Object);
+
+            var consensusManager = new Mock<IConsensusManager>();
+            ChainedHeader outHeader = longChainIndexer.Genesis;
+            consensusManager.Setup(c => c.IsAtBestChainTip(out outHeader)).Returns(true);
+
+            this.blockStoreQueue.SetConsensusManager(consensusManager.Object);
 
             this.blockStoreQueue.Initialize();
             this.chainState.ConsensusTip = longChainIndexer.Tip;
@@ -210,7 +218,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             this.repositoryTipHashAndHeight = new HashHeightPair(this.chainIndexer.Genesis.HashBlock, 0);
 
             var blockStoreFlushConditionMock = new Mock<IBlockStoreQueueFlushCondition>();
-            blockStoreFlushConditionMock.Setup(s => s.ShouldFlush).Returns(false);
+            blockStoreFlushConditionMock.Setup(s => s.ShouldFlush(It.IsAny<IConsensusManager>())).Returns(false);
             this.blockStoreQueue = new BlockStoreQueue(this.chainIndexer, this.chainState, blockStoreFlushConditionMock.Object, this.storeSettings, this.blockRepositoryMock.Object, this.loggerFactory, new Mock<INodeStats>().Object, this.asyncProvider, new Mock<IInitialBlockDownloadState>().Object);
 
             this.blockStoreQueue.Initialize();
@@ -242,9 +250,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
         public async Task BatchIsSavedWhenAtConsensusTipAsync()
         {
             this.repositoryTipHashAndHeight = new HashHeightPair(this.chainIndexer.Genesis.HashBlock, 0);
-
+            
             var blockStoreFlushConditionMock = new Mock<IBlockStoreQueueFlushCondition>();
-            blockStoreFlushConditionMock.Setup(s => s.ShouldFlush).Returns(false);
+            blockStoreFlushConditionMock.Setup(s => s.ShouldFlush(It.IsAny<IConsensusManager>())).Returns(false);
             this.blockStoreQueue = new BlockStoreQueue(this.chainIndexer, this.chainState, blockStoreFlushConditionMock.Object, this.storeSettings,
                 this.blockRepositoryMock.Object, this.loggerFactory, new Mock<INodeStats>().Object, this.asyncProvider, new Mock<IInitialBlockDownloadState>().Object);
 
@@ -260,7 +268,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
                 if (i == this.chainIndexer.Height)
                 {
                     await this.WaitUntilQueueIsEmptyAsync().ConfigureAwait(false);
-                    blockStoreFlushConditionMock.Setup(s => s.ShouldFlush).Returns(true);
+                    blockStoreFlushConditionMock.Setup(s => s.ShouldFlush(It.IsAny<IConsensusManager>())).Returns(true);
                 }
 
                 this.blockStoreQueue.AddToPending(new ChainedHeaderBlock(block, lastHeader));
@@ -287,7 +295,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             this.repositoryTipHashAndHeight = new HashHeightPair(this.chainIndexer.Genesis.HashBlock, 0);
 
             var blockStoreFlushConditionMock = new Mock<IBlockStoreQueueFlushCondition>();
-            blockStoreFlushConditionMock.Setup(s => s.ShouldFlush).Returns(false);
+            blockStoreFlushConditionMock.Setup(s => s.ShouldFlush(It.IsAny<IConsensusManager>())).Returns(false);
             this.blockStoreQueue = new BlockStoreQueue(this.chainIndexer, this.chainState, blockStoreFlushConditionMock.Object, this.storeSettings,
                 this.blockRepositoryMock.Object, this.loggerFactory, new Mock<INodeStats>().Object, this.asyncProvider, new Mock<IInitialBlockDownloadState>().Object);
 
@@ -342,7 +350,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             this.repositoryTipHashAndHeight = new HashHeightPair(this.chainIndexer.Genesis.HashBlock, 0);
 
             var blockStoreFlushCondition = new Mock<IBlockStoreQueueFlushCondition>();
-            blockStoreFlushCondition.Setup(s => s.ShouldFlush).Returns(false);
+            blockStoreFlushCondition.Setup(s => s.ShouldFlush(It.IsAny<IConsensusManager>())).Returns(false);
 
             this.blockStoreQueue = new BlockStoreQueue(this.chainIndexer, this.chainState, blockStoreFlushCondition.Object, this.storeSettings,
                 this.blockRepositoryMock.Object, this.loggerFactory, new Mock<INodeStats>().Object, this.asyncProvider, new Mock<IInitialBlockDownloadState>().Object);
@@ -386,14 +394,14 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
                 block.GetSerializedSize();
 
                 if (header == alternativeBlocks.Last())
-                    blockStoreFlushCondition.Setup(s => s.ShouldFlush).Returns(true);
+                    blockStoreFlushCondition.Setup(s => s.ShouldFlush(It.IsAny<IConsensusManager>())).Returns(true);
 
                 this.blockStoreQueue.AddToPending(new ChainedHeaderBlock(block, header));
             }
 
             await this.WaitUntilQueueIsEmptyAsync().ConfigureAwait(false);
 
-            blockStoreFlushCondition.Setup(s => s.ShouldFlush).Returns(false);
+            blockStoreFlushCondition.Setup(s => s.ShouldFlush(It.IsAny<IConsensusManager>())).Returns(false);
 
             // Make sure only longest chain is saved.
             Assert.Equal(this.chainIndexer.Tip.Height, this.repositoryTotalBlocksSaved);
@@ -408,7 +416,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
                 block.GetSerializedSize();
 
                 if (i == this.chainIndexer.Height)
-                    blockStoreFlushCondition.Setup(s => s.ShouldFlush).Returns(true);
+                    blockStoreFlushCondition.Setup(s => s.ShouldFlush(It.IsAny<IConsensusManager>())).Returns(true);
 
                 this.blockStoreQueue.AddToPending(new ChainedHeaderBlock(block, this.chainIndexer.GetHeader(i)));
             }

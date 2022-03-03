@@ -98,6 +98,8 @@ namespace Stratis.Bitcoin.Features.BlockStore
         /// <inheritdoc/>
         public ChainedHeader BlockStoreCacheTip { get; private set; }
 
+        private IConsensusManager consensusManager;
+
         private Exception saveAsyncLoopException;
 
         public BlockStoreQueue(
@@ -133,10 +135,16 @@ namespace Stratis.Bitcoin.Features.BlockStore
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.cancellation = new CancellationTokenSource();
             this.saveAsyncLoopException = null;
+            this.consensusManager = null;
 
             this.BatchThresholdSizeBytes = storeSettings.MaxCacheSize * 1024 * 1024;
 
             nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
+        }
+
+        public void SetConsensusManager(IConsensusManager consensusManager)
+        {
+            this.consensusManager = consensusManager;
         }
 
         public void ReindexChain(IConsensusManager consensusManager, CancellationToken nodeCancellation)
@@ -545,7 +553,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
                     this.ProcessQueueItem(item);
 
-                    if (this.blockStoreQueueFlushCondition.ShouldFlush)
+                    if (this.blockStoreQueueFlushCondition.ShouldFlush(this.consensusManager))
                         this.FlushAllCollections();
 
                     // If we are out of IBD, don't allow the block store to fall MaxReorg length behind consensus tip
