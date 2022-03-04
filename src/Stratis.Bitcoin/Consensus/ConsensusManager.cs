@@ -1448,17 +1448,20 @@ namespace Stratis.Bitcoin.Consensus
         /// <para>Should be locked by <see cref="peerLock"/>.</para></remarks>
         public bool IsAtBestChainTip(out ChainedHeader bestTip)
         {
-            bestTip = this.chainedHeaderTree.GetBestPeerTip();
-
-            if (bestTip == null)
+            lock (this.peerLock)
             {
-                this.logger.LogTrace("(-)[NO_PEERS]:false");
-                return false;
+                bestTip = this.chainedHeaderTree.GetBestPeerTip();
+
+                if (bestTip == null)
+                {
+                    this.logger.LogTrace("(-)[NO_PEERS]:false");
+                    return false;
+                }
+
+                bool isConsideredSynced = this.Tip.Height + ConsensusIsConsideredToBeSyncedMargin > bestTip.Height;
+
+                return isConsideredSynced;
             }
-
-            bool isConsideredSynced = this.Tip.Height + ConsensusIsConsideredToBeSyncedMargin > bestTip.Height;
-
-            return isConsideredSynced;
         }
 
         [NoTrace]
