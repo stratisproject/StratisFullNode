@@ -361,7 +361,7 @@ if ( $NodeType -eq "50K" )
     #Launching GETH
     $API = $gethAPIPort
     Write-Host (Get-TimeStamp) "Starting GETH Masternode" -ForegroundColor Cyan
-    $StartNode = Start-Process 'geth.exe' -ArgumentList "--syncmode fast --http --http.corsdomain=* --http.api web3,eth,debug,personal,net --datadir=$ethDataDir" -PassThru
+    $StartNode = Start-Process 'geth.exe' -ArgumentList "--syncmode snap --http --http.corsdomain=* --http.api web3,eth,debug,personal,net --datadir=$ethDataDir" -PassThru
 
     While ( -not ( Test-Connection -TargetName 127.0.0.1 -TCPPort $API ) ) 
     {
@@ -498,8 +498,7 @@ if ( $NodeType -eq "50K" )
 {
     if ( $ethGasPrice )
     {
-        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -eth_interopenabled=1 -ethereumgaspricetracking -pricetracking -eth_account=$ethAddress -eth_passphrase=$ethPassword -eth_multisigwalletcontractaddress=$ethMultiSigContract -eth_wrappedstraxcontractaddress=$ethWrappedStraxContract -eth_keyvaluestorecontractaddress=$ethKeyValueStoreContractAddress -eth_gasprice=$ethGasPrice -eth_gas=$ethGasLimit -cirrusmultisigcontractaddress=$cirrusMultiSig -cirrussmartcontractactiveaddress=$walletAddress0 -eth_watcherc20=$Token1 -eth_watcherc20=$Token2 -eth_watcherc20=$Token3 -eth_watcherc20=$Token4" -PassThru
-    }
+        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -eth_interopenabled=1 -ethereumgaspricetracking -pricetracking -eth_account=$ethAddress -eth_passphrase=$ethPassword -eth_multisigwalletcontractaddress=$ethMultiSigContract -eth_wrappedstraxcontractaddress=$ethWrappedStraxContract -eth_keyvaluestorecontractaddress=$ethKeyValueStoreContractAddress -eth_gasprice=$ethGasPrice -eth_gas=$ethGasLimit -cirrusmultisigcontractaddress=$cirrusMultiSigContract -cirrussmartcontractactiveaddress=$miningWalletAddress -eth_watcherc20=$Token1 -eth_watcherc20=$Token2 -eth_watcherc20=$Token3 -eth_watcherc20=$Token4 -eth_watcherc20=$Token5 -eth_watcherc20=$Token6" -PassThru    }
         Else
         {
             $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -eth_interopenabled=1 -eth_account=$ethAddress -eth_passphrase=$ethPassword -eth_multisigwalletcontractaddress=$ethMultiSigContract -eth_wrappedstraxcontractaddress=$ethWrappedStraxContract" -PassThru
@@ -722,8 +721,8 @@ Exit
 # SIG # Begin signature block
 # MIIO+gYJKoZIhvcNAQcCoIIO6zCCDucCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU1EaWDGpoaK7k4e2zBPDkuV6j
-# 5umgggxCMIIFfjCCBGagAwIBAgIQCrk836uc/wPyOiuycqPb5zANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUDCZ13k9Aa5UrdpUq36qODXIS
+# m/WgggxCMIIFfjCCBGagAwIBAgIQCrk836uc/wPyOiuycqPb5zANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTIxMDQyMjAwMDAwMFoXDTI0MDcxOTIzNTk1
@@ -793,11 +792,11 @@ Exit
 # ZXJ0LmNvbTErMCkGA1UEAxMiRGlnaUNlcnQgRVYgQ29kZSBTaWduaW5nIENBIChT
 # SEEyKQIQCrk836uc/wPyOiuycqPb5zAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIB
 # DDEKMAigAoAAoQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEE
-# AYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUNiysCpBBfJBx
-# J3Q7A9EnEyJLf+gwDQYJKoZIhvcNAQEBBQAEggEAGyvP7/B5JFIE9ZGjt16kSDWR
-# IkdKs67US8UnYuCp/bqfUNKmeQ3P0Toe3IRqYA+TKRD9HEiy9bIzKEU1gE5S0qqh
-# f3aA/yPUOyqMfjAtcq0jDig4WDNbBSrSqRh9tdfNzG7wyRDyQm9QYwgjyv8CeN7G
-# 2cSyK530SjMWWgXWMGBCbqpMOmlFvgrTwigeEGkF/ORF9f00hOeII0eNq6ajivfy
-# 5MlS8Du1D/MMA7lXWdx/LeIUE+QCU/V5pPergXiIp38XVTFBeae1yYLtxhgMnAlp
-# v7Y6N7Rj/KgDdspTeAIKqsb6MVJ1fu3UzSYV8eT2vDTxJuOBIxHzjDEOXNAQfw==
+# AYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUbxQBIpPKCGxu
+# br2vNFhuWhfgG8cwDQYJKoZIhvcNAQEBBQAEggEAVLX5H8+iu4DcLFev0OsY+31K
+# 1QLfZmIS/of9koQlmOZrRCrUGCqI21+C7CpzfIKj3Ygctm8SLw0IbZWusva/b2xB
+# 0gSuS4iZ0LePsRwqo9w28wBD1SLRtzGGXU/zjCjuV4ksLfNArm/7aRKGB/mMWwa5
+# FSJNgW9mMZsfqmzqVez7HdorQRYYNs5eEB4s12pn8iEBMvA8BO5q5XtySh8gYTXG
+# t1cx/HypUOKlA3q0UHFiyZtaWf/ql7zfhOXlsq6Xq789CO+A7qr5Kk9PtrljJOeQ
+# mfFdEpA2DdEi1EJaOlyajIbDjH4yra8uyeOJDrTfosv1sRUblmrZitdtj8TfUQ==
 # SIG # End signature block
