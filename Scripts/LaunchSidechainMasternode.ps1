@@ -629,11 +629,38 @@ if ( $NodeType -eq "50K" )
 {
 	#Initialize InterFlux
     Write-Host (Get-TimeStamp) "Initializing InterFlux" -ForegroundColor Cyan 
+    
+    if ( $miningWalletPassword.GetType().Name -eq "SecureString" )
+    {
+        $requstBody = ConvertTo-Json @{
+
+            name = $miningWalletName
+            password = ConvertFrom-SecureString -SecureString $miningWalletPassword -AsPlainText
+        }
+    }
+        Else {
+            $requstBody = ConvertTo-Json @{
+
+            name = $miningWalletName
+            password = $miningWalletPassword
+        }
+    }
+            
+    Invoke-RestMethod -Uri http://localhost:37223/api/Wallet/load -Method Post -Body $requstBody -ContentType "application/json-patch+json" -UseBasicParsing -ErrorVariable loadWallet
+
+    if ( $loadWallet )
+    {
+        Write-Host (Get-TimeStamp) "ERROR: Wallet could not be loaded. Please launch again" -ForegroundColor Red
+        Shutdown-SidechainNode
+        Shutdown-MainchainNode
+        Start-Sleep 30
+        Exit
+    }
 
     $requstBody = ConvertTo-Json @{
 
         walletName = $miningWalletName
-        walletPassword = $miningPassword
+        walletPassword = $miningWalletPassword
         accountName = "account 0"
     }
 
@@ -721,8 +748,8 @@ Exit
 # SIG # Begin signature block
 # MIIO+gYJKoZIhvcNAQcCoIIO6zCCDucCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUDCZ13k9Aa5UrdpUq36qODXIS
-# m/WgggxCMIIFfjCCBGagAwIBAgIQCrk836uc/wPyOiuycqPb5zANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU1EaWDGpoaK7k4e2zBPDkuV6j
+# 5umgggxCMIIFfjCCBGagAwIBAgIQCrk836uc/wPyOiuycqPb5zANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTIxMDQyMjAwMDAwMFoXDTI0MDcxOTIzNTk1
@@ -792,11 +819,11 @@ Exit
 # ZXJ0LmNvbTErMCkGA1UEAxMiRGlnaUNlcnQgRVYgQ29kZSBTaWduaW5nIENBIChT
 # SEEyKQIQCrk836uc/wPyOiuycqPb5zAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIB
 # DDEKMAigAoAAoQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEE
-# AYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUbxQBIpPKCGxu
-# br2vNFhuWhfgG8cwDQYJKoZIhvcNAQEBBQAEggEAVLX5H8+iu4DcLFev0OsY+31K
-# 1QLfZmIS/of9koQlmOZrRCrUGCqI21+C7CpzfIKj3Ygctm8SLw0IbZWusva/b2xB
-# 0gSuS4iZ0LePsRwqo9w28wBD1SLRtzGGXU/zjCjuV4ksLfNArm/7aRKGB/mMWwa5
-# FSJNgW9mMZsfqmzqVez7HdorQRYYNs5eEB4s12pn8iEBMvA8BO5q5XtySh8gYTXG
-# t1cx/HypUOKlA3q0UHFiyZtaWf/ql7zfhOXlsq6Xq789CO+A7qr5Kk9PtrljJOeQ
-# mfFdEpA2DdEi1EJaOlyajIbDjH4yra8uyeOJDrTfosv1sRUblmrZitdtj8TfUQ==
+# AYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUNiysCpBBfJBx
+# J3Q7A9EnEyJLf+gwDQYJKoZIhvcNAQEBBQAEggEAGyvP7/B5JFIE9ZGjt16kSDWR
+# IkdKs67US8UnYuCp/bqfUNKmeQ3P0Toe3IRqYA+TKRD9HEiy9bIzKEU1gE5S0qqh
+# f3aA/yPUOyqMfjAtcq0jDig4WDNbBSrSqRh9tdfNzG7wyRDyQm9QYwgjyv8CeN7G
+# 2cSyK530SjMWWgXWMGBCbqpMOmlFvgrTwigeEGkF/ORF9f00hOeII0eNq6ajivfy
+# 5MlS8Du1D/MMA7lXWdx/LeIUE+QCU/V5pPergXiIp38XVTFBeae1yYLtxhgMnAlp
+# v7Y6N7Rj/KgDdspTeAIKqsb6MVJ1fu3UzSYV8eT2vDTxJuOBIxHzjDEOXNAQfw==
 # SIG # End signature block
