@@ -141,6 +141,8 @@ namespace Stratis.Bitcoin.Features.Api
         public IActionResult Status([FromQuery] bool publish)
         {
             // Output has been merged with RPC's GetInfo() since they provided similar functionality.
+            this.consensusManager.IsAtBestChainTip(out ChainedHeader bestPeerTip);
+
             var model = new StatusModel
             {
                 Version = this.fullNode.Version?.ToString() ?? "0",
@@ -157,7 +159,7 @@ namespace Stratis.Bitcoin.Features.Api
                 RunningTime = this.dateTimeProvider.GetUtcNow() - this.fullNode.StartTime,
                 CoinTicker = this.network.CoinTicker,
                 State = this.fullNode.State.ToString(),
-                BestPeerHeight = this.chainState.BestPeerTip?.Height,
+                BestPeerHeight = bestPeerTip?.Height,
                 InIbd = this.initialBlockDownloadState.IsInitialBlockDownload()
             };
 
@@ -185,8 +187,8 @@ namespace Stratis.Bitcoin.Features.Api
             }
 
             // Include BlockStore Height if enabled
-            if (this.chainState.BlockStoreTip != null)
-                model.BlockStoreHeight = this.chainState.BlockStoreTip.Height;
+            if (this.blockStore is IBlockStoreQueue blockStoreQueue && blockStoreQueue.StoreTip != null)
+                model.BlockStoreHeight = blockStoreQueue.StoreTip.Height;
 
             // Add the details of connected nodes.
             foreach (INetworkPeer peer in this.connectionManager.ConnectedPeers)

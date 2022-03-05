@@ -61,10 +61,12 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             var chainedHeaderTree = new ChainedHeaderTree(this.network, this.loggerFactory.Object, headerValidator, this.checkpoints.Object,
                 this.chainState.Object, finalizedBlockInfoRepository, this.consensusSettings, new InvalidBlockHashStore(new DateTimeProvider()), new ChainWorkComparer());
 
+            var blockStoreQueue = new Mock<IBlockStoreQueue>();
+
             // Create consensus manager.
             var consensus = new ConsensusManager(chainedHeaderTree, this.network, this.loggerFactory.Object, this.chainState.Object, integrityValidator,
                 partialValidator, fullValidator, consensusRuleEngine, finalizedBlockInfoRepository, signals,
-                new Mock<IPeerBanning>().Object, initialBlockDownloadState, this.ChainIndexer, new Mock<IBlockPuller>().Object, new Mock<IBlockStore>().Object,
+                new Mock<IPeerBanning>().Object, initialBlockDownloadState, this.ChainIndexer, new Mock<IBlockPuller>().Object, blockStoreQueue.Object,
                 new Mock<IConnectionManager>().Object, new Mock<INodeStats>().Object, new Mock<INodeLifetime>().Object, this.consensusSettings, this.dateTimeProvider.Object);
 
             // Mock the coinviews "FetchCoinsAsync" method. We will use the "unspentOutputs" dictionary to track spendable outputs.
@@ -108,8 +110,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
                 StakeTime = (this.ChainIndexer.Tip.Header.Time + 60) & ~PosConsensusOptions.StakeTimestampMask
             });
 
-            // Since we are mocking the chainState ensure that the BlockStoreTip returns a usable value.
-            this.chainState.Setup(d => d.BlockStoreTip).Returns(this.ChainIndexer.Tip);
+            // Since we are mocking the BlockStoreQueue ensure that the StoreTip returns a usable value.
+            blockStoreQueue.Setup(q => q.StoreTip).Returns(this.ChainIndexer.Tip);
 
             // Since we are mocking the chainState ensure that the ConsensusTip returns a usable value.
             this.chainState.Setup(d => d.ConsensusTip).Returns(this.ChainIndexer.Tip);

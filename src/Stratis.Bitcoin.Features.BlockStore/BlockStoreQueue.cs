@@ -49,8 +49,8 @@ namespace Stratis.Bitcoin.Features.BlockStore
         /// <summary>The current pending blocks size in bytes.</summary>
         private long blocksQueueSizeBytes;
 
-        /// <summary>The highest stored block in the repository.</summary>
-        private ChainedHeader storeTip;
+        /// <inheritdoc/>
+        public ChainedHeader StoreTip { get; private set; }
 
         private readonly IInitialBlockDownloadState initialBlockDownloadState;
 
@@ -98,6 +98,8 @@ namespace Stratis.Bitcoin.Features.BlockStore
         /// <inheritdoc/>
         public ChainedHeader BlockStoreCacheTip { get; private set; }
 
+        private IConsensusManager consensusManager;
+
         private Exception saveAsyncLoopException;
 
         public BlockStoreQueue(
@@ -133,10 +135,16 @@ namespace Stratis.Bitcoin.Features.BlockStore
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.cancellation = new CancellationTokenSource();
             this.saveAsyncLoopException = null;
+            this.consensusManager = null;
 
             this.BatchThresholdSizeBytes = storeSettings.MaxCacheSize * 1024 * 1024;
 
             nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
+        }
+
+        public void SetConsensusManager(IConsensusManager consensusManager)
+        {
+            this.consensusManager = consensusManager;
         }
 
         public void ReindexChain(IConsensusManager consensusManager, CancellationToken nodeCancellation)
@@ -144,14 +152,14 @@ namespace Stratis.Bitcoin.Features.BlockStore
             if (!this.storeSettings.ReIndexChain)
                 return;
 
-            if (consensusManager.Tip.Height >= this.storeTip.Height)
+            if (consensusManager.Tip.Height >= this.StoreTip.Height)
                 return;
 
-            if (this.storeTip.FindFork(consensusManager.Tip) != consensusManager.Tip)
+            if (this.StoreTip.FindFork(consensusManager.Tip) != consensusManager.Tip)
                 throw new Exception("Store and chain tip are not on same fork.");
 
             List<ChainedHeader> headers = new List<ChainedHeader>();
-            foreach (ChainedHeader chainedHeader in this.storeTip.EnumerateToGenesis())
+            foreach (ChainedHeader chainedHeader in this.StoreTip.EnumerateToGenesis())
             {
                 if (chainedHeader.Height == consensusManager.Tip.Height)
                     break;
@@ -176,7 +184,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
                 if (newChainedHeader.Height % 1000 == 0)
                 {
-                    this.logger.LogInformation("Reindex in process... {0}/{1} blocks processed.", newChainedHeader.Height, this.storeTip.Height);
+                    this.logger.LogInformation("Reindex in process... {0}/{1} blocks processed.", newChainedHeader.Height, this.StoreTip.Height);
                 }
             }
         }
@@ -184,13 +192,13 @@ namespace Stratis.Bitcoin.Features.BlockStore
         /// <summary>
         /// Initializes the <see cref="BlockStoreQueue"/>.
         /// <para>
-        /// If <see cref="storeTip"/> is <c>null</c>, the store is out of sync. This can happen when:</para>
+        /// If <see cref="StoreTip"/> is <c>null</c>, the store is out of sync. This can happen when:</para>
         /// <list>
         ///     <item>The node crashed.</item>
         ///     <item>The node was not closed down properly.</item>
         /// </list>
         /// <para>
-        /// To recover we walk back the chain until a common block header is found and set the <see cref="BlockStoreQueue"/>'s <see cref="storeTip"/> to that.
+        /// To recover we walk back the chain until a common block header is found and set the <see cref="BlockStoreQueue"/>'s <see cref="StoreTip"/> to that.
         /// </para>
         /// </summary>
         public void Initialize()
@@ -209,7 +217,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
             if (this.storeSettings.TxIndex != this.blockRepository.TxIndex)
             {
-                if (this.storeTip != this.chainIndexer.Genesis)
+                if (this.StoreTip != this.chainIndexer.Genesis)
                 {
                     this.logger.LogTrace("(-)[REBUILD_REQUIRED]");
                     throw new BlockStoreException("You need to rebuild the block store database using -reindex to change -txindex");
@@ -406,8 +414,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
         /// <param name="newTip">The new store tip to set.</param>
         private void SetStoreTip(ChainedHeader newTip)
         {
-            this.storeTip = newTip;
-            this.chainState.BlockStoreTip = newTip;
+            this.StoreTip = newTip;
         }
 
         /// <summary>
@@ -461,7 +468,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
         [NoTrace]
         private void AddComponentStats(StringBuilder log)
         {
-            if (this.storeTip != null)
+            if (this.StoreTip != null)
             {
                 log.AppendLine(">> Block Store");
                 log.AppendLine("Batch Size".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.currentBatchSizeBytes.BytesToMegaBytes()} MB / {this.BatchThresholdSizeBytes.BytesToMegaBytes()} MB ({this.batch.Count} batched)");
@@ -545,7 +552,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
                     this.ProcessQueueItem(item);
 
-                    if (this.blockStoreQueueFlushCondition.ShouldFlush)
+                    if (this.blockStoreQueueFlushCondition.ShouldFlush(this.consensusManager, this))
                         this.FlushAllCollections();
 
                     // If we are out of IBD, don't allow the block store to fall MaxReorg length behind consensus tip
@@ -616,7 +623,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
                 ChainedHeader expectedStoreTip = clearedBatch.First().ChainedHeader.Previous;
 
                 // Check if block repository contains reorged blocks. If it does - delete them.
-                if (expectedStoreTip.HashBlock != this.storeTip.HashBlock)
+                if (expectedStoreTip.HashBlock != this.StoreTip.HashBlock)
                     this.RemoveReorgedBlocksFromStore(expectedStoreTip);
 
                 // Save the batch.
@@ -627,7 +634,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
                 this.blockRepository.PutBlocks(new HashHeightPair(newTip), clearedBatch.Select(b => b.Block).ToList());
 
                 this.SetStoreTip(newTip);
-                this.logger.LogDebug("Store tip set to '{0}'.", this.storeTip);
+                this.logger.LogDebug("Store tip set to '{0}'.", this.StoreTip);
 
                 // If an error occurred above then this code which clears the batch will not execute.
                 lock (this.blocksCacheLock)
@@ -687,7 +694,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
         private void RemoveReorgedBlocksFromStore(ChainedHeader expectedStoreTip)
         {
             var blocksToDelete = new List<uint256>();
-            ChainedHeader currentHeader = this.storeTip;
+            ChainedHeader currentHeader = this.StoreTip;
 
             while (currentHeader.HashBlock != expectedStoreTip.HashBlock)
             {
@@ -704,7 +711,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
             this.blockRepository.Delete(new HashHeightPair(currentHeader), blocksToDelete);
 
             this.SetStoreTip(expectedStoreTip);
-            this.logger.LogDebug("Store tip rewound to '{0}'.", this.storeTip);
+            this.logger.LogDebug("Store tip rewound to '{0}'.", this.StoreTip);
         }
 
         /// <inheritdoc />

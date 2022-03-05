@@ -34,8 +34,6 @@ namespace Stratis.Bitcoin.Tests.Consensus
                 this.testContext.coinView.UpdateTipHash(new HashHeightPair(this.testContext.InitialChainTip));
                 this.testContext.ChainedHeaderTree.Initialize(this.testContext.InitialChainTip);
                 this.testContext.chainIndexer.Initialize(this.testContext.InitialChainTip);
-                this.testContext.ChainState.Setup(c => c.BlockStoreTip)
-                    .Returns(this.testContext.InitialChainTip);
             }
 
             return this.testContext;

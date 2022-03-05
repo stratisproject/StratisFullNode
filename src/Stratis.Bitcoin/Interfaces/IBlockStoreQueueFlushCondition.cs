@@ -1,4 +1,6 @@
-﻿namespace Stratis.Bitcoin.Interfaces
+﻿using Stratis.Bitcoin.Consensus;
+
+namespace Stratis.Bitcoin.Interfaces
 {
     /// <summary>
     /// Determines whether or not <see cref="BlockStoreQueue"/> should flush it's batch to disk.
@@ -11,6 +13,6 @@
         /// If consensus tip in IBD or store tip is a distance of more then 5 blocks from consensus tip this will return <c>false</c>.
         /// </para>
         /// </summary>
-        bool ShouldFlush { get; }
+        bool ShouldFlush(IConsensusManager consensusManager, IBlockStoreQueue blockStoreQueue);
     }
 }

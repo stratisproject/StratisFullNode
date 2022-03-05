@@ -785,15 +785,12 @@ namespace Stratis.Bitcoin.IntegrationTests
             this.interceptAtBlockHeight = interceptAtBlockHeight;
         }
 
-        public bool ShouldFlush
+        public bool ShouldFlush(IConsensusManager consensusManager, IBlockStoreQueue blockStoreQueue)
         {
-            get
-            {
-                if (this.chainState.ConsensusTip.Height >= this.interceptAtBlockHeight)
-                    return false;
+            if (this.chainState.ConsensusTip.Height >= this.interceptAtBlockHeight)
+                return false;
 
-                return this.chainState.IsAtBestChainTip;
-            }
+            return consensusManager.IsAtBestChainTip(out _);
         }
     }
 }

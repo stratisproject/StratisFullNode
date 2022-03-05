@@ -21,13 +21,14 @@ namespace Stratis.Bitcoin.Tests.Common
 {
     public static class ConsensusManagerHelper
     {
-        public static IConsensusManager CreateConsensusManager(
+        public static (IConsensusManager consensusManager, IServiceCollection serviceCollection, MockingContext mockingContext) CreateConsensusManager(
             Network network,
             string dataDir = null,
             ChainState chainState = null,
             InMemoryCoinView inMemoryCoinView = null,
             ChainIndexer chainIndexer = null,
             IConsensusRuleEngine consensusRules = null,
+            IBlockStore blockStore = null,
             IFinalizedBlockInfoRepository finalizedBlockInfoRepository = null)
         {
             IServiceCollection mockingServices = GetMockingServices(network,
@@ -38,6 +39,9 @@ namespace Stratis.Bitcoin.Tests.Common
             if (consensusRules != null)
                 mockingServices.AddSingleton(consensusRules);
 
+            if (blockStore != null)
+                mockingServices.AddSingleton(blockStore);
+
             if (inMemoryCoinView != null)
             {
                 mockingServices.AddSingleton<ICoinView>(inMemoryCoinView);
@@ -46,7 +50,9 @@ namespace Stratis.Bitcoin.Tests.Common
 
             mockingServices.AddSingleton(finalizedBlockInfoRepository ?? new FinalizedBlockInfoRepository(new HashHeightPair()));
 
-            return new MockingContext(mockingServices).GetService<IConsensusManager>();
+            var mockingContext = new MockingContext(mockingServices);
+
+            return (mockingContext.GetService<IConsensusManager>(), mockingServices, mockingContext);
         }
 
         public static IServiceCollection GetMockingServices(

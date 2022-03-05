@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Base;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.BlockStore.Pruning
@@ -20,6 +21,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Pruning
         private readonly INodeLifetime nodeLifetime;
         private readonly IPrunedBlockRepository prunedBlockRepository;
         private readonly StoreSettings storeSettings;
+        private readonly IBlockStoreQueue blockStoreQueue;
 
         /// <inheritdoc/>
         public ChainedHeader PrunedUpToHeaderTip { get; private set; }
@@ -31,7 +33,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.Pruning
             IChainState chainState,
             ILoggerFactory loggerFactory,
             INodeLifetime nodeLifetime,
-            StoreSettings storeSettings)
+            StoreSettings storeSettings,
+            IBlockStoreQueue blockStoreQueue)
         {
             this.asyncProvider = asyncProvider;
             this.blockRepository = blockRepository;
@@ -40,12 +43,13 @@ namespace Stratis.Bitcoin.Features.BlockStore.Pruning
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.nodeLifetime = nodeLifetime;
             this.storeSettings = storeSettings;
+            this.blockStoreQueue = blockStoreQueue;
         }
 
         /// <inheritdoc/>
         public void Initialize()
         {
-            this.PrunedUpToHeaderTip = this.chainState.BlockStoreTip.GetAncestor(this.prunedBlockRepository.PrunedTip.Height);
+            this.PrunedUpToHeaderTip = this.blockStoreQueue.StoreTip.GetAncestor(this.prunedBlockRepository.PrunedTip.Height);
 
             this.asyncLoop = this.asyncProvider.CreateAndRunAsyncLoop($"{this.GetType().Name}.{nameof(this.PruneBlocks)}", token =>
            {
@@ -81,7 +85,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Pruning
             }
 
             int heightToPruneFrom = this.blockRepository.TipHashAndHeight.Height - this.storeSettings.AmountOfBlocksToKeep;
-            ChainedHeader startFrom = this.chainState.BlockStoreTip.GetAncestor(heightToPruneFrom);
+            ChainedHeader startFrom = this.blockStoreQueue.StoreTip.GetAncestor(heightToPruneFrom);
             if (startFrom == null)
             {
                 this.logger.LogInformation("(-)[PRUNE_ABORTED_START_BLOCK_NOT_FOUND]{0}:{1}", nameof(heightToPruneFrom), heightToPruneFrom);

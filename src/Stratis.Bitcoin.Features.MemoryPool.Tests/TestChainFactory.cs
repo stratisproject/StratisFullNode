@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
@@ -120,11 +119,13 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
                 inMemoryCoinView, stakeChain, new StakeValidator(network, stakeChain, chain, inMemoryCoinView, loggerFactory), chainState, new InvalidBlockHashStore(dateTimeProvider),
                 new NodeStats(dateTimeProvider, NodeSettings.Default(network), new Mock<IVersionProvider>().Object), new RewindDataIndexCache(dateTimeProvider, network, finalizedBlockInfoRepository, new Checkpoints()), asyncProvider, consensusRulesContainer).SetupRulesEngineParent();
 
-            IConsensusManager consensus = ConsensusManagerHelper.CreateConsensusManager(network, dataDir, chainState, chainIndexer: chain, consensusRules: consensusRules, inMemoryCoinView: inMemoryCoinView);
+            var blockStoreQueue = new Mock<IBlockStoreQueue>();
+
+            var context = ConsensusManagerHelper.CreateConsensusManager(network, dataDir, chainState, chainIndexer: chain, consensusRules: consensusRules, inMemoryCoinView: inMemoryCoinView, blockStore: blockStoreQueue.Object);
 
             var genesis = new ChainedHeader(network.GetGenesis().Header, network.GenesisHash, 0);
-            chainState.BlockStoreTip = genesis;
-            await consensus.InitializeAsync(genesis).ConfigureAwait(false);
+            blockStoreQueue.Setup(q => q.StoreTip).Returns(genesis);
+            await context.consensusManager.InitializeAsync(genesis).ConfigureAwait(false);
 
             var mempoolSettings = new MempoolSettings(nodeSettings) { RequireStandard = requireStandard };
             var blockPolicyEstimator = new BlockPolicyEstimator(mempoolSettings, loggerFactory, nodeSettings);
@@ -239,10 +240,14 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
             ConsensusRuleEngine consensusRules = new PowConsensusRuleEngine(network, loggerFactory, dateTimeProvider, chain, deployments, consensusSettings, new Checkpoints(),
                 inMemoryCoinView, chainState, new InvalidBlockHashStore(dateTimeProvider), new NodeStats(dateTimeProvider, nodeSettings, new Mock<IVersionProvider>().Object), asyncProvider, consensusRulesContainer).SetupRulesEngineParent();
 
-            IConsensusManager consensus = ConsensusManagerHelper.CreateConsensusManager(network, dataDir, chainState, chainIndexer: chain, consensusRules: consensusRules, inMemoryCoinView: inMemoryCoinView);
+            var blockStoreQueue = new Mock<IBlockStoreQueue>();
+
+            var context = ConsensusManagerHelper.CreateConsensusManager(network, dataDir, chainState, chainIndexer: chain, consensusRules: consensusRules, inMemoryCoinView: inMemoryCoinView, blockStore: blockStoreQueue.Object);
+            var consensus = context.consensusManager;
 
             var genesis = new ChainedHeader(network.GetGenesis().Header, network.GenesisHash, 0);
-            chainState.BlockStoreTip = genesis;
+            blockStoreQueue.Setup(q => q.StoreTip).Returns(genesis);
+
             await consensus.InitializeAsync(genesis).ConfigureAwait(false);
 
             var blockPolicyEstimator = new BlockPolicyEstimator(new MempoolSettings(nodeSettings), loggerFactory, nodeSettings);

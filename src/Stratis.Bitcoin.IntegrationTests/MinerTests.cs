@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Moq;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Base;
@@ -21,6 +22,7 @@ using Stratis.Bitcoin.Features.MemoryPool.Rules;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Mining;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Tests.Common;
@@ -134,14 +136,8 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 var mockingServices = ConsensusManagerHelper.GetMockingServices(this.network,
                     nodeSettings: ctx => new NodeSettings(this.network, args: new string[] { "-checkpoints" }),
-                    chainState: ctx =>
-                    {
-                        var genesis = this.network.GetGenesis();
-                        return new ChainState()
-                        {
-                            BlockStoreTip = new ChainedHeader(genesis.Header, genesis.GetHash(), 0)
-                        };
-                    })
+                    chainState: ctx => new ChainState())
+                    .AddSingleton<IBlockStore>(ctx => ctx.GetService<IBlockStoreQueue>())
                     .AddSingleton(ctx => new InMemoryCoinView(new HashHeightPair(ctx.GetService<ChainIndexer>().Tip)))
                     .AddSingleton<ICoinView, InMemoryCoinView>()
                     .AddSingleton<ICoindb, InMemoryCoinView>()
@@ -169,7 +165,12 @@ namespace Stratis.Bitcoin.IntegrationTests
                 this.ConsensusRules = mockingContext.GetService<IConsensusRuleEngine>();
                 this.consensus = mockingContext.GetService<IConsensusManager>();
 
-                await this.consensus.InitializeAsync(mockingContext.GetService<IChainState>().BlockStoreTip);
+                mockingContext.GetService<Mock<IBlockStoreQueue>>().Setup(q => q.StoreTip).Returns(() => {
+                    var genesis = this.network.GetGenesis();
+                    return new ChainedHeader(genesis.Header, genesis.GetHash(), 0);
+                });
+
+                await this.consensus.InitializeAsync(mockingContext.GetService<IBlockStoreQueue>().StoreTip);
 
                 this.entry.Fee(11);
                 this.entry.Height(11);

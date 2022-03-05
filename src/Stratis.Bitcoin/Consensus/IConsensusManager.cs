@@ -88,6 +88,13 @@ namespace Stratis.Bitcoin.Consensus
         /// <exception cref="ConsensusException">Thrown if partial or full validation failed or if full validation wasn't required.</exception>
         /// <returns><see cref="ChainedHeader"/> of a block that was mined.</returns>
         Task<ChainedHeader> BlockMinedAsync(Block block, bool assumeValid = false);
+
+        /// <summary>Indicates whether consensus tip is equal to the tip of the most advanced peer node is connected to.</summary>
+        /// <param name="bestPeerTip">The tip of the most advanced peer our node is connected to or <c>null</c> if no peer is connected.
+        /// <para>This is a best guess and should be use for informational purposes only
+        /// as it may not always be correct for example if a node is in a reorg state or has no peers.</para>
+        /// </param>
+        bool IsAtBestChainTip(out ChainedHeader bestPeerTip);
     }
 
     /// <summary>
