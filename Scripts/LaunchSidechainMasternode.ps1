@@ -632,21 +632,21 @@ if ( $NodeType -eq "50K" )
     
     if ( $miningWalletPassword.GetType().Name -eq "SecureString" )
     {
-        $requstBody = ConvertTo-Json @{
+        $requestBody = ConvertTo-Json @{
 
             name = $miningWalletName
             password = ConvertFrom-SecureString -SecureString $miningWalletPassword -AsPlainText
         }
     }
         Else {
-            $requstBody = ConvertTo-Json @{
+            $requestBody = ConvertTo-Json @{
 
             name = $miningWalletName
             password = $miningWalletPassword
         }
     }
             
-    Invoke-RestMethod -Uri http://localhost:37223/api/Wallet/load -Method Post -Body $requstBody -ContentType "application/json-patch+json" -UseBasicParsing -ErrorVariable loadWallet
+    Invoke-RestMethod -Uri http://localhost:$sideChainAPIPort/api/Wallet/load -Method Post -Body $requestBody -ContentType "application/json-patch+json" -UseBasicParsing -ErrorVariable loadWallet
 
     if ( $loadWallet )
     {
@@ -657,14 +657,25 @@ if ( $NodeType -eq "50K" )
         Exit
     }
 
-    $requstBody = ConvertTo-Json @{
+    if ( $miningWalletPassword.GetType().Name -eq "SecureString" )
+    {
+        $requestBody = ConvertTo-Json @{
 
-        walletName = $miningWalletName
-        walletPassword = $miningWalletPassword
-        accountName = "account 0"
+            walletName = $miningWalletName
+            walletPassword = ConvertFrom-SecureString -SecureString $miningWalletPassword -AsPlainText
+            accountName = "account 0"
+        }
+    }
+        Else {
+            $requestBody = ConvertTo-Json @{
+
+            walletName = $miningWalletName
+            walletPassword = $miningWalletPassword
+            accountName = "account 0"
+        }
     }
 
-    $initializeInterFlux = Invoke-RestMethod -Uri http://localhost:$API/api/Interop/initializeinterflux -Method Post -Body $requstBody -ContentType "application/json-patch+json"
+    $initializeInterFlux = Invoke-RestMethod -Uri http://localhost:$API/api/Interop/initializeinterflux -Method Post -Body $requestBody -ContentType "application/json-patch+json"
     if ( $initializeInterFlux -ne $true )
     {
         Write-Host (Get-TimeStamp) "ERROR: Something went wrong. Cannot Initialize InterFlux! Please contact support in Discord" -ForegroundColor Red
@@ -748,8 +759,8 @@ Exit
 # SIG # Begin signature block
 # MIIO+gYJKoZIhvcNAQcCoIIO6zCCDucCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU1EaWDGpoaK7k4e2zBPDkuV6j
-# 5umgggxCMIIFfjCCBGagAwIBAgIQCrk836uc/wPyOiuycqPb5zANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUkyLdN8OYBavs2FxSBv2zrxOF
+# aRSgggxCMIIFfjCCBGagAwIBAgIQCrk836uc/wPyOiuycqPb5zANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTIxMDQyMjAwMDAwMFoXDTI0MDcxOTIzNTk1
@@ -819,11 +830,11 @@ Exit
 # ZXJ0LmNvbTErMCkGA1UEAxMiRGlnaUNlcnQgRVYgQ29kZSBTaWduaW5nIENBIChT
 # SEEyKQIQCrk836uc/wPyOiuycqPb5zAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIB
 # DDEKMAigAoAAoQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEE
-# AYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUNiysCpBBfJBx
-# J3Q7A9EnEyJLf+gwDQYJKoZIhvcNAQEBBQAEggEAGyvP7/B5JFIE9ZGjt16kSDWR
-# IkdKs67US8UnYuCp/bqfUNKmeQ3P0Toe3IRqYA+TKRD9HEiy9bIzKEU1gE5S0qqh
-# f3aA/yPUOyqMfjAtcq0jDig4WDNbBSrSqRh9tdfNzG7wyRDyQm9QYwgjyv8CeN7G
-# 2cSyK530SjMWWgXWMGBCbqpMOmlFvgrTwigeEGkF/ORF9f00hOeII0eNq6ajivfy
-# 5MlS8Du1D/MMA7lXWdx/LeIUE+QCU/V5pPergXiIp38XVTFBeae1yYLtxhgMnAlp
-# v7Y6N7Rj/KgDdspTeAIKqsb6MVJ1fu3UzSYV8eT2vDTxJuOBIxHzjDEOXNAQfw==
+# AYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUlQSHi2vfmpA7
+# o9GVzXHkH87svLwwDQYJKoZIhvcNAQEBBQAEggEARty0YHlmoWZ0ZvSaH85SZrum
+# L0s+dQPAzlP3/HPjMY+3Hgpivp5O0l9PvDdQzdEUZ/3tOTbKIyGg2ufZdlgky81J
+# +oqnPN4TZDKhvLSnGyGfGXAAxxDIr3CCTdzC4T24CZQ+NfBoMoW/AjEE3XGHQGL5
+# tD7LWfT6aNY4bO5Ym28pixR9V3zveO4RM5LX1oXMpit5Cl5eMyKkloRJG3Ctx87/
+# ub7W21HBxkXmG5Gk210zaL83g/WnD5qDqETNswF1SZ7AeKsj2WiCzIrd7ghD5mWv
+# noe+6cabEWbaWpevjP+edjlVmVa/VpdkwEq88F5cJp23YCkptmYZDWCmzzZYZg==
 # SIG # End signature block
