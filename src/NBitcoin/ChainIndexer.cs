@@ -32,12 +32,15 @@ namespace NBitcoin
 
         public ChainedHeader Genesis => this.GetHeader(0);
 
-        public ChainIndexer(Network network)
+        public ChainIndexer()
         {
-            this.Network = network;
-
             this.blocksByHeight = new Dictionary<int, ChainedHeader>();
             this.blocksById = new Dictionary<uint256, ChainedHeader>();
+        }
+
+        public ChainIndexer(Network network) : base()
+        {
+            this.Network = network;
 
             var tip = new ChainedHeader(this.Network.GetGenesis().Header, this.Network.GetGenesis().GetHash(), 0);
             this.AddInternal(tip);
