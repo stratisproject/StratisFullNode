@@ -132,7 +132,7 @@ namespace NBitcoin
             if (block == null)
                 return new ChainedHeader[0];
 
-            return this.Tip.EnumerateToGenesis().TakeWhile(c => c.Height >= block.Height).Reverse();
+            return EnumerateAfter(block).Prepend(block);
         }
 
         /// <summary>
@@ -140,12 +140,18 @@ namespace NBitcoin
         /// </summary>
         /// <param name="block">The chained block header to enumerate after.</param>
         /// <returns>Enumeration of chained block headers after the given block.</returns>
-        internal virtual IEnumerable<ChainedHeader> EnumerateAfter(ChainedHeader block)
+        public virtual IEnumerable<ChainedHeader> EnumerateAfter(ChainedHeader block)
         {
-            if (this[block.HashBlock] == null)
-                return new ChainedHeader[0];
+            for (int i = block.Height + 1; i < this.Tip.Height; i++)
+            {
+                ChainedHeader nextBlock = this.blocksByHeight[i];
+                if (nextBlock.Previous != block)
+                    yield break;
 
-            return this.Tip.EnumerateToGenesis().TakeWhile(c => c.Height > block.Height).Reverse();
+                block = nextBlock;
+
+                yield return block;
+            }
         }
 
         internal void Add(ChainedHeader addTip)
