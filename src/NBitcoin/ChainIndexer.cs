@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
+
+[assembly: InternalsVisibleTo("Stratis.Bitcoin.Tests.Common")]
+[assembly: InternalsVisibleTo("Stratis.SmartContracts.Core.Tests")]
 
 namespace NBitcoin
 {
@@ -104,21 +108,6 @@ namespace NBitcoin
         }
 
         /// <summary>
-        /// Enumerate chain block headers after given block hash to genesis block.
-        /// </summary>
-        /// <param name="blockHash">Block hash to enumerate after.</param>
-        /// <returns>Enumeration of chained block headers after given block hash.</returns>
-        public IEnumerable<ChainedHeader> EnumerateAfter(uint256 blockHash)
-        {
-            ChainedHeader block = this.GetHeader(blockHash);
-
-            if (block == null)
-                return new ChainedHeader[0];
-
-            return this.EnumerateAfter(block);
-        }
-
-        /// <summary>
         /// Enumerates chain block headers from the given chained block header to tip.
         /// </summary>
         /// <param name="block">Chained block header to enumerate from.</param>
@@ -138,14 +127,11 @@ namespace NBitcoin
         /// <returns>Enumeration of chained block headers from the given block hash to tip.</returns>
         public IEnumerable<ChainedHeader> EnumerateToTip(uint256 blockHash)
         {
-            ChainedHeader block = this.GetHeader(blockHash);
+            ChainedHeader block = this[blockHash];
             if (block == null)
-                yield break;
+                return new ChainedHeader[0];
 
-            yield return block;
-
-            foreach (ChainedHeader chainedBlock in this.EnumerateAfter(blockHash))
-                yield return chainedBlock;
+            return this.Tip.EnumerateToGenesis().TakeWhile(c => c.Height >= block.Height).Reverse();
         }
 
         /// <summary>
@@ -153,27 +139,15 @@ namespace NBitcoin
         /// </summary>
         /// <param name="block">The chained block header to enumerate after.</param>
         /// <returns>Enumeration of chained block headers after the given block.</returns>
-        public virtual IEnumerable<ChainedHeader> EnumerateAfter(ChainedHeader block)
+        internal virtual IEnumerable<ChainedHeader> EnumerateAfter(ChainedHeader block)
         {
-            int i = block.Height + 1;
-            ChainedHeader prev = block;
+            if (this[block.HashBlock] == null)
+                return new ChainedHeader[0];
 
-            while (true)
-            {
-                ChainedHeader b = this.GetHeader(i);
-                if ((b == null) || (b.Previous != prev))
-                    yield break;
-
-                yield return b;
-                i++;
-                prev = b;
-            }
+            return this.Tip.EnumerateToGenesis().TakeWhile(c => c.Height > block.Height).Reverse();
         }
 
-        /// <summary>
-        /// TODO: Make this internal when the component moves to Stratis.Bitcoin
-        /// </summary>
-        public void Add(ChainedHeader addTip)
+        internal void Add(ChainedHeader addTip)
         {
             lock (this.lockObject)
             {
@@ -192,10 +166,7 @@ namespace NBitcoin
             this.blocksByHeight.Add(addTip.Height, addTip);
         }
 
-        /// <summary>
-        /// TODO: Make this internal when the component moves to Stratis.Bitcoin
-        /// </summary>
-        public void Remove(ChainedHeader removeTip)
+        internal void Remove(ChainedHeader removeTip)
         {
             lock (this.lockObject)
             {
