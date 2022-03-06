@@ -259,7 +259,7 @@ namespace Stratis.Bitcoin.Base
             }
 
             if (this.chainIndexer.Tip.Height != initializedAt.Height)
-                this.chainIndexer.Initialize(initializedAt);
+                this.chainIndexer.SetTip(initializedAt);
 
             NetworkPeerConnectionParameters connectionParameters = this.connectionManager.Parameters;
             connectionParameters.IsRelay = this.connectionManager.ConnectionSettings.RelayTxes;
@@ -330,7 +330,7 @@ namespace Stratis.Bitcoin.Base
 
             this.logger.LogInformation("Loading chain.");
             ChainedHeader chainTip = await this.chainRepository.LoadAsync(this.chainIndexer.Genesis).ConfigureAwait(false);
-            this.chainIndexer.Initialize(chainTip);
+            this.chainIndexer.SetTip(chainTip);
 
             this.logger.LogInformation("Chain loaded at height {0}.", this.chainIndexer.Height);
 

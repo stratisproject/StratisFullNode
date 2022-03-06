@@ -125,7 +125,8 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
             }
 
             // Build the chain indexer from the chain.
-            this.ChainIndexer = new ChainIndexer(network, chainTip);
+            this.ChainIndexer = new ChainIndexer(network);
+            this.ChainIndexer.SetTip(chainTip);
             this.TicksReading = 0;
         }
 

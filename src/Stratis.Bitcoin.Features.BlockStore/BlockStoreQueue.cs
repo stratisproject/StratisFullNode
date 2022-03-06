@@ -451,7 +451,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
             if (blockStoreResetList.Count != 0)
                 this.blockRepository.Delete(new HashHeightPair(newTip), blockStoreResetList);
 
-            this.chainIndexer.Initialize(newTip); // we have to set chain store to be same as the store tip.
+            this.chainIndexer.SetTip(newTip); // we have to set chain store to be same as the store tip.
 
             this.logger.LogWarning("Block store tip recovered to block '{0}'.", newTip);
 

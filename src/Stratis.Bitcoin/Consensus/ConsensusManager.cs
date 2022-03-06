@@ -260,9 +260,6 @@ namespace Stratis.Bitcoin.Consensus
 
             this.SetConsensusTip(pendingTip);
 
-            if (this.chainIndexer.Tip != pendingTip)
-                this.chainIndexer.Initialize(pendingTip);
-
             this.logger.LogInformation("Consensus Manager initialized with tip '{0}'.", pendingTip);
 
             this.blockPuller.Initialize(this.BlockDownloaded);
@@ -744,7 +741,6 @@ namespace Stratis.Bitcoin.Consensus
                 lock (this.peerLock)
                 {
                     this.SetConsensusTipInternalLocked(current.Previous);
-                    this.chainIndexer.Remove(current);
                 }
 
                 var disconnectedBlock = new ChainedHeaderBlock(block, current);
@@ -796,7 +792,6 @@ namespace Stratis.Bitcoin.Consensus
                     lock (this.peerLock)
                     {
                         this.SetConsensusTipInternalLocked(lastValidatedBlockHeader);
-                        this.chainIndexer.Add(lastValidatedBlockHeader);
                     }
 
                     if (this.network.Consensus.MaxReorgLength != 0)
@@ -1004,6 +999,7 @@ namespace Stratis.Bitcoin.Consensus
         private void SetConsensusTipInternalLocked(ChainedHeader newTip)
         {
             this.Tip = newTip;
+            this.chainIndexer.SetTip(newTip);
 
             this.chainState.ConsensusTip = this.Tip;
         }

@@ -30,7 +30,7 @@ namespace Stratis.SmartContracts.Core.Tests
 
             ChainedHeader[] chain = this.CreateChain(chainIndexer.Genesis, chainLength);
 
-            chainIndexer.Initialize(chain.Last());
+            chainIndexer.SetTip(chain.Last());
 
             var query = new ChainIndexerRangeQuery(chainIndexer);
 
@@ -60,7 +60,7 @@ namespace Stratis.SmartContracts.Core.Tests
             // Create a new reorg that removes 3 blocks and adds another 5.
             ChainedHeader[] chainAfterReorg = this.CreateChain(chainBeforeReorg[chainLength - 3], 5);
 
-            chainIndexer.Initialize(chainBeforeReorg.Last());
+            chainIndexer.SetTip(chainBeforeReorg.Last());
 
             var query = new ChainIndexerRangeQuery(chainIndexer);
 
@@ -104,7 +104,7 @@ namespace Stratis.SmartContracts.Core.Tests
 
             ChainedHeader[] chain = this.CreateChain(chainIndexer.Genesis, 1);
 
-            chainIndexer.Initialize(chain.Last());
+            chainIndexer.SetTip(chain.Last());
 
             var query = new ChainIndexerRangeQuery(chainIndexer);
 
@@ -121,7 +121,7 @@ namespace Stratis.SmartContracts.Core.Tests
 
             ChainedHeader[] chain = this.CreateChain(chainIndexer.Genesis, 5);
 
-            chainIndexer.Initialize(chain.Last());
+            chainIndexer.SetTip(chain.Last());
 
             var query = new ChainIndexerRangeQuery(chainIndexer);
 

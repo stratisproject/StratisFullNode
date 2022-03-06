@@ -75,7 +75,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
         {
             var controller = new FederationGatewayController(
                 Substitute.For<IAsyncProvider>(),
-                new ChainIndexer(),
+                new ChainIndexer(this.network),
                 Substitute.For<IConnectionManager>(),
                 this.crossChainTransferStore,
                 this.GetMaturedBlocksProvider(federatedPegSettings),
@@ -209,7 +209,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             var controller = new FederationGatewayController(
                 Substitute.For<IAsyncProvider>(),
-                new ChainIndexer(),
+                new ChainIndexer(this.network),
                 Substitute.For<IConnectionManager>(),
                 this.crossChainTransferStore,
                 this.GetMaturedBlocksProvider(federatedPegSettings),
@@ -302,7 +302,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             var controller = new FederationGatewayController(
                 Substitute.For<IAsyncProvider>(),
-                new ChainIndexer(),
+                new ChainIndexer(this.network),
                 Substitute.For<IConnectionManager>(),
                 this.crossChainTransferStore,
                 this.GetMaturedBlocksProvider(settings),

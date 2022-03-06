@@ -207,7 +207,7 @@ namespace NBitcoin.Tests
             enumerator.MoveNext();
             Assert.True(enumerator.Current == c);
 
-            chain.Initialize(b);
+            chain.SetTip(b);
             ChainedHeader cc = this.AppendBlock(chain);
             ChainedHeader dd = this.AppendBlock(chain);
 
