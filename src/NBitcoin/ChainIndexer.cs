@@ -79,7 +79,7 @@ namespace NBitcoin
         /// </summary>
         /// <param name="hashes">Hash to search for.</param>
         /// <returns>First found chained block header or <c>null</c> if not found.</returns>
-        public ChainedHeader FindFork(IEnumerable<uint256> hashes)
+        internal ChainedHeader FindFork(IEnumerable<uint256> hashes)
         {
             if (hashes == null)
                 throw new ArgumentNullException("hashes");
@@ -140,7 +140,7 @@ namespace NBitcoin
         /// </summary>
         /// <param name="block">The chained block header to enumerate after.</param>
         /// <returns>Enumeration of chained block headers after the given block.</returns>
-        public virtual IEnumerable<ChainedHeader> EnumerateAfter(ChainedHeader block)
+        internal virtual IEnumerable<ChainedHeader> EnumerateAfter(ChainedHeader block)
         {
             for (int i = block.Height + 1; i <= this.Tip.Height; i++)
             {

@@ -375,19 +375,5 @@ namespace NBitcoin.Tests
             ChainedHeader index = null;
             return this.AppendBlock(index, chainsIndexer);
         }
-
-        /// <summary>
-        /// Returns the first common chained block header between two chains.
-        /// </summary>
-        /// <param name="chainSrc">The source chain.</param>
-        /// <param name="otherChain">The other chain.</param>
-        /// <returns>First common chained block header or <c>null</c>.</returns>
-        private ChainedHeader FindFork(ChainIndexer chainSrc, ChainIndexer otherChain)
-        {
-            if (otherChain == null)
-                throw new ArgumentNullException("otherChain");
-
-            return chainSrc.FindFork(otherChain.Tip.EnumerateToGenesis().Select(o => o.HashBlock));
-        }
     }
 }
