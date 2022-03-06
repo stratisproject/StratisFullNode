@@ -142,7 +142,7 @@ namespace NBitcoin
         /// <returns>Enumeration of chained block headers after the given block.</returns>
         public virtual IEnumerable<ChainedHeader> EnumerateAfter(ChainedHeader block)
         {
-            for (int i = block.Height + 1; i < this.Tip.Height; i++)
+            for (int i = block.Height + 1; i <= this.Tip.Height; i++)
             {
                 ChainedHeader nextBlock = this.blocksByHeight[i];
                 if (nextBlock.Previous != block)
