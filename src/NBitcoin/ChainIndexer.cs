@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Stratis.Bitcoin.Tests.Common")]
 [assembly: InternalsVisibleTo("Stratis.SmartContracts.Core.Tests")]
+[assembly: InternalsVisibleTo("Stratis.Bitcoin.Features.PoA.Tests")]
 
 namespace NBitcoin
 {
