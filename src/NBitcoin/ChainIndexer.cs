@@ -38,7 +38,7 @@ namespace NBitcoin
             this.blocksById = new Dictionary<uint256, ChainedHeader>();
         }
 
-        public ChainIndexer(Network network) : base()
+        public ChainIndexer(Network network) : this()
         {
             this.Network = network;
 
