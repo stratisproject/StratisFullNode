@@ -47,6 +47,48 @@ namespace Stratis.Interop.Contracts
                 NetworkType.Mainnet,
                 new List<SupportedContractAddress>()
                 {
+                    new SupportedContractAddress()
+                    {
+                        NativeNetwork = SupportedNativeChain.Ethereum,
+                        NativeNetworkAddress = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+                        SRC20Address = "CSnCmGCh8W8r2FeVFWtztXFXD8wbHH9Rwg",
+                        TokenName = "WETH",
+                    },
+                    new SupportedContractAddress()
+                    {
+                        NativeNetwork = SupportedNativeChain.Ethereum,
+                        NativeNetworkAddress = "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+                        SRC20Address = "Ce79acmz7X5EXm8j4UUAw8F2EUhWu7wFea",
+                        TokenName = "WBTC",
+                    },
+                    new SupportedContractAddress()
+                    {
+                        NativeNetwork = SupportedNativeChain.Ethereum,
+                        NativeNetworkAddress = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+                        SRC20Address = "CKhmQHhqzdy4jRuFgh6ariMfnCB3fj2uwv",
+                        TokenName = "USDC",
+                    },
+                    new SupportedContractAddress()
+                    {
+                        NativeNetwork = SupportedNativeChain.Ethereum,
+                        NativeNetworkAddress = "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+                        SRC20Address = "CNwcowLp63MX5iZVh22LWtLMcFCeCj8FaU",
+                        TokenName = "USDT",
+                    },
+                    new SupportedContractAddress()
+                    {
+                        NativeNetwork = SupportedNativeChain.Ethereum,
+                        NativeNetworkAddress = "0x514910771AF9Ca656af840dff83E8264EcF986CA",
+                        SRC20Address = "CccwbTXHsi5sXmRSH6MeMK3xFbrzFp886p",
+                        TokenName = "LINK",
+                    },
+                    new SupportedContractAddress()
+                    {
+                        NativeNetwork = SupportedNativeChain.Ethereum,
+                        NativeNetworkAddress = "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE",
+                        SRC20Address = "CahVhkwht2PnLbf8iWEbwUSaCk7UrXrWFF",
+                        TokenName = "SHIB",
+                    }
                 }
             },
         };
