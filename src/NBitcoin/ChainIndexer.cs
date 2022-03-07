@@ -116,6 +116,7 @@ namespace NBitcoin
         /// </summary>
         /// <param name="block">Chained block header to enumerate from.</param>
         /// <returns>Enumeration of chained block headers from given chained block header to tip.</returns>
+        /// <remarks>The chain could re-org in which case the enumeration may exit early when encountering a block from a different chain.</remarks>
         public IEnumerable<ChainedHeader> EnumerateToTip(ChainedHeader block)
         {
             if (block == null)
@@ -129,6 +130,7 @@ namespace NBitcoin
         /// </summary>
         /// <param name="blockHash">Block hash to enumerate from.</param>
         /// <returns>Enumeration of chained block headers from the given block hash to tip.</returns>
+        /// <remarks>The chain could re-org in which case the enumeration may exit early when encountering a block from a different chain.</remarks>
         public IEnumerable<ChainedHeader> EnumerateToTip(uint256 blockHash)
         {
             ChainedHeader block = this[blockHash];
