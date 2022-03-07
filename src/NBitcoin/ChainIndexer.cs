@@ -171,7 +171,7 @@ namespace NBitcoin
                 if (this.Tip.HashBlock != addTip.Previous.HashBlock)
                     throw new InvalidOperationException("New tip must be consecutive");
 
-                this.AddInternal(addTip);
+                AddInternal(addTip);
 
                 this.Tip = addTip;
             }
