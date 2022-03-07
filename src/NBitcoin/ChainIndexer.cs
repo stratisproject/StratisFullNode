@@ -48,7 +48,7 @@ namespace NBitcoin
             this.Network = network;
 
             var tip = new ChainedHeader(this.Network.GetGenesis().Header, this.Network.GetGenesis().GetHash(), 0);
-            this.AddInternal(tip);
+            AddInternal(tip);
 
             this.Tip = tip;
         }
@@ -84,15 +84,18 @@ namespace NBitcoin
             if (hashes == null)
                 throw new ArgumentNullException("hashes");
 
-            // Find the first block the caller has in the main chain.
-            foreach (uint256 hash in hashes)
+            lock (this.lockObject)
             {
-                ChainedHeader chainedHeader = this.GetHeader(hash);
-                if (chainedHeader != null)
-                    return chainedHeader;
-            }
+                // Find the first block the caller has in the main chain.
+                foreach (uint256 hash in hashes)
+                {
+                    ChainedHeader chainedHeader = this.GetHeader(hash);
+                    if (chainedHeader != null)
+                        return chainedHeader;
+                }
 
-            return null;
+                return null;
+            }
         }
 
         /// <summary>
@@ -140,15 +143,20 @@ namespace NBitcoin
         /// </summary>
         /// <param name="block">The chained block header to enumerate after.</param>
         /// <returns>Enumeration of chained block headers after the given block.</returns>
+        /// <remarks>The chain could re-org in which case the enumeration may exit early when encountering a block from a different chain.</remarks>
         internal virtual IEnumerable<ChainedHeader> EnumerateAfter(ChainedHeader block)
         {
             for (int i = block.Height + 1; i <= this.Tip.Height; i++)
             {
-                ChainedHeader nextBlock = this.blocksByHeight[i];
-                if (nextBlock.Previous != block)
-                    yield break;
+                lock (this.lockObject)
+                {
+                    ChainedHeader nextBlock = this.blocksByHeight[i];
 
-                block = nextBlock;
+                    if (nextBlock.Previous != block)
+                        yield break;
+
+                    block = nextBlock;
+                }
 
                 yield return block;
             }
