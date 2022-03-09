@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Numerics;
 using System.Threading.Tasks;
+using CSharpFunctionalExtensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -18,6 +19,9 @@ using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Coordination;
+using Stratis.SmartContracts;
+using Stratis.SmartContracts.CLR;
+using Stratis.SmartContracts.CLR.Serialization;
 
 namespace Stratis.Bitcoin.Features.Interop.Controllers
 {
@@ -25,6 +29,8 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
     [Route("api/[controller]")]
     public sealed class InteropController : Controller
     {
+        private readonly ICallDataSerializer callDataSerializer;
+        private readonly IContractPrimitiveSerializer contractPrimitiveSerializer;
         private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
         private readonly IConversionRequestRepository conversionRequestRepository;
         private readonly IETHCompatibleClientProvider ethCompatibleClientProvider;
@@ -35,6 +41,8 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         private readonly Network network;
 
         public InteropController(
+            ICallDataSerializer callDataSerializer,
+            IContractPrimitiveSerializer contractPrimitiveSerializer,
             Network network,
             IConversionRequestCoordinationService conversionRequestCoordinationService,
             IConversionRequestRepository conversionRequestRepository,
@@ -43,6 +51,8 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             InteropSettings interopSettings,
             InteropPoller interopPoller)
         {
+            this.callDataSerializer = callDataSerializer;
+            this.contractPrimitiveSerializer = contractPrimitiveSerializer;
             this.conversionRequestCoordinationService = conversionRequestCoordinationService;
             this.conversionRequestRepository = conversionRequestRepository;
             this.ethCompatibleClientProvider = ethCompatibleClientProvider;
@@ -695,6 +705,40 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             catch (Exception e)
             {
                 this.logger.LogError("Exception resetting scan height to '{0}' : {1}.", model.Height, e.ToString());
+
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Endpoint that allows the user to decode the method parameters for an interflux transaction.
+        /// </summary>
+        /// <param name="hex">Hex of the interflux transaction.</param>
+        [Route("decodeinterfluxtransaction")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult DecodeInterFluxTransaction(string hex)
+        {
+            try
+            {
+                Transaction transaction = this.network.CreateTransaction(hex);
+                TxOut sc = transaction.Outputs.FirstOrDefault(x => x.ScriptPubKey.IsSmartContractExec());
+                Result<ContractTxData> deserializedCallData = this.callDataSerializer.Deserialize(sc.ScriptPubKey.ToBytes());
+                var methodParameters = deserializedCallData.Value.MethodParameters.Last() as byte[];
+                var deserializedMethodParameters = this.contractPrimitiveSerializer.Deserialize<byte[][]>(methodParameters);
+
+                Address address = this.contractPrimitiveSerializer.Deserialize<Address>(deserializedMethodParameters[0].Slice(1, (uint)(deserializedMethodParameters[0].Length - 1)));
+                var addressString = address.ToUint160().ToBase58Address(this.network);
+
+                UInt256 amount = this.contractPrimitiveSerializer.Deserialize<UInt256>(deserializedMethodParameters[1].Slice(1, (uint)(deserializedMethodParameters[1].Length - 1)));
+
+                return this.Json($"Method parameters for '{transaction.GetHash()}': address {addressString}; amount {amount}.");
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception trying to decode interflux transaction: {0}.", e.ToString());
 
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
             }
