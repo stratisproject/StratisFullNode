@@ -1496,11 +1496,15 @@ namespace Stratis.Bitcoin.Features.Interop
             foreach (ConversionRequest request in requests)
             {
                 int decimals = 8;
+                string mintText = request.DestinationChain.ToString();
                 SupportedContractAddress token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.SRC20Address == request.TokenContract);
                 if (token != null)
+                {
                     decimals = token.Decimals;
+                    mintText = $"{token.TokenName}->{request.DestinationChain}";
+                }
 
-                benchLog.AppendLine($"Mint To: {request.DestinationChain} Address: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Amount: {request.Amount.FormatAsFractionalValue(decimals)} Ext Hash: {request.ExternalChainTxHash}");
+                benchLog.AppendLine($"Mint: {mintText} Address: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Amount: {request.Amount.FormatAsFractionalValue(decimals)} Ext Hash: {request.ExternalChainTxHash}");
             }
 
             benchLog.AppendLine();
