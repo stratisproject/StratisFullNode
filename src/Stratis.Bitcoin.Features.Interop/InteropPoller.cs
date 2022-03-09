@@ -32,6 +32,7 @@ using Stratis.Features.FederatedPeg.Distribution;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.SourceChain;
 using Stratis.Features.FederatedPeg.TargetChain;
+using Stratis.Interop.Contracts;
 using Stratis.SmartContracts;
 using Stratis.SmartContracts.CLR;
 
@@ -1494,7 +1495,12 @@ namespace Stratis.Bitcoin.Features.Interop
 
             foreach (ConversionRequest request in requests)
             {
-                benchLog.AppendLine($"Mint To: {request.DestinationChain} Address: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Amount: {request.Amount.FormatAsFractionalValue(request.DestinationChain == DestinationChain.ETH ? 8 : 18)} Ext Hash: {request.ExternalChainTxHash}");
+                int decimals = 8;
+                SupportedContractAddress token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.SRC20Address == request.TokenContract);
+                if (token != null)
+                    decimals = token.Decimals;
+
+                benchLog.AppendLine($"Mint To: {request.DestinationChain} Address: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Amount: {request.Amount.FormatAsFractionalValue(decimals)} Ext Hash: {request.ExternalChainTxHash}");
             }
 
             benchLog.AppendLine();
@@ -1507,7 +1513,12 @@ namespace Stratis.Bitcoin.Features.Interop
 
             foreach (ConversionRequest request in requests)
             {
-                benchLog.AppendLine($"Destination: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Processed: {request.Processed} Amount: {request.Amount.FormatAsFractionalValue(request.DestinationChain == DestinationChain.STRAX ? 8 : 18)} Height: {request.BlockHeight}");
+                int decimals = 8;
+                SupportedContractAddress token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.SRC20Address == request.TokenContract);
+                if (token != null)
+                    decimals = token.Decimals;
+
+                benchLog.AppendLine($"Destination: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Processed: {request.Processed} Amount: {request.Amount.FormatAsFractionalValue(decimals)} Height: {request.BlockHeight}");
             }
 
             benchLog.AppendLine();
