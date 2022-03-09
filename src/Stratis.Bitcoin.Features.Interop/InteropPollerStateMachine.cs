@@ -1,14 +1,14 @@
 ﻿using System.Numerics;
 using System.Threading.Tasks;
-using Stratis.Bitcoin.Features.Interop.ETHClient;
-using Stratis.Features.FederatedPeg.Conversion;
 using NLog;
 using Stratis.Bitcoin.Features.ExternalApi;
+using Stratis.Bitcoin.Features.Interop.ETHClient;
+using Stratis.Bitcoin.Features.Interop.Payloads;
 using Stratis.Bitcoin.Features.Interop.Settings;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.Wallet;
+using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Coordination;
-using Stratis.Bitcoin.Features.Interop.Payloads;
 using Stratis.Features.FederatedPeg.Interfaces;
 
 namespace Stratis.Bitcoin.Features.Interop
@@ -95,7 +95,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public async Task OriginatorSubmittingAsync(ConversionRequest request, IETHClient clientForDestChain, ICirrusContractClient cirrusClient, BigInteger submissionConfirmationThreshold, bool isTransfer)
         {
-            string transactionType = request.RequestType == ConversionRequestType.Burn ? "SRC20->ERC20" : "CRS->WSTRAX";
+            string transactionType = DetermineTransactionTypeForLog(request, isTransfer);
 
             (BigInteger confirmationCount, string blockHash) = isTransfer ? cirrusClient.GetConfirmations(request.ExternalChainBlockHeight) : await clientForDestChain.GetConfirmationsAsync(request.ExternalChainTxHash).ConfigureAwait(false);
 
@@ -113,7 +113,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public async Task OriginatorSubmittedAsync(ConversionRequest request, InteropSettings interopSettings, bool isTransfer)
         {
-            string transactionType = request.RequestType == ConversionRequestType.Burn ? "SRC20->ERC20" : "CRS->WSTRAX";
+            string transactionType = DetermineTransactionTypeForLog(request, isTransfer);
 
             BigInteger transactionId2 = this.conversionRequestCoordinationService.GetCandidateTransactionId(request.RequestId);
 
@@ -134,7 +134,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public async Task VoteFinalisedAsync(ConversionRequest request, IETHClient clientForDestChain, InteropSettings interopSettings)
         {
-            string transactionType = request.RequestType == ConversionRequestType.Burn ? "SRC20->ERC20" : "CRS->WSTRAX";
+            string transactionType = DetermineTransactionTypeForLog(request, !string.IsNullOrEmpty(request.TokenContract));
 
             BigInteger transactionId3 = this.conversionRequestCoordinationService.GetAgreedTransactionId(request.RequestId, interopSettings.GetSettingsByChain(request.DestinationChain).MultisigWalletQuorum);
 
@@ -157,7 +157,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 else
                 {
                     this.logger.Info("Transaction '{0}' has finished voting but does not yet have {1} confirmations, re-broadcasting votes to peers.", transactionId3, interopSettings.GetSettingsByChain(request.DestinationChain).MultisigWalletQuorum);
-                    
+
                     // There are not enough confirmations yet.
                     // Even though the vote is finalised, other nodes may come and go. So we re-broadcast the finalised votes to all federation peers.
                     // Nodes will simply ignore the messages if they are not relevant.
@@ -170,7 +170,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public async Task NotOriginatorAsync(ConversionRequest request, IETHClient clientForDestChain, InteropSettings interopSettings)
         {
-            string transactionType = request.RequestType == ConversionRequestType.Burn ? "SRC20->ERC20" : "CRS->WSTRAX";
+            string transactionType = DetermineTransactionTypeForLog(request, !string.IsNullOrEmpty(request.TokenContract));
 
             BigInteger agreedUponId = this.conversionRequestCoordinationService.GetAgreedTransactionId(request.RequestId, interopSettings.GetSettingsByChain(request.DestinationChain).MultisigWalletQuorum);
 
@@ -213,6 +213,23 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 // No state transition here, as we are waiting for the candidate transactionId to progress to an agreed upon transactionId via a quorum.
             }
+        }
+
+        private string DetermineTransactionTypeForLog(ConversionRequest request, bool isTransfer)
+        {
+            string transactionType;
+
+            if (request.RequestType == ConversionRequestType.Mint)
+            {
+                transactionType = "CRS->WSTRAX";
+
+                if (isTransfer)
+                    transactionType = "ERC20->CRS";
+            }
+            else
+                transactionType = "SRC20->ERC20";
+
+            return transactionType;
         }
 
         private async Task BroadcastCoordinationVoteRequestAsync(string requestId, BigInteger transactionId, DestinationChain destinationChain, bool isTransfer)
