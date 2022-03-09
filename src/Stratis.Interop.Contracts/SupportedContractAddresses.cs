@@ -16,35 +16,27 @@ namespace Stratis.Interop.Contracts
                     new SupportedContractAddress()
                     {
                         NativeNetwork = SupportedNativeChain.Ethereum,
-                        NativeNetworkAddress = "0xf197f5f8c406d269e2cc44aaf495fbc4eb519634",
-                        SRC20Address = "tNVR1r6WSWSCK7XVQsz9aJk3CdBGGvFgY5",
-                        TokenName = "TST2",
+                        NativeNetworkAddress = "0xf5dab0f35378ea5fc69149d0f20ba0c16b170a3d",
+                        SRC20Address = "tQk6t6ithWWoBUQxphDShcYFF6s916mM4R",
+                        TokenName = "TSTX",
                         Decimals = 18
                     },
                     new SupportedContractAddress()
                     {
                         NativeNetwork = SupportedNativeChain.Ethereum,
-                        NativeNetworkAddress = "0xa3c22370de5f9544f0c4de126b1e46ceadf0a51b",
-                        SRC20Address = "tWD9SN1hPcbefQAWarkB7Jg4xjkDkBYjvH",
-                        TokenName = "TST3",
-                        Decimals = 18
+                        NativeNetworkAddress = "0x2b3b0bd8219ffe0c22ffcdefbc81b7efa5c8d9ba",
+                        SRC20Address = "tWCCJ3FxmoYuzrE4aUcDLDh9gn51EJ4cvM",
+                        TokenName = "TSTY",
+                        Decimals = 8
                     },
                     new SupportedContractAddress()
                     {
                         NativeNetwork = SupportedNativeChain.Ethereum,
-                        NativeNetworkAddress = "0x5da5cfe7d4ce1cc0712ebc0bb58eff93817a6801",
-                        SRC20Address = "tQhh41Z6LCbiJEF78c2myQHqvbptsfPmSu",
-                        TokenName = "TST4",
-                        Decimals = 18
+                        NativeNetworkAddress = "0x4cb3e0b719a7707c0148e21585d8011213de6708",
+                        SRC20Address = "tQspjyuEap2vDaNkf9KRHQLdU3h8qq6dnX",
+                        TokenName = "TSTZ",
+                        Decimals = 6
                     },
-                    new SupportedContractAddress()
-                    {
-                        NativeNetwork = SupportedNativeChain.Ethereum,
-                        NativeNetworkAddress = "0x14f768657135d3daafb45d242157055f1c9143f3",
-                        SRC20Address = "tJTNQT4inhr9PPZ7RF8B2tX5RaN1AdK2cp",
-                        TokenName = "TST5",
-                        Decimals = 18
-                    }
                 }
             },
             {
