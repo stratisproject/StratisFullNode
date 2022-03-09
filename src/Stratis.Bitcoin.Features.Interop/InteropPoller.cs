@@ -1517,11 +1517,6 @@ namespace Stratis.Bitcoin.Features.Interop
 
             foreach (ConversionRequest request in requests)
             {
-                int decimals = 8;
-                SupportedContractAddress token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.SRC20Address == request.TokenContract);
-                if (token != null)
-                    decimals = token.Decimals;
-
                 benchLog.AppendLine($"Destination: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Processed: {request.Processed} Amount: {request.Amount.FormatAsFractionalValue(decimals)} Height: {request.BlockHeight}");
             }
 
