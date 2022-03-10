@@ -477,6 +477,11 @@ namespace Stratis.Bitcoin.Features.Interop
                                ));
 
                             KeyValuePair<string, string> contractMapping = this.interopSettings.GetSettingsByChain(DestinationChain.ETH).WatchedErc20Contracts.First(c => c.Value == receipt.To);
+                            SupportedContractAddress token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.NativeNetworkAddress == contractMapping.Key);
+                            if (token != null)
+                                this.logger.Info($"A burn request from CRS to '{token.TokenName}-{contractMapping.Key} will be processed.");
+                            else
+                                this.logger.Info($"A burn request from CRS to '{contractMapping.Key} will be processed.");
 
                             lock (this.repositoryLock)
                             {
