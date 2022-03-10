@@ -70,9 +70,13 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                 string checkPointFileName = Path.Combine(directoryName, $"{this.network.Name}Contracts{checkpoint.Key}.zip");
                 if (File.Exists(checkPointFileName))
                 {
-                    // TODO: Un-zip "contracts" and "contractsreceipts" to sub-folders within the data folder.
-                    Directory.Delete(this.dataFolder.SmartContractStatePath, true);
-                    Directory.Delete(this.dataFolder.SmartContractStatePath + "receipts", true);
+                    // Un-zip "contracts" and "contractsreceipts" to sub-folders within the data folder.
+                    if (Directory.Exists(this.dataFolder.SmartContractStatePath))
+                        Directory.Delete(this.dataFolder.SmartContractStatePath, true);
+
+                    if (Directory.Exists(this.dataFolder.SmartContractStatePath + "receipts"))
+                        Directory.Delete(this.dataFolder.SmartContractStatePath + "receipts", true);
+
                     System.IO.Compression.ZipFile.ExtractToDirectory(checkPointFileName, this.dataFolder.RootPath);
                 }
             }
