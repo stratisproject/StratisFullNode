@@ -42,6 +42,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
         private IStateRepositoryRoot mutableStateRepository;
         private ulong blockGasConsumed;
         private readonly ILogger logger;
+        private readonly int? lastCheckPointHeight;
 
         public SmartContractCoinViewRuleLogic(IStateRepositoryRoot stateRepositoryRoot,
             IContractExecutorFactory executorFactory,
@@ -50,7 +51,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
             IReceiptRepository receiptRepository,
             ICoinView coinView,
             IBlockExecutionResultCache executionCache,
-            ILoggerFactory loggerFactory)
+            ILoggerFactory loggerFactory,
+            Network network)
         {
             this.stateRepositoryRoot = stateRepositoryRoot;
             this.executorFactory = executorFactory;
@@ -63,6 +65,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
             this.blockTxsProcessed = new List<Transaction>();
             this.receipts = new List<Receipt>();
             this.logger = loggerFactory.CreateLogger<SmartContractCoinViewRuleLogic>();
+            this.lastCheckPointHeight = network.Checkpoints.Keys.LastOrDefault();
         }
 
         public async Task RunAsync(Func<RuleContext, Task> baseRunAsync, RuleContext context)
@@ -81,6 +84,24 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
             this.logger.LogDebug("Block hash state root '{0}'.", blockRoot);
 
             this.cachedResults = this.executionCache.GetExecutionResult(block.GetHash());
+
+            if (this.cachedResults == null && context.ValidationContext.ChainedHeaderToValidate.Height <= this.lastCheckPointHeight)
+            {
+                List<uint256> transactionHashes = block.Transactions.GetSmartContractExecTransactions().Select(t => t.GetHash()).ToList();
+                if (transactionHashes.Count != 0)
+                {
+                    List<Receipt> receipts = this.receiptRepository.RetrieveMany(transactionHashes).Where(r => r != null).ToList();
+
+                    // If we have receipts then the smart contracts have already been executed for this block.
+                    if (receipts.Count != 0)
+                    {
+                        // Get the previously persisted state.
+                        uint256 blockRootThis = ((ISmartContractBlockHeader)context.ValidationContext.ChainedHeaderToValidate.Header).HashStateRoot;
+                        IStateRepositoryRoot state = this.stateRepositoryRoot.GetSnapshotTo(blockRootThis.ToBytes());
+                        this.cachedResults = new BlockExecutionResultModel(state, receipts);
+                    }
+                }
+            }
 
             if (this.cachedResults == null)
             {
