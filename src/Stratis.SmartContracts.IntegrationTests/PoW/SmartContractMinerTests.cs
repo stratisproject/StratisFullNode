@@ -329,8 +329,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
                 this.keyEncodingStrategy = BasicKeyEncodingStrategy.Default;
 
                 this.Folder = TestBase.AssureEmptyDir(Path.Combine(AppContext.BaseDirectory, "TestCase", callingMethod)).FullName;
-                var engine = new DBreezeEngine(Path.Combine(this.Folder, "contracts"));
-                var byteStore = new DBreezeByteStore(engine, "ContractState1");
+                var byteStore = new DBreezeByteStore(Path.Combine(this.Folder, "contracts"), "ContractState1");
                 byteStore.Empty();
                 ISource<byte[], byte[]> stateDB = new NoDeleteSource<byte[], byte[]>(byteStore);
 
