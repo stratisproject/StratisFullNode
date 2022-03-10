@@ -30,6 +30,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
     public sealed class InteropController : Controller
     {
         private readonly ICallDataSerializer callDataSerializer;
+        private readonly ChainIndexer chainIndexer;
         private readonly IContractPrimitiveSerializer contractPrimitiveSerializer;
         private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
         private readonly IConversionRequestRepository conversionRequestRepository;
@@ -42,6 +43,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
 
         public InteropController(
             ICallDataSerializer callDataSerializer,
+            ChainIndexer chainIndexer,
             IContractPrimitiveSerializer contractPrimitiveSerializer,
             Network network,
             IConversionRequestCoordinationService conversionRequestCoordinationService,
@@ -52,6 +54,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             InteropPoller interopPoller)
         {
             this.callDataSerializer = callDataSerializer;
+            this.chainIndexer = chainIndexer;
             this.contractPrimitiveSerializer = contractPrimitiveSerializer;
             this.conversionRequestCoordinationService = conversionRequestCoordinationService;
             this.conversionRequestRepository = conversionRequestRepository;
@@ -100,7 +103,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         {
             try
             {
-                return this.Json(this.interopSettings.GetSettingsByChain(destinationChain));
+                return Ok(this.interopSettings.GetSettingsByChain(destinationChain));
             }
             catch (Exception e)
             {
@@ -205,7 +208,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             {
                 this.conversionRequestRepository.DeleteConversionRequest(requestId);
 
-                return this.Ok($"{requestId} has been deleted.");
+                return Ok($"{requestId} has been deleted.");
             }
             catch (Exception e)
             {
@@ -265,7 +268,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             try
             {
                 if (!this.ethCompatibleClientProvider.IsChainSupportedAndEnabled(destinationChain))
-                    return this.Json($"{destinationChain} not enabled or supported!");
+                    return BadRequest($"{destinationChain} not enabled or supported!");
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
 
@@ -297,7 +300,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             try
             {
                 if (!this.ethCompatibleClientProvider.IsChainSupportedAndEnabled(destinationChain))
-                    return this.Json($"{destinationChain} not enabled or supported!");
+                    return BadRequest($"{destinationChain} not enabled or supported!");
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
                 string data = client.EncodeAddOwnerParams(newOwnerAddress);
@@ -333,7 +336,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             try
             {
                 if (!this.ethCompatibleClientProvider.IsChainSupportedAndEnabled(destinationChain))
-                    return this.Json($"{destinationChain} not enabled or supported!");
+                    return BadRequest($"{destinationChain} not enabled or supported!");
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
                 string data = client.EncodeRemoveOwnerParams(existingOwnerAddress);
@@ -369,7 +372,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             try
             {
                 if (!this.ethCompatibleClientProvider.IsChainSupportedAndEnabled(destinationChain))
-                    return this.Json($"{destinationChain} not enabled or supported!");
+                    return BadRequest($"{destinationChain} not enabled or supported!");
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
 
@@ -403,7 +406,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             try
             {
                 if (!this.ethCompatibleClientProvider.IsChainSupportedAndEnabled(destinationChain))
-                    return this.Json($"{destinationChain} not enabled or supported!");
+                    return BadRequest($"{destinationChain} not enabled or supported!");
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
 
@@ -439,7 +442,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             try
             {
                 if (!this.ethCompatibleClientProvider.IsChainSupportedAndEnabled(destinationChain))
-                    return this.Json($"{destinationChain} not enabled or supported!");
+                    return BadRequest($"{destinationChain} not enabled or supported!");
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
 
@@ -482,7 +485,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             try
             {
                 if (!this.ethCompatibleClientProvider.IsChainSupportedAndEnabled(destinationChain))
-                    return this.Json($"{destinationChain} not enabled or supported!");
+                    return BadRequest($"{destinationChain} not enabled or supported!");
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
 
@@ -524,11 +527,11 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             try
             {
                 if (!this.ethCompatibleClientProvider.IsChainSupportedAndEnabled(destinationChain))
-                    return this.Json($"{destinationChain} not enabled or supported!");
+                    return BadRequest($"{destinationChain} not enabled or supported!");
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
 
-                return this.Json((await client.GetWStraxBalanceAsync(account).ConfigureAwait(false)).ToString());
+                return Ok((await client.GetWStraxBalanceAsync(account).ConfigureAwait(false)).ToString());
             }
             catch (Exception e)
             {
@@ -555,11 +558,11 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             try
             {
                 if (!this.ethCompatibleClientProvider.IsChainSupportedAndEnabled(destinationChain))
-                    return this.Json($"{destinationChain} not enabled or supported!");
+                    return BadRequest($"{destinationChain} not enabled or supported!");
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
 
-                return this.Json((await client.GetErc20BalanceAsync(account, contractAddress).ConfigureAwait(false)).ToString());
+                return Ok((await client.GetErc20BalanceAsync(account, contractAddress).ConfigureAwait(false)).ToString());
             }
             catch (Exception e)
             {
@@ -579,55 +582,48 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             if (this.network.IsTest() || this.network.IsRegTest())
             {
                 var result = this.conversionRequestRepository.DeleteConversionRequests();
-                return this.Json($"{result} conversion requests have been deleted.");
+                return Ok($"{result} conversion requests have been deleted.");
             }
 
-            return this.Json($"Deleting conversion requests is only available on test networks.");
+            return BadRequest($"Deleting conversion requests is only available on test networks.");
         }
 
         /// <summary>
-        /// Endpoint that allows the multisig operator to set itself as the originator (submittor) for a given request id.
+        /// Endpoint that allows the multisig operator to set the state on a conversion request.
         /// </summary>
         /// <param name="requestId">The request id in question.</param>
-        [Route("requests/setoriginator")]
+        /// <param name="status">The state to state to set the request to id in question.</param>
+        /// <param name="processed">Set the request's processed state.</param>
+        [Route("requests/setstate")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult SetOriginatorForRequest([FromBody] string requestId)
+        public IActionResult SetConversionRequestState([FromBody] string requestId, [FromBody] ConversionRequestStatus status, [FromBody] bool processed)
         {
             try
             {
-                this.conversionRequestRepository.SetConversionRequestState(requestId, ConversionRequestStatus.OriginatorNotSubmitted);
-                return this.Json($"Conversion request '{requestId}' has been reset to {ConversionRequestStatus.OriginatorNotSubmitted}.");
+                ConversionRequest request = this.conversionRequestRepository.Get(requestId);
+
+                if (request == null)
+                    return NotFound($"'{requestId}' does not exist.");
+
+                if (this.chainIndexer.Tip.Height - request.BlockHeight <= this.network.Consensus.MaxReorgLength)
+                    return BadRequest($"Please wait at least {this.network.Consensus.MaxReorgLength} blocks before attempting to update this request.");
+
+                if (processed && status != ConversionRequestStatus.Processed)
+                    return BadRequest($"A processed request must have its processed state set as true.");
+
+                request.Processed = processed;
+                request.RequestStatus = status;
+
+                this.conversionRequestRepository.Save(request);
+
+                return Ok($"Conversion request '{requestId}' has been reset to {status}.");
             }
             catch (Exception e)
             {
-                this.logger.LogError("Exception setting conversion request '{0}' to {1} : {2}.", requestId, e.ToString(), ConversionRequestStatus.OriginatorNotSubmitted);
-
-                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
-            }
-        }
-
-        /// <summary>
-        /// Endpoint that allows the multisig operator to reset the request as NotOriginator.
-        /// </summary>
-        /// <param name="requestId">The request id in question.</param>
-        [Route("requests/setnotoriginator")]
-        [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult ResetConversionRequestAsNotOriginator([FromBody] string requestId)
-        {
-            try
-            {
-                this.conversionRequestRepository.SetConversionRequestState(requestId, ConversionRequestStatus.NotOriginator);
-                return this.Json($"Conversion request '{requestId}' has been reset to {ConversionRequestStatus.NotOriginator}.");
-            }
-            catch (Exception e)
-            {
-                this.logger.LogError("Exception setting conversion request '{0}' to {1} : {2}.", requestId, e.ToString(), ConversionRequestStatus.NotOriginator);
+                this.logger.LogError("Exception setting conversion request '{0}' to {1} : {2}.", requestId, e.ToString(), status);
 
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
             }
@@ -649,7 +645,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                 this.conversionRequestRepository.ReprocessBurnRequest(model.RequestId, model.BlockHeight, ConversionRequestStatus.Unprocessed);
                 this.logger.LogInformation($"Burn request '{model.RequestId}' will be reprocessed at height {model.BlockHeight}.");
 
-                return this.Json($"Burn request '{model.RequestId}' will be reprocessed at height {model.BlockHeight}.");
+                return Ok($"Burn request '{model.RequestId}' will be reprocessed at height {model.BlockHeight}.");
             }
             catch (Exception e)
             {
@@ -674,7 +670,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             {
                 this.conversionRequestCoordinationService.AddVote(model.RequestId, BigInteger.Parse(model.EventId), this.federationManager.CurrentFederationKey.PubKey);
                 this.conversionRequestRepository.SetConversionRequestState(model.RequestId, ConversionRequestStatus.OriginatorSubmitted);
-                return this.Json($"Manual vote pushed for request '{model.RequestId}' with event id '{model.EventId}'.");
+                return Ok($"Manual vote pushed for request '{model.RequestId}' with event id '{model.EventId}'.");
             }
             catch (Exception e)
             {
@@ -700,7 +696,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                 this.interopPoller.ResetScanHeight(model.DestinationChain, model.Height);
                 this.logger.LogInformation($"Scan height for chain {model.DestinationChain} will be reset to '{model.Height}'.");
 
-                return this.Json($"Scan height for chain {model.DestinationChain} will be reset to '{model.Height}'.");
+                return Ok($"Scan height for chain {model.DestinationChain} will be reset to '{model.Height}'.");
             }
             catch (Exception e)
             {
@@ -734,12 +730,11 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
 
                 UInt256 amount = this.contractPrimitiveSerializer.Deserialize<UInt256>(deserializedMethodParameters[1].Slice(1, (uint)(deserializedMethodParameters[1].Length - 1)));
 
-                return this.Json($"Method parameters for '{transaction.GetHash()}': address {addressString}; amount {amount}.");
+                return Ok($"Method parameters for '{transaction.GetHash()}': address {addressString}; amount {amount}.");
             }
             catch (Exception e)
             {
                 this.logger.LogError("Exception trying to decode interflux transaction: {0}.", e.ToString());
-
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
             }
         }
