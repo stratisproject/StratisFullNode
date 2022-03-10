@@ -591,39 +591,37 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         /// <summary>
         /// Endpoint that allows the multisig operator to set the state on a conversion request.
         /// </summary>
-        /// <param name="requestId">The request id in question.</param>
-        /// <param name="status">The state to state to set the request to id in question.</param>
-        /// <param name="processed">Set the request's processed state.</param>
+        /// <param name="model">The request details to set to.</param>
         [Route("requests/setstate")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult SetConversionRequestState([FromBody] string requestId, [FromBody] ConversionRequestStatus status, [FromBody] bool processed)
+        public IActionResult SetConversionRequestState([FromBody] SetConversionRequestStateModel model)
         {
             try
             {
-                ConversionRequest request = this.conversionRequestRepository.Get(requestId);
+                ConversionRequest request = this.conversionRequestRepository.Get(model.RequestId);
 
                 if (request == null)
-                    return NotFound($"'{requestId}' does not exist.");
+                    return NotFound($"'{model.RequestId}' does not exist.");
 
                 if (this.chainIndexer.Tip.Height - request.BlockHeight <= this.network.Consensus.MaxReorgLength)
                     return BadRequest($"Please wait at least {this.network.Consensus.MaxReorgLength} blocks before attempting to update this request.");
 
-                if (processed && status != ConversionRequestStatus.Processed)
+                if (model.Processed && model.Status != ConversionRequestStatus.Processed)
                     return BadRequest($"A processed request must have its processed state set as true.");
 
-                request.Processed = processed;
-                request.RequestStatus = status;
+                request.Processed = model.Processed;
+                request.RequestStatus = model.Status;
 
                 this.conversionRequestRepository.Save(request);
 
-                return Ok($"Conversion request '{requestId}' has been reset to {status}.");
+                return Ok($"Conversion request '{model.RequestId}' has been reset to {model.Status}.");
             }
             catch (Exception e)
             {
-                this.logger.LogError("Exception setting conversion request '{0}' to {1} : {2}.", requestId, e.ToString(), status);
+                this.logger.LogError("Exception setting conversion request '{0}' to {1} : {2}.", model.RequestId, e.ToString(), model.Status);
 
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
             }
