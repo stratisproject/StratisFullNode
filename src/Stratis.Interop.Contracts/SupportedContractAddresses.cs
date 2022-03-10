@@ -47,7 +47,7 @@ namespace Stratis.Interop.Contracts
                     {
                         NativeNetwork = SupportedNativeChain.Ethereum,
                         NativeNetworkAddress = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-                        SRC20Address = "CSnCmGCh8W8r2FeVFWtztXFXD8wbHH9Rwg",
+                        SRC20Address = "CLgwsVta6KhALRGGv8mtq8ECEAudrhVJT1",
                         TokenName = "WETH",
                         Decimals = 18
                     },
@@ -55,7 +55,7 @@ namespace Stratis.Interop.Contracts
                     {
                         NativeNetwork = SupportedNativeChain.Ethereum,
                         NativeNetworkAddress = "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
-                        SRC20Address = "Ce79acmz7X5EXm8j4UUAw8F2EUhWu7wFea",
+                        SRC20Address = "CPWWnnDJQXcJvP4MCNRhhPWyFcBfv2xnoe",
                         TokenName = "WBTC",
                         Decimals = 8
                     },
@@ -63,7 +63,7 @@ namespace Stratis.Interop.Contracts
                     {
                         NativeNetwork = SupportedNativeChain.Ethereum,
                         NativeNetworkAddress = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-                        SRC20Address = "CKhmQHhqzdy4jRuFgh6ariMfnCB3fj2uwv",
+                        SRC20Address = "CeN35f2EeDE7gRNjbwDiVHUphNRB5eBUDh",
                         TokenName = "USDC",
                         Decimals = 6
                     },
@@ -71,7 +71,7 @@ namespace Stratis.Interop.Contracts
                     {
                         NativeNetwork = SupportedNativeChain.Ethereum,
                         NativeNetworkAddress = "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-                        SRC20Address = "CNwcowLp63MX5iZVh22LWtLMcFCeCj8FaU",
+                        SRC20Address = "Cf8CJMFADmkLuRNpMfHGk5agJdin3XD8UR",
                         TokenName = "USDT",
                         Decimals = 6
                     },
@@ -79,7 +79,7 @@ namespace Stratis.Interop.Contracts
                     {
                         NativeNetwork = SupportedNativeChain.Ethereum,
                         NativeNetworkAddress = "0x514910771AF9Ca656af840dff83E8264EcF986CA",
-                        SRC20Address = "CccwbTXHsi5sXmRSH6MeMK3xFbrzFp886p",
+                        SRC20Address = "CHDyDnoUGvAB9hjLmxXymwWW2WWUmNGRf3",
                         TokenName = "LINK",
                         Decimals = 18
                     },
@@ -87,7 +87,7 @@ namespace Stratis.Interop.Contracts
                     {
                         NativeNetwork = SupportedNativeChain.Ethereum,
                         NativeNetworkAddress = "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE",
-                        SRC20Address = "CahVhkwht2PnLbf8iWEbwUSaCk7UrXrWFF",
+                        SRC20Address = "CTqXKirw9qjLWSmbuB9Az53hqGYQ6FCewE",
                         TokenName = "SHIB",
                         Decimals = 18
                     }
