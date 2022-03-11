@@ -28,6 +28,7 @@ using Stratis.Bitcoin.Features.MemoryPool.Rules;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Services;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Networks.Policies;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
@@ -200,7 +201,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             Assert.Equal(this.Network.Consensus.MempoolRules.Count, mempoolRules.Count);
 
             var mempoolValidator = new MempoolValidator(this.txMemPool, mempoolLock, this.dateTimeProvider, this.mempoolSettings, this.chainIndexer,
-                this.coinView.Object, this.loggerFactory, this.nodeSettings, consensusRuleEngine, mempoolRules, new Signals.Signals(this.loggerFactory, null), this.nodeDeployments);
+                this.coinView.Object, this.loggerFactory, this.nodeSettings, consensusRuleEngine, mempoolRules, new Signals.Signals(this.loggerFactory, null), this.nodeDeployments, new Mock<IInitialBlockDownloadState>().Object);
 
             // Create mempool manager.
             var mempoolPersistence = new Mock<IMempoolPersistence>();

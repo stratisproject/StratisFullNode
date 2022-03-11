@@ -157,7 +157,9 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
 
             var nodeDeployments = new NodeDeployments(network, chain);
 
-            var mempoolValidator = new MempoolValidator(mempool, mempoolLock, dateTimeProvider, mempoolSettings, chain, inMemoryCoinView, loggerFactory, nodeSettings, consensusRules, mempoolRules, new Signals.Signals(loggerFactory, null), nodeDeployments);
+            var initialBlockDownloadState = new Mock<IInitialBlockDownloadState>();
+
+            var mempoolValidator = new MempoolValidator(mempool, mempoolLock, dateTimeProvider, mempoolSettings, chain, inMemoryCoinView, loggerFactory, nodeSettings, consensusRules, mempoolRules, new Signals.Signals(loggerFactory, null), nodeDeployments, initialBlockDownloadState.Object);
 
             var blocks = new List<Block>();
             var srcTxs = new List<Transaction>();
@@ -320,7 +322,9 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
 
             var nodeDeployments = new NodeDeployments(network, chain);
 
-            var mempoolValidator = new MempoolValidator(mempool, mempoolLock, dateTimeProvider, mempoolSettings, chain, inMemoryCoinView, loggerFactory, nodeSettings, consensusRules, mempoolRules, new Signals.Signals(loggerFactory, null), nodeDeployments);
+            var initialBlockDownloadState = new Mock<IInitialBlockDownloadState>();
+
+            var mempoolValidator = new MempoolValidator(mempool, mempoolLock, dateTimeProvider, mempoolSettings, chain, inMemoryCoinView, loggerFactory, nodeSettings, consensusRules, mempoolRules, new Signals.Signals(loggerFactory, null), nodeDeployments, initialBlockDownloadState.Object);
 
             return new TestChainContext { MempoolValidator = mempoolValidator, MempoolSettings = mempoolSettings, ChainIndexer = chain, SrcTxs = srcTxs };
         }

@@ -30,8 +30,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts
             IConsensusRuleEngine consensusRules,
             IEnumerable<IMempoolRule> mempoolRules,
             Signals.ISignals signals,
-            NodeDeployments nodeDeployments)
-            : base(memPool, mempoolLock, dateTimeProvider, mempoolSettings, chainIndexer, coinView, loggerFactory, nodeSettings, consensusRules, mempoolRules, signals, nodeDeployments)
+            NodeDeployments nodeDeployments,
+            Bitcoin.Interfaces.IInitialBlockDownloadState initialBlockDownLoadState)
+            : base(memPool, mempoolLock, dateTimeProvider, mempoolSettings, chainIndexer, coinView, loggerFactory, nodeSettings, consensusRules, mempoolRules, signals, nodeDeployments, initialBlockDownLoadState)
         {
             // Dirty hack, but due to AllowedScriptTypeRule we don't need to check for standard scripts on any network, even live.
             // TODO: Remove ASAP. Ensure RequireStandard isn't used on SC mainnets, or the StandardScripts check is modular.

@@ -11,6 +11,7 @@ using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.MemoryPool
@@ -124,6 +125,8 @@ namespace Stratis.Bitcoin.Features.MemoryPool
 
         private readonly NodeDeployments nodeDeployments;
 
+        private readonly IInitialBlockDownloadState initialBlockDownloadState;
+
         public MempoolValidator(
             ITxMempool memPool,
             MempoolSchedulerLock mempoolLock,
@@ -136,7 +139,8 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             IConsensusRuleEngine consensusRules,
             IEnumerable<IMempoolRule> mempoolRules,
             Signals.ISignals signals,
-            NodeDeployments nodeDeployments)
+            NodeDeployments nodeDeployments, 
+            IInitialBlockDownloadState initialBlockDownloadState)
         {
             this.memPool = memPool;
             this.mempoolLock = mempoolLock;
@@ -154,6 +158,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             this.mempoolRules = mempoolRules.ToList();
             this.signals = signals;
             this.nodeDeployments = nodeDeployments;
+            this.initialBlockDownloadState = initialBlockDownloadState;
         }
 
         /// <summary>Gets a counter for tracking memory pool performance.</summary>
@@ -200,6 +205,10 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// <inheritdoc />
         public Task<bool> AcceptToMemoryPool(MempoolValidationState state, Transaction tx)
         {
+            // Can't properly evaluate transactions with an incomplete chain.
+            if (this.initialBlockDownloadState.IsInitialBlockDownload())
+                return Task.FromResult(false);
+
             state.AcceptTime = this.dateTimeProvider.GetTime();
             return this.AcceptToMemoryPoolWithTime(state, tx);
         }
