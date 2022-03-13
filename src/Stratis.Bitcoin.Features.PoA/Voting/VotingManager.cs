@@ -9,7 +9,7 @@ using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.EventBus.CoreEvents;
-using Stratis.Bitcoin.Features.BlockStore;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
@@ -20,7 +20,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
     public sealed class VotingManager : IDisposable
     {
         private readonly PoAConsensusOptions poaConsensusOptions;
-        private readonly IBlockRepository blockRepository;
+        private readonly IBlockStoreQueue blockStoreQueue;
         private readonly ChainIndexer chainIndexer;
         private readonly IFederationManager federationManager;
 
@@ -46,6 +46,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private IIdleFederationMembersKicker idleFederationMembersKicker;
         private readonly INodeLifetime nodeLifetime;
+        private readonly IInitialBlockDownloadState initialBlockDownloadState;
 
         /// <summary>In-memory collection of pending polls.</summary>
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
@@ -73,8 +74,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             ISignals signals,
             Network network,
             ChainIndexer chainIndexer,
-            IBlockRepository blockRepository = null,
-            INodeLifetime nodeLifetime = null)
+            IBlockStoreQueue blockStoreQueue = null,
+            INodeLifetime nodeLifetime = null,
+            IInitialBlockDownloadState initialBlockDownloadState = null)
         {
             this.federationManager = Guard.NotNull(federationManager, nameof(federationManager));
             this.pollResultExecutor = Guard.NotNull(pollResultExecutor, nameof(pollResultExecutor));
@@ -92,9 +94,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             Guard.Assert(this.poaConsensusOptions.PollExpiryBlocks != 0);
 
-            this.blockRepository = blockRepository;
+            this.blockStoreQueue = blockStoreQueue;
             this.chainIndexer = chainIndexer;
             this.nodeLifetime = nodeLifetime;
+            this.initialBlockDownloadState = initialBlockDownloadState;
 
             this.isInitialized = false;
         }
@@ -321,7 +324,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 this.PollsRepository.AddPolls(transaction, poll);
 
-                this.logger.LogInformation("New poll was created: '{0}'.", poll);
+                this.logger.LogInformation("Created poll {0} [{1}] at height {2}.",
+                    poll.Id, this.pollResultExecutor.ConvertToString(poll.VotingData), poll.PollStartBlockData.Height);
             });
 
             return poll;
@@ -360,6 +364,29 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 }
 
                 return federation;
+            }
+        }
+
+        public void GetWhitelistedHashesFromExecutedPolls(IWhitelistedHashesRepository whitelistedHashesRepository)
+        {
+            lock (this.locker)
+            {
+                var federation = new List<IFederationMember>(this.poaConsensusOptions.GenesisFederationMembers);
+
+                IEnumerable<Poll> executedPolls = this.GetExecutedPolls().WhitelistPolls();
+                foreach (Poll poll in executedPolls.OrderBy(a => a.PollExecutedBlockData.Height))
+                {
+                    var hash = new uint256(poll.VotingData.Data);
+
+                    if (poll.VotingData.Key == VoteKey.WhitelistHash)
+                    {
+                        whitelistedHashesRepository.AddHash(hash, poll.PollExecutedBlockData.Height);
+                    }
+                    else if (poll.VotingData.Key == VoteKey.KickFederationMember)
+                    {
+                        whitelistedHashesRepository.RemoveHash(hash, poll.PollExecutedBlockData.Height);
+                    }
+                }
             }
         }
 
@@ -520,7 +547,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         else
                         {
                             this.logger.LogDebug("Applying poll '{0}'.", poll);
-                            this.pollResultExecutor.ApplyChange(poll.VotingData);
+                            // Hash-related polls have already been applied at the "voted in favor" height.
+                            if (poll.VotingData.Key != VoteKey.WhitelistHash && poll.VotingData.Key != VoteKey.RemoveHash)
+                                this.pollResultExecutor.ApplyChange(poll.VotingData, (int)(poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength));
 
                             this.polls.AdjustPoll(poll, poll => poll.PollExecutedBlockData = new HashHeightPair(chBlock.ChainedHeader));
                             this.PollsRepository.UpdatePoll(transaction, poll);
@@ -642,6 +671,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             this.polls.AdjustPoll(poll, poll => poll.PollVotedInFavorBlockData = new HashHeightPair(chBlock.ChainedHeader));
                             this.PollsRepository.UpdatePoll(transaction, poll);
                             pollsRepositoryModified = true;
+
+                            // Update the whitelist hash repository early to allow for scenarios where the voting manager is lagging up to MaxReorgLength blocks.
+                            if (poll.VotingData.Key == VoteKey.RemoveHash || poll.VotingData.Key == VoteKey.WhitelistHash)
+                                this.pollResultExecutor.ApplyChange(poll.VotingData, (int)(poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength));
                         }
                     }
 
@@ -671,7 +704,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 foreach (Poll poll in this.polls.Where(x => !x.IsPending && x.PollExecutedBlockData?.Hash == chBlock.ChainedHeader.HashBlock).ToList())
                 {
                     this.logger.LogDebug("Reverting poll execution '{0}'.", poll);
-                    this.pollResultExecutor.RevertChange(poll.VotingData);
+                    this.pollResultExecutor.RevertChange(poll.VotingData, (int)(chBlock.ChainedHeader.Height + this.network.Consensus.MaxReorgLength));
 
                     this.polls.AdjustPoll(poll, poll => poll.PollExecutedBlockData = null);
                     this.PollsRepository.UpdatePoll(transaction, poll);
@@ -732,6 +765,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         this.polls.AdjustPoll(targetPoll, poll => poll.PollVotedInFavorBlockData = null);
                         this.PollsRepository.UpdatePoll(transaction, targetPoll);
                         pollsRepositoryModified = true;
+
+                        // Update the whitelist hash repository early to allow for scenarios where the voting manager is lagging up to MaxReorgLength blocks.
+                        if (targetPoll.VotingData.Key == VoteKey.RemoveHash || targetPoll.VotingData.Key == VoteKey.WhitelistHash)
+                            this.pollResultExecutor.RevertChange(targetPoll.VotingData, (int)(chBlock.ChainedHeader.Height + this.network.Consensus.MaxReorgLength));
                     }
 
                     // Pub key of a fed member that created voting data.
@@ -787,8 +824,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return this.GetModifiedFederation(this.chainIndexer.Tip);
         }
 
-        internal bool Synchronize(ChainedHeader newTip)
+        internal bool Synchronize(ChainedHeader newTip, bool allowLag = true)
         {
+            // Allowing the voting manager to lag makes it more efficient due to multi-block processing.
+            if (allowLag && (LastKnownFederationHeight() - 1) > newTip?.Height && (this.initialBlockDownloadState?.IsInitialBlockDownload() ?? false))
+                return false;
+
             if (newTip?.HashBlock == this.PollsRepository.CurrentTip?.Hash)
                 return true;
 
@@ -811,7 +852,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                             for (ChainedHeader header = repoTip; header.Height > fork.Height; header = header.Previous)
                             {
-                                Block block = this.blockRepository.GetBlock(header.HashBlock);
+                                Block block = this.blockStoreQueue.GetBlock(header.HashBlock);
 
                                 this.UnProcessBlock(transaction, new ChainedHeaderBlock(block, header));
                             }
@@ -836,30 +877,30 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     DBreeze.Transactions.Transaction currentTransaction = this.PollsRepository.GetTransaction();
 
                     int i = 0;
-                    foreach (Block block in this.blockRepository.EnumerateBatch(headers))
-                    {
-                        if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
+                        foreach (Block block in this.blockStoreQueue.GetBlocks(headers.Select(h => h.HashBlock).ToList()))
                         {
-                            this.logger.LogTrace("(-)[NODE_DISPOSED]");
-                            this.PollsRepository.SaveCurrentTip(currentTransaction);
-                            currentTransaction.Commit();
-                            currentTransaction.Dispose();
+                            if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
+                            {
+                                this.logger.LogTrace("(-)[NODE_DISPOSED]");
+                                this.PollsRepository.SaveCurrentTip(currentTransaction);
+                                currentTransaction.Commit();
+                                currentTransaction.Dispose();
 
-                            bSuccess = false;
-                            return;
-                        }
+                                bSuccess = false;
+                                return;
+                            }
 
-                        ChainedHeader header = headers[i++];
+                            ChainedHeader header = headers[i++];
 
-                        this.ProcessBlock(currentTransaction, new ChainedHeaderBlock(block, header));
+                            this.ProcessBlock(currentTransaction, new ChainedHeaderBlock(block, header));
 
-                        if (header.Height % 10000 == 0)
-                        {
-                            var progress = (int)((decimal)header.Height / this.chainIndexer.Tip.Height * 100);
-                            var progressString = $"Synchronizing voting data at height {header.Height} / {this.chainIndexer.Tip.Height} ({progress} %).";
+                            if (header.Height % 10000 == 0)
+                            {
+                                var progress = (int)((decimal)header.Height / this.chainIndexer.Tip.Height * 100);
+                                var progressString = $"Synchronizing voting data at height {header.Height} / {this.chainIndexer.Tip.Height} ({progress} %).";
 
-                            this.logger.LogInformation(progressString);
-                            this.signals.Publish(new FullNodeEvent() { Message = progressString, State = FullNodeState.Initializing.ToString() });
+                                this.logger.LogInformation(progressString);
+                                this.signals.Publish(new FullNodeEvent() { Message = progressString, State = FullNodeState.Initializing.ToString() });
 
                             this.PollsRepository.SaveCurrentTip(currentTransaction);
 
