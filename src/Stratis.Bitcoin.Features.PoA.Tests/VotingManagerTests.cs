@@ -24,8 +24,8 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             this.changesApplied = new List<VotingData>();
             this.changesReverted = new List<VotingData>();
 
-            this.resultExecutorMock.Setup(x => x.ApplyChange(It.IsAny<VotingData>())).Callback((VotingData data) => this.changesApplied.Add(data));
-            this.resultExecutorMock.Setup(x => x.RevertChange(It.IsAny<VotingData>())).Callback((VotingData data) => this.changesReverted.Add(data));
+            this.resultExecutorMock.Setup(x => x.ApplyChange(It.IsAny<VotingData>(), It.IsAny<int>())).Callback((VotingData data, int _) => this.changesApplied.Add(data));
+            this.resultExecutorMock.Setup(x => x.RevertChange(It.IsAny<VotingData>(), It.IsAny<int>())).Callback((VotingData data, int _) => this.changesReverted.Add(data));
         }
 
         [Fact]
@@ -74,7 +74,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             ChainedHeaderBlock[] blocks = GetBlocksWithVotingData(votesRequired, votingData, votingRequest.ChainedHeader);
 
             // Mock the blocks via the block repository.
-            this.blockRepository.Setup(r => r.GetBlock(It.IsAny<uint256>())).Returns((uint256 hash) =>
+            this.blockStoreQueue.Setup(r => r.GetBlock(It.IsAny<uint256>())).Returns((uint256 hash) =>
             {
                 return (hash == votingRequest.ChainedHeader.HashBlock) ? votingRequest.Block : blocks.FirstOrDefault(b => b.ChainedHeader.HashBlock == hash)?.Block;
             });
@@ -112,7 +112,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             ChainedHeaderBlock[] blocks = GetBlocksWithVotingData(votesRequired + 1, votingData, votingRequest.ChainedHeader);
 
             // Mock the blocks via the block repository.
-            this.blockRepository.Setup(r => r.GetBlock(It.IsAny<uint256>())).Returns((uint256 hash) =>
+            this.blockStoreQueue.Setup(r => r.GetBlock(It.IsAny<uint256>())).Returns((uint256 hash) =>
             {
                 return (hash == votingRequest.ChainedHeader.HashBlock) ? votingRequest.Block : blocks.FirstOrDefault(b => b.ChainedHeader.HashBlock == hash)?.Block;
             });
@@ -157,7 +157,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             ChainedHeaderBlock votingRequest = GetBlockWithVotingRequest(memberPubKey);
 
             // Mock the blocks via the block repository.
-            this.blockRepository.Setup(r => r.GetBlock(It.IsAny<uint256>())).Returns((uint256 hash) =>
+            this.blockStoreQueue.Setup(r => r.GetBlock(It.IsAny<uint256>())).Returns((uint256 hash) =>
             {
                 return votingRequest.Block;
             });
@@ -183,7 +183,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             ChainedHeaderBlock[] blocks = GetBlocksWithVotingData(1, votingData, votingRequest.ChainedHeader);
 
             // Mock the blocks via the block repository.
-            this.blockRepository.Setup(r => r.GetBlock(It.IsAny<uint256>())).Returns((uint256 hash) =>
+            this.blockStoreQueue.Setup(r => r.GetBlock(It.IsAny<uint256>())).Returns((uint256 hash) =>
             {
                 return (hash == votingRequest.ChainedHeader.HashBlock) ? votingRequest.Block : blocks.FirstOrDefault(b => b.ChainedHeader.HashBlock == hash)?.Block;
             });
@@ -232,7 +232,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             ChainedHeaderBlock[] blocks = GetBlocksWithVotingData(1, votingData, votingRequest.ChainedHeader);
 
             // Mock the blocks via the block repository.
-            this.blockRepository.Setup(r => r.GetBlock(It.IsAny<uint256>())).Returns((uint256 hash) =>
+            this.blockStoreQueue.Setup(r => r.GetBlock(It.IsAny<uint256>())).Returns((uint256 hash) =>
             {
                 return (hash == votingRequest.ChainedHeader.HashBlock) ? votingRequest.Block : blocks.FirstOrDefault(b => b.ChainedHeader.HashBlock == hash)?.Block;
             });
