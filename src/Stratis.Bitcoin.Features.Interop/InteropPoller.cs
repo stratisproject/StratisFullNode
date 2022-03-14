@@ -298,9 +298,9 @@ namespace Stratis.Bitcoin.Features.Interop
                     this.logger.Warn("Exception raised when consolidating Cirrus rewards wallet. {0}", e);
                 }
             },
-                this.nodeLifetime.ApplicationStopping,
-                repeatEvery: TimeSpans.Minute,
-                startAfter: TimeSpans.Second);
+            this.nodeLifetime.ApplicationStopping,
+            repeatEvery: TimeSpan.FromMinutes(5),
+            startAfter: TimeSpans.Minute);
         }
 
         public void CheckForBlockHeightOverrides(DestinationChain chain)
@@ -681,11 +681,11 @@ namespace Stratis.Bitcoin.Features.Interop
             if (walletStats.TotalUtxoCount < UtxoCountThreshold)
                 return;
 
-            this.logger.Info("Performing consolidation for wallet {0} account {1}.", walletCredentials.WalletName, walletCredentials.AccountName);
+            this.logger.Info("Performing consolidation for wallet '{0}' account '{1}'; UTXO count {2}.", walletCredentials.WalletName, walletCredentials.AccountName, walletStats.TotalUtxoCount);
 
-            bool success = await this.cirrusClient.ConsolidateAsync(walletCredentials.WalletName, walletCredentials.AccountName, walletCredentials.WalletPassword).ConfigureAwait(false);
+            var consolidationTransactionId = await this.cirrusClient.ConsolidateAsync(walletCredentials.WalletName, walletCredentials.AccountName, walletCredentials.WalletPassword).ConfigureAwait(false);
 
-            this.logger.Info("Result of consolidation: {0}", success);
+            this.logger.Info("Consolidation transaction Id (null if failed): {0}", consolidationTransactionId);
         }
 
         /// <summary>
