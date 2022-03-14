@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
@@ -13,18 +12,16 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
     public class P2PKHNotContractRule : FullValidationConsensusRule
     {
         private readonly IStateRepositoryRoot stateRepositoryRoot;
-        private readonly int? lastCheckPointHeight;
 
-        public P2PKHNotContractRule(IStateRepositoryRoot stateRepositoryRoot, Network network)
+        public P2PKHNotContractRule(IStateRepositoryRoot stateRepositoryRoot)
         {
             this.stateRepositoryRoot = stateRepositoryRoot;
-            this.lastCheckPointHeight = network.Checkpoints.OrderByDescending(c => c.Key).Select(c => c.Key).FirstOrDefault();
         }
 
         /// <inheritdoc/>
         public override Task RunAsync(RuleContext context)
         {
-            if (context.ValidationContext.ChainedHeaderToValidate.Height <= this.lastCheckPointHeight)
+            if (context.SkipValidation)
                 return Task.CompletedTask;
 
             Block block = context.ValidationContext.BlockToValidate;
