@@ -1,7 +1,6 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using NBitcoin;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Features.PoA.Collateral;
@@ -16,20 +15,17 @@ namespace Stratis.Features.Collateral
     /// </summary>
     public sealed class CheckCollateralCommitmentHeightRule : FullValidationConsensusRule
     {
-        private readonly int? lastCheckPointHeight;
-
-        public CheckCollateralCommitmentHeightRule(Network network)
+        public CheckCollateralCommitmentHeightRule()
         {
-            this.lastCheckPointHeight = network.Checkpoints.OrderByDescending(c => c.Key).Select(c => c.Key).FirstOrDefault();
         }
 
         public override Task RunAsync(RuleContext context)
         {
-            // The genesis block won't contain any commitment data.
-            if (context.ValidationContext.ChainedHeaderToValidate.Height == 0)
+            if (context.SkipValidation)
                 return Task.CompletedTask;
 
-            if (context.ValidationContext.ChainedHeaderToValidate.Height <= this.lastCheckPointHeight)
+            // The genesis block won't contain any commitment data.
+            if (context.ValidationContext.ChainedHeaderToValidate.Height == 0)
                 return Task.CompletedTask;
 
             // If the network's CollateralCommitmentActivationHeight is set then check that the current height is less than than that.
