@@ -15,10 +15,6 @@ namespace Stratis.Features.Collateral
     /// </summary>
     public sealed class CheckCollateralCommitmentHeightRule : FullValidationConsensusRule
     {
-        public CheckCollateralCommitmentHeightRule()
-        {
-        }
-
         public override Task RunAsync(RuleContext context)
         {
             if (context.SkipValidation)
