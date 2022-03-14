@@ -222,8 +222,9 @@ namespace Stratis.Bitcoin.IntegrationTests
             }
         }
 
+        // This test is non-async to prevent locking when run in parallel with Reorg_FailsFV_Reconnect_OldChain_Nodes_DisconnectedAsync.
         [Fact]
-        public async Task Reorg_FailsFV_Reconnect_OldChain_From2ndMiner_DisconnectedAsync()
+        public void Reorg_FailsFV_Reconnect_OldChain_From2ndMiner_DisconnectedAsync()
         {
             using (var builder = NodeBuilder.Create(this))
             {
@@ -257,7 +258,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 // MinerB mines 5 more blocks:
                 // Block 6,7,9,10 = valid
                 // Block 8 = invalid
-                await TestHelper.BuildBlocks.OnNode(minerB).Amount(5).Invalid(8, (coreNode, block) => BlockBuilder.InvalidCoinbaseReward(coreNode, block)).BuildAsync();
+                TestHelper.BuildBlocks.OnNode(minerB).Amount(5).Invalid(8, (coreNode, block) => BlockBuilder.InvalidCoinbaseReward(coreNode, block)).BuildAsync().GetAwaiter().GetResult();
 
                 // Reconnect syncer to minerB causing the following to happen:
                 // Reorg from blocks 9 to 5.
