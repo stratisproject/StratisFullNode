@@ -78,6 +78,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                         Directory.Delete(this.dataFolder.SmartContractStatePath + "receipts", true);
 
                     System.IO.Compression.ZipFile.ExtractToDirectory(checkPointFileName, this.dataFolder.RootPath);
+                    break;
                 }
             }
         }
