@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -209,6 +210,15 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             Assert.True(this.repositorySavesCount > 0);
         }
 
+        private ChainedHeader blockStoreTip 
+        {
+            get
+            {
+                FieldInfo blockStoreTipField = this.blockStoreQueue.GetType().GetField("blockStoreTip", BindingFlags.NonPublic | BindingFlags.Instance);
+                return (ChainedHeader)blockStoreTipField.GetValue(this.blockStoreQueue);
+            }
+        }
+
         [Fact]
         public async Task BatchIsSavedOnShutdownAsync()
         {
@@ -233,13 +243,13 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             await this.WaitUntilQueueIsEmptyAsync().ConfigureAwait(false);
 
-            Assert.Equal(this.blockStoreQueue.StoreTip, this.chainIndexer.Genesis);
+            Assert.Equal(this.chainIndexer.Genesis, this.blockStoreTip);
             Assert.Equal(0, this.repositorySavesCount);
 
             this.nodeLifetime.StopApplication();
             this.blockStoreQueue.Dispose();
 
-            Assert.Equal(this.blockStoreQueue.StoreTip, lastHeader);
+            Assert.Equal(lastHeader, this.blockStoreTip);
             Assert.Equal(1, this.repositorySavesCount);
         }
 
@@ -322,7 +332,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             await this.WaitUntilQueueIsEmptyAsync().ConfigureAwait(false);
 
-            Assert.Equal(this.blockStoreQueue.StoreTip, this.chainIndexer.Genesis);
+            Assert.Equal(this.chainIndexer.Genesis, this.blockStoreTip);
             Assert.Equal(0, this.repositorySavesCount);
 
             // Dispose block store to trigger save.
@@ -330,7 +340,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             this.blockStoreQueue.Dispose();
 
             // Make sure that blocks only from 2nd chain were saved.
-            Assert.Equal(this.chainIndexer.GetHeader(realChainLenght - 1), this.blockStoreQueue.StoreTip);
+            Assert.Equal(this.chainIndexer.GetHeader(realChainLenght - 1), this.blockStoreTip);
             Assert.Equal(1, this.repositorySavesCount);
             Assert.Equal(realChainLenght - 1, this.repositoryTotalBlocksSaved);
         }
