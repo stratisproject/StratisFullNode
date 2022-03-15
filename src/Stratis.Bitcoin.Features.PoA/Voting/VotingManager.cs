@@ -109,7 +109,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.idleFederationMembersKicker = idleFederationMembersKicker;
 
             this.PollsRepository.Initialize();
-            this.PollsRepository.WithTransaction(transaction => this.polls = new PollsCollection(this.PollsRepository.GetAllPolls(transaction)));
+            this.PollsRepository.WithTransaction(transaction => this.polls = new PollsCollection(this.network as PoANetwork, this.PollsRepository.GetAllPolls(transaction)));
 
             this.blockConnectedSubscription = this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
             this.blockDisconnectedSubscription = this.signals.Subscribe<BlockDisconnected>(this.OnBlockDisconnected);
@@ -516,30 +516,28 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 {
                     bool pollsRepositoryModified = false;
 
-                    foreach (Poll poll in this.GetPendingPolls().Where(p => PollsRepository.IsPollExpiredAt(p, chBlock.ChainedHeader, this.network as PoANetwork)).ToList())
+                    foreach (Poll poll in this.polls.GetPollsToExecuteOrExpire(chBlock.ChainedHeader.Height))
                     {
-                        this.logger.LogDebug("Expiring poll '{0}'.", poll);
+                        if (!poll.IsApproved)
+                        {
+                            this.logger.LogDebug("Expiring poll '{0}'.", poll);
 
-                        // Flag the poll as expired. The "PollVotedInFavorBlockData" will always be null at this point due to the "GetPendingPolls" filter above.
-                        // The value of the hash is not significant but we set it to a non-zero value to prevent the field from being de-serialized as null.
-                        poll.IsExpired = true;
-                        this.polls.OnPendingStatusChanged(poll);
-                        this.PollsRepository.UpdatePoll(transaction, poll);
-                        pollsRepositoryModified = true;
-                    }
+                            // Flag the poll as expired. The "PollVotedInFavorBlockData" will always be null at this point due to the "GetPendingPolls" filter above.
+                            // The value of the hash is not significant but we set it to a non-zero value to prevent the field from being de-serialized as null.
+                            this.polls.AdjustPoll(poll, poll => poll.IsExpired = true);
+                            this.PollsRepository.UpdatePoll(transaction, poll);
+                            pollsRepositoryModified = true;
+                        }
+                        else
+                        {
+                            this.logger.LogDebug("Applying poll '{0}'.", poll);
+                            this.pollResultExecutor.ApplyChange(poll.VotingData);
 
-                    foreach (Poll poll in this.GetApprovedPolls())
-                    {
-                        if (poll.IsExpired || chBlock.ChainedHeader.Height != (poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength))
-                            continue;
+                            this.polls.AdjustPoll(poll, poll => poll.PollExecutedBlockData = new HashHeightPair(chBlock.ChainedHeader));
+                            this.PollsRepository.UpdatePoll(transaction, poll);
 
-                        this.logger.LogDebug("Applying poll '{0}'.", poll);
-                        this.pollResultExecutor.ApplyChange(poll.VotingData);
-
-                        poll.PollExecutedBlockData = new HashHeightPair(chBlock.ChainedHeader);
-                        this.PollsRepository.UpdatePoll(transaction, poll);
-
-                        pollsRepositoryModified = true;
+                            pollsRepositoryModified = true;
+                        }
                     }
 
                     if (this.federationManager.GetMultisigMinersApplicabilityHeight() == chBlock.ChainedHeader.Height)
@@ -659,9 +657,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             if (validVotesCount < requiredVotesCount)
                                 continue;
 
-                            poll.PollVotedInFavorBlockData = new HashHeightPair(chBlock.ChainedHeader);
-                            this.polls.OnPendingStatusChanged(poll);
-
+                            this.polls.AdjustPoll(poll, poll => poll.PollVotedInFavorBlockData = new HashHeightPair(chBlock.ChainedHeader));
                             this.PollsRepository.UpdatePoll(transaction, poll);
                             pollsRepositoryModified = true;
                         }
@@ -695,18 +691,17 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     this.logger.LogDebug("Reverting poll execution '{0}'.", poll);
                     this.pollResultExecutor.RevertChange(poll.VotingData);
 
-                    poll.PollExecutedBlockData = null;
+                    this.polls.AdjustPoll(poll, poll => poll.PollExecutedBlockData = null);
                     this.PollsRepository.UpdatePoll(transaction, poll);
                     pollsRepositoryModified = true;
                 }
 
-                foreach (Poll poll in this.polls.Where(x => x.IsExpired && !PollsRepository.IsPollExpiredAt(x, chBlock.ChainedHeader.Previous, this.network as PoANetwork)).ToList())
+                foreach (Poll poll in this.polls.Where(x => x.IsExpired && !PollsRepository.IsPollExpiredAt(x, chBlock.ChainedHeader.Height - 1, this.network as PoANetwork)).ToList())
                 {
                     this.logger.LogDebug("Reverting poll expiry '{0}'.", poll);
 
                     // Revert back to null as this field would have been when the poll was expired.
-                    poll.IsExpired = false;
-                    this.polls.OnPendingStatusChanged(poll);
+                    this.polls.AdjustPoll(poll, poll => poll.IsExpired = false);
                     this.PollsRepository.UpdatePoll(transaction, poll);
                     pollsRepositoryModified = true;
                 }
@@ -752,9 +747,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                     if (targetPoll.PollVotedInFavorBlockData == new HashHeightPair(chBlock.ChainedHeader))
                     {
-                        targetPoll.PollVotedInFavorBlockData = null;
-                        this.polls.OnPendingStatusChanged(targetPoll);
-
+                        this.polls.AdjustPoll(targetPoll, poll => poll.PollVotedInFavorBlockData = null);
                         this.PollsRepository.UpdatePoll(transaction, targetPoll);
                         pollsRepositoryModified = true;
                     }

@@ -35,6 +35,9 @@ namespace Stratis.Features.Unity3dApi
 
         /// <summary>Returns collection of all users that own nft.</summary>
         NFTContractModel GetAllNFTOwnersByContractAddress(string contractAddress);
+
+        /// <summary>Reindexes all tracked contracts.</summary>
+        void ReindexAllContracts();
     }
 
     /// <summary>This component maps addresses to NFT Ids they own.</summary>
@@ -44,8 +47,7 @@ namespace Stratis.Features.Unity3dApi
 
         private const string DatabaseFilename = "NFTTransferIndexer.litedb";
         private const string DbOwnedNFTsKey = "OwnedNfts";
-        private const int SyncBufferBlocks = 50;
-        
+
         private readonly DataFolder dataFolder;
         private readonly ILogger logger;
         private readonly ChainIndexer chainIndexer;
@@ -57,8 +59,8 @@ namespace Stratis.Features.Unity3dApi
         private LiteCollection<NFTContractModel> NFTContractCollection;
         private CancellationTokenSource cancellation;
         private Task indexingTask;
-        
-        public NFTTransferIndexer(DataFolder dataFolder, ILoggerFactory loggerFactory, IAsyncProvider asyncProvider, 
+
+        public NFTTransferIndexer(DataFolder dataFolder, ILoggerFactory loggerFactory, IAsyncProvider asyncProvider,
             ChainIndexer chainIndexer, Network network, ISmartContractTransactionService smartContractTransactionService = null)
         {
             this.network = network;
@@ -89,10 +91,17 @@ namespace Stratis.Features.Unity3dApi
             this.logger.LogDebug("NFTTransferIndexer initialized.");
         }
 
+        private int GetWatchFromHeight()
+        {
+            int watchFromHeight = this.network.IsTest() ? 3000000 : 3400000;
+
+            return watchFromHeight;
+        }
+
         /// <inheritdoc />
         public void WatchNFTContract(string contractAddress)
         {
-            int watchFromHeight = this.network.IsTest() ? 3000000 : 3400000;
+            int watchFromHeight = this.GetWatchFromHeight();
 
             if (!this.NFTContractCollection.Exists(x => x.ContractAddress == contractAddress))
             {
@@ -141,6 +150,20 @@ namespace Stratis.Features.Unity3dApi
 
             NFTContractModel currentContract = this.NFTContractCollection.FindOne(x => x.ContractAddress == contractAddress);
             return currentContract;
+        }
+
+        /// <inheritdoc />
+        public void ReindexAllContracts()
+        {
+            int watchFromHeight = this.GetWatchFromHeight();
+
+            foreach (NFTContractModel contractModel in this.NFTContractCollection.FindAll().ToList())
+            {
+                contractModel.OwnedIDsByAddress = new Dictionary<string, HashSet<long>>();
+                contractModel.LastUpdatedBlock = watchFromHeight;
+
+                this.NFTContractCollection.Upsert(contractModel);
+            }
         }
 
         private async Task IndexNFTsContinuouslyAsync()
@@ -200,7 +223,7 @@ namespace Stratis.Features.Unity3dApi
                             TransferLogRoot infoObj = JsonConvert.DeserializeObject<TransferLogRoot>(jsonLog);
                             transferLogs.Add(infoObj.Data);
                         }
-                    
+
                         foreach (TransferLog transferInfo in transferLogs)
                         {
                             if ((transferInfo.From != null) && currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.From))
