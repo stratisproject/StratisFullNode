@@ -221,7 +221,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 this.pollsRepository.highestPollId = -1;
                 this.RemoveAllKeys(DataTable, true);
-                this.pollsRepository.CurrentTip = null;
+                this.pollsRepository.CurrentTip = new HashHeightPair(this.pollsRepository.network.GenesisHash, 0);
             }
         }
 
@@ -234,6 +234,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.dbreeze = new DBreezeEngine(dataFolder.PollsPath);
             this.dBreezeSerializer = dBreezeSerializer;
             this.network = network;
+            this.CurrentTip = new HashHeightPair(network.GenesisHash, 0);
 
             this.logger = LogManager.GetCurrentClassLogger();
         }
@@ -243,6 +244,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             // Load highest index.
             lock (this.lockObject)
             {
+                this.highestPollId = -1;
+                this.CurrentTip = new HashHeightPair(this.network.GenesisHash, 0);
+
                 using (var transaction = new Transaction(this))
                 {
                     try
