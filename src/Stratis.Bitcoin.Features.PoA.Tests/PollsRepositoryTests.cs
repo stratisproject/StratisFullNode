@@ -31,11 +31,11 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             this.repository.WithTransaction(transaction =>
             {
-                this.repository.AddPolls(transaction, new Poll() { Id = 0 });
-                this.repository.AddPolls(transaction, new Poll() { Id = 1 });
-                this.repository.AddPolls(transaction, new Poll() { Id = 2 });
-                Assert.Throws<ArgumentException>(() => this.repository.AddPolls(transaction, new Poll() { Id = 5 }));
-                this.repository.AddPolls(transaction, new Poll() { Id = 3 });
+                transaction.AddPolls(new Poll() { Id = 0 });
+                transaction.AddPolls(new Poll() { Id = 1 });
+                transaction.AddPolls(new Poll() { Id = 2 });
+                Assert.Throws<ArgumentException>(() => transaction.AddPolls(new Poll() { Id = 5 }));
+                transaction.AddPolls(new Poll() { Id = 3 });
 
                 transaction.Commit();
             });
@@ -44,14 +44,14 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             this.repository.WithTransaction(transaction =>
             {
-                this.repository.RemovePolls(transaction, 3);
+                transaction.RemovePolls(3);
 
-                Assert.Throws<ArgumentException>(() => this.repository.RemovePolls(transaction, 6));
-                Assert.Throws<ArgumentException>(() => this.repository.RemovePolls(transaction, 3));
+                Assert.Throws<ArgumentException>(() => transaction.RemovePolls(6));
+                Assert.Throws<ArgumentException>(() => transaction.RemovePolls(3));
 
-                this.repository.RemovePolls(transaction, 2);
-                this.repository.RemovePolls(transaction, 1);
-                this.repository.RemovePolls(transaction, 0);
+                transaction.RemovePolls(2);
+                transaction.RemovePolls(1);
+                transaction.RemovePolls(0);
 
                 transaction.Commit();
             });
@@ -64,11 +64,9 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         {
             this.repository.WithTransaction(transaction =>
             {
-                this.repository.AddPolls(transaction, new Poll() { Id = 0, PollStartBlockData = new HashHeightPair(1, 1) });
-                this.repository.AddPolls(transaction, new Poll() { Id = 1, PollStartBlockData = new HashHeightPair(2, 2) });
-                this.repository.AddPolls(transaction, new Poll() { Id = 2, PollStartBlockData = new HashHeightPair(3, 3) });
-
-                this.repository.SaveCurrentTip(transaction, new HashHeightPair(this.chainIndexer.Tip.HashBlock, 0));
+                transaction.AddPolls(new Poll() { Id = 0, PollStartBlockData = new HashHeightPair(1, 1) });
+                transaction.AddPolls(new Poll() { Id = 1, PollStartBlockData = new HashHeightPair(2, 2) });
+                transaction.AddPolls(new Poll() { Id = 2, PollStartBlockData = new HashHeightPair(3, 3) });
 
                 transaction.Commit();
             });
@@ -83,19 +81,19 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         {
             this.repository.WithTransaction(transaction =>
             {
-                this.repository.AddPolls(transaction, new Poll() { Id = 0 });
-                this.repository.AddPolls(transaction, new Poll() { Id = 1 });
-                this.repository.AddPolls(transaction, new Poll() { Id = 2 });
+                transaction.AddPolls(new Poll() { Id = 0 });
+                transaction.AddPolls(new Poll() { Id = 1 });
+                transaction.AddPolls(new Poll() { Id = 2 });
 
                 transaction.Commit();
             });
 
             this.repository.WithTransaction(transaction =>
             {
-                Assert.True(this.repository.GetPolls(transaction, 0, 1, 2).Count == 3);
-                Assert.True(this.repository.GetAllPolls(transaction).Count == 3);
-                Assert.Throws<ArgumentException>(() => this.repository.GetPolls(transaction, -1));
-                Assert.Throws<ArgumentException>(() => this.repository.GetPolls(transaction, 9));
+                Assert.True(transaction.GetPolls( 0, 1, 2).Count == 3);
+                Assert.True(transaction.GetAllPolls().Count == 3);
+                Assert.Throws<ArgumentException>(() => transaction.GetPolls(-1));
+                Assert.Throws<ArgumentException>(() => transaction.GetPolls(9));
             });
         }
 
@@ -106,17 +104,17 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             this.repository.WithTransaction(transaction =>
              {
-                 this.repository.AddPolls(transaction, poll);
+                 transaction.AddPolls(poll);
 
                  poll.VotingData.Key = VoteKey.KickFederationMember;
-                 this.repository.UpdatePoll(transaction, poll);
+                 transaction.UpdatePoll(poll);
 
                  transaction.Commit();
              });
 
             this.repository.WithTransaction(transaction =>
             {
-                Assert.Equal(VoteKey.KickFederationMember, this.repository.GetPolls(transaction, poll.Id).First().VotingData.Key);
+                Assert.Equal(VoteKey.KickFederationMember, transaction.GetPolls(poll.Id).First().VotingData.Key);
             });
         }
     }
