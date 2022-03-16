@@ -1558,13 +1558,22 @@ namespace Stratis.Bitcoin.Features.Interop
         {
             int decimals = 8;
             string destinationText = request.DestinationChain.ToString();
-            SupportedContractAddress token;
+            SupportedContractAddress token = null;
 
             if (request.RequestType == ConversionRequestType.Burn)
-                token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.NativeNetworkAddress.ToLowerInvariant() == request.TokenContract.ToLowerInvariant());
+            {
+                if (string.IsNullOrEmpty(request.TokenContract))
+                    destinationText = "wSTRAX->STRAX";
+                else
+                    token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.NativeNetworkAddress.ToLowerInvariant() == request.TokenContract.ToLowerInvariant());
+            }
             else
-                token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.SRC20Address.ToLowerInvariant() == request.TokenContract.ToLowerInvariant());
-
+            {
+                if (string.IsNullOrEmpty(request.TokenContract))
+                    destinationText = "STRAX->wSTRAX";
+                else
+                    token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.SRC20Address.ToLowerInvariant() == request.TokenContract.ToLowerInvariant());
+            }
             if (token != null)
             {
                 decimals = token.Decimals;
