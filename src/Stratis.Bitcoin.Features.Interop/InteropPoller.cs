@@ -1533,16 +1533,8 @@ namespace Stratis.Bitcoin.Features.Interop
 
             foreach (ConversionRequest request in requests)
             {
-                int decimals = 8;
-                string mintText = request.DestinationChain.ToString();
-                SupportedContractAddress token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.SRC20Address == request.TokenContract);
-                if (token != null)
-                {
-                    decimals = token.Decimals;
-                    mintText = $"{token.TokenName}->{request.DestinationChain}";
-                }
-
-                benchLog.AppendLine($"Mint: {mintText} Address: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Amount: {request.Amount.FormatAsFractionalValue(decimals)} Ext Hash: {request.ExternalChainTxHash}");
+                (int Decimals, string DestinationText) = RetrieveDecimalsAndTokenDestination(request);
+                benchLog.AppendLine($"{DestinationText} Dest. : {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Amount: {request.Amount.FormatAsFractionalValue(Decimals)} Ext Hash: {request.ExternalChainTxHash}");
             }
 
             benchLog.AppendLine();
@@ -1555,15 +1547,25 @@ namespace Stratis.Bitcoin.Features.Interop
 
             foreach (ConversionRequest request in requests)
             {
-                int decimals = 8;
-                SupportedContractAddress token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.SRC20Address == request.TokenContract);
-                if (token != null)
-                    decimals = token.Decimals;
-
-                benchLog.AppendLine($"Destination: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Processed: {request.Processed} Amount: {new BigInteger(request.Amount.ToBytes())} Height: {request.BlockHeight}");
+                (int Decimals, string DestinationText) = RetrieveDecimalsAndTokenDestination(request);
+                benchLog.AppendLine($"{DestinationText} Dest. : {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Amount: {new BigInteger(request.Amount.ToBytes())} Height: {request.BlockHeight}");
             }
 
             benchLog.AppendLine();
+        }
+
+        private (int Decimals, string DestinationText) RetrieveDecimalsAndTokenDestination(ConversionRequest request)
+        {
+            int decimals = 8;
+            string destinationText = request.DestinationChain.ToString();
+            SupportedContractAddress token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.SRC20Address == request.TokenContract);
+            if (token != null)
+            {
+                decimals = token.Decimals;
+                destinationText = $"{token.TokenName}->{request.DestinationChain}";
+            }
+
+            return (decimals, destinationText);
         }
 
         private ulong CalculateProcessingHeight()
