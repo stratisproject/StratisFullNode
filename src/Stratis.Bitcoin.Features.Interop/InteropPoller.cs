@@ -1534,7 +1534,7 @@ namespace Stratis.Bitcoin.Features.Interop
             foreach (ConversionRequest request in requests)
             {
                 (int Decimals, string DestinationText) = RetrieveDecimalsAndTokenDestination(request);
-                benchLog.AppendLine($"{DestinationText} Dest. : {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Amount: {request.Amount.FormatAsFractionalValue(Decimals)} Ext Hash: {request.ExternalChainTxHash}");
+                benchLog.AppendLine($"{DestinationText} Address: {request.DestinationAddress} Id: {request.RequestId} Status: {request.RequestStatus} Amount: {request.Amount.FormatAsFractionalValue(Decimals)}");
             }
 
             benchLog.AppendLine();
@@ -1548,7 +1548,7 @@ namespace Stratis.Bitcoin.Features.Interop
             foreach (ConversionRequest request in requests)
             {
                 (int Decimals, string DestinationText) = RetrieveDecimalsAndTokenDestination(request);
-                benchLog.AppendLine($"{DestinationText} Dest. : {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Amount: {new BigInteger(request.Amount.ToBytes())} Height: {request.BlockHeight}");
+                benchLog.AppendLine($"{DestinationText} Address: {request.DestinationAddress} Id: {request.RequestId} Status: {request.RequestStatus} Amount: {new BigInteger(request.Amount.ToBytes())} Height: {request.BlockHeight}");
             }
 
             benchLog.AppendLine();
@@ -1558,7 +1558,13 @@ namespace Stratis.Bitcoin.Features.Interop
         {
             int decimals = 8;
             string destinationText = request.DestinationChain.ToString();
-            SupportedContractAddress token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.SRC20Address == request.TokenContract);
+            SupportedContractAddress token;
+
+            if (request.RequestType == ConversionRequestType.Burn)
+                token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.NativeNetworkAddress.ToLowerInvariant() == request.TokenContract.ToLowerInvariant());
+            else
+                token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.SRC20Address.ToLowerInvariant() == request.TokenContract.ToLowerInvariant());
+
             if (token != null)
             {
                 decimals = token.Decimals;
