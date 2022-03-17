@@ -23,7 +23,8 @@ namespace Stratis.Features.FederatedPeg.Conversion
         NotOriginator,
         OriginatorSubmitting,
 
-        Failed
+        Failed,
+        Stale // Set once a request went past max re-org block and was never submitted for processing.
     }
 
     /// <summary>Request to mint or burn wSTRAX.</summary>
@@ -140,7 +141,7 @@ namespace Stratis.Features.FederatedPeg.Conversion
             stream.ReadWrite(ref this.requestStatus);
             stream.ReadWrite(ref this.blockHeight);
             stream.ReadWrite(ref this.destinationAddress);
-            
+
             // This field cannot be removed as it would break the (de)serialisation.
             stream.ReadWrite(ref this.dummyAmount);
 

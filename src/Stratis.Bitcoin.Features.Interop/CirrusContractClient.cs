@@ -55,7 +55,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         Task<WalletStatsModel> GetWalletStatsAsync(string walletName, string accountName, int minConfirmations = 1, bool verbose = false);
 
-        Task<bool> ConsolidateAsync(string walletName, string accountName, string walletPassword, int utxoValueThreshold = 1, bool broadcast = true);
+        Task<string> ConsolidateAsync(string walletName, string accountName, string walletPassword, bool broadcast = true);
 
         /// <summary>
         /// Gets the number of on-chain confirmations a given txid has. This would be the number of confirmations on the Cirrus chain.
@@ -321,7 +321,7 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
-        public async Task<bool> ConsolidateAsync(string walletName, string accountName, string walletPassword, int utxoValueThreshold = 1, bool broadcast = true)
+        public async Task<string> ConsolidateAsync(string walletName, string accountName, string walletPassword, bool broadcast = true)
         {
             using (CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(600)))
             {
@@ -333,7 +333,6 @@ namespace Stratis.Bitcoin.Features.Interop
                         AccountName = accountName,
                         WalletPassword = walletPassword,
                         DestinationAddress = this.cirrusInteropSettings.CirrusSmartContractActiveAddress,
-                        UtxoValueThreshold = utxoValueThreshold.ToString(),
                         Broadcast = broadcast
                     };
 
@@ -345,19 +344,19 @@ namespace Stratis.Bitcoin.Features.Interop
 
                     if (response.StatusCode == (int)HttpStatusCode.OK)
                     {
-                        string result = await response.GetJsonAsync<string>().ConfigureAwait(false);
+                        string transactionHex = await response.GetJsonAsync<string>().ConfigureAwait(false);
 
                         // Ensure the response is a valid transaction so that we can return success.
-                        this.chainIndexer.Network.Consensus.ConsensusFactory.CreateTransaction(result);
+                        Transaction transaction = this.chainIndexer.Network.Consensus.ConsensusFactory.CreateTransaction(transactionHex);
 
-                        return true;
+                        return transaction.GetHash().ToString();
                     }
                 }
                 catch
                 {
                 }
 
-                return false;
+                return null;
             }
         }
 
