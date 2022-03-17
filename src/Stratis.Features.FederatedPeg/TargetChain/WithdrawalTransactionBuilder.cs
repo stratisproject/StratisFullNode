@@ -104,7 +104,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                         multiSigContext.Recipients = this.distributionManager.DistributeToMultisigNodes(blockHeight, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount);
                     }
-
                 }
 
                 // TODO: Amend this so we're not picking coins twice.

@@ -10,7 +10,6 @@ using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.SmartContracts;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Caching;
-using Stratis.SmartContracts.CLR.Loader;
 using Stratis.SmartContracts.CLR.Serialization;
 using Stratis.SmartContracts.Core.Receipts;
 using Stratis.SmartContracts.Core.State;
@@ -107,16 +106,16 @@ namespace Stratis.Bitcoin.Features.SmartContracts
             {
                 // Cache is not thread-safe so don't load into the cache if not found - leave that for consensus for now.
                 var byteCode = this.stateRepositoryRoot.GetCode(address);
-                
+
                 if (byteCode == null)
                 {
                     return null;
                 }
-                
+
                 return Assembly.Load(byteCode);
             }
 
-            return cachedAssembly.Assembly.Assembly;            
+            return cachedAssembly.Assembly.Assembly;
         }
 
         /// <summary>
