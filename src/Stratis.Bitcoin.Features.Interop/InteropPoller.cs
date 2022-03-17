@@ -172,8 +172,6 @@ namespace Stratis.Bitcoin.Features.Interop
                 if (this.initialBlockDownloadState.IsInitialBlockDownload())
                     return;
 
-                this.logger.Debug("Executing check interop nodes loop.");
-
                 try
                 {
                     await this.CheckInteropNodesAsync().ConfigureAwait(false);
@@ -889,11 +887,11 @@ namespace Stratis.Bitcoin.Features.Interop
             {
                 // Ignore old conversion requests for the time being.
                 // If this is not an originator node, we can also check its state.
-                if ((request.RequestStatus == ConversionRequestStatus.Unprocessed || request.RequestStatus == ConversionRequestStatus.NotOriginator) &&
-                    (this.chainIndexer.Tip.Height - request.BlockHeight) > this.network.Consensus.MaxReorgLength)
+                if ((request.RequestStatus == ConversionRequestStatus.Unprocessed) && (this.chainIndexer.Tip.Height - request.BlockHeight) > this.network.Consensus.MaxReorgLength)
                 {
                     this.logger.Info("Ignoring old mint request '{0}' with status {1} from block height {2}.", request.RequestId, request.RequestStatus, request.BlockHeight);
 
+                    request.RequestStatus = ConversionRequestStatus.Stale;
                     request.Processed = true;
 
                     lock (this.repositoryLock)
@@ -929,7 +927,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 {
                     case ConversionRequestStatus.Unprocessed:
                         {
-                            await stateMachine.UnprocessedAsync(request, originator, designatedMember).ConfigureAwait(false);
+                            stateMachine.Unprocessed(request, originator, designatedMember);
                             break;
                         }
 
@@ -1143,6 +1141,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 {
                     this.logger.Info("Ignoring old burn request '{0}' with status {1} from block height {2}.", request.RequestId, request.RequestStatus, request.BlockHeight);
 
+                    request.RequestStatus = ConversionRequestStatus.Stale;
                     request.Processed = true;
 
                     lock (this.repositoryLock)
@@ -1185,8 +1184,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 {
                     case ConversionRequestStatus.Unprocessed:
                         {
-                            await stateMachine.UnprocessedAsync(request, originator, designatedMember).ConfigureAwait(false);
-
+                            stateMachine.Unprocessed(request, originator, designatedMember);
                             break;
                         }
 
