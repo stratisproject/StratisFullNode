@@ -33,7 +33,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.federatedPegBroadcaster = federatedPegBroadcaster;
         }
 
-        public async Task UnprocessedAsync(ConversionRequest request, bool originator, IFederationMember designatedMember)
+        public void Unprocessed(ConversionRequest request, bool originator, IFederationMember designatedMember)
         {
             string transactionType = request.RequestType == ConversionRequestType.Burn ? "SRC20->ERC20" : "CRS->WSTRAX";
 
@@ -56,7 +56,7 @@ namespace Stratis.Bitcoin.Features.Interop
         {
             string transactionType = request.RequestType == ConversionRequestType.Burn ? "SRC20->ERC20" : "CRS->WSTRAX";
 
-            this.logger.Info($"{transactionType} conversion not yet submitted, checking which gas price to use.");
+            this.logger.Info($"Request '{request}'; '{transactionType}' conversion not yet submitted, checking which gas price to use.");
 
             // First construct the necessary transfer() transaction data, utilising the ABI of a standard ERC20 contract.
             // When this constructed transaction is actually executed, the transfer's source account will be the account executing the transaction i.e. the multisig contract address.
@@ -68,7 +68,7 @@ namespace Stratis.Bitcoin.Features.Interop
             if (gasPrice == -1)
                 gasPrice = interopSettings.GetSettingsByChain(request.DestinationChain).GasPrice;
 
-            this.logger.Info($"Originator will use a gas price of {gasPrice} to submit the {transactionType} transaction.");
+            this.logger.Info($"Request '{request.RequestId}'; originator will use a gas price of {gasPrice} to submit the {transactionType} transaction.");
 
             // Submit the unconfirmed transaction data to the multisig contract, returning a transactionId used to refer to it.
             // Once sufficient multisig owners have confirmed the transaction the multisig contract will execute it.
@@ -77,7 +77,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             if (identifiers.TransactionId == BigInteger.MinusOne)
             {
-                this.logger.Error($"{transactionType} conversion on {request.DestinationChain} to address '{request.DestinationAddress}' for {request.Amount} failed: {identifiers.Message}");
+                this.logger.Error($"Request '{request.RequestId}'; '{transactionType}' conversion on {request.DestinationChain} to address '{request.DestinationAddress}' for {request.Amount} failed: {identifiers.Message}");
 
                 request.Processed = true;
                 request.RequestStatus = ConversionRequestStatus.Failed;

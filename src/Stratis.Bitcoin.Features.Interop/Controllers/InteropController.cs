@@ -112,6 +112,28 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             }
         }
 
+        [Route("request")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult InteropStatusBurnRequests([FromBody] string requestId)
+        {
+            try
+            {
+                ConversionRequest request = this.conversionRequestRepository.Get(requestId);
+                if (request == null)
+                    return BadRequest($"'{requestId}' does not exist.");
+
+                return this.Json(ConstructConversionRequestModel(request));
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
         [Route("burns")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
@@ -121,29 +143,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         {
             try
             {
-                var response = new InteropStatusResponseModel();
-
-                var burnRequests = new List<ConversionRequestModel>();
-
-                foreach (ConversionRequest request in this.conversionRequestRepository.GetAllBurn(false))
-                {
-                    burnRequests.Add(new ConversionRequestModel()
-                    {
-                        RequestId = request.RequestId,
-                        RequestType = request.RequestType,
-                        RequestStatus = request.RequestStatus,
-                        BlockHeight = request.BlockHeight,
-                        DestinationAddress = request.DestinationAddress,
-                        DestinationChain = request.DestinationChain.ToString(),
-                        Amount = new BigInteger(request.Amount.ToBytes()),
-                        Processed = request.Processed,
-                        Status = request.RequestStatus.ToString(),
-                    });
-                }
-
-                response.BurnRequests = burnRequests.OrderByDescending(m => m.BlockHeight).ToList();
-
-                return this.Json(response);
+                return this.Json(this.conversionRequestRepository.GetAllBurn(false).Select(request => ConstructConversionRequestModel(request)).OrderByDescending(m => m.BlockHeight));
             }
             catch (Exception e)
             {
@@ -161,34 +161,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         {
             try
             {
-                var response = new InteropStatusResponseModel();
-
-                var mintRequests = new List<ConversionRequestModel>();
-
-                foreach (ConversionRequest request in this.conversionRequestRepository.GetAllMint(false))
-                {
-                    mintRequests.Add(new ConversionRequestModel()
-                    {
-                        RequestId = request.RequestId,
-                        RequestType = request.RequestType,
-                        RequestStatus = request.RequestStatus,
-                        BlockHeight = request.BlockHeight,
-                        DestinationAddress = request.DestinationAddress,
-                        DestinationChain = request.DestinationChain.ToString(),
-                        ExternalChainBlockHeight = request.ExternalChainBlockHeight,
-                        ExternalChainTxEventId = request.ExternalChainTxEventId,
-                        ExternalChainTxHash = request.ExternalChainTxHash,
-                        Amount = new BigInteger(request.Amount.ToBytes()),
-                        Processed = request.Processed,
-                        TokenContract = request.TokenContract,
-                        Status = request.RequestStatus.ToString(),
-                        Message = request.StatusMessage
-                    });
-                }
-
-                response.MintRequests = mintRequests.OrderByDescending(m => m.BlockHeight).ToList();
-
-                return this.Json(response);
+                return this.Json(this.conversionRequestRepository.GetAllMint(false).Select(request => ConstructConversionRequestModel(request)).OrderByDescending(m => m.BlockHeight));
             }
             catch (Exception e)
             {
@@ -735,6 +708,27 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                 this.logger.LogError("Exception trying to decode interflux transaction: {0}.", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
             }
+        }
+
+        private ConversionRequestModel ConstructConversionRequestModel(ConversionRequest request)
+        {
+            return new ConversionRequestModel()
+            {
+                RequestId = request.RequestId,
+                RequestType = request.RequestType,
+                RequestStatus = request.RequestStatus,
+                BlockHeight = request.BlockHeight,
+                DestinationAddress = request.DestinationAddress,
+                DestinationChain = request.DestinationChain.ToString(),
+                ExternalChainBlockHeight = request.ExternalChainBlockHeight,
+                ExternalChainTxEventId = request.ExternalChainTxEventId,
+                ExternalChainTxHash = request.ExternalChainTxHash,
+                Amount = new BigInteger(request.Amount.ToBytes()),
+                Processed = request.Processed,
+                TokenContract = request.TokenContract,
+                Status = request.RequestStatus.ToString(),
+                Message = request.StatusMessage
+            };
         }
     }
 }
