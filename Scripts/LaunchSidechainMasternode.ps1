@@ -498,7 +498,7 @@ if ( $NodeType -eq "50K" )
 {
     if ( $ethGasPrice )
     {
-        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -eth_interopenabled=1 -ethereumgaspricetracking -pricetracking -eth_account=$ethAddress -eth_passphrase=$ethPassword -eth_multisigwalletcontractaddress=$ethMultiSigContract -eth_wrappedstraxcontractaddress=$ethWrappedStraxContract -eth_keyvaluestorecontractaddress=$ethKeyValueStoreContractAddress -eth_gasprice=$ethGasPrice -eth_gas=$ethGasLimit -cirrusmultisigcontractaddress=$cirrusMultiSigContract -cirrussmartcontractactiveaddress=$miningWalletAddress -eth_watcherc20=$Token1 -eth_watcherc20=$Token2 -eth_watcherc20=$Token3 -eth_watcherc20=$Token4 -eth_watcherc20=$Token5 -eth_watcherc20=$Token6" -PassThru    }
+        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -eth_interopenabled=1 -ethereumgaspricetracking -pricetracking -eth_account=$ethAddress -eth_passphrase=$ethPassword -eth_multisigwalletcontractaddress=$ethMultiSigContract -eth_wrappedstraxcontractaddress=$ethWrappedStraxContract -eth_keyvaluestorecontractaddress=$ethKeyValueStoreContractAddress -eth_gasprice=$ethGasPrice -eth_gas=$ethGasLimit -cirrusmultisigcontractaddress=$cirrusMultiSigContract -cirrussmartcontractactiveaddress=$miningWalletAddress -eth_watcherc20=$Token1 -eth_watcherc20=$Token2 -eth_watcherc20=$Token3 -eth_watcherc20=$Token4 -eth_watcherc20=$Token5 -eth_watcherc20=$Token6 -ethereummultisigwalletquorum=7" -PassThru    }
         Else
         {
             $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -eth_interopenabled=1 -eth_account=$ethAddress -eth_passphrase=$ethPassword -eth_multisigwalletcontractaddress=$ethMultiSigContract -eth_wrappedstraxcontractaddress=$ethWrappedStraxContract" -PassThru
@@ -759,8 +759,8 @@ Exit
 # SIG # Begin signature block
 # MIIO+gYJKoZIhvcNAQcCoIIO6zCCDucCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUkyLdN8OYBavs2FxSBv2zrxOF
-# aRSgggxCMIIFfjCCBGagAwIBAgIQCrk836uc/wPyOiuycqPb5zANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUejsUZ0JLxas+Jqi18Wly5q0+
+# JuugggxCMIIFfjCCBGagAwIBAgIQCrk836uc/wPyOiuycqPb5zANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTIxMDQyMjAwMDAwMFoXDTI0MDcxOTIzNTk1
@@ -830,11 +830,11 @@ Exit
 # ZXJ0LmNvbTErMCkGA1UEAxMiRGlnaUNlcnQgRVYgQ29kZSBTaWduaW5nIENBIChT
 # SEEyKQIQCrk836uc/wPyOiuycqPb5zAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIB
 # DDEKMAigAoAAoQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEE
-# AYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUlQSHi2vfmpA7
-# o9GVzXHkH87svLwwDQYJKoZIhvcNAQEBBQAEggEARty0YHlmoWZ0ZvSaH85SZrum
-# L0s+dQPAzlP3/HPjMY+3Hgpivp5O0l9PvDdQzdEUZ/3tOTbKIyGg2ufZdlgky81J
-# +oqnPN4TZDKhvLSnGyGfGXAAxxDIr3CCTdzC4T24CZQ+NfBoMoW/AjEE3XGHQGL5
-# tD7LWfT6aNY4bO5Ym28pixR9V3zveO4RM5LX1oXMpit5Cl5eMyKkloRJG3Ctx87/
-# ub7W21HBxkXmG5Gk210zaL83g/WnD5qDqETNswF1SZ7AeKsj2WiCzIrd7ghD5mWv
-# noe+6cabEWbaWpevjP+edjlVmVa/VpdkwEq88F5cJp23YCkptmYZDWCmzzZYZg==
+# AYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQU0uX/VCXDvyJn
+# BQQNVZ7Sa/3rHyEwDQYJKoZIhvcNAQEBBQAEggEAREhkDWsFFW5NTq6O8Tu7XOrj
+# zVyt4YmbvHrOu4YtPRNsbs0Ch+OMa0oB2I5JSN5Ftez4YfjVyCt8xui+0hLpoZE5
+# HABgRZDZVpO5RLjB6j5DFx5nbWT1YZ32dM5DrATgYny3lf1/EIQUGlW6AKtxO8R4
+# PF64f7iq6v9Kv70e0HNc/hAFspRraOgwtJnMcVN4EsEMv8BqkKXoqUFJ/eycpMQJ
+# yGpodM6/FleM8t/clyx3roZVE81QZcYphMbG6YvCn/8IfD44ibEHBq7wyGIST2ZP
+# 9qoH+rk7qb16DiI0LT88CufOGxWPgEEB/Ic4oqiQC0sDG14SiWJ1mK3FuKbn1w==
 # SIG # End signature block
