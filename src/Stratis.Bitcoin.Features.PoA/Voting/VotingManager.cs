@@ -195,23 +195,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 List<Poll> pendingPolls = this.GetPendingPolls().ToList();
                 List<Poll> approvedPolls = this.GetApprovedPolls().Where(x => !x.IsExecuted).ToList();
 
-                int release1300ActivationHeight = 0;
-                if (this.nodeDeployments?.BIP9.ArraySize > 0 /* Not NoBIP9Deployments */)
-                    release1300ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[0 /* Release1300 */].ActivationHeight;
-
                 bool IsTooOldToVoteOn(Poll poll) => poll.IsPending && (this.chainIndexer.Tip.Height - poll.PollStartBlockData.Height) >= this.poaConsensusOptions.PollExpiryBlocks;
+
+                bool ShouldNotExistYet(Poll poll) => poll.IsPending && (this.chainIndexer.Tip.Height - poll.PollStartBlockData.Height) < 0;
 
                 bool IsValid(VotingData currentScheduledData)
                 {
-                    if (currentScheduledData.Key == VoteKey.AddFederationMember)
-                    {
-                        // "Add member" votes must have pending polls created by the JoinFederationRequestMonitor (if this behavior was active in the monitor).
-                        if (!pendingPolls.Any(x => x.VotingData == currentScheduledData && x.PollStartBlockData.Height >= release1300ActivationHeight))
-                            return false;
-                    }
-
-                    // Remove scheduled voting data that relate to too-old pending polls.
-                    if (pendingPolls.Any(x => x.VotingData == currentScheduledData && IsTooOldToVoteOn(x)))
+                    // Remove scheduled voting data that relate to too-old pending polls or rewound blocks.
+                    if (pendingPolls.Any(x => x.VotingData == currentScheduledData && (ShouldNotExistYet(x) || IsTooOldToVoteOn(x))))
                         return false;
 
                     // Remove scheduled voting data that can be found in finished polls that were not yet executed.
