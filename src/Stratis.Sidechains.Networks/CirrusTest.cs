@@ -132,7 +132,7 @@ namespace Stratis.Sidechains.Networks
                 EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
                 VotingManagerV2ActivationHeight = 1_999_500,
                 Release1100ActivationHeight = 2_796_000,
-                PollExpiryBlocks = 450, // 2 hours,
+                PollExpiryBlocks = 100,
                 GetMiningTimestampV2ActivationHeight = 3_000_000, // 15 January 2022
                 GetMiningTimestampV2ActivationStrictHeight = 3_121_500, // 17 January 2022
                 ContractSerializerV2ActivationHeight = 2_842_681
@@ -148,7 +148,7 @@ namespace Stratis.Sidechains.Networks
             var bip9Deployments = new CirrusBIP9Deployments()
             {
                 // Deployment will go active once 75% of nodes are on 1.3.0.0 or later.
-                [CirrusBIP9Deployments.Release1300] = new BIP9DeploymentsParameters("Release1300", 0, new DateTime(2022,3,22).ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-1-1").ToUnixTimestamp(), BIP9DeploymentsParameters.DefaultMainnetThreshold)
+                [CirrusBIP9Deployments.Release1300] = new BIP9DeploymentsParameters("Release1300", 0, new DateTime(2022, 3, 22).ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-1-1").ToUnixTimestamp(), BIP9DeploymentsParameters.DefaultMainnetThreshold)
             };
 
             this.Consensus = new Consensus(
