@@ -87,5 +87,6 @@ namespace Stratis.Bitcoin.Features.Wallet
         ETC = 3, // Ethereum classic
         AVAX = 4, // Avalanche
         ADA = 5, // Cardano
+        CIRRUS = 6, // Cirrus
     }
 }
