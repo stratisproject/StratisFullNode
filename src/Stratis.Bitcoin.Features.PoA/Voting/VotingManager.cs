@@ -199,15 +199,29 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 bool ShouldNotExistYet(Poll poll) => poll.IsPending && (this.chainIndexer.Tip.Height - poll.PollStartBlockData.Height) < 0;
 
-                bool IsValid(VotingData currentScheduledData)
+                bool IsValid(VotingData votingData)
                 {
                     // Remove scheduled voting data that relate to too-old pending polls or rewound blocks.
-                    if (pendingPolls.Any(x => x.VotingData == currentScheduledData && (ShouldNotExistYet(x) || IsTooOldToVoteOn(x))))
+                    if (pendingPolls.Any(x => x.VotingData == votingData && (ShouldNotExistYet(x) || IsTooOldToVoteOn(x))))
+                    {
+                        if (votingData.Key == VoteKey.AddFederationMember || votingData.Key == VoteKey.KickFederationMember)
+                            this.logger.LogDebug($"Removing {votingData.Key} scheduled vote for member '{this.GetMemberVotedOn(votingData).PubKey}'.");
+                        else
+                            this.logger.LogDebug($"Removing {votingData.Key} scheduled vote.");
+
                         return false;
+                    }
 
                     // Remove scheduled voting data that can be found in finished polls that were not yet executed.
-                    if (approvedPolls.Any(x => x.VotingData == currentScheduledData))
+                    if (approvedPolls.Any(x => x.VotingData == votingData))
+                    {
+                        if (votingData.Key == VoteKey.AddFederationMember || votingData.Key == VoteKey.KickFederationMember)
+                            this.logger.LogDebug($"Removing {votingData.Key} scheduled vote for member '{this.GetMemberVotedOn(votingData).PubKey}' from approved polls.");
+                        else
+                            this.logger.LogDebug($"Removing {votingData.Key} scheduled vote.");
+
                         return false;
+                    }
 
                     return true;
                 }
