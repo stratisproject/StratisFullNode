@@ -192,10 +192,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 List<Poll> pendingPolls = this.GetPendingPolls().ToList();
                 List<Poll> approvedPolls = this.GetApprovedPolls().Where(x => !x.IsExecuted).ToList();
 
-                int release1300ActivationHeight = 0;
-                if (this.nodeDeployments?.BIP9.ArraySize > 0 /* Not NoBIP9Deployments */)
-                    release1300ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[0 /* Release1300 */].ActivationHeight;
-
                 bool IsTooOldToVoteOn(Poll poll) => poll.IsPending && (this.chainIndexer.Tip.Height - poll.PollStartBlockData.Height) >= this.poaConsensusOptions.PollExpiryBlocks;
 
                 bool ShouldNotExistYet(Poll poll) => poll.IsPending && (this.chainIndexer.Tip.Height - poll.PollStartBlockData.Height) < 0;
