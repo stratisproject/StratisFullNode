@@ -493,7 +493,7 @@ namespace Stratis.Bitcoin.Consensus
         private List<int> FindPeersToResync(ChainedHeader consensusTip)
         {
             var peerIdsToResync = new List<int>();
-            uint maxReorgLength = this.chainState.MaxReorgLength;
+            uint maxReorgLength = this.network.Consensus.MaxReorgLength;
 
             // Find peers with chains that now violate max reorg.
             if (maxReorgLength != 0)
@@ -1168,7 +1168,7 @@ namespace Stratis.Bitcoin.Consensus
         /// <exception cref="MaxReorgViolationException">Thrown in case maximum reorganization rule is violated.</exception>
         private void CheckMaxReorgRuleViolated(ChainedHeader chainedHeader)
         {
-            uint maxReorgLength = this.chainState.MaxReorgLength;
+            uint maxReorgLength = this.network.Consensus.MaxReorgLength;
             ChainedHeader consensusTip = this.GetConsensusTip();
             if (maxReorgLength != 0)
             {

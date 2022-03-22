@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Numerics;
 using System.Threading.Tasks;
+using CSharpFunctionalExtensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -11,12 +12,16 @@ using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
 using Stratis.Bitcoin.Features.Interop.Models;
+using Stratis.Bitcoin.Features.Interop.Settings;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Coordination;
+using Stratis.SmartContracts;
+using Stratis.SmartContracts.CLR;
+using Stratis.SmartContracts.CLR.Serialization;
 
 namespace Stratis.Bitcoin.Features.Interop.Controllers
 {
@@ -24,63 +29,81 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
     [Route("api/[controller]")]
     public sealed class InteropController : Controller
     {
+        private readonly ICallDataSerializer callDataSerializer;
+        private readonly ChainIndexer chainIndexer;
+        private readonly IContractPrimitiveSerializer contractPrimitiveSerializer;
         private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
         private readonly IConversionRequestRepository conversionRequestRepository;
         private readonly IETHCompatibleClientProvider ethCompatibleClientProvider;
         private readonly IFederationManager federationManager;
         private readonly InteropSettings interopSettings;
+        private readonly InteropPoller interopPoller;
         private readonly ILogger logger;
         private readonly Network network;
 
         public InteropController(
+            ICallDataSerializer callDataSerializer,
+            ChainIndexer chainIndexer,
+            IContractPrimitiveSerializer contractPrimitiveSerializer,
             Network network,
             IConversionRequestCoordinationService conversionRequestCoordinationService,
             IConversionRequestRepository conversionRequestRepository,
             IETHCompatibleClientProvider ethCompatibleClientProvider,
             IFederationManager federationManager,
-            InteropSettings interopSettings)
+            InteropSettings interopSettings,
+            InteropPoller interopPoller)
         {
+            this.callDataSerializer = callDataSerializer;
+            this.chainIndexer = chainIndexer;
+            this.contractPrimitiveSerializer = contractPrimitiveSerializer;
             this.conversionRequestCoordinationService = conversionRequestCoordinationService;
             this.conversionRequestRepository = conversionRequestRepository;
             this.ethCompatibleClientProvider = ethCompatibleClientProvider;
             this.federationManager = federationManager;
             this.interopSettings = interopSettings;
+            this.interopPoller = interopPoller;
             this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
         }
 
-        [Route("status/burns")]
+        [Route("initializeinterflux")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult InitializeInterflux([FromBody] InitializeInterfluxRequestModel model)
+        {
+            try
+            {
+                this.interopSettings.GetSettings<CirrusInteropSettings>().CirrusWalletCredentials = new WalletCredentials()
+                {
+                    WalletName = model.WalletName,
+                    WalletPassword = model.WalletPassword,
+                    AccountName = model.AccountName
+                };
+
+                this.logger.LogInformation("Interop wallet credentials set.");
+
+                return this.Json(true);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        [Route("configuration")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult InteropStatusBurnRequests()
+        public IActionResult Configuration(DestinationChain destinationChain)
         {
             try
             {
-                var response = new InteropStatusResponseModel();
-
-                var burnRequests = new List<ConversionRequestModel>();
-
-                foreach (ConversionRequest request in this.conversionRequestRepository.GetAllBurn(false))
-                {
-                    burnRequests.Add(new ConversionRequestModel()
-                    {
-                        RequestId = request.RequestId,
-                        RequestType = request.RequestType,
-                        RequestStatus = request.RequestStatus,
-                        BlockHeight = request.BlockHeight,
-                        DestinationAddress = request.DestinationAddress,
-                        DestinationChain = request.DestinationChain.ToString(),
-                        Amount = request.Amount,
-                        Processed = request.Processed,
-                        Status = request.RequestStatus.ToString(),
-                    });
-                }
-
-                response.BurnRequests = burnRequests.OrderByDescending(m => m.BlockHeight).ToList();
-
-                return this.Json(response);
+                return Ok(this.interopSettings.GetSettingsByChain(destinationChain));
             }
             catch (Exception e)
             {
@@ -89,7 +112,47 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             }
         }
 
-        [Route("status/mints")]
+        [Route("request")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult InteropStatusBurnRequests([FromBody] string requestId)
+        {
+            try
+            {
+                ConversionRequest request = this.conversionRequestRepository.Get(requestId);
+                if (request == null)
+                    return BadRequest($"'{requestId}' does not exist.");
+
+                return this.Json(ConstructConversionRequestModel(request));
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        [Route("burns")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult InteropStatusBurnRequests()
+        {
+            try
+            {
+                return this.Json(this.conversionRequestRepository.GetAllBurn(false).Select(request => ConstructConversionRequestModel(request)).OrderByDescending(m => m.BlockHeight));
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        [Route("mints")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -98,29 +161,27 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         {
             try
             {
-                var response = new InteropStatusResponseModel();
+                return this.Json(this.conversionRequestRepository.GetAllMint(false).Select(request => ConstructConversionRequestModel(request)).OrderByDescending(m => m.BlockHeight));
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
 
-                var mintRequests = new List<ConversionRequestModel>();
+        [Route("mint/delete")]
+        [HttpDelete]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult DeleteMintRequest(string requestId)
+        {
+            try
+            {
+                this.conversionRequestRepository.DeleteConversionRequest(requestId);
 
-                foreach (ConversionRequest request in this.conversionRequestRepository.GetAllMint(false))
-                {
-                    mintRequests.Add(new ConversionRequestModel()
-                    {
-                        RequestId = request.RequestId,
-                        RequestType = request.RequestType,
-                        RequestStatus = request.RequestStatus,
-                        BlockHeight = request.BlockHeight,
-                        DestinationAddress = request.DestinationAddress,
-                        DestinationChain = request.DestinationChain.ToString(),
-                        Amount = request.Amount,
-                        Processed = request.Processed,
-                        Status = request.RequestStatus.ToString(),
-                    });
-                }
-
-                response.MintRequests = mintRequests.OrderByDescending(m => m.BlockHeight).ToList();
-
-                return this.Json(response);
+                return Ok($"{requestId} has been deleted.");
             }
             catch (Exception e)
             {
@@ -180,7 +241,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             try
             {
                 if (!this.ethCompatibleClientProvider.IsChainSupportedAndEnabled(destinationChain))
-                    return this.Json($"{destinationChain} not enabled or supported!");
+                    return BadRequest($"{destinationChain} not enabled or supported!");
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
 
@@ -212,7 +273,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             try
             {
                 if (!this.ethCompatibleClientProvider.IsChainSupportedAndEnabled(destinationChain))
-                    return this.Json($"{destinationChain} not enabled or supported!");
+                    return BadRequest($"{destinationChain} not enabled or supported!");
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
                 string data = client.EncodeAddOwnerParams(newOwnerAddress);
@@ -248,7 +309,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             try
             {
                 if (!this.ethCompatibleClientProvider.IsChainSupportedAndEnabled(destinationChain))
-                    return this.Json($"{destinationChain} not enabled or supported!");
+                    return BadRequest($"{destinationChain} not enabled or supported!");
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
                 string data = client.EncodeRemoveOwnerParams(existingOwnerAddress);
@@ -284,7 +345,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             try
             {
                 if (!this.ethCompatibleClientProvider.IsChainSupportedAndEnabled(destinationChain))
-                    return this.Json($"{destinationChain} not enabled or supported!");
+                    return BadRequest($"{destinationChain} not enabled or supported!");
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
 
@@ -318,7 +379,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             try
             {
                 if (!this.ethCompatibleClientProvider.IsChainSupportedAndEnabled(destinationChain))
-                    return this.Json($"{destinationChain} not enabled or supported!");
+                    return BadRequest($"{destinationChain} not enabled or supported!");
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
 
@@ -354,7 +415,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             try
             {
                 if (!this.ethCompatibleClientProvider.IsChainSupportedAndEnabled(destinationChain))
-                    return this.Json($"{destinationChain} not enabled or supported!");
+                    return BadRequest($"{destinationChain} not enabled or supported!");
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
 
@@ -397,7 +458,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             try
             {
                 if (!this.ethCompatibleClientProvider.IsChainSupportedAndEnabled(destinationChain))
-                    return this.Json($"{destinationChain} not enabled or supported!");
+                    return BadRequest($"{destinationChain} not enabled or supported!");
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
 
@@ -439,11 +500,42 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             try
             {
                 if (!this.ethCompatibleClientProvider.IsChainSupportedAndEnabled(destinationChain))
-                    return this.Json($"{destinationChain} not enabled or supported!");
+                    return BadRequest($"{destinationChain} not enabled or supported!");
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
 
-                return this.Json((await client.GetErc20BalanceAsync(account).ConfigureAwait(false)).ToString());
+                return Ok((await client.GetWStraxBalanceAsync(account).ConfigureAwait(false)).ToString());
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Retrieves the balance of a given account on a given ERC20 contract.
+        /// </summary>
+        /// <param name="destinationChain">The chain the ERC20 contract is deployed to.</param>
+        /// <param name="account">The account to retrieve the balance for.</param>
+        /// <param name="contractAddress">The address of the contract on the given chain.</param>
+        /// <returns>The account balance.</returns>
+        [Route("erc20balance")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public async Task<IActionResult> Erc20BalanceAsync(DestinationChain destinationChain, string account, string contractAddress)
+        {
+            try
+            {
+                if (!this.ethCompatibleClientProvider.IsChainSupportedAndEnabled(destinationChain))
+                    return BadRequest($"{destinationChain} not enabled or supported!");
+
+                IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
+
+                return Ok((await client.GetErc20BalanceAsync(account, contractAddress).ConfigureAwait(false)).ToString());
             }
             catch (Exception e)
             {
@@ -463,55 +555,46 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             if (this.network.IsTest() || this.network.IsRegTest())
             {
                 var result = this.conversionRequestRepository.DeleteConversionRequests();
-                return this.Json($"{result} conversion requests have been deleted.");
+                return Ok($"{result} conversion requests have been deleted.");
             }
 
-            return this.Json($"Deleting conversion requests is only available on test networks.");
+            return BadRequest($"Deleting conversion requests is only available on test networks.");
         }
 
         /// <summary>
-        /// Endpoint that allows the multisig operator to set itself as the originator (submittor) for a given request id.
+        /// Endpoint that allows the multisig operator to set the state on a conversion request.
         /// </summary>
-        /// <param name="requestId">The request id in question.</param>
-        [Route("requests/setoriginator")]
+        /// <param name="model">The request details to set to.</param>
+        [Route("requests/setstate")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult SetOriginatorForRequest([FromBody] string requestId)
+        public IActionResult SetConversionRequestState([FromBody] SetConversionRequestStateModel model)
         {
             try
             {
-                this.conversionRequestRepository.SetConversionRequestState(requestId, ConversionRequestStatus.OriginatorNotSubmitted);
-                return this.Json($"Conversion request '{requestId}' has been reset to {ConversionRequestStatus.OriginatorNotSubmitted}.");
+                ConversionRequest request = this.conversionRequestRepository.Get(model.RequestId);
+
+                if (request == null)
+                    return NotFound($"'{model.RequestId}' does not exist.");
+
+                if (this.chainIndexer.Tip.Height - request.BlockHeight <= this.network.Consensus.MaxReorgLength)
+                    return BadRequest($"Please wait at least {this.network.Consensus.MaxReorgLength} blocks before attempting to update this request.");
+
+                if (model.Processed && model.Status != ConversionRequestStatus.Processed)
+                    return BadRequest($"A processed request must have its processed state set as true.");
+
+                request.Processed = model.Processed;
+                request.RequestStatus = model.Status;
+
+                this.conversionRequestRepository.Save(request);
+
+                return Ok($"Conversion request '{model.RequestId}' has been reset to {model.Status}.");
             }
             catch (Exception e)
             {
-                this.logger.LogError("Exception setting conversion request '{0}' to {1} : {2}.", requestId, e.ToString(), ConversionRequestStatus.OriginatorNotSubmitted);
-
-                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
-            }
-        }
-
-        /// <summary>
-        /// Endpoint that allows the multisig operator to reset the request as NotOriginator.
-        /// </summary>
-        /// <param name="requestId">The request id in question.</param>
-        [Route("requests/setnotoriginator")]
-        [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult ResetConversionRequestAsNotOriginator([FromBody] string requestId)
-        {
-            try
-            {
-                this.conversionRequestRepository.SetConversionRequestState(requestId, ConversionRequestStatus.NotOriginator);
-                return this.Json($"Conversion request '{requestId}' has been reset to {ConversionRequestStatus.NotOriginator}.");
-            }
-            catch (Exception e)
-            {
-                this.logger.LogError("Exception setting conversion request '{0}' to {1} : {2}.", requestId, e.ToString(), ConversionRequestStatus.NotOriginator);
+                this.logger.LogError("Exception setting conversion request '{0}' to {1} : {2}.", model.RequestId, e.ToString(), model.Status);
 
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
             }
@@ -533,7 +616,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                 this.conversionRequestRepository.ReprocessBurnRequest(model.RequestId, model.BlockHeight, ConversionRequestStatus.Unprocessed);
                 this.logger.LogInformation($"Burn request '{model.RequestId}' will be reprocessed at height {model.BlockHeight}.");
 
-                return this.Json($"Burn request '{model.RequestId}' will be reprocessed at height {model.BlockHeight}.");
+                return Ok($"Burn request '{model.RequestId}' will be reprocessed at height {model.BlockHeight}.");
             }
             catch (Exception e)
             {
@@ -558,7 +641,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             {
                 this.conversionRequestCoordinationService.AddVote(model.RequestId, BigInteger.Parse(model.EventId), this.federationManager.CurrentFederationKey.PubKey);
                 this.conversionRequestRepository.SetConversionRequestState(model.RequestId, ConversionRequestStatus.OriginatorSubmitted);
-                return this.Json($"Manual vote pushed for request '{model.RequestId}' with event id '{model.EventId}'.");
+                return Ok($"Manual vote pushed for request '{model.RequestId}' with event id '{model.EventId}'.");
             }
             catch (Exception e)
             {
@@ -566,6 +649,86 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
 
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
             }
+        }
+
+        /// <summary>
+        /// Endpoint that allows the multisig operator to reset the scan height of the interop poller.
+        /// </summary>
+        /// <param name="model">The chain identifier and block height to reset the scan height for.</param>
+        [Route("resetscanheight")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult ReprocessBurnRequest([FromBody] ResetScanHeightModel model)
+        {
+            try
+            {
+                this.interopPoller.ResetScanHeight(model.DestinationChain, model.Height);
+                this.logger.LogInformation($"Scan height for chain {model.DestinationChain} will be reset to '{model.Height}'.");
+
+                return Ok($"Scan height for chain {model.DestinationChain} will be reset to '{model.Height}'.");
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception resetting scan height to '{0}' : {1}.", model.Height, e.ToString());
+
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Endpoint that allows the user to decode the method parameters for an interflux transaction.
+        /// </summary>
+        /// <param name="hex">Hex of the interflux transaction.</param>
+        [Route("decodeinterfluxtransaction")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult DecodeInterFluxTransaction(string hex)
+        {
+            try
+            {
+                Transaction transaction = this.network.CreateTransaction(hex);
+                TxOut sc = transaction.Outputs.FirstOrDefault(x => x.ScriptPubKey.IsSmartContractExec());
+                Result<ContractTxData> deserializedCallData = this.callDataSerializer.Deserialize(sc.ScriptPubKey.ToBytes());
+                var methodParameters = deserializedCallData.Value.MethodParameters.Last() as byte[];
+                var deserializedMethodParameters = this.contractPrimitiveSerializer.Deserialize<byte[][]>(methodParameters);
+
+                Address address = this.contractPrimitiveSerializer.Deserialize<Address>(deserializedMethodParameters[0].Slice(1, (uint)(deserializedMethodParameters[0].Length - 1)));
+                var addressString = address.ToUint160().ToBase58Address(this.network);
+
+                UInt256 amount = this.contractPrimitiveSerializer.Deserialize<UInt256>(deserializedMethodParameters[1].Slice(1, (uint)(deserializedMethodParameters[1].Length - 1)));
+
+                return Ok($"Method parameters for '{transaction.GetHash()}': address {addressString}; amount {amount}.");
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception trying to decode interflux transaction: {0}.", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
+            }
+        }
+
+        private ConversionRequestModel ConstructConversionRequestModel(ConversionRequest request)
+        {
+            return new ConversionRequestModel()
+            {
+                RequestId = request.RequestId,
+                RequestType = request.RequestType,
+                RequestStatus = request.RequestStatus,
+                BlockHeight = request.BlockHeight,
+                DestinationAddress = request.DestinationAddress,
+                DestinationChain = request.DestinationChain.ToString(),
+                ExternalChainBlockHeight = request.ExternalChainBlockHeight,
+                ExternalChainTxEventId = request.ExternalChainTxEventId,
+                ExternalChainTxHash = request.ExternalChainTxHash,
+                Amount = new BigInteger(request.Amount.ToBytes()),
+                Processed = request.Processed,
+                TokenContract = request.TokenContract,
+                Status = request.RequestStatus.ToString(),
+                Message = request.StatusMessage
+            };
         }
     }
 }

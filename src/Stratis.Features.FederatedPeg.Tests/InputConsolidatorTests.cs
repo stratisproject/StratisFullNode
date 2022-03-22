@@ -29,7 +29,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 this.asyncProvider,
                 this.network);
 
-            Assert.Null(inputConsolidator.CreateRequiredConsolidationTransactions(Money.Coins(100m)));
+            Assert.Null(inputConsolidator.CallPrivateMethod("CreateRequiredConsolidationTransactions", Money.Coins(100m)));
         }
 
         [Fact]
@@ -68,7 +68,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             this.AddFundingTransaction(funding);
 
-            List<ConsolidationTransaction> transactions = inputConsolidator.CreateRequiredConsolidationTransactions(Money.Coins(depositAmount));
+            var transactions = (List<ConsolidationTransaction>)inputConsolidator.CallPrivateMethod("CreateRequiredConsolidationTransactions", Money.Coins(depositAmount));
 
             Assert.Equal(2, transactions.Count);
             Assert.Equal(this.federatedPegSettings.MultiSigAddress.ScriptPubKey, transactions[0].PartialTransaction.Outputs[0].ScriptPubKey);

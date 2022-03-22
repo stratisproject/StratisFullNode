@@ -1,107 +1,173 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Tests.Common
 {
-    public class MockingContext : IDisposable
+    public static class IServiceCollectionExt
+    {
+        public static IServiceCollection AddSingleton<T>(this IServiceCollection serviceCollection, ConstructorInfo constructorInfo) where T : class
+        {
+            serviceCollection.AddSingleton(typeof(T), (s) => constructorInfo.Invoke(MockingContext.GetConstructorArguments(s, constructorInfo)));
+
+            return serviceCollection;
+        }
+    }
+
+    /// <summary>
+    /// Implements a <c>GetService</c> that concretizes services on-demand and also mocks services that can't be otherwise concretized.
+    /// </summary>
+    public class MockingContext : IServiceProvider
     {
         private IServiceCollection serviceCollection;
-
-        public MockingContext() : this(new ServiceCollection())
-        {
-        }
 
         public MockingContext(IServiceCollection serviceCollection)
         {
             this.serviceCollection = serviceCollection;
         }
 
-        private Type MockType(Type serviceType) => typeof(Mock<>).MakeGenericType(serviceType);
-
-        private object GetMock(Type serviceType)
+        /// <summary>
+        /// Returns a concrete instance of the provided <paramref name="serviceType"/>.
+        /// If the service type had no associated <c>AddService</c> then a mocked instance is returned.
+        /// </summary>
+        /// <param name="serviceType">The service type.</param>
+        /// <returns>The service instance.</returns>
+        /// <remarks><para>A mocked type can be passed in which case the mock object is returned for setup purposes.</para>
+        /// <para>An enumerable type can be passed in which case multiple service instances are returned.</para></remarks>
+        public object GetService(Type serviceType)
         {
-            GetOrAddService(serviceType);
+            ServiceDescriptor[] services = this.serviceCollection.Where(s => s.ServiceType == serviceType).ToArray();
 
-            Type mockType = MockType(serviceType);
-            return this.serviceCollection.SingleOrDefault(s => s.ServiceType == mockType)?.ImplementationInstance;
+            // Need to do a bit more work to resolve IEnumerable types.
+            if (typeof(IEnumerable<object>).IsAssignableFrom(serviceType))
+            {
+                Type elementType = serviceType.GetGenericArguments().First();
+                Type collectionType = typeof(List<>).MakeGenericType(elementType);
+                var collection = Activator.CreateInstance(collectionType);
+                MethodInfo addMethod = collectionType.GetMethod("Add");
+                foreach (ServiceDescriptor serviceDescriptor in services)
+                {
+                    var element = MakeConcrete(serviceDescriptor);
+                    addMethod.Invoke(collection, new object[] { element });
+                }
+
+                return collection;
+            }
+
+            if (services.Length > 1)
+                throw new InvalidOperationException($"There are {services.Length} services of type {serviceType}.");
+
+            if (services.Length == 0)
+                return MakeConcrete(serviceType);
+
+            return MakeConcrete(services[0]);
         }
 
-        public Mock<T> GetMock<T>() where T : class
+        private object MakeConcrete(ServiceDescriptor serviceDescriptor)
         {
-            Guard.Assert(typeof(T).IsInterface);
-
-            return (Mock<T>)GetMock(typeof(T));
-        }
-
-        private object GetOrAddService(Type serviceType, Type implementationType = null, ConstructorInfo constructorInfo = null, bool allowAdd = true)
-        {            
-            var service = this.serviceCollection
-                .Where(s => s.ServiceType == serviceType && (implementationType == null || s.ImplementationType == implementationType))
-                .SingleOrDefault()?.ImplementationInstance;
-
-            if (service != null || !allowAdd)
+            object service = serviceDescriptor.ImplementationInstance;
+            if (service != null)
                 return service;
 
-            implementationType ??= serviceType;
+            this.serviceCollection.Remove(serviceDescriptor);
 
-            if (implementationType.IsInterface)
+            if (serviceDescriptor.ImplementationFactory != null)
             {
-                Type mockType = MockType(implementationType);
-                var mock = Activator.CreateInstance(mockType);
-                service = ((dynamic)mock).Object;
+                service = serviceDescriptor.ImplementationFactory.Invoke(this);
+                if (service != null)
+                    this.serviceCollection.AddSingleton(serviceDescriptor.ServiceType, service);
+                return service;
+            }
+
+            if (serviceDescriptor?.ImplementationType != null)
+            {
+                service = GetService(serviceDescriptor.ImplementationType);
+                if (service != null && serviceDescriptor.ImplementationType != serviceDescriptor.ServiceType)
+                    // Restore the service type singleton, with the resolved implementation instance.
+                    this.serviceCollection.AddSingleton(serviceDescriptor.ServiceType, service);
+                return service;
+            }
+
+            return MakeConcrete(serviceDescriptor.ServiceType);
+        }
+
+        private object MakeConcrete(Type serviceType)
+        {
+            object service;
+            object mock = null;
+            bool isMock = typeof(IMock<object>).IsAssignableFrom(serviceType);
+
+            // Mock interfaces and explicit mock types.
+            if (serviceType.IsInterface || isMock)
+            {
+                Type mockType = isMock ? serviceType : typeof(Mock<>).MakeGenericType(serviceType);
+                if (isMock)
+                    serviceType = serviceType.GetGenericArguments().First();
+                
+                if (serviceType.IsInterface)
+                {
+                    mock = Activator.CreateInstance(mockType);
+                }
+                else
+                {
+                    ConstructorInfo constructorInfo = GetConstructor(serviceType);
+                    object[] args = GetConstructorArguments(this, constructorInfo);
+                    mock = Activator.CreateInstance(mockType, args);
+                }
+
                 this.serviceCollection.AddSingleton(mockType, mock);
+
+                // If we're mocking an interface then there is no separate singleton for the internal object.
+                if (isMock && serviceType.IsInterface)
+                    return mock;
+
+                mock.SetPrivatePropertyValue("CallBase", true);
+
+                service = ((dynamic)mock).Object;
             }
             else
             {
-                constructorInfo ??= implementationType.GetConstructors().Single();
-                object[] args = constructorInfo.GetParameters().Select(p => GetOrAddService(p.ParameterType)).ToArray();
-                service = Activator.CreateInstance(implementationType, args);
+                ConstructorInfo constructorInfo = GetConstructor(serviceType);
+                object[] args = GetConstructorArguments(this, constructorInfo);
+                service = constructorInfo.Invoke(args);
             }
 
             this.serviceCollection.AddSingleton(serviceType, service);
 
-            return service;
+            return isMock ? mock : service;
         }
 
-        public T GetService<T>(Type implementationType = null, bool addIfNotExists = false) where T : class
+        private static ConstructorInfo GetConstructor(Type implementationType)
         {
-            return (T)GetOrAddService(typeof(T), implementationType, allowAdd: addIfNotExists);
+            ConstructorInfo[] constructors = implementationType.GetConstructors();
+
+            // If there is a choice of two then ignore the parameterless constructor.
+            if (constructors.Length == 2)
+                constructors = constructors.Where(c => c.GetParameters().Length != 0).ToArray();
+
+            // Too much ambiguity.
+            if (constructors.Length != 1)
+                throw new InvalidOperationException($"There are {constructors.Length} constructors for {implementationType}.");
+
+            return constructors.Single();
         }
 
-        public MockingContext AddService<T>() where T : class
+        private static object ResolveParameter(IServiceProvider serviceProvider, ParameterInfo parameterInfo)
         {
-            Guard.Assert(typeof(T).IsInterface);
+            // Some constructors have value type arguments with default values.
+            if (parameterInfo.ParameterType.IsValueType)
+                return parameterInfo.DefaultValue;
 
-            GetOrAddService(typeof(T));
-            return this;
+            // Default path.
+            return serviceProvider.GetService(parameterInfo.ParameterType);
         }
 
-        public MockingContext AddService<T>(ConstructorInfo constructorInfo) where T : class
+        internal static object[] GetConstructorArguments(IServiceProvider serviceProvider, ConstructorInfo constructorInfo)
         {
-            GetOrAddService(typeof(T), constructorInfo.DeclaringType, constructorInfo);
-            return this;
-        }
-
-        public MockingContext AddService<T>(Type implementationType) where T : class
-        {
-            GetOrAddService(typeof(T), implementationType);
-            return this;
-        }
-
-        public MockingContext AddService<T>(T implementationInstance) where T : class
-        {
-            this.serviceCollection.AddSingleton(typeof(T), implementationInstance);
-
-            return this;
-        }
-
-        public void Dispose()
-        {
-            this.serviceCollection.Clear();
+            return constructorInfo.GetParameters().Select(p => ResolveParameter(serviceProvider, p)).ToArray();
         }
     }
 }

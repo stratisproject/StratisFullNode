@@ -14,6 +14,8 @@ using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.PoA.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
+using Stratis.Bitcoin.Utilities.Extensions;
+using Stratis.Sidechains.Networks.Deployments;
 
 namespace Stratis.Sidechains.Networks
 {
@@ -192,7 +194,11 @@ namespace Stratis.Sidechains.Networks
                 [BuriedDeployments.BIP66] = 0
             };
 
-            var bip9Deployments = new NoBIP9Deployments();
+            var bip9Deployments = new CirrusBIP9Deployments()
+            {
+                // Deployment will go active once 75% of nodes are on 1.3.0.0 or later.
+                [CirrusBIP9Deployments.Release1300] = new BIP9DeploymentsParameters("Release1300", 0, new DateTime(2022, 3, 22).ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-1-1").ToUnixTimestamp(), BIP9DeploymentsParameters.DefaultMainnetThreshold)
+            };
 
             this.Consensus = new Consensus(
                 consensusFactory: consensusFactory,
@@ -279,7 +285,8 @@ namespace Stratis.Sidechains.Networks
                 { 3_000_000, new CheckpointInfo(new uint256("0x79afa4a91a24b5e72632ad01d2a18330aecd1bc2cd4eea82eda5e3945fb0b238")) },
                 { 3_200_000, new CheckpointInfo(new uint256("0x6ec55b3b252f45e6677abf553601fb7bc97637319a9646e84d787769afe65988")) },
                 { 3_500_000, new CheckpointInfo(new uint256("0x1772356d6498935ab93cbd5eaf1b868c5265480edeef2b5fec133fbc21b292cb")) },
-                { 3_700_000, new CheckpointInfo(new uint256("0x16b41558dedb4945476f0212034bd148bef3cdeccdd1b55a198f8b1d6900716b")) }
+                { 3_700_000, new CheckpointInfo(new uint256("0x16b41558dedb4945476f0212034bd148bef3cdeccdd1b55a198f8b1d6900716b")) },
+                { 3_834_160, new CheckpointInfo(new uint256("0xa0e7b27d1e642301a5b3a985dc98953858d89849e9b864de7e9b62e6856973a0")) }
             };
 
             this.DNSSeeds = new List<DNSSeedData>
