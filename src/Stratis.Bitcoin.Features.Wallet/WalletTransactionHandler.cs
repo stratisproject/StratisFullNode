@@ -66,9 +66,12 @@ namespace Stratis.Bitcoin.Features.Wallet
 
                 Transaction transaction = context.TransactionBuilder.BuildTransaction(false);
 
-                // If there are cross chain deposits, try and validate them before
-                // we continue with signing and verification.
-                DepositValidationHelper.ValidateCrossChainDeposit(this.network, transaction);
+                if (!context.IsInteropFeeForMultisig)
+                {
+                    // If there are cross chain deposits, try and validate them before
+                    // we continue with signing and verification.
+                    DepositValidationHelper.ValidateCrossChainDeposit(this.network, transaction);
+                }
 
                 ICoin[] spentCoins = context.TransactionBuilder.FindSpentCoins(transaction);
 
@@ -625,5 +628,11 @@ namespace Stratis.Bitcoin.Features.Wallet
         {
             get { return this.Recipients?.Any(r => r.SubtractFeeFromAmount) ?? false; }
         }
+
+        /// <summary>
+        /// A flag indicating that the output paying the multisig relates to an interop associated fee.
+        /// This will skip the OP_RETURN validation in the cross chain deposit validation helper.
+        /// </summary>
+        public bool IsInteropFeeForMultisig { get; set; }
     }
 }

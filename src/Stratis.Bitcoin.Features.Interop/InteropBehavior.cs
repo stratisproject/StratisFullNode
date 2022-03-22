@@ -19,6 +19,8 @@ namespace Stratis.Bitcoin.Features.Interop
 {
     public sealed class InteropBehavior : NetworkPeerBehavior
     {
+        private readonly ChainIndexer chainIndexer;
+        private readonly ICirrusContractClient cirrusClient;
         private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
         private readonly IConversionRequestFeeService conversionRequestFeeService;
         private readonly IConversionRequestRepository conversionRequestRepository;
@@ -29,12 +31,16 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public InteropBehavior(
             Network network,
+            ChainIndexer chainIndexer,
+            ICirrusContractClient cirrusClient,
             IConversionRequestCoordinationService conversionRequestCoordinationService,
             IConversionRequestFeeService conversionRequestFeeService,
             IConversionRequestRepository conversionRequestRepository,
             IETHCompatibleClientProvider ethClientProvider,
             IFederationManager federationManager)
         {
+            this.chainIndexer = chainIndexer;
+            this.cirrusClient = cirrusClient;
             this.conversionRequestCoordinationService = conversionRequestCoordinationService;
             this.conversionRequestFeeService = conversionRequestFeeService;
             this.conversionRequestRepository = conversionRequestRepository;
@@ -49,7 +55,7 @@ namespace Stratis.Bitcoin.Features.Interop
         [NoTrace]
         public override object Clone()
         {
-            return new InteropBehavior(this.network, this.conversionRequestCoordinationService, this.conversionRequestFeeService, this.conversionRequestRepository, this.ethClientProvider, this.federationManager);
+            return new InteropBehavior(this.network, this.chainIndexer, this.cirrusClient, this.conversionRequestCoordinationService, this.conversionRequestFeeService, this.conversionRequestRepository, this.ethClientProvider, this.federationManager);
         }
 
         /// <inheritdoc/>
@@ -114,7 +120,7 @@ namespace Stratis.Bitcoin.Features.Interop
             if (!this.federationManager.IsFederationMember)
                 return;
 
-            this.logger.LogDebug("Conversion request payload request for id '{0}' received from '{1}':'{2}' proposing transaction ID '{4}'.", payload.RequestId, peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, payload.RequestId, payload.TransactionId);
+            this.logger.LogDebug($"Conversion request payload request for id '{payload.RequestId}' received from '{peer.PeerEndPoint.Address}':'{peer.RemoteSocketEndpoint.Address}' proposing transaction ID '{payload.TransactionId}', (IsTransfer: {payload.IsTransfer}).");
 
             if (payload.TransactionId == BigInteger.MinusOne)
                 return;
@@ -144,10 +150,14 @@ namespace Stratis.Bitcoin.Features.Interop
             try
             {
                 // Check that the transaction ID in the payload actually exists, and is unconfirmed.
-                confirmationCount = await this.ethClientProvider.GetClientForChain(payload.DestinationChain).GetMultisigConfirmationCountAsync(payload.TransactionId).ConfigureAwait(false);
+                if (payload.IsTransfer)
+                    confirmationCount = await this.cirrusClient.GetMultisigConfirmationCountAsync(payload.TransactionId, (ulong)this.chainIndexer.Tip.Height).ConfigureAwait(false);
+                else
+                    confirmationCount = await this.ethClientProvider.GetClientForChain(payload.DestinationChain).GetMultisigConfirmationCountAsync(payload.TransactionId).ConfigureAwait(false);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                this.logger.LogError($"An exception occurred trying to retrieve the confirmation count for multisig transaction id '{payload.TransactionId}', request id'{payload.RequestId}': {ex}");
                 return;
             }
 
@@ -165,8 +175,11 @@ namespace Stratis.Bitcoin.Features.Interop
 
             if (payload.IsRequesting)
             {
+                // Execute a small delay to prevent network congestion.
+                await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+
                 string signature = this.federationManager.CurrentFederationKey.SignMessage(payload.RequestId + payload.TransactionId);
-                await this.AttachedPeer.SendMessageAsync(ConversionRequestPayload.Reply(payload.RequestId, payload.TransactionId, signature, payload.DestinationChain)).ConfigureAwait(false);
+                await this.AttachedPeer.SendMessageAsync(ConversionRequestPayload.Reply(payload.RequestId, payload.TransactionId, signature, payload.DestinationChain, payload.IsTransfer)).ConfigureAwait(false);
             }
         }
 
@@ -197,7 +210,12 @@ namespace Stratis.Bitcoin.Features.Interop
             // Reply back to the peer with this node's proposal.
             FeeProposalPayload replyToPayload = await this.conversionRequestFeeService.MultiSigMemberProposedInteropFeeAsync(payload.RequestId, payload.FeeAmount, pubKey).ConfigureAwait(false);
             if (payload.IsRequesting && replyToPayload != null)
+            {
+                // Execute a small delay to prevent network congestion.
+                await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+
                 await this.AttachedPeer.SendMessageAsync(replyToPayload).ConfigureAwait(false);
+            }
         }
 
         private async Task ProcessFeeAgreeAsync(FeeAgreePayload payload)
@@ -227,7 +245,12 @@ namespace Stratis.Bitcoin.Features.Interop
             // Reply back to the peer with this node's amount.
             FeeAgreePayload replyToPayload = await this.conversionRequestFeeService.MultiSigMemberAgreedOnInteropFeeAsync(payload.RequestId, payload.FeeAmount, pubKey).ConfigureAwait(false);
             if (payload.IsRequesting && replyToPayload != null)
+            {
+                // Execute a small delay to prevent network congestion.
+                await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+
                 await this.AttachedPeer.SendMessageAsync(replyToPayload).ConfigureAwait(false);
+            }
         }
     }
 }

@@ -201,6 +201,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             try
             {
                 ChainedHeader chainedHeader = this.chainIndexer.GetHeader(blockHeight);
+                if (chainedHeader == null)
+                    return ErrorHelpers.BuildErrorResponse(HttpStatusCode.NotFound, "The block was not found at this time.", string.Empty);
+
                 PubKey pubKey = this.federationHistory.GetFederationMemberForBlock(chainedHeader)?.PubKey;
 
                 return Json(pubKey);
