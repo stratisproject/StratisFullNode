@@ -142,7 +142,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 this.SanitizeScheduledPollsLocked();
             }
 
-            this.logger.LogDebug("Vote was scheduled with key: {0}.", votingData.Key);
+            if (votingData.Key == VoteKey.AddFederationMember || votingData.Key == VoteKey.KickFederationMember)
+                this.logger.LogDebug($"{votingData.Key} vote scheduled for member '{this.GetMemberVotedOn(votingData).PubKey}'.");
+            else
+                this.logger.LogDebug($"{votingData.Key} vote scheduled.");
         }
 
         /// <summary>Provides a copy of scheduled voting data.</summary>
@@ -548,6 +551,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     if (rawVotingData == null)
                     {
                         this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader);
+                        this.logger.LogTrace($"'{chBlock.ChainedHeader}' does not contain any voting data.");
                         return;
                     }
 
