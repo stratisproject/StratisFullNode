@@ -295,11 +295,11 @@ namespace Stratis.Bitcoin.Consensus
         /// </remarks>
         protected virtual async Task ProcessHeadersAsync(INetworkPeer peer, List<BlockHeader> headers)
         {
-            this.logger.LogDebug("Received {0} headers. First: '{1}'  Last: '{2}'.", headers.Count, headers.FirstOrDefault()?.ToString(), headers.LastOrDefault()?.ToString());
+            this.logger.LogTrace("Received {0} headers. First: '{1}'  Last: '{2}'.", headers.Count, headers.FirstOrDefault()?.ToString(), headers.LastOrDefault()?.ToString());
 
             if (headers.Count == 0)
             {
-                this.logger.LogDebug("Headers payload with no headers was received. Assuming we're synced with the peer.");
+                this.logger.LogTrace("Headers payload with no headers was received. Assuming we're synced with the peer.");
                 this.logger.LogTrace("(-)[NO_HEADERS]");
                 return;
             }
