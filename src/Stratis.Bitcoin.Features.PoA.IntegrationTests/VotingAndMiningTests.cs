@@ -41,6 +41,18 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
             this.node3 = this.builder.CreatePoANode(this.poaNetwork, this.poaNetwork.FederationKey3).Start();
         }
 
+        private void SimulateJoinFederationRequestMonitor(VotingManager votingManager, VotingData votingData, ChainedHeader chainedHeader)
+        {
+            // Create a pending poll so that the scheduled vote is not "sanitized" away.
+            votingManager.PollsRepository.WithTransaction(transaction =>
+            {
+                votingManager.CreatePendingPoll(transaction, votingData, chainedHeader);
+                transaction.Commit();
+            });
+
+            votingManager.ScheduleVote(votingData);
+        }
+
         [Fact]
         // Checks that fed members cant vote twice.
         // Checks that miner adds voting data if it exists.
@@ -60,10 +72,15 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
                 Data = fedMemberBytes
             };
 
+            // Create a pending poll (simulating a JoinFederationRequestMonitor) so that the votes are not sanitized away.
+            ChainedHeader pollStart = this.node1.FullNode.NodeService<ChainIndexer>().Tip;
+            SimulateJoinFederationRequestMonitor(this.node1.FullNode.NodeService<VotingManager>(), votingData, pollStart);
+            SimulateJoinFederationRequestMonitor(this.node2.FullNode.NodeService<VotingManager>(), votingData, pollStart);
+
             this.node1.FullNode.NodeService<VotingManager>().ScheduleVote(votingData);
 
             Assert.Single(this.node1.FullNode.NodeService<VotingManager>().GetScheduledVotes());
-            Assert.Empty(this.node1.FullNode.NodeService<VotingManager>().GetPendingPolls());
+            Assert.Single(this.node1.FullNode.NodeService<VotingManager>().GetPendingPolls());
 
             await this.node1.MineBlocksAsync(1);
             CoreNodePoAExtensions.WaitTillSynced(this.node1, this.node2);
@@ -109,6 +126,12 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
                 Key = VoteKey.AddFederationMember,
                 Data = fedMemberBytes
             };
+
+            // Create a pending poll (simulating a JoinFederationRequestMonitor) so that the votes are not sanitized away.
+            ChainedHeader pollStart = this.node1.FullNode.NodeService<ChainIndexer>().Tip;
+            SimulateJoinFederationRequestMonitor(this.node1.FullNode.NodeService<VotingManager>(), votingData, pollStart);
+            SimulateJoinFederationRequestMonitor(this.node2.FullNode.NodeService<VotingManager>(), votingData, pollStart);
+            SimulateJoinFederationRequestMonitor(this.node3.FullNode.NodeService<VotingManager>(), votingData, pollStart);
 
             this.node1.FullNode.NodeService<VotingManager>().ScheduleVote(votingData);
             this.node2.FullNode.NodeService<VotingManager>().ScheduleVote(votingData);
@@ -198,16 +221,20 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
         {
             TestHelper.Connect(this.node1, this.node2);
 
-            byte[] fedMemberBytes = (this.poaNetwork.Consensus.ConsensusFactory as PoAConsensusFactory).SerializeFederationMember(new FederationMember(this.testPubKey));
-            var votingData = new VotingData() { Key = VoteKey.AddFederationMember, Data = fedMemberBytes };
+            // Create a pending poll (simulating a JoinFederationRequestMonitor) so that the votes are not sanitized away.
+            VotingData votingData = GetVotingData(this.testPubKey, true);
+            ChainedHeader pollStart = this.node1.FullNode.NodeService<ChainIndexer>().Tip;
+            SimulateJoinFederationRequestMonitor(this.node1.FullNode.NodeService<VotingManager>(), votingData, pollStart);
+            SimulateJoinFederationRequestMonitor(this.node2.FullNode.NodeService<VotingManager>(), votingData, pollStart);
+            SimulateJoinFederationRequestMonitor(this.node3.FullNode.NodeService<VotingManager>(), votingData, pollStart);
+
             this.node1.FullNode.NodeService<VotingManager>().ScheduleVote(votingData);
 
-            votingData = new VotingData() { Key = VoteKey.KickFederationMember, Data = fedMemberBytes };
-            this.node1.FullNode.NodeService<VotingManager>().ScheduleVote(votingData);
+            VotingData kickVotingData = GetVotingData(this.testPubKey, false);
+            this.node1.FullNode.NodeService<VotingManager>().ScheduleVote(kickVotingData);
             await this.node1.MineBlocksAsync(1);
             CoreNodePoAExtensions.WaitTillSynced(this.node1, this.node2);
 
-            votingData = new VotingData() { Key = VoteKey.AddFederationMember, Data = fedMemberBytes };
             this.node2.FullNode.NodeService<VotingManager>().ScheduleVote(votingData);
             await this.node2.MineBlocksAsync(1);
             CoreNodePoAExtensions.WaitTillSynced(this.node1, this.node2);
@@ -219,28 +246,43 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
             TestHelper.Connect(this.node2, this.node3);
             CoreNodePoAExtensions.WaitTillSynced(this.node1, this.node2, this.node3);
 
-            Assert.Empty(this.node2.FullNode.NodeService<VotingManager>().GetPendingPolls());
+            // Only retains pending poll created at height 0 by SimulateJoinFederationRequestMonitor.
+            Assert.Single(this.node2.FullNode.NodeService<VotingManager>().GetPendingPolls());
             Assert.Empty(this.node2.FullNode.NodeService<VotingManager>().GetApprovedPolls());
         }
 
         private async Task AllVoteAndMineAsync(PubKey key, bool add)
         {
-            await this.VoteAndMineBlockAsync(key, add, this.node1);
-            await this.VoteAndMineBlockAsync(key, add, this.node2);
-            await this.VoteAndMineBlockAsync(key, add, this.node3);
+            VotingData votingData = GetVotingData(key, add);
+
+            // Create a pending poll (simulating a JoinFederationRequestMonitor) so that the votes are not sanitized away.
+            if (add)
+            {
+                ChainedHeader pollStart = this.node1.FullNode.NodeService<ChainIndexer>().Tip;
+                SimulateJoinFederationRequestMonitor(this.node1.FullNode.NodeService<VotingManager>(), votingData, pollStart);
+                SimulateJoinFederationRequestMonitor(this.node2.FullNode.NodeService<VotingManager>(), votingData, pollStart);
+                SimulateJoinFederationRequestMonitor(this.node3.FullNode.NodeService<VotingManager>(), votingData, pollStart);
+            }
+
+            await this.VoteAndMineBlockAsync(votingData, this.node1);
+            await this.VoteAndMineBlockAsync(votingData, this.node2);
+            await this.VoteAndMineBlockAsync(votingData, this.node3);
 
             await this.node1.MineBlocksAsync((int)this.poaNetwork.Consensus.MaxReorgLength + 1);
         }
 
-        private async Task VoteAndMineBlockAsync(PubKey key, bool add, CoreNode node)
+        private VotingData GetVotingData(PubKey key, bool add)
         {
             byte[] fedMemberBytes = (this.poaNetwork.Consensus.ConsensusFactory as PoAConsensusFactory).SerializeFederationMember(new FederationMember(key));
-            var votingData = new VotingData()
+            return new VotingData()
             {
                 Key = add ? VoteKey.AddFederationMember : VoteKey.KickFederationMember,
                 Data = fedMemberBytes
             };
+        }
 
+        private async Task VoteAndMineBlockAsync(VotingData votingData, CoreNode node)
+        {
             node.FullNode.NodeService<VotingManager>().ScheduleVote(votingData);
 
             await node.MineBlocksAsync(1);
