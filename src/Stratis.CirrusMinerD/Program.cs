@@ -101,6 +101,10 @@ namespace Stratis.CirrusMinerD
                 })
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()
+                .AddSignalR(options =>
+                {
+                    DaemonConfiguration.ConfigureSignalRForCirrus(options);
+                })
                 .Build();
 
             return node;
@@ -173,6 +177,10 @@ namespace Stratis.CirrusMinerD
                 .UseWallet()
                 .AddSQLiteWalletRepository()
                 .AddPowPosMining(true)
+                .AddSignalR(options =>
+                {
+                    DaemonConfiguration.ConfigureSignalRForCirrus(options);
+                })
                 .Build();
 
             return node;
