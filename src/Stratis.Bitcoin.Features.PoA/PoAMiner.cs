@@ -425,7 +425,7 @@ namespace Stratis.Bitcoin.Features.PoA
                     this.logger.LogWarning("This node is no longer a federation member!");
 
                     throw new OperationCanceledException();
-                }                
+                }
 
                 await Task.Delay(TimeSpan.FromMilliseconds(100), this.cancellation.Token).ConfigureAwait(false);
             }
@@ -562,7 +562,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
             if (scheduledVotes.Count == 0)
             {
-                this.logger.LogTrace("(-)[NO_DATA]");
+                this.logger.LogDebug("There are no votes to add to this block.");
                 return;
             }
 
@@ -574,6 +574,14 @@ namespace Stratis.Bitcoin.Features.PoA
             var votingOutputScript = new Script(OpcodeType.OP_RETURN, Op.GetPushOp(votingData.ToArray()));
 
             blockTemplate.Block.Transactions[0].AddOutput(Money.Zero, votingOutputScript);
+
+            foreach (VotingData scheduledVote in scheduledVotes)
+            {
+                if (scheduledVote.Key == VoteKey.AddFederationMember || scheduledVote.Key == VoteKey.KickFederationMember)
+                    this.logger.LogDebug($"{scheduledVote.Key} vote added to block for member '{this.votingManager.GetMemberVotedOn(scheduledVote).PubKey}'.");
+                else
+                    this.logger.LogDebug($"{scheduledVote.Key} vote added to block.");
+            }
         }
 
         [NoTrace]

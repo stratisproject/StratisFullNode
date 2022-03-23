@@ -142,7 +142,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 this.SanitizeScheduledPollsLocked();
             }
 
-            this.logger.LogDebug("Vote was scheduled with key: {0}.", votingData.Key);
+            if (votingData.Key == VoteKey.AddFederationMember || votingData.Key == VoteKey.KickFederationMember)
+                this.logger.LogDebug($"{votingData.Key} vote scheduled for member '{this.GetMemberVotedOn(votingData).PubKey}'.");
+            else
+                this.logger.LogDebug($"{votingData.Key} vote scheduled.");
         }
 
         /// <summary>Provides a copy of scheduled voting data.</summary>
@@ -192,28 +195,33 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 List<Poll> pendingPolls = this.GetPendingPolls().ToList();
                 List<Poll> approvedPolls = this.GetApprovedPolls().Where(x => !x.IsExecuted).ToList();
 
-                int release1300ActivationHeight = 0;
-                if (this.nodeDeployments?.BIP9.ArraySize > 0 /* Not NoBIP9Deployments */)
-                    release1300ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[0 /* Release1300 */].ActivationHeight;
-
                 bool IsTooOldToVoteOn(Poll poll) => poll.IsPending && (this.chainIndexer.Tip.Height - poll.PollStartBlockData.Height) >= this.poaConsensusOptions.PollExpiryBlocks;
 
-                bool IsValid(VotingData currentScheduledData)
+                bool ShouldNotExistYet(Poll poll) => poll.IsPending && (this.chainIndexer.Tip.Height - poll.PollStartBlockData.Height) < 0;
+
+                bool IsValid(VotingData votingData)
                 {
-                    if (currentScheduledData.Key == VoteKey.AddFederationMember)
+                    // Remove scheduled voting data that relate to too-old pending polls or rewound blocks.
+                    if (pendingPolls.Any(x => x.VotingData == votingData && (ShouldNotExistYet(x) || IsTooOldToVoteOn(x))))
                     {
-                        // "Add member" votes must have pending polls created by the JoinFederationRequestMonitor (if this behavior was active in the monitor).
-                        if (!pendingPolls.Any(x => x.VotingData == currentScheduledData && x.PollStartBlockData.Height >= release1300ActivationHeight))
-                            return false;
+                        if (votingData.Key == VoteKey.AddFederationMember || votingData.Key == VoteKey.KickFederationMember)
+                            this.logger.LogDebug($"Removing {votingData.Key} scheduled vote for member '{this.GetMemberVotedOn(votingData).PubKey}'.");
+                        else
+                            this.logger.LogDebug($"Removing {votingData.Key} scheduled vote.");
+
+                        return false;
                     }
 
-                    // Remove scheduled voting data that relate to too-old pending polls.
-                    if (pendingPolls.Any(x => x.VotingData == currentScheduledData && IsTooOldToVoteOn(x)))
-                        return false;
-
                     // Remove scheduled voting data that can be found in finished polls that were not yet executed.
-                    if (approvedPolls.Any(x => x.VotingData == currentScheduledData))
+                    if (approvedPolls.Any(x => x.VotingData == votingData))
+                    {
+                        if (votingData.Key == VoteKey.AddFederationMember || votingData.Key == VoteKey.KickFederationMember)
+                            this.logger.LogDebug($"Removing {votingData.Key} scheduled vote for member '{this.GetMemberVotedOn(votingData).PubKey}' from approved polls.");
+                        else
+                            this.logger.LogDebug($"Removing {votingData.Key} scheduled vote.");
+
                         return false;
+                    }
 
                     return true;
                 }
@@ -548,6 +556,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     if (rawVotingData == null)
                     {
                         this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader);
+                        this.logger.LogTrace($"'{chBlock.ChainedHeader}' does not contain any voting data.");
                         return;
                     }
 
