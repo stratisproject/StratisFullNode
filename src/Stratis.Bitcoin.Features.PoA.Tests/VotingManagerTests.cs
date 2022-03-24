@@ -33,11 +33,18 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         {
             this.federationManager.SetPrivatePropertyValue(typeof(FederationManager), nameof(this.federationManager.IsFederationMember), true);
 
-            this.votingManager.ScheduleVote(new VotingData());
+            PubKey memberPubKey = (new Key()).PubKey;
+            var votingData = new VotingData()
+            {
+                Key = VoteKey.AddFederationMember,
+                Data = memberPubKey.ToBytes()
+            };
+
+            this.votingManager.ScheduleVote(votingData);
 
             Assert.Single(this.votingManager.GetScheduledVotes());
 
-            this.votingManager.ScheduleVote(new VotingData());
+            this.votingManager.ScheduleVote(votingData);
 
             Assert.Single(this.votingManager.GetAndCleanScheduledVotes());
 
