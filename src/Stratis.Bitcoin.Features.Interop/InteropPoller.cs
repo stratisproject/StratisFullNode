@@ -250,7 +250,11 @@ namespace Stratis.Bitcoin.Features.Interop
                         BigInteger blockHeight = await supportedChain.Value.GetBlockHeightAsync().ConfigureAwait(false);
 
                         if (this.lastPolledBlock[supportedChain.Key] < (blockHeight - DestinationChainReorgWindow))
-                            await PollBlockForBurnsAndTransfersAsync(supportedChain, blockHeight).ConfigureAwait(false);
+                        {
+                            this.logger.Info($"[{supportedChain.Key}] Polling for burns and transfers, last polled block: {this.lastPolledBlock[supportedChain.Key]}; chain height: {blockHeight}");
+
+                            await PollBlockForBurnsAndTransfersAsync(supportedChain).ConfigureAwait(false);
+                        }
                     }
                 }
                 catch (Exception e)
@@ -285,7 +289,10 @@ namespace Stratis.Bitcoin.Features.Interop
                     ConsensusTipModel cirrusTip = await this.cirrusClient.GetConsensusTipAsync().ConfigureAwait(false);
 
                     if (this.lastPolledBlock[DestinationChain.CIRRUS] < (cirrusTip.TipHeight - DestinationChainReorgWindow))
-                        await PollCirrusForTransfersAsync(cirrusTip.TipHeight).ConfigureAwait(false);
+                    {
+                        this.logger.Info($"[CIRRUS] Polling for transfers, last polled block: {this.lastPolledBlock[DestinationChain.CIRRUS]}; chain height: {cirrusTip.TipHeight}");
+                        await PollCirrusForTransfersAsync().ConfigureAwait(false);
+                    }
                 }
                 catch (Exception e)
                 {
