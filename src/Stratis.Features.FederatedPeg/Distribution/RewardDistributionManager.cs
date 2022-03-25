@@ -63,21 +63,18 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
         public List<Recipient> DistributeToMultisigNodes(int blockHeight, Money fee)
         {
-            // Retrieve the federation at the given block height.
-            List<IFederationMember> federation = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeader(blockHeight));
-
             var multiSigMinerScripts = new List<Script>();
 
-            // Start checking if a multisig member mined a block at the current tip less max reorg blocks.
-            var startHeight = this.chainIndexer.Tip.Height - this.epoch;
+            // Start checking if a multisig member mined a block at the conversion deposit block height tip less epoch window blocks.
+            var startHeight = blockHeight - this.epochWindow;
 
             // Inspect the round of blocks equal to the federation size
             // and determine if a multisig member mined the block.
             // If so add the list of multisig members to pay.
 
-            // Look back at least 4 federation sizes to ensure that we collect enough data on the multisig
+            // Look back at least 8 federation sizes to ensure that we collect enough data on the multisig
             // members that mined.
-            var inspectionRange = federation.Count * 4;
+            var inspectionRange = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeader(blockHeight)).Count * 8;
 
             for (int i = inspectionRange; i >= 0; i--)
             {
@@ -110,7 +107,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
                     multiSigMinerScripts.Add(minerScript);
             }
 
-            this.logger.LogInformation("Fee reward to multisig node at main chain height {0} will distribute {1} STRAX between {2} multisig mining keys.", blockHeight, fee, multiSigMinerScripts.Count);
+            this.logger.LogInformation($"Fee reward to multisig; Conversion deposit height {blockHeight}; fee {fee}; keys {multiSigMinerScripts.Count}; start height {startHeight}; inspection range {inspectionRange}");
 
             Money feeReward = fee / multiSigMinerScripts.Count;
 
