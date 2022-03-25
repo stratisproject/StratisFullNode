@@ -250,7 +250,11 @@ namespace Stratis.Bitcoin.Features.Interop
                         BigInteger blockHeight = await supportedChain.Value.GetBlockHeightAsync().ConfigureAwait(false);
 
                         if (this.lastPolledBlock[supportedChain.Key] < (blockHeight - DestinationChainReorgWindow))
-                            await PollBlockForBurnsAndTransfersAsync(supportedChain, blockHeight).ConfigureAwait(false);
+                        {
+                            this.logger.Info($"[{supportedChain.Key}] Polling for burns and transfers, last polled block: {this.lastPolledBlock[supportedChain.Key]}; chain height: {blockHeight}");
+
+                            await PollBlockForBurnsAndTransfersAsync(supportedChain).ConfigureAwait(false);
+                        }
                     }
                 }
                 catch (Exception e)
@@ -285,7 +289,10 @@ namespace Stratis.Bitcoin.Features.Interop
                     ConsensusTipModel cirrusTip = await this.cirrusClient.GetConsensusTipAsync().ConfigureAwait(false);
 
                     if (this.lastPolledBlock[DestinationChain.CIRRUS] < (cirrusTip.TipHeight - DestinationChainReorgWindow))
-                        await PollCirrusForTransfersAsync(cirrusTip.TipHeight).ConfigureAwait(false);
+                    {
+                        this.logger.Info($"[CIRRUS] Polling for transfers, last polled block: {this.lastPolledBlock[DestinationChain.CIRRUS]}; chain height: {cirrusTip.TipHeight}");
+                        await PollCirrusForTransfersAsync().ConfigureAwait(false);
+                    }
                 }
                 catch (Exception e)
                 {
@@ -381,7 +388,8 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 while (this.lastPolledBlock[supportedChain.Key] < (blockHeight - DestinationChainReorgWindow - DestinationChainSyncToBuffer))
                 {
-                    await PollBlockForBurnsAndTransfersAsync(supportedChain, blockHeight).ConfigureAwait(false);
+                    this.logger.Info($"[{supportedChain.Key}] Polling for burns and transfers, last polled block: {this.lastPolledBlock[supportedChain.Key]}; chain height: {blockHeight}");
+                    await PollBlockForBurnsAndTransfersAsync(supportedChain).ConfigureAwait(false);
                 }
             }
         }
@@ -397,18 +405,20 @@ namespace Stratis.Bitcoin.Features.Interop
 
             while (this.lastPolledBlock[DestinationChain.CIRRUS] < (cirrusTip.TipHeight - DestinationChainReorgWindow - DestinationChainSyncToBuffer))
             {
-                await PollCirrusForTransfersAsync(cirrusTip.TipHeight).ConfigureAwait(false);
+                this.logger.Info($"[CIRRUS] Polling for transfers, last polled block: {this.lastPolledBlock[DestinationChain.CIRRUS]}; chain height: {cirrusTip.TipHeight}");
+
+                await PollCirrusForTransfersAsync().ConfigureAwait(false);
             }
         }
 
-        private async Task PollCirrusForTransfersAsync(int blockHeight)
+        private async Task PollCirrusForTransfersAsync()
         {
-            this.logger.Info($"[CIRRUS] Polling for transfers, last polled block: {this.lastPolledBlock[DestinationChain.CIRRUS]}; chain height: {blockHeight}");
+            var applicableHeight = (int)this.lastPolledBlock[DestinationChain.CIRRUS];
 
-            NBitcoin.Block block = await this.cirrusClient.GetBlockByHeightAsync(blockHeight).ConfigureAwait(false);
+            NBitcoin.Block block = await this.cirrusClient.GetBlockByHeightAsync(applicableHeight).ConfigureAwait(false);
             if (block == null)
             {
-                this.logger.Info($"Unable to retrieve block with height {blockHeight}.");
+                this.logger.Info($"Unable to retrieve block at height {applicableHeight}.");
 
                 // We shouldn't update the block height before returning because we might skip a block. 
                 return;
@@ -499,7 +509,7 @@ namespace Stratis.Bitcoin.Features.Interop
                                 Money.Satoshis(interopConversionRequestFee.Amount),
                                 this.network.ConversionTransactionFeeDistributionDummyAddress,
                                 DestinationChain.CIRRUS,
-                                blockHeight,
+                                applicableHeight,
                                 block.GetHash()
                                ));
 
@@ -520,7 +530,7 @@ namespace Stratis.Bitcoin.Features.Interop
                                         Processed = false,
                                         RequestStatus = ConversionRequestStatus.Unprocessed,
                                         Amount = ConvertBigIntegerToUint256(src20burn.Value),
-                                        BlockHeight = blockHeight,
+                                        BlockHeight = applicableHeight,
                                         DestinationAddress = src20burn.To,
                                         DestinationChain = DestinationChain.ETH,
                                         TokenContract = contractMapping.Key
@@ -539,7 +549,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 }
                 catch (Exception e)
                 {
-                    this.logger.Error("Error processing Cirrus block {0} for transfers: {1}", blockHeight, e);
+                    this.logger.Error("Error processing Cirrus block {0} for transfers: {1}", applicableHeight, e);
                 }
             }
 
@@ -637,10 +647,8 @@ namespace Stratis.Bitcoin.Features.Interop
             return transfer;
         }
 
-        private async Task PollBlockForBurnsAndTransfersAsync(KeyValuePair<DestinationChain, IETHClient> supportedChain, BigInteger blockHeight)
+        private async Task PollBlockForBurnsAndTransfersAsync(KeyValuePair<DestinationChain, IETHClient> supportedChain)
         {
-            this.logger.Info($"[{supportedChain.Key}] Polling for burns and transfers, last polled block: {this.lastPolledBlock[supportedChain.Key]}; chain height: {blockHeight}");
-
             BlockWithTransactions block = await supportedChain.Value.GetBlockAsync(this.lastPolledBlock[supportedChain.Key]).ConfigureAwait(false);
 
             // TODO: Move this check into the same method as the transfers to save iterating over the entire Ethereum block twice
