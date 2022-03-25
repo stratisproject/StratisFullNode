@@ -6,6 +6,7 @@ using NBitcoin;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.PoA;
+using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Wallet;
 using Stratis.Features.PoA.Collateral;
 
@@ -20,6 +21,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
         private const int DefaultEpoch = 240;
 
         private readonly ChainIndexer chainIndexer;
+        private readonly IConversionRequestRepository conversionRequestRepository;
         private readonly IConsensusManager consensusManager;
         private readonly CollateralHeightCommitmentEncoder encoder;
         private readonly int epoch;
@@ -38,10 +40,16 @@ namespace Stratis.Features.FederatedPeg.Distribution
         // We pay no attention to whether a miner has been kicked since the last distribution or not.
         // If they produced an accepted block, they get their reward.
 
-        public RewardDistributionManager(Network network, ChainIndexer chainIndexer, IConsensusManager consensusManager, IFederationHistory federationHistory)
+        public RewardDistributionManager(
+            Network network,
+            ChainIndexer chainIndexer,
+            IConversionRequestRepository conversionRequestRepository,
+            IConsensusManager consensusManager,
+            IFederationHistory federationHistory)
         {
             this.network = network;
             this.chainIndexer = chainIndexer;
+            this.conversionRequestRepository = conversionRequestRepository;
             this.consensusManager = consensusManager;
             this.logger = LogManager.GetCurrentClassLogger();
             this.federationHistory = federationHistory;
@@ -61,12 +69,17 @@ namespace Stratis.Features.FederatedPeg.Distribution
             }
         }
 
-        public List<Recipient> DistributeToMultisigNodes(int blockHeight, Money fee)
+        /// <inheritdoc />
+        public List<Recipient> DistributeToMultisigNodes(uint256 depositId, Money fee)
         {
             var multiSigMinerScripts = new List<Script>();
 
+            // If we are distributing a fee to the multisig we need look at the height that the deposit or burn was received on Cirrus.
+            // For Strax to wStrax transfers and SRC20 to ERC20 the deposit id will match the conversion request id.
+            ConversionRequest conversionRequest = this.conversionRequestRepository.Get(depositId.ToString());
+
             // Start checking if a multisig member mined a block at the conversion deposit block height tip less epoch window blocks.
-            var startHeight = blockHeight - this.epochWindow;
+            var startHeight = conversionRequest.BlockHeight - this.epochWindow;
 
             // Inspect the round of blocks equal to the federation size
             // and determine if a multisig member mined the block.
@@ -74,7 +87,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
             // Look back at least 8 federation sizes to ensure that we collect enough data on the multisig
             // members that mined.
-            var inspectionRange = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeader(blockHeight)).Count * 8;
+            var inspectionRange = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeader(conversionRequest.BlockHeight)).Count * 8;
 
             for (int i = inspectionRange; i >= 0; i--)
             {
@@ -107,7 +120,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
                     multiSigMinerScripts.Add(minerScript);
             }
 
-            this.logger.LogInformation($"Fee reward to multisig; Conversion deposit height {blockHeight}; fee {fee}; keys {multiSigMinerScripts.Count}; start height {startHeight}; inspection range {inspectionRange}");
+            this.logger.LogInformation($"Fee reward to multisig; Conversion deposit height {conversionRequest.BlockHeight}; fee {fee}; keys {multiSigMinerScripts.Count}; start height {startHeight}; inspection range {inspectionRange}");
 
             Money feeReward = fee / multiSigMinerScripts.Count;
 
