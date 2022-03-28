@@ -444,6 +444,15 @@ namespace Stratis.Bitcoin.Features.Interop
                         continue;
                     }
 
+                    lock (this.repositoryLock)
+                    {
+                        if (this.conversionRequestRepository.Get(receipt.TransactionHash) != null)
+                        {
+                            this.logger.Info($"SRC20 transfer transaction '{receipt.TransactionHash}' already exists, ignoring.");
+                            continue;
+                        }
+                    }
+
                     // Filter out calls to contracts that we aren't monitoring.
                     // Note: The contract call for the burn is made against the SRC20/721 contract, but the burn event log is emitted with a To address of zero.
                     if (!watchedSrc20Contracts.Contains(receipt.To) && !watchedSrc721Contracts.Contains(receipt.To))
@@ -490,15 +499,44 @@ namespace Stratis.Bitcoin.Features.Interop
                                 }
                             }
 
+                            var request = new ConversionRequest()
+                            {
+                                RequestId = receipt.TransactionHash,
+                                RequestType = ConversionRequestType.Burn,
+                                Amount = ConvertBigIntegerToUint256(src20burn.Value),
+                                BlockHeight = applicableHeight,
+                                DestinationAddress = src20burn.To,
+                                DestinationChain = DestinationChain.ETH,
+                            };
+
                             if (conversionFeeOutput == null)
                             {
                                 this.logger.Warn("Transfer transaction '{0}' has no fee output.", receipt.TransactionHash);
+                                request.Processed = true;
+                                request.RequestStatus = ConversionRequestStatus.FailedNoFeeOutput;
+
+                                lock (this.repositoryLock)
+                                {
+                                    this.conversionRequestRepository.Save(request);
+                                }
+
                                 continue;
                             }
 
                             if (Money.Satoshis(interopConversionRequestFee.Amount) >= conversionFeeOutput.Value)
                             {
-                                this.logger.Warn("Transfer transaction '{0}' has an insufficient fee.", receipt.TransactionHash);
+                                var message = $"Transfer transaction '{receipt.TransactionHash}' has an insufficient fee; estimated fee '{Money.Satoshis(interopConversionRequestFee.Amount).ToUnit(MoneyUnit.BTC)}'";
+                                this.logger.Warn(message);
+
+                                request.Processed = true;
+                                request.RequestStatus = ConversionRequestStatus.FailedInsufficientFee;
+                                request.StatusMessage = message;
+
+                                lock (this.repositoryLock)
+                                {
+                                    this.conversionRequestRepository.Save(request);
+                                }
+
                                 continue;
                             }
 
@@ -513,33 +551,20 @@ namespace Stratis.Bitcoin.Features.Interop
                                 block.GetHash()
                                ));
 
+
+                            KeyValuePair<string, string> contractMapping = this.interopSettings.GetSettingsByChain(DestinationChain.ETH).WatchedErc20Contracts.First(c => c.Value == receipt.To);
+                            SupportedContractAddress token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.NativeNetworkAddress.ToLowerInvariant() == contractMapping.Key.ToLowerInvariant());
+                            var tokenString = token == null ? contractMapping.Key : $"{token.TokenName}-{contractMapping.Key}";
+
+                            this.logger.Info($"A transfer request from CRS to '{tokenString}' will be processed.");
+
+                            request.Processed = false;
+                            request.RequestStatus = ConversionRequestStatus.Unprocessed;
+                            request.TokenContract = contractMapping.Key;
+
                             lock (this.repositoryLock)
                             {
-                                if (this.conversionRequestRepository.Get(receipt.TransactionHash) == null)
-                                {
-                                    KeyValuePair<string, string> contractMapping = this.interopSettings.GetSettingsByChain(DestinationChain.ETH).WatchedErc20Contracts.First(c => c.Value == receipt.To);
-                                    SupportedContractAddress token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.NativeNetworkAddress.ToLowerInvariant() == contractMapping.Key.ToLowerInvariant());
-                                    var tokenString = token == null ? contractMapping.Key : $"{token.TokenName}-{contractMapping.Key}";
-
-                                    this.logger.Info($"A transfer request from CRS to '{tokenString}' will be processed.");
-
-                                    this.conversionRequestRepository.Save(new ConversionRequest()
-                                    {
-                                        RequestId = receipt.TransactionHash,
-                                        RequestType = ConversionRequestType.Burn,
-                                        Processed = false,
-                                        RequestStatus = ConversionRequestStatus.Unprocessed,
-                                        Amount = ConvertBigIntegerToUint256(src20burn.Value),
-                                        BlockHeight = applicableHeight,
-                                        DestinationAddress = src20burn.To,
-                                        DestinationChain = DestinationChain.ETH,
-                                        TokenContract = contractMapping.Key
-                                    });
-                                }
-                                else
-                                {
-                                    this.logger.Info("SRC20 transfer transaction '{0}' already exists, ignoring.", receipt.TransactionHash);
-                                }
+                                this.conversionRequestRepository.Save(request);
                             }
                         }
 
