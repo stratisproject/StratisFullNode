@@ -24,7 +24,9 @@ namespace Stratis.Features.FederatedPeg.Conversion
         OriginatorSubmitting,
 
         Failed,
-        Stale // Set once a request went past max re-org block and was never submitted for processing.
+        Stale, // Set once a request went past max re-org block and was never submitted for processing.
+        FailedNoFeeOutput,
+        FailedInsufficientFee
     }
 
     /// <summary>Request to mint or burn wSTRAX.</summary>
