@@ -205,7 +205,8 @@ namespace Stratis.Bitcoin.Features.ExternalApi
         public decimal EstimateConversionTransactionFee()
         {
             // The approximate USD fee that will be applied to conversion transactions, over and above the computed gas cost.
-            const decimal ConversionTransactionFee = 220;
+            // $2 x 13 multisig members
+            const decimal ConversionTransactionFee = 26;
 
             decimal ethereumUsdPrice = this.GetEthereumPrice();
 
