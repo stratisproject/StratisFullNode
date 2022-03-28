@@ -503,8 +503,6 @@ namespace Stratis.Bitcoin.Features.Interop
                             {
                                 RequestId = receipt.TransactionHash,
                                 RequestType = ConversionRequestType.Burn,
-                                Processed = false,
-                                RequestStatus = ConversionRequestStatus.Unprocessed,
                                 Amount = ConvertBigIntegerToUint256(src20burn.Value),
                                 BlockHeight = applicableHeight,
                                 DestinationAddress = src20burn.To,
@@ -514,7 +512,9 @@ namespace Stratis.Bitcoin.Features.Interop
                             if (conversionFeeOutput == null)
                             {
                                 this.logger.Warn("Transfer transaction '{0}' has no fee output.", receipt.TransactionHash);
+                                request.Processed = true;
                                 request.RequestStatus = ConversionRequestStatus.FailedNoFeeOutput;
+
                                 lock (this.repositoryLock)
                                 {
                                     this.conversionRequestRepository.Save(request);
@@ -527,6 +527,8 @@ namespace Stratis.Bitcoin.Features.Interop
                             {
                                 var message = $"Transfer transaction '{receipt.TransactionHash}' has an insufficient fee; estimated fee '{Money.Satoshis(interopConversionRequestFee.Amount).ToUnit(MoneyUnit.BTC)}'";
                                 this.logger.Warn(message);
+
+                                request.Processed = true;
                                 request.RequestStatus = ConversionRequestStatus.FailedInsufficientFee;
                                 request.StatusMessage = message;
 
@@ -556,6 +558,8 @@ namespace Stratis.Bitcoin.Features.Interop
 
                             this.logger.Info($"A transfer request from CRS to '{tokenString}' will be processed.");
 
+                            request.Processed = false;
+                            request.RequestStatus = ConversionRequestStatus.Unprocessed;
                             request.TokenContract = contractMapping.Key;
 
                             lock (this.repositoryLock)
