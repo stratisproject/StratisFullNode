@@ -440,7 +440,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     // This is probably a normal Cirrus transfer (if null), or a failed contract call that should be ignored.
                     if (receipt == null || !receipt.Success)
                     {
-                        this.logger.Warn($"Transaction {transaction.GetHash()} did not contain a receipt.");
+                        this.logger.Debug($"Transaction {transaction.GetHash()} did not contain a receipt.");
                         continue;
                     }
 
