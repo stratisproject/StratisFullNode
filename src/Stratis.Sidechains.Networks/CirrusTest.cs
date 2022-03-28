@@ -148,7 +148,7 @@ namespace Stratis.Sidechains.Networks
             var bip9Deployments = new CirrusBIP9Deployments()
             {
                 // Deployment will go active once 75% of nodes are on 1.3.0.0 or later.
-                [CirrusBIP9Deployments.Release1300] = new BIP9DeploymentsParameters("Release1300", 0, DateTime.Parse("2022-3-22 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-1-1 +0").ToUnixTimestamp(), BIP9DeploymentsParameters.DefaultTestnetThreshold)
+                [CirrusBIP9Deployments.Release1300] = new BIP9DeploymentsParameters("Release1300", 0, DateTime.Parse("2022-3-28 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-1-1 +0").ToUnixTimestamp(), BIP9DeploymentsParameters.DefaultTestnetThreshold)
             };
 
             this.Consensus = new Consensus(
@@ -237,7 +237,8 @@ namespace Stratis.Sidechains.Networks
                 { 2_600_000, new CheckpointInfo(new uint256("0x272a6bd353d794bdbf0ebfe2846fb45ed63bc0073202fcfbbd0d6820bf2370c4")) },
                 { 2_800_000, new CheckpointInfo(new uint256("0xec789f5b9dec0245b3c81fe9279b403dd233dfb4f4361a18386152c66f88cb87")) },
                 { 2_900_000, new CheckpointInfo(new uint256("0x37650f6df2f43fa6e00eb628f5aa5b728fc80dcabc18a9d071bbf171db4a2f7c")) },
-                { 3_219_570, new CheckpointInfo(new uint256("0xb08c34d0879c65f6e3649eff05853a8d38081d898230beb671b591179f57892d")) }
+                { 3_219_570, new CheckpointInfo(new uint256("0xb08c34d0879c65f6e3649eff05853a8d38081d898230beb671b591179f57892d")) },
+                { 3_275_480, new CheckpointInfo(new uint256("0x70d4dd9bae9db409c0df441d3afb430821f85f166223357a456e4a2ba5c478af")) }
             };
 
             this.DNSSeeds = new List<DNSSeedData>
