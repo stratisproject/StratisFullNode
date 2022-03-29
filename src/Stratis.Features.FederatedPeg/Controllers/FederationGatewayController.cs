@@ -422,16 +422,13 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [HttpDelete]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult DeleteSuspendedTransfers()
+        public IActionResult DeleteSuspendedTransfers([FromBody] DeleteSuspendedTransferModel model)
         {
-            if (this.network.IsTest() || this.network.IsRegTest())
-            {
-                var result = this.crossChainTransferStore.DeleteSuspendedTransfers();
-                return this.Json($"{result} suspended transfers has been removed.");
-            }
+            (bool result, string message) deleteResult = this.crossChainTransferStore.DeleteSuspendedTransfer(new uint256(model.DepositId));
+            if (deleteResult.result)
+                return Ok($"'{model.DepositId}' was deleted.");
 
-            return this.Json($"Deleting suspended transfers is only available on test networks.");
+            return BadRequest(deleteResult.message);
         }
     }
 }
