@@ -660,7 +660,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult ReprocessBurnRequest([FromBody] ResetScanHeightModel model)
+        public IActionResult ResetScanHeight([FromBody] ResetScanHeightModel model)
         {
             try
             {
