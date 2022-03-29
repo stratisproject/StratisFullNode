@@ -416,6 +416,10 @@ namespace Stratis.Bitcoin.Features.BlockStore
         /// <returns>The store tip set by this method.</returns>
         private ChainedHeader RecoverStoreTip()
         {
+            ChainedHeader blockStoreTip = this.chainIndexer.GetHeader(this.blockRepository.TipHashAndHeight.Hash);
+            if (blockStoreTip != null)
+                return blockStoreTip;
+
             int firstNotFound = BinarySearch.BinaryFindFirst((h) => this.chainIndexer[h] == null || this.blockRepository.GetBlock(this.chainIndexer[h].HashBlock) == null, 1, this.chainIndexer.Height);
             if (firstNotFound < 0)
                 return this.chainIndexer.Tip;
