@@ -22,17 +22,15 @@ namespace Stratis.Features.Collateral
         private readonly VotingManager votingManager;
         private readonly Network network;
         private readonly Network counterChainNetwork;
-        private readonly IFederationManager federationManager;
         private readonly NodeDeployments nodeDeployments;
 
-        public JoinFederationRequestMonitor(VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, IFederationManager federationManager, ISignals signals, NodeDeployments nodeDeployments)
+        public JoinFederationRequestMonitor(VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, ISignals signals, NodeDeployments nodeDeployments)
         {
             this.signals = signals;
             this.logger = LogManager.GetCurrentClassLogger();
             this.votingManager = votingManager;
             this.network = network;
             this.counterChainNetwork = counterChainNetworkWrapper.CounterChainNetwork;
-            this.federationManager = federationManager;
             this.nodeDeployments = nodeDeployments;
         }
 
