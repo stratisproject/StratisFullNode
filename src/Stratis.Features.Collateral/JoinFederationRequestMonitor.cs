@@ -49,10 +49,6 @@ namespace Stratis.Features.Collateral
             if (!(this.network.Consensus.ConsensusFactory is CollateralPoAConsensusFactory consensusFactory))
                 return;
 
-            // Only mining federation members vote to include new members.
-            if (this.federationManager.CurrentFederationKey?.PubKey == null)
-                return;
-
             List<IFederationMember> modifiedFederation = null;
 
             List<Transaction> transactions = blockConnectedData.ConnectedBlock.Block.Transactions;
@@ -73,14 +69,6 @@ namespace Stratis.Features.Collateral
                     // Skip if the member already exists.
                     if (this.votingManager.IsFederationMember(request.PubKey))
                         continue;
-
-                    // Only mining federation members vote to include new members.
-                    modifiedFederation ??= this.votingManager.GetModifiedFederation(blockConnectedData.ConnectedBlock.ChainedHeader);
-                    if (!modifiedFederation.Any(m => m.PubKey == this.federationManager.CurrentFederationKey.PubKey))
-                    {
-                        this.logger.LogDebug($"Ignoring as member '{this.federationManager.CurrentFederationKey.PubKey}' is not part of the federation at block '{blockConnectedData.ConnectedBlock.ChainedHeader}'.");
-                        return;
-                    }
 
                     // Check if the collateral amount is valid.
                     decimal collateralAmount = request.CollateralAmount.ToDecimal(MoneyUnit.BTC);
