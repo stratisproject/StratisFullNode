@@ -148,7 +148,7 @@ namespace Stratis.Bitcoin.BlockPulling
         private const int AverageBlockSizeSamplesCount = 1000;
 
         /// <summary>The minimal count of blocks that we can ask for simultaneous download.</summary>
-        private const int MinimalCountOfBlocksBeingDownloaded = 10;
+        private const int MinimalCountOfBlocksBeingDownloaded = 10000;
 
         /// <summary>The maximum blocks being downloaded multiplier. Value of <c>1.1</c> means that we will ask for 10% more than we estimated peers can deliver.</summary>
         private const double MaxBlocksBeingDownloadedMultiplier = 1.1;
