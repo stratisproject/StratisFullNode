@@ -77,14 +77,26 @@ namespace Stratis.Bitcoin.Base.Deployments
         /// </summary>
         /// <param name="indexPrev">The block at which to compute the metrics.</param>
         /// <param name="thresholdStates">The current state of each BIP9 deployment.</param>
+        /// <param name="activationHeights">The activation heights or <c>null</c> depending on whether an activation is active.</param>
         /// <returns>A <see cref="ThresholdStateModel" /> object containg the metrics.</returns>
-        public List<ThresholdStateModel> GetThresholdStateMetrics(ChainedHeader indexPrev, ThresholdState[] thresholdStates)
+        public List<ThresholdStateModel> GetThresholdStateMetrics(ChainedHeader indexPrev, ThresholdState[] thresholdStates, int[] activationHeights = null)
         {
             var thresholdStateModels = new List<ThresholdStateModel>();
             ThresholdState[] array = new ThresholdState[this.consensus.BIP9Deployments.Length];
+            ChainedHeader referenceHeader = indexPrev;
 
             for (int deploymentIndex = 0; deploymentIndex < array.Length; deploymentIndex++)
             {
+                int period = this.consensus.MinerConfirmationWindow;
+
+                if (activationHeights != null)
+                {
+                    if (thresholdStates[deploymentIndex] != ThresholdState.LockedIn && thresholdStates[deploymentIndex] != ThresholdState.Active)
+                        continue;
+
+                    indexPrev = referenceHeader.GetAncestor(activationHeights[deploymentIndex] - period).Previous.Previous;
+                }
+
                 if (this.consensus.BIP9Deployments[deploymentIndex] == null) continue;
 
                 string deploymentName = this.consensus.BIP9Deployments[deploymentIndex]?.Name;
@@ -95,10 +107,10 @@ namespace Stratis.Bitcoin.Base.Deployments
 
                 int votes = 0;
                 int currentHeight = indexPrev.Height + 1;
-                int period = this.consensus.MinerConfirmationWindow;
 
                 // First ancestor outside last confirmation window. If we haven't reached block height 2016 yet this will be the genesis block.
                 int periodStart = (indexPrev.Height - (currentHeight % period)) > 0 ? (indexPrev.Height - (currentHeight % period)) : 0;
+
                 ChainedHeader periodStartsHeader = indexPrev.GetAncestor(periodStart);
 
                 int periodEndsHeight = periodStartsHeader.Height + period;

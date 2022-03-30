@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -74,6 +75,41 @@ namespace Stratis.Bitcoin.Features.Consensus
                 List<ThresholdStateModel> metrics = ruleEngine.NodeDeployments.BIP9.GetThresholdStateMetrics(this.ChainState.ConsensusTip.Previous, thresholdStates);
 
                 return this.Json(metrics);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+
+        /// <summary>
+        /// Gets information about locked in or active deployments.
+        /// </summary>
+        /// <returns>A <see cref="JsonResult"/> object derived from a list of
+        /// <see cref="ThresholdActivationModel"/> objects - one per locked in or active deployment.
+        /// Returns an <see cref="ErrorResult"/> if the method fails.</returns>
+        /// <response code="200">Returns the list of locked in or active deployments.</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route("api/[controller]/lockedindeployments")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult LockedInDeployments()
+        {
+            try
+            {
+                ConsensusRuleEngine ruleEngine = this.ConsensusManager.ConsensusRules as ConsensusRuleEngine;
+
+                // Ensure threshold conditions cached.
+                ThresholdState[] thresholdStates = ruleEngine.NodeDeployments.BIP9.GetStates(this.ChainState.ConsensusTip.Previous);
+
+                int[] activationHeights = ruleEngine.NodeDeployments.BIP9.ActivationHeightProviders.Select(p => p.ActivationHeight).ToArray();
+
+                List<ThresholdStateModel> metrics = ruleEngine.NodeDeployments.BIP9.GetThresholdStateMetrics(this.ChainState.ConsensusTip.Previous, thresholdStates, activationHeights);
+
+                return this.Json(metrics.Select(m => new ThresholdActivationModel() { activationHeight = m.Height + ruleEngine.Network.Consensus.MinerConfirmationWindow + 1, DeploymentIndex = m.DeploymentIndex, DeploymentName = m.DeploymentName, Votes = m.Votes }).ToArray());
             }
             catch (Exception e)
             {
