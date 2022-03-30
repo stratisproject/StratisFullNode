@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -48,8 +47,6 @@ namespace Stratis.Features.Collateral
         {
             if (!(this.network.Consensus.ConsensusFactory is CollateralPoAConsensusFactory consensusFactory))
                 return;
-
-            List<IFederationMember> modifiedFederation = null;
 
             List<Transaction> transactions = blockConnectedData.ConnectedBlock.Block.Transactions;
 
