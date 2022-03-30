@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -23,17 +22,15 @@ namespace Stratis.Features.Collateral
         private readonly VotingManager votingManager;
         private readonly Network network;
         private readonly Network counterChainNetwork;
-        private readonly IFederationManager federationManager;
         private readonly NodeDeployments nodeDeployments;
 
-        public JoinFederationRequestMonitor(VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, IFederationManager federationManager, ISignals signals, NodeDeployments nodeDeployments)
+        public JoinFederationRequestMonitor(VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, ISignals signals, NodeDeployments nodeDeployments)
         {
             this.signals = signals;
             this.logger = LogManager.GetCurrentClassLogger();
             this.votingManager = votingManager;
             this.network = network;
             this.counterChainNetwork = counterChainNetworkWrapper.CounterChainNetwork;
-            this.federationManager = federationManager;
             this.nodeDeployments = nodeDeployments;
         }
 
@@ -48,12 +45,6 @@ namespace Stratis.Features.Collateral
         {
             if (!(this.network.Consensus.ConsensusFactory is CollateralPoAConsensusFactory consensusFactory))
                 return;
-
-            // Only mining federation members vote to include new members.
-            if (this.federationManager.CurrentFederationKey?.PubKey == null)
-                return;
-
-            List<IFederationMember> modifiedFederation = null;
 
             List<Transaction> transactions = blockConnectedData.ConnectedBlock.Block.Transactions;
 
@@ -73,14 +64,6 @@ namespace Stratis.Features.Collateral
                     // Skip if the member already exists.
                     if (this.votingManager.IsFederationMember(request.PubKey))
                         continue;
-
-                    // Only mining federation members vote to include new members.
-                    modifiedFederation ??= this.votingManager.GetModifiedFederation(blockConnectedData.ConnectedBlock.ChainedHeader);
-                    if (!modifiedFederation.Any(m => m.PubKey == this.federationManager.CurrentFederationKey.PubKey))
-                    {
-                        this.logger.LogDebug($"Ignoring as member '{this.federationManager.CurrentFederationKey.PubKey}' is not part of the federation at block '{blockConnectedData.ConnectedBlock.ChainedHeader}'.");
-                        return;
-                    }
 
                     // Check if the collateral amount is valid.
                     decimal collateralAmount = request.CollateralAmount.ToDecimal(MoneyUnit.BTC);
