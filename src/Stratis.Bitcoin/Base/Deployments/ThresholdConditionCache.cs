@@ -90,6 +90,7 @@ namespace Stratis.Bitcoin.Base.Deployments
                 int period = this.consensus.MinerConfirmationWindow;
                 int currentHeight = indexPrev.Height + 1;
 
+                // Activation heights are passed in the use-case of reporting on locked-in deployments.
                 if (activationHeights != null)
                 {
                     if (thresholdStates[deploymentIndex] != ThresholdState.LockedIn && thresholdStates[deploymentIndex] != ThresholdState.Active)
