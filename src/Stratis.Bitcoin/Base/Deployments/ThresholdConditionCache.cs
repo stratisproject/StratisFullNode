@@ -88,13 +88,18 @@ namespace Stratis.Bitcoin.Base.Deployments
             for (int deploymentIndex = 0; deploymentIndex < array.Length; deploymentIndex++)
             {
                 int period = this.consensus.MinerConfirmationWindow;
+                int currentHeight = indexPrev.Height + 1;
 
                 if (activationHeights != null)
                 {
                     if (thresholdStates[deploymentIndex] != ThresholdState.LockedIn && thresholdStates[deploymentIndex] != ThresholdState.Active)
                         continue;
 
-                    indexPrev = referenceHeader.GetAncestor(activationHeights[deploymentIndex] - period).Previous.Previous;
+                    indexPrev = referenceHeader.GetAncestor(activationHeights[deploymentIndex] - period - 1);
+
+                    // The window will be chosen to include this height.
+                    // Its the window with the votes that led to locked-in status.
+                    currentHeight = indexPrev.Height;
                 }
 
                 if (this.consensus.BIP9Deployments[deploymentIndex] == null) continue;
@@ -106,7 +111,6 @@ namespace Stratis.Bitcoin.Base.Deployments
                 long threshold = this.consensus.BIP9Deployments[deploymentIndex].Threshold;
 
                 int votes = 0;
-                int currentHeight = indexPrev.Height + 1;
 
                 // First ancestor outside last confirmation window. If we haven't reached block height 2016 yet this will be the genesis block.
                 int periodStart = (indexPrev.Height - (currentHeight % period)) > 0 ? (indexPrev.Height - (currentHeight % period)) : 0;
@@ -118,9 +122,8 @@ namespace Stratis.Bitcoin.Base.Deployments
                 var hexVersions = new Dictionary<string, int>();
                 int totalBlocks = 0;
 
-                ChainedHeader headerTemp = indexPrev;
-
-                while (headerTemp != periodStartsHeader)
+                // Count votes backwards up to and including the period start block.
+                for (ChainedHeader headerTemp = indexPrev; headerTemp.Height >= periodStartsHeader.Height; headerTemp = headerTemp.Previous)
                 {
                     if (this.Condition(headerTemp, deploymentIndex))
                     {
@@ -135,8 +138,6 @@ namespace Stratis.Bitcoin.Base.Deployments
                         count = 0;
 
                     hexVersions[hexVersion] = count + 1;
-
-                    headerTemp = headerTemp.Previous;
                 }
 
                 // look in the cache for the hash of the first block an item was deployed
