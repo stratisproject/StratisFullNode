@@ -82,12 +82,13 @@ namespace Stratis.Bitcoin.Base.Deployments
         public List<ThresholdStateModel> GetThresholdStateMetrics(ChainedHeader indexPrev, ThresholdState[] thresholdStates, int[] activationHeights = null)
         {
             var thresholdStateModels = new List<ThresholdStateModel>();
-            ThresholdState[] array = new ThresholdState[this.consensus.BIP9Deployments.Length];
             ChainedHeader referenceHeader = indexPrev;
 
-            for (int deploymentIndex = 0; deploymentIndex < array.Length; deploymentIndex++)
+            for (int deploymentIndex = 0; deploymentIndex < this.consensus.BIP9Deployments.Length; deploymentIndex++)
             {
-                if (this.consensus.BIP9Deployments[deploymentIndex] == null) continue;
+                BIP9DeploymentsParameters deployment = this.consensus.BIP9Deployments[deploymentIndex];
+
+                if (deployment == null) continue;
 
                 ThresholdState state = thresholdStates[deploymentIndex];
                 int period = this.consensus.MinerConfirmationWindow;
@@ -114,10 +115,6 @@ namespace Stratis.Bitcoin.Base.Deployments
 
                 // Subsequent code selects the window that includes this height.
                 int currentHeight = indexPrev.Height;
-                string deploymentName = this.consensus.BIP9Deployments[deploymentIndex]?.Name;
-                DateTime? timeStart = this.consensus.BIP9Deployments[deploymentIndex]?.StartTime.Date;
-                DateTime? timeTimeout = this.consensus.BIP9Deployments[deploymentIndex]?.Timeout.Date;
-                long threshold = this.consensus.BIP9Deployments[deploymentIndex].Threshold;
                 int periodStartHeight = currentHeight - (currentHeight % period);
                 int periodEndHeight = periodStartHeight + period - 1;
                 var hexVersions = new Dictionary<string, int>();
@@ -144,15 +141,15 @@ namespace Stratis.Bitcoin.Base.Deployments
 
                 thresholdStateModels.Add(new ThresholdStateModel()
                 {
-                    DeploymentName = deploymentName,
+                    DeploymentName = deployment.Name,
                     DeploymentIndex = deploymentIndex,
                     ConfirmationPeriod = period,
                     Blocks = totalBlocks,
                     Votes = votes,
                     HexVersions = hexVersions,
-                    TimeStart = timeStart,
-                    TimeTimeOut = timeTimeout,
-                    Threshold = threshold,
+                    TimeStart = deployment.StartTime.Date,
+                    TimeTimeOut = deployment.Timeout.Date,
+                    Threshold = deployment.Threshold,
                     Height = currentHeight + 1,
                     SinceHeight = sinceHeight,
                     PeriodStartHeight = periodStartHeight,
