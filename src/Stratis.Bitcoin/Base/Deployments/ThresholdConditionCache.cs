@@ -89,6 +89,7 @@ namespace Stratis.Bitcoin.Base.Deployments
             {
                 if (this.consensus.BIP9Deployments[deploymentIndex] == null) continue;
 
+                ThresholdState state = thresholdStates[deploymentIndex];
                 int period = this.consensus.MinerConfirmationWindow;
                 int sinceHeight = 0;
 
@@ -104,8 +105,7 @@ namespace Stratis.Bitcoin.Base.Deployments
                 }
                 else
                 {
-                    // Look in the cache for the hash of the first block an item was deployed.
-                    ThresholdState state = thresholdStates[deploymentIndex];
+                    // Look in the cache for the hash of the first block an item was deployed.                    
                     KeyValuePair<uint256, ThresholdState?[]> firstSeenHash;
                     if (state != ThresholdState.Started)
                         firstSeenHash = this.cache.FirstOrDefault(c => c.Value[deploymentIndex] == state);
@@ -163,8 +163,8 @@ namespace Stratis.Bitcoin.Base.Deployments
                     SinceHeight = sinceHeight,
                     PeriodStartHeight = periodStartHeight,
                     PeriodEndHeight = periodEndHeight,
-                    StateValue = thresholdStates[deploymentIndex],
-                    ThresholdState = ((ThresholdState) thresholdStates[deploymentIndex]).ToString()
+                    StateValue = state,
+                    ThresholdState = state.ToString()
                 });
             }
 
