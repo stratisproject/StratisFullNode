@@ -105,7 +105,7 @@ namespace Stratis.Bitcoin.Base.Deployments
                 }
                 else
                 {
-                    // Look in the cache for the hash of the first block an item was deployed.                    
+                    // Look in the cache for the hash of the first block an item was deployed.
                     KeyValuePair<uint256, ThresholdState?[]> firstSeenHash;
                     if (state != ThresholdState.Started)
                         firstSeenHash = this.cache.FirstOrDefault(c => c.Value[deploymentIndex] == state);
