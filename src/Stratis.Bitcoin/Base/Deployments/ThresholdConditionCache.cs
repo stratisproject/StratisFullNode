@@ -114,11 +114,11 @@ namespace Stratis.Bitcoin.Base.Deployments
                 int votes = 0;
 
                 // First ancestor outside last confirmation window. If we haven't reached block height 2016 yet this will be the genesis block.
-                int periodStart = (indexPrev.Height - (currentHeight % period)) > 0 ? (indexPrev.Height - (currentHeight % period)) : 0;
+                int periodStart = currentHeight - (currentHeight % period);
 
                 ChainedHeader periodStartsHeader = indexPrev.GetAncestor(periodStart);
 
-                int periodEndsHeight = periodStartsHeader.Height + period;
+                int periodEndsHeight = periodStartsHeader.Height + period - 1;
 
                 var hexVersions = new Dictionary<string, int>();
                 int totalBlocks = 0;
