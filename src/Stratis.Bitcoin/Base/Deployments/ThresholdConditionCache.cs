@@ -96,10 +96,10 @@ namespace Stratis.Bitcoin.Base.Deployments
                     if (thresholdStates[deploymentIndex] != ThresholdState.LockedIn && thresholdStates[deploymentIndex] != ThresholdState.Active)
                         continue;
 
+                    // Choose the last header that's within the window where voting led to locked-in state.
                     indexPrev = referenceHeader.GetAncestor(activationHeights[deploymentIndex] - period - 1);
 
-                    // The window will be chosen to include this height.
-                    // Its the window with the votes that led to locked-in status.
+                    // Subsequent code selects the window that includes this height.
                     currentHeight = indexPrev.Height;
                 }
 
