@@ -114,17 +114,15 @@ namespace Stratis.Bitcoin.Base.Deployments
                 int votes = 0;
 
                 // First ancestor outside last confirmation window. If we haven't reached block height 2016 yet this will be the genesis block.
-                int periodStart = currentHeight - (currentHeight % period);
+                int periodStartHeight = currentHeight - (currentHeight % period);
 
-                ChainedHeader periodStartsHeader = indexPrev.GetAncestor(periodStart);
-
-                int periodEndsHeight = periodStartsHeader.Height + period - 1;
+                int periodEndHeight = periodStartHeight + period - 1;
 
                 var hexVersions = new Dictionary<string, int>();
                 int totalBlocks = 0;
 
                 // Count votes backwards up to and including the period start block.
-                for (ChainedHeader headerTemp = indexPrev; headerTemp.Height >= periodStartsHeader.Height; headerTemp = headerTemp.Previous)
+                for (ChainedHeader headerTemp = indexPrev; headerTemp.Height >= periodStartHeight; headerTemp = headerTemp.Previous)
                 {
                     if (this.Condition(headerTemp, deploymentIndex))
                     {
@@ -164,8 +162,8 @@ namespace Stratis.Bitcoin.Base.Deployments
                     Threshold = threshold,
                     Height = currentHeight,
                     SinceHeight = sinceHeight,
-                    PeriodStartHeight = periodStartsHeader.Height,
-                    PeriodEndHeight = periodEndsHeight,
+                    PeriodStartHeight = periodStartHeight,
+                    PeriodEndHeight = periodEndHeight,
                     StateValue = thresholdStates[deploymentIndex],
                     ThresholdState = ((ThresholdState) thresholdStates[deploymentIndex]).ToString()
                 });
