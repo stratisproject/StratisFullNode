@@ -87,8 +87,10 @@ namespace Stratis.Bitcoin.Base.Deployments
 
             for (int deploymentIndex = 0; deploymentIndex < array.Length; deploymentIndex++)
             {
+                if (this.consensus.BIP9Deployments[deploymentIndex] == null) continue;
+
                 int period = this.consensus.MinerConfirmationWindow;
-                int currentHeight = indexPrev.Height + 1;
+                int sinceHeight = 0;
 
                 // Activation heights are passed in the use-case of reporting on locked-in deployments.
                 if (activationHeights != null)
@@ -97,29 +99,36 @@ namespace Stratis.Bitcoin.Base.Deployments
                         continue;
 
                     // Choose the last header that's within the window where voting led to locked-in state.
-                    indexPrev = referenceHeader.GetAncestor(activationHeights[deploymentIndex] - period - 1);
+                    sinceHeight = activationHeights[deploymentIndex];
+                    indexPrev = referenceHeader.GetAncestor(sinceHeight - period - 1);
+                }
+                else
+                {
+                    // Look in the cache for the hash of the first block an item was deployed.
+                    ThresholdState state = thresholdStates[deploymentIndex];
+                    KeyValuePair<uint256, ThresholdState?[]> firstSeenHash;
+                    if (state != ThresholdState.Started)
+                        firstSeenHash = this.cache.FirstOrDefault(c => c.Value[deploymentIndex] == state);
+                    else
+                        firstSeenHash = this.cache.LastOrDefault(c => c.Value[deploymentIndex] == state);
 
-                    // Subsequent code selects the window that includes this height.
-                    currentHeight = indexPrev.Height;
+                    if (firstSeenHash.Key != null)
+                    {
+                        sinceHeight = referenceHeader.FindAncestorOrSelf(firstSeenHash.Key).Height + 1;
+                    }
                 }
 
-                if (this.consensus.BIP9Deployments[deploymentIndex] == null) continue;
-
+                // Subsequent code selects the window that includes this height.
+                int currentHeight = indexPrev.Height;
                 string deploymentName = this.consensus.BIP9Deployments[deploymentIndex]?.Name;
-
                 DateTime? timeStart = this.consensus.BIP9Deployments[deploymentIndex]?.StartTime.Date;
                 DateTime? timeTimeout = this.consensus.BIP9Deployments[deploymentIndex]?.Timeout.Date;
                 long threshold = this.consensus.BIP9Deployments[deploymentIndex].Threshold;
-
-                int votes = 0;
-
-                // First ancestor outside last confirmation window. If we haven't reached block height 2016 yet this will be the genesis block.
                 int periodStartHeight = currentHeight - (currentHeight % period);
-
                 int periodEndHeight = periodStartHeight + period - 1;
-
                 var hexVersions = new Dictionary<string, int>();
                 int totalBlocks = 0;
+                int votes = 0;
 
                 // Count votes backwards up to and including the period start block.
                 for (ChainedHeader headerTemp = indexPrev; headerTemp.Height >= periodStartHeight; headerTemp = headerTemp.Previous)
@@ -139,16 +148,6 @@ namespace Stratis.Bitcoin.Base.Deployments
                     hexVersions[hexVersion] = count + 1;
                 }
 
-                // look in the cache for the hash of the first block an item was deployed
-
-                var firstSeenHash = this.cache.FirstOrDefault(c => c.Value[deploymentIndex] == ThresholdState.Started);
-                int sinceHeight = 0;
-
-                if (firstSeenHash.Key != null)
-                {
-                    sinceHeight = indexPrev.FindAncestorOrSelf(firstSeenHash.Key).Height;
-                }
-
                 thresholdStateModels.Add(new ThresholdStateModel()
                 {
                     DeploymentName = deploymentName,
@@ -160,7 +159,7 @@ namespace Stratis.Bitcoin.Base.Deployments
                     TimeStart = timeStart,
                     TimeTimeOut = timeTimeout,
                     Threshold = threshold,
-                    Height = currentHeight,
+                    Height = currentHeight + 1,
                     SinceHeight = sinceHeight,
                     PeriodStartHeight = periodStartHeight,
                     PeriodEndHeight = periodEndHeight,
