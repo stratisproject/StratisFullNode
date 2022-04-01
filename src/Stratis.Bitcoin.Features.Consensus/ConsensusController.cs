@@ -109,7 +109,7 @@ namespace Stratis.Bitcoin.Features.Consensus
 
                 List<ThresholdStateModel> metrics = ruleEngine.NodeDeployments.BIP9.GetThresholdStateMetrics(this.ChainState.ConsensusTip.Previous, thresholdStates, activationHeights);
 
-                return this.Json(metrics.Select(m => new ThresholdActivationModel() { activationHeight = m.Height + ruleEngine.Network.Consensus.MinerConfirmationWindow + 1, DeploymentIndex = m.DeploymentIndex, DeploymentName = m.DeploymentName, Votes = m.Votes }).ToArray());
+                return this.Json(metrics.Select(m => new ThresholdActivationModel() { activationHeight = m.SinceHeight, DeploymentIndex = m.DeploymentIndex, DeploymentName = m.DeploymentName, Votes = m.Votes }).ToArray());
             }
             catch (Exception e)
             {
