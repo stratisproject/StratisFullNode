@@ -93,6 +93,7 @@ namespace Stratis.Features.FederatedPeg.Conversion
         /// wSTRAX burn transactions are already denominated in wei on the Ethereum chain and thus need to be converted back into satoshi when the
         /// conversion request is created.
         /// For ERC20-SRC20 transfers this amount field is the full-precision integral token amount being transferred, typically 18 decimal places for ERC20.
+        /// For ERC721-SRC721 transfers this amount field is the token identifier of the NFT.
         /// </summary>
         public uint256 Amount { get { return this.amount; } set { this.amount = value; } }
 

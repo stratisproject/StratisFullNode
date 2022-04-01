@@ -33,9 +33,9 @@ namespace Stratis.Bitcoin.Features.Interop
             this.federatedPegBroadcaster = federatedPegBroadcaster;
         }
 
-        public void Unprocessed(ConversionRequest request, bool originator, IFederationMember designatedMember)
+        public void Unprocessed(ConversionRequest request, bool originator, IFederationMember designatedMember, bool isTransfer, ContractType contractType)
         {
-            string transactionType = request.RequestType == ConversionRequestType.Burn ? "SRC20->ERC20" : "CRS->WSTRAX";
+            string transactionType = DetermineTransactionTypeForLog(request, isTransfer, contractType);
 
             if (originator)
             {
@@ -52,9 +52,9 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
-        public async Task OriginatorNotSubmittedAsync(ConversionRequest request, IETHClient clientForDestChain, InteropSettings interopSettings, BigInteger submissionAmount, string contractToSubmit)
+        public async Task OriginatorNotSubmittedAsync(ConversionRequest request, IETHClient clientForDestChain, InteropSettings interopSettings, BigInteger submissionAmount, string contractToSubmit, bool isTransfer, ContractType contractType)
         {
-            string transactionType = request.RequestType == ConversionRequestType.Burn ? "SRC20->ERC20" : "CRS->WSTRAX";
+            string transactionType = DetermineTransactionTypeForLog(request, isTransfer, contractType);
 
             this.logger.Info($"Request '{request}'; '{transactionType}' conversion not yet submitted, checking which gas price to use.");
 
@@ -93,9 +93,9 @@ namespace Stratis.Bitcoin.Features.Interop
             request.ExternalChainTxEventId = identifiers.TransactionId.ToString();
         }
 
-        public async Task OriginatorSubmittingAsync(ConversionRequest request, IETHClient clientForDestChain, ICirrusContractClient cirrusClient, BigInteger submissionConfirmationThreshold, bool isTransfer)
+        public async Task OriginatorSubmittingAsync(ConversionRequest request, IETHClient clientForDestChain, ICirrusContractClient cirrusClient, BigInteger submissionConfirmationThreshold, bool isTransfer, ContractType contractType)
         {
-            string transactionType = DetermineTransactionTypeForLog(request, isTransfer);
+            string transactionType = DetermineTransactionTypeForLog(request, isTransfer, contractType);
 
             (BigInteger confirmationCount, string blockHash) = isTransfer ? cirrusClient.GetConfirmations(request.ExternalChainBlockHeight) : await clientForDestChain.GetConfirmationsAsync(request.ExternalChainTxHash).ConfigureAwait(false);
 
@@ -111,9 +111,9 @@ namespace Stratis.Bitcoin.Features.Interop
             request.RequestStatus = ConversionRequestStatus.OriginatorSubmitted;
         }
 
-        public async Task OriginatorSubmittedAsync(ConversionRequest request, InteropSettings interopSettings, bool isTransfer)
+        public async Task OriginatorSubmittedAsync(ConversionRequest request, InteropSettings interopSettings, bool isTransfer, ContractType contractType)
         {
-            string transactionType = DetermineTransactionTypeForLog(request, isTransfer);
+            string transactionType = DetermineTransactionTypeForLog(request, isTransfer, contractType);
 
             BigInteger transactionId2 = this.conversionRequestCoordinationService.GetCandidateTransactionId(request.RequestId);
 
@@ -132,9 +132,9 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
-        public async Task VoteFinalisedAsync(ConversionRequest request, IETHClient clientForDestChain, InteropSettings interopSettings)
+        public async Task VoteFinalisedAsync(ConversionRequest request, IETHClient clientForDestChain, InteropSettings interopSettings, ContractType contractType)
         {
-            string transactionType = DetermineTransactionTypeForLog(request, !string.IsNullOrEmpty(request.TokenContract));
+            string transactionType = DetermineTransactionTypeForLog(request, !string.IsNullOrEmpty(request.TokenContract), contractType);
 
             BigInteger transactionId3 = this.conversionRequestCoordinationService.GetAgreedTransactionId(request.RequestId, interopSettings.GetSettingsByChain(request.DestinationChain).MultisigWalletQuorum);
 
@@ -168,9 +168,9 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
-        public async Task NotOriginatorAsync(ConversionRequest request, IETHClient clientForDestChain, InteropSettings interopSettings)
+        public async Task NotOriginatorAsync(ConversionRequest request, IETHClient clientForDestChain, InteropSettings interopSettings, ContractType contractType)
         {
-            string transactionType = DetermineTransactionTypeForLog(request, !string.IsNullOrEmpty(request.TokenContract));
+            string transactionType = DetermineTransactionTypeForLog(request, !string.IsNullOrEmpty(request.TokenContract), contractType);
 
             BigInteger agreedUponId = this.conversionRequestCoordinationService.GetAgreedTransactionId(request.RequestId, interopSettings.GetSettingsByChain(request.DestinationChain).MultisigWalletQuorum);
 
@@ -215,7 +215,7 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
-        private string DetermineTransactionTypeForLog(ConversionRequest request, bool isTransfer)
+        private string DetermineTransactionTypeForLog(ConversionRequest request, bool isTransfer, ContractType contractType)
         {
             string transactionType;
 
@@ -224,10 +224,28 @@ namespace Stratis.Bitcoin.Features.Interop
                 transactionType = "CRS->WSTRAX";
 
                 if (isTransfer)
-                    transactionType = "ERC20->CRS";
+                {
+                    if (contractType == ContractType.ERC20)
+                    {
+                        transactionType = "ERC20->CRS";
+                    }
+                    else
+                    {
+                        transactionType = "ERC721->CRS";
+                    }
+                }
             }
             else
-                transactionType = "SRC20->ERC20";
+            {
+                if (contractType == ContractType.ERC20)
+                {
+                    transactionType = "SRC20->ERC20";
+                }
+                else
+                {
+                    transactionType = "SRC721->ERC721";
+                }
+            }
 
             return transactionType;
         }
@@ -236,6 +254,22 @@ namespace Stratis.Bitcoin.Features.Interop
         {
             string signature = this.federationManager.CurrentFederationKey.SignMessage(requestId + ((int)transactionId));
             await this.federatedPegBroadcaster.BroadcastAsync(ConversionRequestPayload.Request(requestId, (int)transactionId, signature, destinationChain, isTransfer)).ConfigureAwait(false);
+        }
+
+        private string GetDescription(ConversionRequestType conversionRequestType, ContractType contractType)
+        {
+            if (conversionRequestType == ConversionRequestType.Burn)
+            {
+                if (contractType == ContractType.ERC20)
+                {
+                    return "SRC20->ERC20";
+                }
+
+                return "SRC721->ERC721";
+            }
+
+            // If it was not a burn, it is a wSTRAX mint.
+            return "CRS->WSTRAX";
         }
     }
 }

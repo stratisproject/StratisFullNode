@@ -125,6 +125,8 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
         Task<BigInteger> GetErc20BalanceAsync(string addressToQuery, string contractAddress);
 
+        Task<string> GetErc721TokenUriAsync(string contractAddress, BigInteger tokenId);
+
         /// <summary>
         /// Retrieves a string from the Key Value Store contract.
         /// </summary>
@@ -504,6 +506,11 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         {
             // TODO: Make a generic ERC20 contract interface for the necessary methods, rather than sharing this
             return await WrappedStrax.GetErc20BalanceAsync(this.web3, contractAddress, addressToQuery).ConfigureAwait(false);
+        }
+
+        public async Task<string> GetErc721TokenUriAsync(string contractAddress, BigInteger tokenId)
+        {
+            return await NftInterface.GetTokenUriAsync(this.web3, contractAddress, tokenId).ConfigureAwait(false);
         }
 
         /// <inheritdoc />

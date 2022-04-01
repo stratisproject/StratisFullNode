@@ -803,16 +803,17 @@ namespace Stratis.Bitcoin.Features.Interop
         }
 
         /// <summary>
-        /// Processes Transfer contract call events made against one of the ERC20 token contracts being monitored by the poller.
+        /// Processes Transfer contract call events made against one of the ERC20/ERC721 token contracts being monitored by the poller.
         /// </summary>
         /// <remarks>Only transfers affecting the federation multisig wallet contract are processed.</remarks>
         /// <param name="blockHash">The hash of the block the transfer transaction appeared in.</param>
         /// <param name="transactionHash">The hash of the transaction that the transfer method call appeared in.</param>
         /// <param name="transferContractAddress">The address of the ERC20 contract that the transfer was actioned against.</param>
         /// <param name="transfer">The metadata of the transfer method call.</param>
+        /// <param name="supportedChain">The chain-specific client.</param>
         private async Task ProcessTransferAsync(string blockHash, string transactionHash, string transferContractAddress, TransferDetails transfer, KeyValuePair<DestinationChain, IETHClient> supportedChain)
         {
-            this.logger.Info("Conversion transfer transaction '{0}' received from polled block '{1}', sender {2}.", transactionHash, blockHash, transfer.From);
+            this.logger.Info("Conversion transfer transaction '{0}' of type '{1}' received from polled block '{2}', sender {3}.", transactionHash, transfer.ContractType, blockHash, transfer.From);
 
             lock (this.repositoryLock)
             {
@@ -853,9 +854,17 @@ namespace Stratis.Bitcoin.Features.Interop
                 return;
             }
 
-            if (!this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts.TryGetValue(transferContractAddress, out string destinationContract))
+            string destinationContract = null;
+
+            if (transfer.ContractType == ContractType.ERC20 && !this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts.TryGetValue(transferContractAddress, out destinationContract))
             {
                 this.logger.Error("Unknown ERC20 contract address '{0}'; unable to map it to an SRC20 contract", transferContractAddress);
+                return;
+            }
+
+            if (transfer.ContractType == ContractType.ERC721 && !this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc721Contracts.TryGetValue(transferContractAddress, out destinationContract))
+            {
+                this.logger.Error("Unknown ERC721 contract address '{0}'; unable to map it to an SRC721 contract", transferContractAddress);
                 return;
             }
 
@@ -935,11 +944,19 @@ namespace Stratis.Bitcoin.Features.Interop
                     continue;
                 }
 
+                // Default to ERC20. This value only gets used if this is not a wSTRAX transfer anyway.
+                ContractType contractType = ContractType.ERC20;
+
+                if (this.interopSettings.ETHSettings.WatchedErc721Contracts.ContainsValue(request.TokenContract))
+                {
+                    contractType = ContractType.ERC721;
+                }
+
                 bool isTransfer = false;
                 if (!string.IsNullOrWhiteSpace(request.TokenContract) && request.DestinationChain == DestinationChain.CIRRUS)
                 {
-                    // This is an ERC20 -> SRC20 minting request, and therefore needs to be handled differently to wSTRAX.
-                    this.logger.Info("Processing ERC20 to SRC20 transfer request {0}.", request.RequestId);
+                    // This is an ERCx -> SRCx minting request, and therefore needs to be handled differently to wSTRAX.
+                    this.logger.Info("Processing {0} transfer request {1}.", (contractType == ContractType.ERC20 ? "ERC20 to SRC20" : "ERC721 to SRC721"), request.RequestId);
                     isTransfer = true;
                 }
 
@@ -952,7 +969,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 this.logger.Info("Processing mint request {0} on {1} chain.", request.RequestId, request.DestinationChain);
 
-                // The state machine gets shared between wSTRAX minting transactions, and ERC20/SRC20 transfers.
+                // The state machine gets shared between wSTRAX minting transactions, and ERCx/SRCx transfers.
                 // TODO: Refactor this to use the InteropPollerStateMachine class for wSTRAX minting transactions, as it will make the logic a lot more concise
                 // The main difference between the two is that we do not have an IEthClient for Cirrus, and have to make contract calls via the HTTP API.
                 // TODO: Perhaps the transactionId coordination should actually be done within the multisig contract. This will however increase gas costs for each mint. Maybe a Cirrus contract instead?
@@ -960,7 +977,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 {
                     case ConversionRequestStatus.Unprocessed:
                         {
-                            stateMachine.Unprocessed(request, originator, designatedMember);
+                            stateMachine.Unprocessed(request, originator, designatedMember, isTransfer, contractType);
                             break;
                         }
 
@@ -969,7 +986,18 @@ namespace Stratis.Bitcoin.Features.Interop
                             if (isTransfer)
                             {
                                 // TODO: Make a Cirrus version of SubmitTransactionAsync that can handle more generic operations than just minting
-                                MultisigTransactionIdentifiers identifiers = await this.cirrusClient.MintAsync(request.TokenContract, request.DestinationAddress, new BigInteger(request.Amount.ToBytes())).ConfigureAwait(false);
+                                MultisigTransactionIdentifiers identifiers = null;
+
+                                if (contractType == ContractType.ERC20)
+                                    identifiers = await this.cirrusClient.MintAsync(request.TokenContract, request.DestinationAddress, new BigInteger(request.Amount.ToBytes())).ConfigureAwait(false);
+                                else
+                                {
+                                    BigInteger tokenId = new BigInteger(request.Amount.ToBytes());
+
+                                    string uri = await clientForDestChain.GetErc721TokenUriAsync(request.TokenContract, tokenId).ConfigureAwait(false);
+
+                                    identifiers = await this.cirrusClient.MintNftAsync(request.TokenContract, request.DestinationAddress, tokenId, uri).ConfigureAwait(false);
+                                }
 
                                 if (identifiers.TransactionId == BigInteger.MinusOne)
                                 {
@@ -993,7 +1021,7 @@ namespace Stratis.Bitcoin.Features.Interop
                                 BigInteger amountToSubmit = this.CoinsToWei(request.Amount.GetLow64());
                                 string contractToSubmit = this.interopSettings.GetSettingsByChain(request.DestinationChain).WrappedStraxContractAddress;
 
-                                await stateMachine.OriginatorNotSubmittedAsync(request, clientForDestChain, this.interopSettings, amountToSubmit, contractToSubmit).ConfigureAwait(false);
+                                await stateMachine.OriginatorNotSubmittedAsync(request, clientForDestChain, this.interopSettings, amountToSubmit, contractToSubmit, isTransfer, contractType).ConfigureAwait(false);
                             }
 
                             break;
@@ -1001,7 +1029,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                     case ConversionRequestStatus.OriginatorSubmitting:
                         {
-                            await stateMachine.OriginatorSubmittingAsync(request, clientForDestChain, this.cirrusClient, this.SubmissionConfirmationThreshold, isTransfer).ConfigureAwait(false);
+                            await stateMachine.OriginatorSubmittingAsync(request, clientForDestChain, this.cirrusClient, this.SubmissionConfirmationThreshold, isTransfer, contractType).ConfigureAwait(false);
 
                             break;
                         }
@@ -1014,7 +1042,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             // The coordination mechanism safeguards against this, as any such spurious transaction will not receive acceptance votes.
                             // TODO: The transactionId should be accompanied by the hash of the submission transaction on the Ethereum chain so that it can be verified
 
-                            await stateMachine.OriginatorSubmittedAsync(request, this.interopSettings, isTransfer).ConfigureAwait(false);
+                            await stateMachine.OriginatorSubmittedAsync(request, this.interopSettings, isTransfer, contractType).ConfigureAwait(false);
 
                             break;
                         }
@@ -1185,6 +1213,14 @@ namespace Stratis.Bitcoin.Features.Interop
                     continue;
                 }
 
+                // Default to ERC20. This value only gets used if this is not a wSTRAX transfer anyway.
+                ContractType contractType = ContractType.ERC20;
+
+                if (this.interopSettings.ETHSettings.WatchedErc721Contracts.ContainsValue(request.TokenContract))
+                {
+                    contractType = ContractType.ERC721;
+                }
+
                 bool originator = DetermineConversionRequestOriginator(request.BlockHeight, out IFederationMember designatedMember);
 
                 IETHClient clientForDestChain = this.ethClientProvider.GetClientForChain(request.DestinationChain);
@@ -1202,6 +1238,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 {
                     this.logger.Error($"Multisig {nameof(balanceRemaining)}={balanceRemaining} is insufficient for {nameof(conversionAmountInWei)}={conversionAmountInWei}, failed to process transaction {request.RequestId}.");
 
+                    request.RequestStatus = ConversionRequestStatus.Failed;
                     request.Processed = true;
 
                     lock (this.repositoryLock)
@@ -1217,7 +1254,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 {
                     case ConversionRequestStatus.Unprocessed:
                         {
-                            stateMachine.Unprocessed(request, originator, designatedMember);
+                            stateMachine.Unprocessed(request, originator, designatedMember, false, contractType);
                             break;
                         }
 
@@ -1225,14 +1262,14 @@ namespace Stratis.Bitcoin.Features.Interop
                         {
                             BigInteger amountToSubmit = new BigInteger(request.Amount.ToBytes());
 
-                            await stateMachine.OriginatorNotSubmittedAsync(request, clientForDestChain, this.interopSettings, amountToSubmit, request.TokenContract).ConfigureAwait(false);
+                            await stateMachine.OriginatorNotSubmittedAsync(request, clientForDestChain, this.interopSettings, amountToSubmit, request.TokenContract, false, contractType).ConfigureAwait(false);
 
                             break;
                         }
 
                     case ConversionRequestStatus.OriginatorSubmitting:
                         {
-                            await stateMachine.OriginatorSubmittingAsync(request, clientForDestChain, this.cirrusClient, this.SubmissionConfirmationThreshold, false).ConfigureAwait(false);
+                            await stateMachine.OriginatorSubmittingAsync(request, clientForDestChain, this.cirrusClient, this.SubmissionConfirmationThreshold, false, contractType).ConfigureAwait(false);
 
                             break;
                         }
@@ -1245,14 +1282,14 @@ namespace Stratis.Bitcoin.Features.Interop
                             // The coordination mechanism safeguards against this, as any such spurious transaction will not receive acceptance votes.
                             // TODO: The transactionId should be accompanied by the hash of the submission transaction on the Ethereum chain so that it can be verified
 
-                            await stateMachine.OriginatorSubmittedAsync(request, this.interopSettings, false).ConfigureAwait(false);
+                            await stateMachine.OriginatorSubmittedAsync(request, this.interopSettings, false, contractType).ConfigureAwait(false);
 
                             break;
                         }
 
                     case ConversionRequestStatus.VoteFinalised:
                         {
-                            await stateMachine.VoteFinalisedAsync(request, clientForDestChain, this.interopSettings).ConfigureAwait(false);
+                            await stateMachine.VoteFinalisedAsync(request, clientForDestChain, this.interopSettings, contractType).ConfigureAwait(false);
 
                             break;
                         }
@@ -1265,7 +1302,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             // This is done within the InteropBehavior automatically, we just check each poll loop if a transaction has enough votes yet.
                             // Each node must only ever confirm a single transactionId for a given conversion transaction.
 
-                            await stateMachine.NotOriginatorAsync(request, clientForDestChain, this.interopSettings).ConfigureAwait(false);
+                            await stateMachine.NotOriginatorAsync(request, clientForDestChain, this.interopSettings, contractType).ConfigureAwait(false);
 
                             break;
                         }

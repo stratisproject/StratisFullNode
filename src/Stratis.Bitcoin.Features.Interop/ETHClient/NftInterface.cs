@@ -1,5 +1,9 @@
 ﻿using System.Numerics;
+using System.Threading.Tasks;
 using Nethereum.ABI.FunctionEncoding.Attributes;
+using Nethereum.Contracts;
+using Nethereum.Contracts.ContractHandlers;
+using Nethereum.Web3;
 
 namespace Stratis.Bitcoin.Features.Interop.ETHClient
 {
@@ -27,5 +31,33 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// and the ERC20 equivalent. However, Nethereum requires the DTO to match exactly and we therefore need two classes.</remarks>
         [Parameter("uint256", "_tokenId", 3, true)]
         public BigInteger TokenId { get; set; }
+    }
+
+    [Function("tokenURI", "string")]
+    public class TokenUriFunction : FunctionMessage
+    {
+        [Parameter("uint256", "tokenId", 1)]
+        public BigInteger TokenId { get; set; }
+    }
+
+    public class NftInterface
+    {
+        /// <summary>
+        /// If the NFT contract supports the ERC721Metadata extension, it should expose a 'tokenURI(uint256 tokenId)' method that
+        /// can be interrogated to retrieve the token-specific URI.
+        /// </summary>
+        /// <returns>The URI for the given tokenId.</returns>
+        public static async Task<string> GetTokenUriAsync(Web3 web3, string contractAddress, BigInteger tokenId)
+        {
+            var tokenUriFunctionMessage = new TokenUriFunction()
+            {
+                TokenId = tokenId
+            };
+
+            IContractQueryHandler<TokenUriFunction> balanceHandler = web3.Eth.GetContractQueryHandler<TokenUriFunction>();
+            string uri = await balanceHandler.QueryAsync<string>(contractAddress, tokenUriFunctionMessage).ConfigureAwait(false);
+
+            return uri;
+        }
     }
 }
