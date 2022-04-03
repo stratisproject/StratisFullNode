@@ -58,9 +58,20 @@ namespace Stratis.Bitcoin.Features.Interop
 
             this.logger.Info($"Request '{request}'; '{transactionType}' conversion not yet submitted, checking which gas price to use.");
 
-            // First construct the necessary transfer() transaction data, utilising the ABI of a standard ERC20 contract.
-            // When this constructed transaction is actually executed, the transfer's source account will be the account executing the transaction i.e. the multisig contract address.
-            string abiData = clientForDestChain.EncodeTransferParams(request.DestinationAddress, submissionAmount);
+            string abiData = null;
+
+            if (contractType == ContractType.ERC721)
+            {
+                // First construct the necessary safeTransferFrom() transaction data, utilising the ABI of a standard ERC721 contract.
+                abiData = clientForDestChain.EncodeNftTransferParams(interopSettings.ETHSettings.MultisigWalletAddress, request.DestinationAddress, submissionAmount);
+            }
+            else
+            {
+                // First construct the necessary transfer() transaction data, utilising the ABI of a standard ERC20 contract.
+                abiData = clientForDestChain.EncodeTransferParams(request.DestinationAddress, submissionAmount);
+            }
+
+            // When the constructed transaction is actually executed, the transfer's source account will be the account executing the transaction i.e. the multisig contract address.
 
             int gasPrice = this.externalApiPoller.GetGasPrice();
 

@@ -30,5 +30,11 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// For an ERC721 transfer, this is the token identifier.
         /// </summary>
         public BigInteger Value { get; set; }
+
+        /// <summary>
+        /// For an ERC721 transfer, this is the URI of the token metadata.
+        /// This field is not used for ERC20 transfers.
+        /// </summary>
+        public string Uri { get; set; }
     }
 }

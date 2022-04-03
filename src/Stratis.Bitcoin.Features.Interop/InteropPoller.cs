@@ -900,7 +900,7 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <summary>
         /// Iterates through all unprocessed mint requests in the repository.
         /// <para>
-        /// This processes all WSTRAX as well as ERC20 to SRC20 (USDT, WTBC etc) minting requests.
+        /// This processes all WSTRAX as well as ERC20 to SRC20 (USDT, WTBC etc) and ERC721 to SRC721 minting requests.
         /// </para>
         /// If this node is regarded as the designated originator of the multisig transaction, it will submit the transfer transaction data to
         /// the multisig wallet contract on the Ethereum chain. This data consists of a method call to the transfer() method on the wrapped STRAX contract,
@@ -994,6 +994,7 @@ namespace Stratis.Bitcoin.Features.Interop
                                 {
                                     BigInteger tokenId = new BigInteger(request.Amount.ToBytes());
 
+                                    // TODO: Maybe retaining the TransferDetails will be less messy
                                     string uri = await clientForDestChain.GetErc721TokenUriAsync(request.TokenContract, tokenId).ConfigureAwait(false);
 
                                     identifiers = await this.cirrusClient.MintNftAsync(request.TokenContract, request.DestinationAddress, tokenId, uri).ConfigureAwait(false);
@@ -1174,13 +1175,14 @@ namespace Stratis.Bitcoin.Features.Interop
         }
 
         /// <summary>
-        /// Iterates through all unprocessed SRC20 burn requests in the repository.
+        /// Iterates through all unprocessed SRC20/SRC721 burn requests in the repository.
         /// <para>
         /// This includes SRC20 to ERC20 burns.
         /// </para>
         /// If this node is regarded as the designated originator of the multisig transaction, it will submit the transfer transaction data to
-        /// the multisig wallet contract on the Ethereum chain. This data consists of a method call to the transfer() method on the ERC20 contract,
-        /// as well as the intended recipient address and amount of tokens to be transferred.
+        /// the multisig wallet contract on the Ethereum chain. This data consists of a method call to the transfer() method on the ERC20 contract
+        /// (or the safeTransferFrom() method in the case of an ERC721 contract), as well as the intended recipient address and amount/tokenId of
+        /// tokens to be transferred.
         /// </summary>
         private async Task ProcessBurnRequestsAsync()
         {
@@ -1225,28 +1227,31 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 IETHClient clientForDestChain = this.ethClientProvider.GetClientForChain(request.DestinationChain);
 
-                this.logger.Info("Processing burn request '{0}' on {1} chain.", request.RequestId, request.DestinationChain);
+                this.logger.Info("Processing burn request '{0}' of type {1} on {2} chain.", request.RequestId, contractType, request.DestinationChain);
 
-                BigInteger balanceRemaining = await clientForDestChain.GetErc20BalanceAsync(this.interopSettings.GetSettingsByChain(request.DestinationChain).MultisigWalletAddress, request.TokenContract).ConfigureAwait(false);
-
-                // The request amount is already denominated in 'wei' (or the Cirrus SRC20 equivalent) so we just need to change the underlying type.
-                BigInteger conversionAmountInWei = new BigInteger(request.Amount.ToBytes());
-
-                // Unlike the wSTRAX contract, the multisig cannot mint new tokens on the ERC20 contracts it is monitoring.
-                // So we retrieve the balance as a sanity check, but if it is insufficient then something has gone badly wrong and we have to abort processing.
-                if (conversionAmountInWei >= balanceRemaining)
+                if (contractType == ContractType.ERC20)
                 {
-                    this.logger.Error($"Multisig {nameof(balanceRemaining)}={balanceRemaining} is insufficient for {nameof(conversionAmountInWei)}={conversionAmountInWei}, failed to process transaction {request.RequestId}.");
+                    BigInteger balanceRemaining = await clientForDestChain.GetErc20BalanceAsync(this.interopSettings.GetSettingsByChain(request.DestinationChain).MultisigWalletAddress, request.TokenContract).ConfigureAwait(false);
 
-                    request.RequestStatus = ConversionRequestStatus.Failed;
-                    request.Processed = true;
+                    // The request amount is already denominated in 'wei' (or the Cirrus SRC20 equivalent) so we just need to change the underlying type.
+                    BigInteger conversionAmountInWei = new BigInteger(request.Amount.ToBytes());
 
-                    lock (this.repositoryLock)
+                    // Unlike the wSTRAX contract, the multisig cannot mint new tokens on the ERC20 contracts it is monitoring.
+                    // So we retrieve the balance as a sanity check, but if it is insufficient then something has gone badly wrong and we have to abort processing.
+                    if (conversionAmountInWei >= balanceRemaining)
                     {
-                        this.conversionRequestRepository.Save(request);
-                    }
+                        this.logger.Error($"Multisig {nameof(balanceRemaining)}={balanceRemaining} is insufficient for {nameof(conversionAmountInWei)}={conversionAmountInWei}, failed to process transaction {request.RequestId}.");
 
-                    continue;
+                        request.RequestStatus = ConversionRequestStatus.Failed;
+                        request.Processed = true;
+
+                        lock (this.repositoryLock)
+                        {
+                            this.conversionRequestRepository.Save(request);
+                        }
+
+                        continue;
+                    }
                 }
 
                 // TODO: Perhaps the transactionId coordination should actually be done within the multisig contract. This will however increase gas costs for each mint. Maybe a Cirrus contract instead?

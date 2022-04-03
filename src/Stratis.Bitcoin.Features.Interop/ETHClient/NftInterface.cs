@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Nethereum.ABI.FunctionEncoding.Attributes;
 using Nethereum.Contracts;
 using Nethereum.Contracts.ContractHandlers;
+using Nethereum.RPC.Eth.DTOs;
 using Nethereum.Web3;
 
 namespace Stratis.Bitcoin.Features.Interop.ETHClient
@@ -40,8 +41,41 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         public BigInteger TokenId { get; set; }
     }
 
+    [Function("ownerOf", "address")]
+    public class NftOwnerFunction : FunctionMessage
+    {
+        [Parameter("uint256", "tokenId", 1)]
+        public BigInteger TokenId { get; set; }
+    }
+
+    [Function("safeTransferFrom")]
+    public class NftTransferFunction : FunctionMessage
+    {
+        [Parameter("address", "from", 1)]
+        public string From { get; set; }
+
+        [Parameter("address", "to", 1)]
+        public string To { get; set; }
+
+        [Parameter("uint256", "tokenId", 2)]
+        public BigInteger TokenId { get; set; }
+    }
+
     public class NftInterface
     {
+        public static async Task<string> GetTokenOwnerAsync(Web3 web3, string contractAddress, BigInteger tokenId)
+        {
+            var nftOwnerFunctionMessage = new NftOwnerFunction()
+            {
+                TokenId = tokenId
+            };
+
+            IContractQueryHandler<NftOwnerFunction> ownerHandler = web3.Eth.GetContractQueryHandler<NftOwnerFunction>();
+            string uri = await ownerHandler.QueryAsync<string>(contractAddress, nftOwnerFunctionMessage).ConfigureAwait(false);
+
+            return uri;
+        }
+
         /// <summary>
         /// If the NFT contract supports the ERC721Metadata extension, it should expose a 'tokenURI(uint256 tokenId)' method that
         /// can be interrogated to retrieve the token-specific URI.
@@ -58,6 +92,22 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
             string uri = await balanceHandler.QueryAsync<string>(contractAddress, tokenUriFunctionMessage).ConfigureAwait(false);
 
             return uri;
+        }
+
+        public static async Task<string> SafeTransferAsync(Web3 web3, string contractAddress, string recipient, BigInteger tokenId)
+        {
+            IContractTransactionHandler<NftTransferFunction> transferHandler = web3.Eth.GetContractTransactionHandler<NftTransferFunction>();
+
+            var transfer = new NftTransferFunction()
+            {
+                From = "",
+                To = recipient,
+                TokenId = tokenId
+            };
+
+            TransactionReceipt transactionTransferReceipt = await transferHandler.SendRequestAndWaitForReceiptAsync(contractAddress, transfer);
+
+            return transactionTransferReceipt.TransactionHash;
         }
     }
 }

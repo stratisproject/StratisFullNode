@@ -125,6 +125,8 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
         Task<BigInteger> GetErc20BalanceAsync(string addressToQuery, string contractAddress);
 
+        Task<string> GetErc721TokenOwnerAsync(string contractAddress, BigInteger tokenId);
+
         Task<string> GetErc721TokenUriAsync(string contractAddress, BigInteger tokenId);
 
         /// <summary>
@@ -198,6 +200,17 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// <param name="requirement">The new threshold for confirmations for a multisig transaction to be executed.</param>
         /// <returns>The hex data of the encoded parameters.</returns>
         string EncodeChangeRequirementParams(BigInteger requirement);
+
+        /// <summary>
+        /// Returns the encoded form of transaction data that calls the safeTransferFrom(address, address, uint256) method on an ERC721-compliant contract.
+        /// This is exactly the contents of the 'data' field in a normal transaction.
+        /// This encoded data is required for submitting a transaction to the multisig contract.
+        /// </summary>
+        /// <param name="from">The address to transfer the token from (must be the token's current owner).</param>
+        /// <param name="to">The address to transfer the token to.</param>
+        /// <param name="tokenId">The identifier of the token to be transferred.</param>
+        /// <returns>The hex data of the encoded parameters.</returns>
+        string EncodeNftTransferParams(string from, string to, BigInteger tokenId);
     }
 
     public class ETHClient : IETHClient
@@ -366,7 +379,10 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
                                 TransferType = TransferType.Transfer,
                                 From = eventLog.Event.From,
                                 To = eventLog.Event.To,
-                                Value = eventLog.Event.Value
+                                Value = eventLog.Event.Value,
+                                
+                                // This field is not used for ERC20. Explicitly setting it to null here as a placeholder.
+                                Uri = null
                             }));
 
                             continue;
@@ -382,14 +398,19 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
                                 continue;
                             }
 
-                            if (nftEventLog.Event.TokenId == BigInteger.Zero)
-                            {
-                                // Ignoring zero-valued transfer.
-                                continue;
-                            }
+                            // We presume that an NFT could conceivably have tokenId = 0.
 
                             if (nftEventLog.Event.TokenId < BigInteger.Zero)
                             {
+                                continue;
+                            }
+
+                            string uri = await this.GetErc721TokenUriAsync("", nftEventLog.Event.TokenId).ConfigureAwait(false);
+
+                            if (uri == null)
+                            {
+                                this.logger.Warn($"Unable to retrieve NFT URI from transaction '{tx.TransactionHash}' for tokenId '{nftEventLog.Event.TokenId}'");
+
                                 continue;
                             }
 
@@ -399,7 +420,8 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
                                 TransferType = TransferType.Transfer,
                                 From = nftEventLog.Event.From,
                                 To = nftEventLog.Event.To,
-                                Value = nftEventLog.Event.TokenId
+                                Value = nftEventLog.Event.TokenId,
+                                Uri = uri
                             }));
                         }
                     }
@@ -504,8 +526,12 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
         public async Task<BigInteger> GetErc20BalanceAsync(string addressToQuery, string contractAddress)
         {
-            // TODO: Make a generic ERC20 contract interface for the necessary methods, rather than sharing this
-            return await WrappedStrax.GetErc20BalanceAsync(this.web3, contractAddress, addressToQuery).ConfigureAwait(false);
+            return await Erc20Interface.GetBalanceAsync(this.web3, contractAddress, addressToQuery).ConfigureAwait(false);
+        }
+
+        public async Task<string> GetErc721TokenOwnerAsync(string contractAddress, BigInteger tokenId)
+        {
+            return await NftInterface.GetTokenOwnerAsync(this.web3, contractAddress, tokenId).ConfigureAwait(false);
         }
 
         public async Task<string> GetErc721TokenUriAsync(string contractAddress, BigInteger tokenId)
@@ -593,6 +619,17 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
             var abiEncode = new ABIEncode();
             string result = ChangeRequirementMethod + abiEncode.GetABIEncoded(new ABIValue("uint256", requirement)).ToHex();
+
+            return result;
+        }
+
+        /// <inheritdoc />
+        public string EncodeNftTransferParams(string from, string to, BigInteger tokenId)
+        {
+            const string SafeTransferFromMethod = "42842e0e";
+
+            var abiEncode = new ABIEncode();
+            string result = SafeTransferFromMethod + abiEncode.GetABIEncoded(new ABIValue("address", from), new ABIValue("address", to), new ABIValue("uint256", tokenId)).ToHex();
 
             return result;
         }
