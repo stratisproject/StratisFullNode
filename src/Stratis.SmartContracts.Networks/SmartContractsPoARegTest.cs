@@ -65,11 +65,9 @@ namespace Stratis.SmartContracts.Networks
                 genesisFederationMembers: genesisFederationMembers,
                 targetSpacingSeconds: 60,
                 votingEnabled: true,
-                autoKickIdleMembers: false
-            )
-            {
-                PollExpiryBlocks = 450
-            };
+                autoKickIdleMembers: false,
+                pollExpiryBlocks: 450
+            );
 
             var buriedDeployments = new BuriedDeploymentsArray
             {

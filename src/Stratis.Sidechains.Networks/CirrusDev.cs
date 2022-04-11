@@ -91,11 +91,9 @@ namespace Stratis.Sidechains.Networks
                 genesisFederationMembers: genesisFederationMembers,
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
-                autoKickIdleMembers: true
-            )
-            {
-                PollExpiryBlocks = 10
-            };
+                autoKickIdleMembers: true,
+                pollExpiryBlocks: 10
+            );
 
             var buriedDeployments = new BuriedDeploymentsArray
             {
