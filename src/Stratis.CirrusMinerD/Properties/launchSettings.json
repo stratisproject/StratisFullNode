@@ -2,7 +2,7 @@
   "profiles": {
     "Stratis.CirrusMinerD": {
       "commandName": "Project",
-      "commandLineArgs": "-sidechain -testnet"
+      "commandLineArgs": "-sidechain -testnet -rewind=3280000 -minblksdownload=10000"
     },
     "Stratis.CirrusMinerD TestNet": {
       "commandName": "Project",
