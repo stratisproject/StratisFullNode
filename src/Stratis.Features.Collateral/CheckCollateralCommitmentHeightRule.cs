@@ -19,6 +19,9 @@ namespace Stratis.Features.Collateral
     {
         public override Task RunAsync(RuleContext context)
         {
+            if (context.SkipValidation)
+                return Task.CompletedTask;
+
             // The genesis block won't contain any commitment data.
             if (context.ValidationContext.ChainedHeaderToValidate.Height == 0)
                 return Task.CompletedTask;
