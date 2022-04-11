@@ -420,6 +420,10 @@ namespace Stratis.Bitcoin.Features.BlockStore
             if (firstNotFound < 0)
                 return this.chainIndexer.Tip;
 
+            int firstNotFound = BinarySearch.BinaryFindFirst((h) => this.chainIndexer[h] == null || this.blockRepository.GetBlock(this.chainIndexer[h].HashBlock) == null, 1, this.chainIndexer.Height);
+            if (firstNotFound < 0)
+                return this.chainIndexer.Tip;
+
             ChainedHeader newTip = this.chainIndexer[firstNotFound - 1];
 
             // Set chain store to be same as the store tip.

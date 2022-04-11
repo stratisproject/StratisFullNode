@@ -124,19 +124,17 @@ namespace Stratis.Sidechains.Networks
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
                 autoKickIdleMembers: true,
-                federationMemberMaxIdleTimeSeconds: 60 * 30 // 30 minutes
-            )
-            {
-                InterFluxV2MainChainActivationHeight = 500_000,
-                EnforceMinProtocolVersionAtBlockHeight = 505900, // setting the value to zero makes the functionality inactive
-                EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
-                VotingManagerV2ActivationHeight = 1_999_500,
-                Release1100ActivationHeight = 2_796_000,
-                PollExpiryBlocks = 100,
-                GetMiningTimestampV2ActivationHeight = 3_000_000, // 15 January 2022
-                GetMiningTimestampV2ActivationStrictHeight = 3_121_500, // 17 January 2022
-                ContractSerializerV2ActivationHeight = 2_842_681
-            };
+                federationMemberMaxIdleTimeSeconds: 60 * 30, // 30 minutes                
+                enforceMinProtocolVersionAtBlockHeight: 505900, // setting the value to zero makes the functionality inactive
+                enforcedMinProtocolVersion: ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
+                interFluxV2MainChainActivationHeight: 500_000,
+                votingManagerV2ActivationHeight: 1_999_500,
+                release1100ActivationHeight: 2_796_000,
+                getMiningTimestampV2ActivationHeight: 3_000_000, // 15 January 2022
+                getMiningTimestampV2ActivationStrictHeight: 3_121_500, // 17 January 2022
+                pollExpiryBlocks: 450, // 2 hours
+                contractSerializerV2ActivationHeight: 2_842_681
+            );
 
             var buriedDeployments = new BuriedDeploymentsArray
             {

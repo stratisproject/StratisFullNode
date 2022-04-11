@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using NBitcoin;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.RPC.Exceptions;
+using Stratis.Bitcoin.Features.RPC.Models;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Xunit;
 
@@ -76,6 +77,22 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
             Assert.Equal((int)coin.Confirmations, resultTxOut.confirmations);
             Assert.Equal(coin.Amount.ToDecimal(MoneyUnit.BTC), resultTxOut.value);
             Assert.Equal(coin.Address.ToString(), resultTxOut.scriptPubKey.addresses[0]);
+        }
+
+        [Fact]
+        public async Task GetAllTxsWithoutFiltersThenReturnsTop10TxsAsync()
+        {
+            RPCClient rpc = this.rpcTestFixture.RpcClient;
+            TransactionInfoModel[] transactions = rpc.ListTransactions();
+            Assert.Equal(10, transactions.Length);
+        }
+
+        [Fact]
+        public async Task GetTxOutAsyncWithValidTxThenReturnsCorrectTxsSinceBlockAsync()
+        {
+            RPCClient rpc = this.rpcTestFixture.RpcClient;
+            TransactionsSinceBlockModel transactions = rpc.ListSinceBlock("3ed622cc3323746716ebdc7b02f4030c945f76e84f4fd6005bef6a04353681f9");
+            Assert.Equal(101, transactions.Transactions.Length);
         }
 
         /// <summary>
