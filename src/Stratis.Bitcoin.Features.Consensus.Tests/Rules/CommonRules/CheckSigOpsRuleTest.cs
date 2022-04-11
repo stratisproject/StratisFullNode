@@ -2,6 +2,7 @@
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
+using Stratis.Bitcoin.Tests.Common;
 using Xunit;
 
 namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
@@ -19,8 +20,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public async Task RunAsync_SingleTransactionInputSigOpsCountAboveThresHold_ThrowsBadBlockSigOpsConsensusErrorExceptionAsync()
         {
-            this.options.MaxBlockSigopsCost = 7;
-            this.options.WitnessScaleFactor = 2;
+            this.options.SetPrivatePropertyValue("MaxBlockSigopsCost", 7);
+            this.options.SetPrivatePropertyValue("WitnessScaleFactor", 2);
 
             var transaction = new Transaction();
             var op = new Op() { Code = OpcodeType.OP_CHECKSIG };
@@ -35,8 +36,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public async Task RunAsync_MultipleTransactionInputSigOpsCountAboveThresHold_ThrowsBadBlockSigOpsConsensusErrorExceptionAsync()
         {
-            this.options.MaxBlockSigopsCost = 7;
-            this.options.WitnessScaleFactor = 2;
+            this.options.SetPrivatePropertyValue("MaxBlockSigopsCost", 7);
+            this.options.SetPrivatePropertyValue("WitnessScaleFactor", 2);
 
             var transaction = new Transaction();
             var op = new Op() { Code = OpcodeType.OP_CHECKSIG };
@@ -52,8 +53,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public async Task RunAsync_SingleTransactionOutputSigOpsCountAboveThresHold_ThrowsBadBlockSigOpsConsensusErrorExceptionAsync()
         {
-            this.options.MaxBlockSigopsCost = 7;
-            this.options.WitnessScaleFactor = 2;
+            this.options.SetPrivatePropertyValue("MaxBlockSigopsCost", 7);
+            this.options.SetPrivatePropertyValue("WitnessScaleFactor", 2);
 
             var transaction = new Transaction();
             var op = new Op() { Code = OpcodeType.OP_CHECKSIG };
@@ -68,8 +69,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public async Task RunAsync_MultipleTransactionOutputSigOpsCountAboveThresHold_ThrowsBadBlockSigOpsConsensusErrorExceptionAsync()
         {
-            this.options.MaxBlockSigopsCost = 7;
-            this.options.WitnessScaleFactor = 2;
+            this.options.SetPrivatePropertyValue("MaxBlockSigopsCost", 7);
+            this.options.SetPrivatePropertyValue("WitnessScaleFactor", 2);
 
             var transaction = new Transaction();
             var op = new Op() { Code = OpcodeType.OP_CHECKSIG };
@@ -85,8 +86,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public async Task RunAsync_CombinedTransactionInputOutputSigOpsCountAboveThresHold_ThrowsBadBlockSigOpsConsensusErrorExceptionAsync()
         {
-            this.options.MaxBlockSigopsCost = 7;
-            this.options.WitnessScaleFactor = 2;
+            this.options.SetPrivatePropertyValue("MaxBlockSigopsCost", 7);
+            this.options.SetPrivatePropertyValue("WitnessScaleFactor", 2);
 
             var transaction = new Transaction();
             var op = new Op() { Code = OpcodeType.OP_CHECKSIG };
@@ -102,8 +103,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public async Task RunAsync_SingleTransactionInputSigOpsCountAtThresHold_DoesNotThrowExceptionAsync()
         {
-            this.options.MaxBlockSigopsCost = 8;
-            this.options.WitnessScaleFactor = 2;
+            this.options.SetPrivatePropertyValue("MaxBlockSigopsCost", 8);
+            this.options.SetPrivatePropertyValue("WitnessScaleFactor", 2);
 
             var transaction = new Transaction();
             var op = new Op() { Code = OpcodeType.OP_CHECKSIG };
@@ -116,8 +117,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public async Task RunAsync_MultipleTransactionInputSigOpsCountAtThresHold_DoesNotThrowExceptionAsync()
         {
-            this.options.MaxBlockSigopsCost = 8;
-            this.options.WitnessScaleFactor = 2;
+            this.options.SetPrivatePropertyValue("MaxBlockSigopsCost", 8);
+            this.options.SetPrivatePropertyValue("WitnessScaleFactor", 2);
 
             var transaction = new Transaction();
             var op = new Op() { Code = OpcodeType.OP_CHECKSIG };
@@ -131,8 +132,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public async Task RunAsync_SingleTransactionOutputSigOpsCountAtThresHold_DoesNotThrowExceptionAsync()
         {
-            this.options.MaxBlockSigopsCost = 8;
-            this.options.WitnessScaleFactor = 2;
+            this.options.SetPrivatePropertyValue("MaxBlockSigopsCost", 8);
+            this.options.SetPrivatePropertyValue("WitnessScaleFactor", 2);
 
             var transaction = new Transaction();
             var op = new Op() { Code = OpcodeType.OP_CHECKSIG };
@@ -145,8 +146,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public async Task RunAsync_MultipleTransactionOutputSigOpsCountAtThresHold_DoesNotThrowExceptionAsync()
         {
-            this.options.MaxBlockSigopsCost = 8;
-            this.options.WitnessScaleFactor = 2;
+            this.options.SetPrivatePropertyValue("MaxBlockSigopsCost", 8);
+            this.options.SetPrivatePropertyValue("WitnessScaleFactor", 2);
 
             var transaction = new Transaction();
             var op = new Op() { Code = OpcodeType.OP_CHECKSIG };
@@ -160,8 +161,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public async Task RunAsync_CombinedTransactionInputOutputSigOpsCountAtThresHold_DoesNotThrowExceptionAsync()
         {
-            this.options.MaxBlockSigopsCost = 8;
-            this.options.WitnessScaleFactor = 2;
+            this.options.SetPrivatePropertyValue("MaxBlockSigopsCost", 8);
+            this.options.SetPrivatePropertyValue("WitnessScaleFactor", 2);
 
             var transaction = new Transaction();
             var op = new Op() { Code = OpcodeType.OP_CHECKSIG };
@@ -175,8 +176,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public async Task RunAsync_SingleTransactionInputSigOpsCountBelowThreshold_DoesNotThrowExceptionAsync()
         {
-            this.options.MaxBlockSigopsCost = 9;
-            this.options.WitnessScaleFactor = 2;
+            this.options.SetPrivatePropertyValue("MaxBlockSigopsCost", 9);
+            this.options.SetPrivatePropertyValue("WitnessScaleFactor", 2);
 
             var transaction = new Transaction();
             var op = new Op() { Code = OpcodeType.OP_CHECKSIG };
@@ -189,8 +190,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public async Task RunAsync_MultipleTransactionInputSigOpsCountBelowThreshold_DoesNotThrowExceptionAsync()
         {
-            this.options.MaxBlockSigopsCost = 9;
-            this.options.WitnessScaleFactor = 2;
+            this.options.SetPrivatePropertyValue("MaxBlockSigopsCost", 9);
+            this.options.SetPrivatePropertyValue("WitnessScaleFactor", 2);
 
             var transaction = new Transaction();
             var op = new Op() { Code = OpcodeType.OP_CHECKSIG };
@@ -204,8 +205,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public async Task RunAsync_SingleTransactionOutputSigOpsCountBelowThreshold_DoesNotThrowExceptionAsync()
         {
-            this.options.MaxBlockSigopsCost = 9;
-            this.options.WitnessScaleFactor = 2;
+            this.options.SetPrivatePropertyValue("MaxBlockSigopsCost", 9);
+            this.options.SetPrivatePropertyValue("WitnessScaleFactor", 2);
 
             var transaction = new Transaction();
             var op = new Op() { Code = OpcodeType.OP_CHECKSIG };
@@ -218,8 +219,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public async Task RunAsync_MultipleTransactionOutputSigOpsCountBelowThreshold_DoesNotThrowExceptionAsync()
         {
-            this.options.MaxBlockSigopsCost = 9;
-            this.options.WitnessScaleFactor = 2;
+            this.options.SetPrivatePropertyValue("MaxBlockSigopsCost", 9);
+            this.options.SetPrivatePropertyValue("WitnessScaleFactor", 2);
 
             var transaction = new Transaction();
             var op = new Op() { Code = OpcodeType.OP_CHECKSIG };
@@ -233,8 +234,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public async Task RunAsync_CombinedTransactionInputOutputSigOpsCountBelowThreshold_DoesNotThrowExceptionAsync()
         {
-            this.options.MaxBlockSigopsCost = 9;
-            this.options.WitnessScaleFactor = 2;
+            this.options.SetPrivatePropertyValue("MaxBlockSigopsCost", 9);
+            this.options.SetPrivatePropertyValue("WitnessScaleFactor", 2);
 
             var transaction = new Transaction();
             var op = new Op() { Code = OpcodeType.OP_CHECKSIG };

@@ -109,12 +109,10 @@ namespace Stratis.Sidechains.Networks
                 genesisFederationMembers: genesisFederationMembers,
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
-                autoKickIdleMembers: true)
-            {
-                GetMiningTimestampV2ActivationHeight = 100,
-                GetMiningTimestampV2ActivationStrictHeight = 100,
-                PollExpiryBlocks = 450 // 2 hours
-            };
+                autoKickIdleMembers: true,
+                getMiningTimestampV2ActivationHeight: 100,
+                getMiningTimestampV2ActivationStrictHeight: 100,
+                pollExpiryBlocks: 450); // 2 hours
 
             var buriedDeployments = new BuriedDeploymentsArray
             {
