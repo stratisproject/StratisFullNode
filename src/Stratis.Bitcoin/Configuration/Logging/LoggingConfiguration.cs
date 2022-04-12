@@ -147,18 +147,8 @@ namespace Stratis.Bitcoin.Configuration.Logging
                 }
             }
 
-            // Remove rule that forbids logging before the logging is initialized.
-            LoggingRule nullPreInitRule = null;
-            foreach (LoggingRule rule in LogManager.Configuration.LoggingRules)
-            {
-                if (rule.Final && rule.NameMatches("*") && (rule.Targets.Count > 0) && (rule.Targets[0].Name == "null"))
-                {
-                    nullPreInitRule = rule;
-                    break;
-                }
-            }
-
-            LogManager.Configuration.LoggingRules.Remove(nullPreInitRule);
+            // Clear this, otherwise duplicate rules are added each time this method is called resulting in duplicate logging.
+            LogManager.Configuration.LoggingRules.Clear();
 
             LayoutRenderer.Register("message", (logEvent) =>
             {
