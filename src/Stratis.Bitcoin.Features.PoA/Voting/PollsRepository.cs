@@ -202,6 +202,41 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
+        /// <summary>
+        /// Compares the Polls collection with the content of the database.
+        /// </summary>
+        public void HealthCheck(PollsCollection pollsToCompare)
+        {
+            // Load highest index.
+            lock (this.lockObject)
+            {
+                using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
+                {
+                    try
+                    {
+                        var polls = new HashSet<Poll>(GetAllPolls(transaction));
+                        if (pollsToCompare.Any(p => !polls.Contains(p)))
+                        {
+                            this.logger.LogWarning("The polls repository is missing some polls.");
+                            return;
+                        }
+
+                        if (polls.Any(p => !pollsToCompare.Contains(p)))
+                        {
+                            this.logger.LogWarning("The polls repository contains extra polls.");
+                            return;
+                        }
+
+                        this.logger.LogDebug("The polls repository matches the in-memory polls.");
+                    }
+                    catch (Exception err)
+                    {
+                        this.logger.LogWarning("Polls repository health check failed: {0}.", err.Message);
+                    }
+                }
+            }
+        }
+
         public void SaveCurrentTip(DBreeze.Transactions.Transaction transaction, ChainedHeader tip)
         {
             SaveCurrentTip(transaction, (tip == null) ? null : new HashHeightPair(tip));

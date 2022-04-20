@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
+using NBitcoin;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Utilities;
 
@@ -29,6 +30,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             foreach (Poll poll in polls)
                 this.Add(poll);
+        }
+
+        public void LogPolls(ChainedHeader tip, List<IFederationMember> federationMembers)
+        {
+            string pollLog = $"Polls: {Environment.NewLine}{string.Join(Environment.NewLine, this.polls)}{Environment.NewLine}Members: {Environment.NewLine}{string.Join(Environment.NewLine, federationMembers)}";
+
+            this.logger.LogDebug("Height {0}: HashCode({1}) {2}.", tip.Height, pollLog.GetHashCode(), pollLog);
         }
 
         public IEnumerator<Poll> GetEnumerator()

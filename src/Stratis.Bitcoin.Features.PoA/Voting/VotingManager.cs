@@ -518,6 +518,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             long flagFall = DateTime.Now.Ticks;
 
+            // Periodically log the polls collection.
+            if ((chBlock.ChainedHeader.Height % 10000) == 0)
+            {
+                this.PollsRepository.HealthCheck(this.polls);
+                this.polls.LogPolls(chBlock.ChainedHeader.Previous, this.federationHistory.GetFederationForBlock(chBlock.ChainedHeader.Previous));
+            }
+
             try
             {
                 lock (this.locker)
