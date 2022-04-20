@@ -521,7 +521,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             // Periodically log the polls collection.
             if ((chBlock.ChainedHeader.Height % 10000) == 0)
             {
-                this.PollsRepository.HealthCheck(this.polls);
+                this.PollsRepository.HealthCheck(transaction, this.polls);
                 this.polls.LogPolls(chBlock.ChainedHeader.Previous, this.federationHistory.GetFederationForBlock(chBlock.ChainedHeader.Previous));
             }
 
