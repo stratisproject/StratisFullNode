@@ -32,16 +32,16 @@ namespace Stratis.Features.Collateral
             this.network = network;
             this.counterChainNetwork = counterChainNetworkWrapper.CounterChainNetwork;
             this.nodeDeployments = nodeDeployments;
+
+            this.signals.Subscribe<VMProcessBlock>(this.OnBlockConnected);
         }
 
         public Task InitializeAsync()
         {
-            this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
-
             return Task.CompletedTask;
         }
 
-        public void OnBlockConnected(BlockConnected blockConnectedData)
+        public void OnBlockConnected(VMProcessBlock blockConnectedData)
         {
             if (!(this.network.Consensus.ConsensusFactory is CollateralPoAConsensusFactory consensusFactory))
                 return;
@@ -115,12 +115,19 @@ namespace Stratis.Features.Collateral
 
                     if (blockConnectedData.ConnectedBlock.ChainedHeader.Height >= release1300ActivationHeight)
                     {
-                        // Create a pending poll so that the scheduled vote is not "sanitized" away.
-                        this.votingManager.PollsRepository.WithTransaction(transaction =>
+                        if (blockConnectedData.PollsRepositoryTransaction == null)
                         {
-                            this.votingManager.CreatePendingPoll(transaction, votingData, blockConnectedData.ConnectedBlock.ChainedHeader);
-                            transaction.Commit();
-                        });
+                            // Create a pending poll so that the scheduled vote is not "sanitized" away.
+                            this.votingManager.PollsRepository.WithTransaction(transaction =>
+                            {
+                                this.votingManager.CreatePendingPoll(transaction, votingData, blockConnectedData.ConnectedBlock.ChainedHeader);
+                                transaction.Commit();
+                            });
+                        }
+                        else
+                        {
+                            this.votingManager.CreatePendingPoll(blockConnectedData.PollsRepositoryTransaction, votingData, blockConnectedData.ConnectedBlock.ChainedHeader);
+                        }
                     }
 
                     this.votingManager.ScheduleVote(votingData);
