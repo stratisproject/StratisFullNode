@@ -524,7 +524,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 lock (this.locker)
                 {
-                    this.signals.Publish(new VMProcessBlock(chBlock, transaction));
+                    this.signals.Publish(new VotingManagerProcessBlock(chBlock, transaction));
 
                     bool pollsRepositoryModified = false;
 

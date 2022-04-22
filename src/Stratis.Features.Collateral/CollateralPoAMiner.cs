@@ -141,7 +141,7 @@ namespace Stratis.Features.Collateral
 
                     ChainedHeaderBlock blockData = this.consensusManager.GetBlockData(votingRequestHeader.HashBlock);
 
-                    this.joinFederationRequestMonitor.OnBlockConnected(new VMProcessBlock(new ChainedHeaderBlock(blockData.Block, votingRequestHeader)));
+                    this.joinFederationRequestMonitor.OnBlockConnected(new VotingManagerProcessBlock(new ChainedHeaderBlock(blockData.Block, votingRequestHeader)));
                 }
 
                 return;
