@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Newtonsoft.Json;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Bitcoin.Utilities.JsonConverters;
 
 namespace Stratis.Bitcoin.Features.PoA.Voting
 {
@@ -32,11 +36,15 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 this.Add(poll);
         }
 
-        public void LogPolls(ChainedHeader tip, List<IFederationMember> federationMembers)
+        public void LogPolls(ChainedHeader tip, List<IFederationMember> federationMembers, IPollResultExecutor pollResultExecutor)
         {
-            string pollLog = $"Polls: {Environment.NewLine}{string.Join(Environment.NewLine, this.polls)}{Environment.NewLine}Members: {Environment.NewLine}{string.Join(Environment.NewLine, federationMembers)}";
+            var settings = new JsonSerializerSettings();
+            settings.Converters.Add(new UInt256JsonConverter());
+            string pollLog = $"Polls: {Environment.NewLine}{string.Join(Environment.NewLine, this.polls.Select(p => JsonConvert.SerializeObject(new PollViewModel(p, pollResultExecutor), settings)))}{Environment.NewLine}Members: {Environment.NewLine}{string.Join(Environment.NewLine, federationMembers)}";
 
-            this.logger.LogDebug("Height {0}: HashCode({1}) {2}.", tip.Height, pollLog.GetHashCode(), pollLog);
+            var hashCode = Utils.GetHashCode(Encoding.ASCII.GetBytes(pollLog));
+
+            this.logger.LogDebug("Height {0}: HashCode({1}) {2}.", tip.Height, hashCode, pollLog);
         }
 
         public IEnumerator<Poll> GetEnumerator()

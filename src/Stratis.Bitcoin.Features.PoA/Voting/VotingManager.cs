@@ -522,7 +522,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             if ((chBlock.ChainedHeader.Height % 10000) == 0)
             {
                 this.PollsRepository.HealthCheck(transaction, this.polls);
-                this.polls.LogPolls(chBlock.ChainedHeader.Previous, this.federationHistory.GetFederationForBlock(chBlock.ChainedHeader.Previous));
+                this.polls.LogPolls(chBlock.ChainedHeader.Previous, this.federationHistory.GetFederationForBlock(chBlock.ChainedHeader.Previous), this.pollResultExecutor);
             }
 
             try
