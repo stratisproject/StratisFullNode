@@ -5,6 +5,7 @@ using System.Text;
 using ConcurrentCollections;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NBitcoin.Crypto;
 using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
@@ -570,7 +571,21 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     IFederationMember member = this.federationHistory.GetFederationMemberForBlock(chBlock.ChainedHeader);
                     if (member == null)
                     {
-                        this.logger.LogError("The block was mined by a non-federation-member!");
+                        PoABlockHeader blockHeader = (PoABlockHeader)(chBlock.ChainedHeader.Header);
+                        uint256 blockHash = blockHeader.GetHash();
+
+                        var signature = ECDSASignature.FromDER(blockHeader.BlockSignature.Signature);
+                        var pubKeys = new List<PubKey>();
+                        for (int recId = 0; recId < 4; recId++)
+                        {
+                            PubKey pubKeyForSig = PubKey.RecoverFromSignature(recId, signature, blockHash, true);
+                            if (pubKeyForSig == null)
+                                break;
+
+                            pubKeys.Add(pubKeyForSig);
+                        }
+
+                        this.logger.LogError("The block at height {0} was mined by a non-federation-member! Potential public keys are: {1}.", chBlock.ChainedHeader.Height, string.Join(", ", pubKeys.Select(p => p.ToHex()))); 
                         this.logger.LogTrace("(-)[ALIEN_BLOCK]");
 
                         this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader);
