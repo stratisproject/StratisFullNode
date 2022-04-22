@@ -428,9 +428,6 @@ namespace Stratis.Bitcoin.Features.Interop
             HashSet<string> watchedSrc20Contracts = this.interopSettings.GetSettingsByChain(DestinationChain.ETH).WatchedErc20Contracts.Values.ToHashSet();
             HashSet<string> watchedSrc721Contracts = this.interopSettings.GetSettingsByChain(DestinationChain.ETH).WatchedErc721Contracts.Values.ToHashSet();
 
-            var zeroAddressRaw = new uint160(Address.Zero.ToBytes());
-            string zeroAddress = zeroAddressRaw.ToBase58Address(this.network);
-
             foreach (NBitcoin.Transaction transaction in block.Transactions.Where(t => t.IsSmartContractExecTransaction()))
             {
                 try
@@ -448,7 +445,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     {
                         if (this.conversionRequestRepository.Get(receipt.TransactionHash) != null)
                         {
-                            this.logger.Info($"SRC20 transfer transaction '{receipt.TransactionHash}' already exists, ignoring.");
+                            this.logger.Info($"Transfer transaction '{receipt.TransactionHash}' already exists, ignoring.");
                             continue;
                         }
                     }
@@ -458,118 +455,121 @@ namespace Stratis.Bitcoin.Features.Interop
                     if (!watchedSrc20Contracts.Contains(receipt.To) && !watchedSrc721Contracts.Contains(receipt.To))
                         continue;
 
+                    ContractType contractType = ContractType.ERC20;
+
+                    if (watchedSrc721Contracts.Contains(receipt.To))
+                        contractType = ContractType.ERC721;
+
                     this.logger.Info($"Found transaction {receipt.TransactionHash} from {receipt.From} with a receipt that affects watched contract {receipt.To}.");
 
-                    // We don't easily know if this was an SRC20 or SRC721 burn, unless we use the watched hashsets as a lookup.
+                    // We don't easily know if this was an SRC20 or SRC721 burn, thus we use the watched hashsets as a lookup.
                     // In any case we have to validate all the fields in the relevant receipt logs.
                     foreach (CirrusLogResponse log in receipt.Logs)
                     {
-                        TransferDetails src20burn = ExtractBurnFromBurnMetadataLog(log);
+                        TransferDetails srcBurn = ExtractBurnFromBurnMetadataLog(log, contractType);
 
-                        if (src20burn != null && src20burn.ContractType == ContractType.ERC20)
+                        if (srcBurn == null)
                         {
-                            this.logger.Info($"Found a valid SRC20->ERC20 transfer transaction with metadata: {src20burn.To}.");
+                            continue;
+                        }
 
-                            // ERC20 transfers out of the multisig wallet have the same cost structure as a wSTRAX conversion, so we can use the same fee estimation logic.
-                            InteropConversionRequestFee interopConversionRequestFee = await this.conversionRequestFeeService.AgreeFeeForConversionRequestAsync(receipt.TransactionHash, (int)receipt.BlockNumber).ConfigureAwait(false);
+                        this.logger.Info($"Found a valid {(contractType == ContractType.ERC721 ? "SRC721->ERC721" : "SRC20->ERC20")} transfer transaction with metadata: {srcBurn.To}.");
 
-                            // If a dynamic fee could not be determined, create a fallback fee.
-                            if (interopConversionRequestFee == null ||
-                                (interopConversionRequestFee != null && interopConversionRequestFee.State != InteropFeeState.AgreeanceConcluded))
+                        // ERC20 transfers out of the multisig wallet have the same cost structure as a wSTRAX conversion, so we can use the same fee estimation logic.
+                        InteropConversionRequestFee interopConversionRequestFee = await this.conversionRequestFeeService.AgreeFeeForConversionRequestAsync(receipt.TransactionHash, (int)receipt.BlockNumber).ConfigureAwait(false);
+
+                        // If a dynamic fee could not be determined, create a fallback fee.
+                        if (interopConversionRequestFee == null ||
+                            (interopConversionRequestFee != null && interopConversionRequestFee.State != InteropFeeState.AgreeanceConcluded))
+                        {
+                            interopConversionRequestFee.Amount = ConversionRequestFeeService.FallBackFee;
+                            this.logger.Warn($"A dynamic fee for {(contractType == ContractType.ERC721 ? "SRC721->ERC721" : "SRC20->ERC20")} request '{receipt.TransactionHash}' could not be determined, using a fixed fee of {ConversionRequestFeeService.FallBackFee} CRS.");
+                        }
+
+                        IFederation federation = this.network.Federations?.GetOnlyFederation();
+
+                        Script multisigScript = PayToFederationTemplate.Instance.GenerateScriptPubKey(federation.Id).PaymentScript;
+
+                        // Since we have no reliable way (yet) of extracting pricing data for all the potential tokens being transferred, there has to be a transaction output paying the multisig the conversion fee in order for the burn to be processed.
+                        // In future perhaps the fee could be taken out of the token value directly e.g. calculate a dollar fee and retain the equivalent SRC20 USDT. The distribution could then be done via an updated multisig contract instead.
+                        TxOut conversionFeeOutput = null;
+                        foreach (TxOut txOut in transaction.Outputs)
+                        {
+                            this.logger.Debug($"Output payment script '{txOut.ScriptPubKey}', multisigScript '{multisigScript}'");
+
+                            // For now, pay it directly to the multisig.
+                            if (txOut.ScriptPubKey == multisigScript)
                             {
-                                interopConversionRequestFee.Amount = ConversionRequestFeeService.FallBackFee;
-                                this.logger.Warn($"A dynamic fee for SRC20->ERC20 request '{receipt.TransactionHash}' could not be determined, using a fixed fee of {ConversionRequestFeeService.FallBackFee} CRS.");
+                                conversionFeeOutput = txOut;
                             }
+                        }
 
-                            IFederation federation = this.network.Federations?.GetOnlyFederation();
+                        var request = new ConversionRequest()
+                        {
+                            RequestId = receipt.TransactionHash,
+                            RequestType = ConversionRequestType.Burn,
+                            Amount = ConvertBigIntegerToUint256(srcBurn.Value),
+                            BlockHeight = applicableHeight,
+                            DestinationAddress = srcBurn.To,
+                            DestinationChain = DestinationChain.ETH,
+                        };
 
-                            Script multisigScript = PayToFederationTemplate.Instance.GenerateScriptPubKey(federation.Id).PaymentScript;
-
-                            // Since we have no reliable way (yet) of extracting pricing data for all the potential tokens being transferred, there has to be a transaction output paying the multisig the conversion fee in order for the burn to be processed.
-                            // In future perhaps the fee could be taken out of the token value directly e.g. calculate a dollar fee and retain the equivalent SRC20 USDT. The distribution could then be done via an updated multisig contract instead.
-                            TxOut conversionFeeOutput = null;
-                            foreach (TxOut txOut in transaction.Outputs)
-                            {
-                                this.logger.Debug($"Output payment script '{txOut.ScriptPubKey}', multisigScript '{multisigScript}'");
-
-                                // For now, pay it directly to the multisig.
-                                if (txOut.ScriptPubKey == multisigScript)
-                                {
-                                    conversionFeeOutput = txOut;
-                                }
-                            }
-
-                            var request = new ConversionRequest()
-                            {
-                                RequestId = receipt.TransactionHash,
-                                RequestType = ConversionRequestType.Burn,
-                                Amount = ConvertBigIntegerToUint256(src20burn.Value),
-                                BlockHeight = applicableHeight,
-                                DestinationAddress = src20burn.To,
-                                DestinationChain = DestinationChain.ETH,
-                            };
-
-                            if (conversionFeeOutput == null)
-                            {
-                                this.logger.Warn("Transfer transaction '{0}' has no fee output.", receipt.TransactionHash);
-                                request.Processed = true;
-                                request.RequestStatus = ConversionRequestStatus.FailedNoFeeOutput;
-
-                                lock (this.repositoryLock)
-                                {
-                                    this.conversionRequestRepository.Save(request);
-                                }
-
-                                continue;
-                            }
-
-                            if (Money.Satoshis(interopConversionRequestFee.Amount) >= conversionFeeOutput.Value)
-                            {
-                                var message = $"Transfer transaction '{receipt.TransactionHash}' has an insufficient fee; estimated fee '{Money.Satoshis(interopConversionRequestFee.Amount).ToUnit(MoneyUnit.BTC)}'";
-                                this.logger.Warn(message);
-
-                                request.Processed = true;
-                                request.RequestStatus = ConversionRequestStatus.FailedInsufficientFee;
-                                request.StatusMessage = message;
-
-                                lock (this.repositoryLock)
-                                {
-                                    this.conversionRequestRepository.Save(request);
-                                }
-
-                                continue;
-                            }
-
-                            // Add the fee to the matured block sync manager so that the CrossChainTransferStore can process it.
-                            this.maturedBlocksSyncManager.AddInterOpFeeDeposit(new Deposit(
-                                new uint256(receipt.TransactionHash),
-                                DepositRetrievalType.Distribution,
-                                Money.Satoshis(interopConversionRequestFee.Amount),
-                                this.network.ConversionTransactionFeeDistributionDummyAddress,
-                                DestinationChain.CIRRUS,
-                                applicableHeight,
-                                block.GetHash()
-                               ));
-
-
-                            KeyValuePair<string, string> contractMapping = this.interopSettings.GetSettingsByChain(DestinationChain.ETH).WatchedErc20Contracts.First(c => c.Value == receipt.To);
-                            SupportedContractAddress token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.NativeNetworkAddress.ToLowerInvariant() == contractMapping.Key.ToLowerInvariant());
-                            var tokenString = token == null ? contractMapping.Key : $"{token.TokenName}-{contractMapping.Key}";
-
-                            this.logger.Info($"A transfer request from CRS to '{tokenString}' will be processed.");
-
-                            request.Processed = false;
-                            request.RequestStatus = ConversionRequestStatus.Unprocessed;
-                            request.TokenContract = contractMapping.Key;
+                        if (conversionFeeOutput == null)
+                        {
+                            this.logger.Warn("Transfer transaction '{0}' has no fee output.", receipt.TransactionHash);
+                            request.Processed = true;
+                            request.RequestStatus = ConversionRequestStatus.FailedNoFeeOutput;
 
                             lock (this.repositoryLock)
                             {
                                 this.conversionRequestRepository.Save(request);
                             }
+
+                            continue;
                         }
 
-                        // TODO: Awaiting an InterFluxNonFungibleToken contract that has a 'burn with metadata' method
-                        //TransferDetails src721burn = ExtractBurnFromTransferLog(log, zeroAddress);
+                        if (Money.Satoshis(interopConversionRequestFee.Amount) >= conversionFeeOutput.Value)
+                        {
+                            var message = $"Transfer transaction '{receipt.TransactionHash}' has an insufficient fee; estimated fee '{Money.Satoshis(interopConversionRequestFee.Amount).ToUnit(MoneyUnit.BTC)}'";
+                            this.logger.Warn(message);
+
+                            request.Processed = true;
+                            request.RequestStatus = ConversionRequestStatus.FailedInsufficientFee;
+                            request.StatusMessage = message;
+
+                            lock (this.repositoryLock)
+                            {
+                                this.conversionRequestRepository.Save(request);
+                            }
+
+                            continue;
+                        }
+
+                        // Add the fee to the matured block sync manager so that the CrossChainTransferStore can process it.
+                        this.maturedBlocksSyncManager.AddInterOpFeeDeposit(new Deposit(
+                            new uint256(receipt.TransactionHash),
+                            DepositRetrievalType.Distribution,
+                            Money.Satoshis(interopConversionRequestFee.Amount),
+                            this.network.ConversionTransactionFeeDistributionDummyAddress,
+                            DestinationChain.CIRRUS,
+                            applicableHeight,
+                            block.GetHash()
+                           ));
+
+                        KeyValuePair<string, string> contractMapping = this.interopSettings.GetSettingsByChain(DestinationChain.ETH).WatchedErc20Contracts.First(c => c.Value == receipt.To);
+                        SupportedContractAddress token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.NativeNetworkAddress.ToLowerInvariant() == contractMapping.Key.ToLowerInvariant());
+                        var tokenString = token == null ? contractMapping.Key : $"{token.TokenName}-{contractMapping.Key}";
+
+                        this.logger.Info($"A transfer request from CRS to '{tokenString}' will be processed.");
+
+                        request.Processed = false;
+                        request.RequestStatus = ConversionRequestStatus.Unprocessed;
+                        request.TokenContract = contractMapping.Key;
+
+                        lock (this.repositoryLock)
+                        {
+                            this.conversionRequestRepository.Save(request);
+                        }
                     }
                 }
                 catch (Exception e)
@@ -584,11 +584,12 @@ namespace Stratis.Bitcoin.Features.Interop
         }
 
         /// <summary>
-        /// SRC20 InterFluxStandardToken burns.
+        /// SRC20 InterFluxStandardToken burns and SRC721 InterFluxNonFungibleToken burns.
         /// </summary>
         /// <param name="log">The log data from a Cirrus smart contract receipt.</param>
-        /// <returns>A <see cref="TransferDetails"/> instance if this was a valid SRC721 burn, else null.</returns>
-        private TransferDetails ExtractBurnFromBurnMetadataLog(CirrusLogResponse log)
+        /// <param name="contractType">The type of contract this receipt is for.</param>
+        /// <returns>A <see cref="TransferDetails"/> instance if this was a valid SRC20/721 burn, else null.</returns>
+        private TransferDetails ExtractBurnFromBurnMetadataLog(CirrusLogResponse log, ContractType contractType)
         {
             // We presume that anything emitting this event must be a burn and thus the 'To' address is neither included in the event nor validated here.
             if (log.Log.Event != "BurnMetadata")
@@ -615,58 +616,11 @@ namespace Stratis.Bitcoin.Features.Interop
 
             var transfer = new TransferDetails()
             {
-                ContractType = ContractType.ERC20,
+                ContractType = contractType,
                 From = fromAddress,
                 To = metadataString,
                 TransferType = TransferType.Burn,
                 Value = transferAmount
-            };
-
-            return transfer;
-        }
-
-        /// <summary>
-        /// For SRC721 NonFungibleToken burns.
-        /// </summary>
-        /// <param name="log">The log data from a Cirrus smart contract receipt.</param>
-        /// <param name="zeroAddress">The base58 representation of <see cref="Address.Zero"/>.</param>
-        /// <returns>A <see cref="TransferDetails"/> instance if this was a valid SRC721 burn, else null.</returns>
-        private TransferDetails ExtractBurnFromTransferLog(CirrusLogResponse log, string zeroAddress)
-        {
-            throw new NotImplementedException("This will not work yet, the NFT contract should instead be adapted to emit a BurnMetadata log as well");
-
-            if (log.Log.Event != "TransferLog")
-                return null;
-
-            if (!log.Log.Data.TryGetValue("from", out object from))
-                return null;
-
-            string fromAddress = (string)from;
-
-            if (!log.Log.Data.TryGetValue("to", out object to))
-                return null;
-
-            string toAddress = (string)to;
-
-            // If it's not being transferred to the zero address it isn't a burn, and can thus be ignored.
-            if (toAddress != zeroAddress)
-                return null;
-
-            if (!log.Log.Data.TryGetValue("tokenId", out object tokenId))
-                return null;
-
-            string tokenIdString = (string)tokenId;
-
-            if (!int.TryParse(tokenIdString, out int tokenIdInt))
-                return null;
-
-            var transfer = new TransferDetails()
-            {
-                ContractType = ContractType.ERC721,
-                From = fromAddress,
-                To = toAddress,
-                TransferType = TransferType.Burn,
-                Value = tokenIdInt
             };
 
             return transfer;
@@ -803,16 +757,17 @@ namespace Stratis.Bitcoin.Features.Interop
         }
 
         /// <summary>
-        /// Processes Transfer contract call events made against one of the ERC20 token contracts being monitored by the poller.
+        /// Processes Transfer contract call events made against one of the ERC20/ERC721 token contracts being monitored by the poller.
         /// </summary>
         /// <remarks>Only transfers affecting the federation multisig wallet contract are processed.</remarks>
         /// <param name="blockHash">The hash of the block the transfer transaction appeared in.</param>
         /// <param name="transactionHash">The hash of the transaction that the transfer method call appeared in.</param>
         /// <param name="transferContractAddress">The address of the ERC20 contract that the transfer was actioned against.</param>
         /// <param name="transfer">The metadata of the transfer method call.</param>
+        /// <param name="supportedChain">The chain-specific client.</param>
         private async Task ProcessTransferAsync(string blockHash, string transactionHash, string transferContractAddress, TransferDetails transfer, KeyValuePair<DestinationChain, IETHClient> supportedChain)
         {
-            this.logger.Info("Conversion transfer transaction '{0}' received from polled block '{1}', sender {2}.", transactionHash, blockHash, transfer.From);
+            this.logger.Info("Conversion transfer transaction '{0}' of type '{1}' received from polled block '{2}', sender {3}.", transactionHash, transfer.ContractType, blockHash, transfer.From);
 
             lock (this.repositoryLock)
             {
@@ -853,9 +808,17 @@ namespace Stratis.Bitcoin.Features.Interop
                 return;
             }
 
-            if (!this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts.TryGetValue(transferContractAddress, out string destinationContract))
+            string destinationContract = null;
+
+            if (transfer.ContractType == ContractType.ERC20 && !this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc20Contracts.TryGetValue(transferContractAddress, out destinationContract))
             {
                 this.logger.Error("Unknown ERC20 contract address '{0}'; unable to map it to an SRC20 contract", transferContractAddress);
+                return;
+            }
+
+            if (transfer.ContractType == ContractType.ERC721 && !this.interopSettings.GetSettingsByChain(supportedChain.Key).WatchedErc721Contracts.TryGetValue(transferContractAddress, out destinationContract))
+            {
+                this.logger.Error("Unknown ERC721 contract address '{0}'; unable to map it to an SRC721 contract", transferContractAddress);
                 return;
             }
 
@@ -891,7 +854,7 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <summary>
         /// Iterates through all unprocessed mint requests in the repository.
         /// <para>
-        /// This processes all WSTRAX as well as ERC20 to SRC20 (USDT, WTBC etc) minting requests.
+        /// This processes all WSTRAX as well as ERC20 to SRC20 (USDT, WTBC etc) and ERC721 to SRC721 minting requests.
         /// </para>
         /// If this node is regarded as the designated originator of the multisig transaction, it will submit the transfer transaction data to
         /// the multisig wallet contract on the Ethereum chain. This data consists of a method call to the transfer() method on the wrapped STRAX contract,
@@ -935,11 +898,19 @@ namespace Stratis.Bitcoin.Features.Interop
                     continue;
                 }
 
+                // Default to ERC20. This value only gets used if this is not a wSTRAX transfer anyway.
+                ContractType contractType = ContractType.ERC20;
+
+                if (this.interopSettings.ETHSettings.WatchedErc721Contracts.ContainsValue(request.TokenContract))
+                {
+                    contractType = ContractType.ERC721;
+                }
+
                 bool isTransfer = false;
                 if (!string.IsNullOrWhiteSpace(request.TokenContract) && request.DestinationChain == DestinationChain.CIRRUS)
                 {
-                    // This is an ERC20 -> SRC20 minting request, and therefore needs to be handled differently to wSTRAX.
-                    this.logger.Info("Processing ERC20 to SRC20 transfer request {0}.", request.RequestId);
+                    // This is an ERCx -> SRCx minting request, and therefore needs to be handled differently to wSTRAX.
+                    this.logger.Info("Processing {0} transfer request {1}.", (contractType == ContractType.ERC20 ? "ERC20 to SRC20" : "ERC721 to SRC721"), request.RequestId);
                     isTransfer = true;
                 }
 
@@ -952,7 +923,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 this.logger.Info("Processing mint request {0} on {1} chain.", request.RequestId, request.DestinationChain);
 
-                // The state machine gets shared between wSTRAX minting transactions, and ERC20/SRC20 transfers.
+                // The state machine gets shared between wSTRAX minting transactions, and ERCx/SRCx transfers.
                 // TODO: Refactor this to use the InteropPollerStateMachine class for wSTRAX minting transactions, as it will make the logic a lot more concise
                 // The main difference between the two is that we do not have an IEthClient for Cirrus, and have to make contract calls via the HTTP API.
                 // TODO: Perhaps the transactionId coordination should actually be done within the multisig contract. This will however increase gas costs for each mint. Maybe a Cirrus contract instead?
@@ -960,7 +931,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 {
                     case ConversionRequestStatus.Unprocessed:
                         {
-                            stateMachine.Unprocessed(request, originator, designatedMember);
+                            stateMachine.Unprocessed(request, originator, designatedMember, isTransfer, contractType);
                             break;
                         }
 
@@ -969,7 +940,19 @@ namespace Stratis.Bitcoin.Features.Interop
                             if (isTransfer)
                             {
                                 // TODO: Make a Cirrus version of SubmitTransactionAsync that can handle more generic operations than just minting
-                                MultisigTransactionIdentifiers identifiers = await this.cirrusClient.MintAsync(request.TokenContract, request.DestinationAddress, new BigInteger(request.Amount.ToBytes())).ConfigureAwait(false);
+                                MultisigTransactionIdentifiers identifiers = null;
+
+                                if (contractType == ContractType.ERC20)
+                                    identifiers = await this.cirrusClient.MintAsync(request.TokenContract, request.DestinationAddress, new BigInteger(request.Amount.ToBytes())).ConfigureAwait(false);
+                                else
+                                {
+                                    BigInteger tokenId = new BigInteger(request.Amount.ToBytes());
+
+                                    // TODO: Maybe retaining the TransferDetails will be less messy
+                                    string uri = await clientForDestChain.GetErc721TokenUriAsync(request.TokenContract, tokenId).ConfigureAwait(false);
+
+                                    identifiers = await this.cirrusClient.MintNftAsync(request.TokenContract, request.DestinationAddress, tokenId, uri).ConfigureAwait(false);
+                                }
 
                                 if (identifiers.TransactionId == BigInteger.MinusOne)
                                 {
@@ -993,7 +976,7 @@ namespace Stratis.Bitcoin.Features.Interop
                                 BigInteger amountToSubmit = this.CoinsToWei(request.Amount.GetLow64());
                                 string contractToSubmit = this.interopSettings.GetSettingsByChain(request.DestinationChain).WrappedStraxContractAddress;
 
-                                await stateMachine.OriginatorNotSubmittedAsync(request, clientForDestChain, this.interopSettings, amountToSubmit, contractToSubmit).ConfigureAwait(false);
+                                await stateMachine.OriginatorNotSubmittedAsync(request, clientForDestChain, this.interopSettings, amountToSubmit, contractToSubmit, isTransfer, contractType).ConfigureAwait(false);
                             }
 
                             break;
@@ -1001,7 +984,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                     case ConversionRequestStatus.OriginatorSubmitting:
                         {
-                            await stateMachine.OriginatorSubmittingAsync(request, clientForDestChain, this.cirrusClient, this.SubmissionConfirmationThreshold, isTransfer).ConfigureAwait(false);
+                            await stateMachine.OriginatorSubmittingAsync(request, clientForDestChain, this.cirrusClient, this.SubmissionConfirmationThreshold, isTransfer, contractType).ConfigureAwait(false);
 
                             break;
                         }
@@ -1014,7 +997,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             // The coordination mechanism safeguards against this, as any such spurious transaction will not receive acceptance votes.
                             // TODO: The transactionId should be accompanied by the hash of the submission transaction on the Ethereum chain so that it can be verified
 
-                            await stateMachine.OriginatorSubmittedAsync(request, this.interopSettings, isTransfer).ConfigureAwait(false);
+                            await stateMachine.OriginatorSubmittedAsync(request, this.interopSettings, isTransfer, contractType).ConfigureAwait(false);
 
                             break;
                         }
@@ -1146,13 +1129,14 @@ namespace Stratis.Bitcoin.Features.Interop
         }
 
         /// <summary>
-        /// Iterates through all unprocessed SRC20 burn requests in the repository.
+        /// Iterates through all unprocessed SRC20/SRC721 burn requests in the repository.
         /// <para>
         /// This includes SRC20 to ERC20 burns.
         /// </para>
         /// If this node is regarded as the designated originator of the multisig transaction, it will submit the transfer transaction data to
-        /// the multisig wallet contract on the Ethereum chain. This data consists of a method call to the transfer() method on the ERC20 contract,
-        /// as well as the intended recipient address and amount of tokens to be transferred.
+        /// the multisig wallet contract on the Ethereum chain. This data consists of a method call to the transfer() method on the ERC20 contract
+        /// (or the safeTransferFrom() method in the case of an ERC721 contract), as well as the intended recipient address and amount/tokenId of
+        /// tokens to be transferred.
         /// </summary>
         private async Task ProcessBurnRequestsAsync()
         {
@@ -1185,31 +1169,43 @@ namespace Stratis.Bitcoin.Features.Interop
                     continue;
                 }
 
+                // Default to ERC20. This value only gets used if this is not a wSTRAX transfer anyway.
+                ContractType contractType = ContractType.ERC20;
+
+                if (this.interopSettings.ETHSettings.WatchedErc721Contracts.ContainsValue(request.TokenContract))
+                {
+                    contractType = ContractType.ERC721;
+                }
+
                 bool originator = DetermineConversionRequestOriginator(request.BlockHeight, out IFederationMember designatedMember);
 
                 IETHClient clientForDestChain = this.ethClientProvider.GetClientForChain(request.DestinationChain);
 
-                this.logger.Info("Processing burn request '{0}' on {1} chain.", request.RequestId, request.DestinationChain);
+                this.logger.Info("Processing burn request '{0}' of type {1} on {2} chain.", request.RequestId, contractType, request.DestinationChain);
 
-                BigInteger balanceRemaining = await clientForDestChain.GetErc20BalanceAsync(this.interopSettings.GetSettingsByChain(request.DestinationChain).MultisigWalletAddress, request.TokenContract).ConfigureAwait(false);
-
-                // The request amount is already denominated in 'wei' (or the Cirrus SRC20 equivalent) so we just need to change the underlying type.
-                BigInteger conversionAmountInWei = new BigInteger(request.Amount.ToBytes());
-
-                // Unlike the wSTRAX contract, the multisig cannot mint new tokens on the ERC20 contracts it is monitoring.
-                // So we retrieve the balance as a sanity check, but if it is insufficient then something has gone badly wrong and we have to abort processing.
-                if (conversionAmountInWei >= balanceRemaining)
+                if (contractType == ContractType.ERC20)
                 {
-                    this.logger.Error($"Multisig {nameof(balanceRemaining)}={balanceRemaining} is insufficient for {nameof(conversionAmountInWei)}={conversionAmountInWei}, failed to process transaction {request.RequestId}.");
+                    BigInteger balanceRemaining = await clientForDestChain.GetErc20BalanceAsync(this.interopSettings.GetSettingsByChain(request.DestinationChain).MultisigWalletAddress, request.TokenContract).ConfigureAwait(false);
 
-                    request.Processed = true;
+                    // The request amount is already denominated in 'wei' (or the Cirrus SRC20 equivalent) so we just need to change the underlying type.
+                    BigInteger conversionAmountInWei = new BigInteger(request.Amount.ToBytes());
 
-                    lock (this.repositoryLock)
+                    // Unlike the wSTRAX contract, the multisig cannot mint new tokens on the ERC20 contracts it is monitoring.
+                    // So we retrieve the balance as a sanity check, but if it is insufficient then something has gone badly wrong and we have to abort processing.
+                    if (conversionAmountInWei >= balanceRemaining)
                     {
-                        this.conversionRequestRepository.Save(request);
-                    }
+                        this.logger.Error($"Multisig {nameof(balanceRemaining)}={balanceRemaining} is insufficient for {nameof(conversionAmountInWei)}={conversionAmountInWei}, failed to process transaction {request.RequestId}.");
 
-                    continue;
+                        request.RequestStatus = ConversionRequestStatus.Failed;
+                        request.Processed = true;
+
+                        lock (this.repositoryLock)
+                        {
+                            this.conversionRequestRepository.Save(request);
+                        }
+
+                        continue;
+                    }
                 }
 
                 // TODO: Perhaps the transactionId coordination should actually be done within the multisig contract. This will however increase gas costs for each mint. Maybe a Cirrus contract instead?
@@ -1217,7 +1213,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 {
                     case ConversionRequestStatus.Unprocessed:
                         {
-                            stateMachine.Unprocessed(request, originator, designatedMember);
+                            stateMachine.Unprocessed(request, originator, designatedMember, false, contractType);
                             break;
                         }
 
@@ -1225,14 +1221,14 @@ namespace Stratis.Bitcoin.Features.Interop
                         {
                             BigInteger amountToSubmit = new BigInteger(request.Amount.ToBytes());
 
-                            await stateMachine.OriginatorNotSubmittedAsync(request, clientForDestChain, this.interopSettings, amountToSubmit, request.TokenContract).ConfigureAwait(false);
+                            await stateMachine.OriginatorNotSubmittedAsync(request, clientForDestChain, this.interopSettings, amountToSubmit, request.TokenContract, false, contractType).ConfigureAwait(false);
 
                             break;
                         }
 
                     case ConversionRequestStatus.OriginatorSubmitting:
                         {
-                            await stateMachine.OriginatorSubmittingAsync(request, clientForDestChain, this.cirrusClient, this.SubmissionConfirmationThreshold, false).ConfigureAwait(false);
+                            await stateMachine.OriginatorSubmittingAsync(request, clientForDestChain, this.cirrusClient, this.SubmissionConfirmationThreshold, false, contractType).ConfigureAwait(false);
 
                             break;
                         }
@@ -1245,14 +1241,14 @@ namespace Stratis.Bitcoin.Features.Interop
                             // The coordination mechanism safeguards against this, as any such spurious transaction will not receive acceptance votes.
                             // TODO: The transactionId should be accompanied by the hash of the submission transaction on the Ethereum chain so that it can be verified
 
-                            await stateMachine.OriginatorSubmittedAsync(request, this.interopSettings, false).ConfigureAwait(false);
+                            await stateMachine.OriginatorSubmittedAsync(request, this.interopSettings, false, contractType).ConfigureAwait(false);
 
                             break;
                         }
 
                     case ConversionRequestStatus.VoteFinalised:
                         {
-                            await stateMachine.VoteFinalisedAsync(request, clientForDestChain, this.interopSettings).ConfigureAwait(false);
+                            await stateMachine.VoteFinalisedAsync(request, clientForDestChain, this.interopSettings, contractType).ConfigureAwait(false);
 
                             break;
                         }
@@ -1265,7 +1261,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             // This is done within the InteropBehavior automatically, we just check each poll loop if a transaction has enough votes yet.
                             // Each node must only ever confirm a single transactionId for a given conversion transaction.
 
-                            await stateMachine.NotOriginatorAsync(request, clientForDestChain, this.interopSettings).ConfigureAwait(false);
+                            await stateMachine.NotOriginatorAsync(request, clientForDestChain, this.interopSettings, contractType).ConfigureAwait(false);
 
                             break;
                         }
