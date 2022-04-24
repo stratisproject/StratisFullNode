@@ -192,37 +192,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 if (!string.IsNullOrEmpty(pubKeyOfMemberBeingVotedOn))
                     models = models.Where(m => m.VotingDataString.Contains(pubKeyOfMemberBeingVotedOn));
 
-                return this.Json(models);
-            }
-            catch (Exception e)
-            {
-                this.logger.LogError("Exception occurred: {0}", e.ToString());
-                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
-            }
-        }
-
-        /// <summary>
-        /// Retrieves a list of expired and executed member polls.
-        /// </summary>
-        /// <param name="pubKeyOfMemberBeingVotedOn">The public key of the member being voted on (in hexadecimal). If omitted or empty then all polls are returned.</param>
-        /// <returns>Executed and expired polls</returns>
-        /// <response code="200">Returns a set of executed and expired polls.</response>
-        /// <response code="400">Unexpected exception occurred</response>
-        [Route("polls/members/all")]
-        [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        public IActionResult GetAllMemberPolls([FromQuery] string pubKeyOfMemberBeingVotedOn = "")
-        {
-            try
-            {
-                IEnumerable<Poll> polls = this.votingManager.GetExpiredPolls().Concat(this.votingManager.GetExecutedPolls()).ToList().MemberPolls();
-                IEnumerable<PollViewModel> models = polls.Select(x => new PollViewModel(x, this.pollExecutor));
-
-                if (!string.IsNullOrEmpty(pubKeyOfMemberBeingVotedOn))
-                    models = models.Where(m => m.VotingDataString.Contains(pubKeyOfMemberBeingVotedOn));
-
-                return this.Json(models.OrderBy(p => p.Id));
+                return this.Json(models.OrderBy(p => p.PollExecutedBlockDataHeight));
             }
             catch (Exception e)
             {
