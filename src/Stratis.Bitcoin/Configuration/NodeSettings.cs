@@ -43,15 +43,16 @@ namespace Stratis.Bitcoin.Configuration
         /// <summary>The version of the protocol supported by the current implementation of the Full Node.</summary>
         public const ProtocolVersion SupportedProtocolVersion = ProtocolVersion.SENDHEADERS_VERSION;
 
-        /// <summary>A factory responsible for creating a Full Node logger instance.</summary>
         private static ILoggerFactory loggerFactory;
 
-        public ILoggerFactory LoggerFactory {
+        /// <summary>A factory responsible for creating a Full Node logger instance.</summary>
+        public ILoggerFactory LoggerFactory
+        { 
             get
             {
                 if (loggerFactory == null)
                 {
-                    var logSettings = new LogSettings();
+                    logSettings = new LogSettings();
                     logSettings.Load(this.ConfigReader);
                     loggerFactory = ExtendedLoggerFactory.Create(logSettings, this.DataFolder);
 
@@ -61,18 +62,15 @@ namespace Stratis.Bitcoin.Configuration
 
                 return loggerFactory;
             }
-
-            private set
-            {
-                loggerFactory = value;
-            }
         }
 
         /// <summary>An instance of the Full Node logger, which reports on the Full Node's activity.</summary>
         public ILogger Logger { get; private set; }
 
+        private static LogSettings logSettings;
+
         /// <summary>The settings of the Full Node's logger.</summary>
-        public LogSettings LogSettings { get; private set; }
+        public LogSettings LogSettings => logSettings;
 
         /// <summary>A list of paths to folders which Full Node components use to store data. These folders are found
         /// in the <see cref="DataDir"/>.
