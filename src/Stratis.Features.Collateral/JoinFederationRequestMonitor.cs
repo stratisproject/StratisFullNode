@@ -61,7 +61,7 @@ namespace Stratis.Features.Collateral
                         continue;
 
                     // Skip if the member already exists.
-                    if (this.votingManager.IsFederationMember(request.PubKey))
+                    if (this.votingManager.IsMemberOfFederation(request.PubKey))
                         continue;
 
                     // Check if the collateral amount is valid.
@@ -131,7 +131,7 @@ namespace Stratis.Features.Collateral
                     }
                     
                     // If this node is a federation member the schedule a vote.
-                    if (this.votingManager.IsFederationMember())
+                    if (this.votingManager.IsFederationMember)
                         this.votingManager.ScheduleVote(votingData);
                 }
                 catch (Exception err)
