@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.Wallet
@@ -17,21 +18,25 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <summary>
         /// A value indicating whether the transactions hex representations should be saved in the wallet file.
         /// </summary>
+        [CommandLineOption("savetrxhex" ,"Save the hex of transactions in the wallet file.")]
         public bool SaveTransactionHex { get; set; }
 
         /// <summary>
         /// A value indicating whether to unlock the supplied default wallet on startup.
         /// </summary>
+        [CommandLineOption("unlockdefaultwallet", "Unlocks the specified default wallet.")]
         public bool UnlockDefaultWallet { get; set; }
 
         /// <summary>
         /// Name for the default wallet.
         /// </summary>
+        [CommandLineOption("defaultwalletname", "Loads the specified wallet on startup. If it doesn't exist, it will be created automatically.")]
         public string DefaultWalletName { get; set; }
 
         /// <summary>
         /// Password for the default wallet if overriding the default.
         /// </summary>
+        [CommandLineOption("defaultwalletpassword", "Overrides the default wallet password.")]
         public string DefaultWalletPassword { get; set; }
 
         /// <summary>
@@ -40,6 +45,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         public bool IsLightWallet { get; set; }
 
         /// <summary>Size of the buffer of unused addresses maintained in an account.</summary>
+        [CommandLineOption("walletaddressbuffer", "Size of the buffer of unused addresses maintained in an account.")]
         public int UnusedAddressesBuffer { get; set; }
 
         /// <summary>
@@ -57,12 +63,8 @@ namespace Stratis.Bitcoin.Features.Wallet
             this.SaveTransactionHex = config.GetOrDefault<bool>("savetrxhex", false, this.logger);
             this.UnusedAddressesBuffer = config.GetOrDefault<int>("walletaddressbuffer", 20, this.logger);
             this.DefaultWalletName = config.GetOrDefault<string>("defaultwalletname", null, this.logger);
-
-            if (!string.IsNullOrEmpty(this.DefaultWalletName))
-            {
-                this.DefaultWalletPassword = config.GetOrDefault<string>("defaultwalletpassword", "default", null); // No logging!
-                this.UnlockDefaultWallet = config.GetOrDefault<bool>("unlockdefaultwallet", false, this.logger);
-            }
+            this.DefaultWalletPassword = config.GetOrDefault<string>("defaultwalletpassword", "default", null); // No logging!
+            this.UnlockDefaultWallet = config.GetOrDefault<bool>("unlockdefaultwallet", false, this.logger);
         }
 
         /// <summary>
@@ -80,15 +82,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <param name="network">Not used.</param>
         public static void PrintHelp(Network network)
         {
-            NodeSettings defaults = NodeSettings.Default(network);
-            var builder = new StringBuilder();
-
-            builder.AppendLine("-savetrxhex=<0 or 1>            Save the hex of transactions in the wallet file. Default: 0.");
-            builder.AppendLine("-defaultwalletname=<string>     Loads the specified wallet on startup. If it doesn't exist, it will be created automatically.");
-            builder.AppendLine("-defaultwalletpassword=<string> Overrides the default wallet password. Default: default.");
-            builder.AppendLine("-unlockdefaultwallet=<0 or 1>   Unlocks the specified default wallet. Default: 0.");
-            builder.AppendLine("-walletaddressbuffer=<number>   Size of the buffer of unused addresses maintained in an account. Default: 20.");
-            defaults.Logger.LogInformation(builder.ToString());
+            SettingsHelper.PrintHelp(typeof(WalletSettings), network);
         }
 
         /// <summary>
@@ -98,17 +92,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <param name="network">The network to base the defaults off.</param>
         public static void BuildDefaultConfigurationFile(StringBuilder builder, Network network)
         {
-            builder.AppendLine("####Wallet Settings####");
-            builder.AppendLine("#Save the hex of transactions in the wallet file. Default: 0.");
-            builder.AppendLine("#savetrxhex=0");
-            builder.AppendLine("#Creates a wallet with the specified name and the specified password. It will be created if it doesn't exist and can be unlocked on startup when unlockdefaultwallet is set to 1.");
-            builder.AppendLine("#defaultwalletname=");
-            builder.AppendLine("#Overrides the default wallet password. Default: default.");
-            builder.AppendLine("#defaultwalletpassword=default");
-            builder.AppendLine("#A value indicating whether to unlock the supplied default wallet on startup. Default 0.");
-            builder.AppendLine("#unlockdefaultwallet=0");
-            builder.AppendLine("#Size of the buffer of unused addresses maintained in an account. Default: 20.");
-            builder.AppendLine("#walletaddressbuffer=20");
+            SettingsHelper.BuildDefaultConfigurationFile(typeof(WalletSettings), builder, network);
         }
     }
 }
