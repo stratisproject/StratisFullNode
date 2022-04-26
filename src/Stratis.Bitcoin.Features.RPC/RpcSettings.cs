@@ -155,7 +155,8 @@ namespace Stratis.Bitcoin.Features.RPC
             builder.AppendLine($"-rpcbind=<ip:port>        Bind to given address to listen for JSON-RPC connections. This option can be specified multiple times. Default: bind to all interfaces");
             builder.AppendLine($"-rpcallowip=<ip>          Allow JSON-RPC connections from specified source. This option can be specified multiple times.");
 
-            defaults.Logger.LogInformation(builder.ToString());
+            var logger = NodeSettings.Default(network).LoggerFactory.CreateLogger(typeof(RpcSettings).FullName);
+            logger.LogInformation(builder.ToString());
         }
 
         /// <summary>Obtains a list of HTTP URLs to RPC interfaces.</summary>

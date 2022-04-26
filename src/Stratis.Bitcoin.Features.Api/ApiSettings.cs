@@ -105,7 +105,8 @@ namespace Stratis.Bitcoin.Features.Api
             builder.AppendLine($"-usehttps=<bool>                  Use https protocol on the API. Defaults to false.");
             builder.AppendLine($"-certificatefilepath=<string>     Path to the certificate used for https traffic encryption. Defaults to <null>. Password protected files are not supported. On MacOs, only p12 certificates can be used without password.");
 
-            NodeSettings.Default(network).Logger.LogInformation(builder.ToString());
+            var logger = NodeSettings.Default(network).LoggerFactory.CreateLogger(typeof(ApiSettings).FullName);
+            logger.LogInformation(builder.ToString());            
         }
 
         /// <summary>

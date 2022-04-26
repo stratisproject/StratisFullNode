@@ -88,7 +88,9 @@ namespace Stratis.Bitcoin.Features.Wallet
             builder.AppendLine("-defaultwalletpassword=<string> Overrides the default wallet password. Default: default.");
             builder.AppendLine("-unlockdefaultwallet=<0 or 1>   Unlocks the specified default wallet. Default: 0.");
             builder.AppendLine("-walletaddressbuffer=<number>   Size of the buffer of unused addresses maintained in an account. Default: 20.");
-            defaults.Logger.LogInformation(builder.ToString());
+
+            var logger = defaults.LoggerFactory.CreateLogger(typeof(WalletSettings).FullName);
+            logger.LogInformation(builder.ToString());
         }
 
         /// <summary>

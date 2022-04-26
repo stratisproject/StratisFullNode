@@ -44,7 +44,29 @@ namespace Stratis.Bitcoin.Configuration
         public const ProtocolVersion SupportedProtocolVersion = ProtocolVersion.SENDHEADERS_VERSION;
 
         /// <summary>A factory responsible for creating a Full Node logger instance.</summary>
-        public ILoggerFactory LoggerFactory { get; private set; }
+        private static ILoggerFactory loggerFactory;
+
+        public ILoggerFactory LoggerFactory {
+            get
+            {
+                if (loggerFactory == null)
+                {
+                    var logSettings = new LogSettings();
+                    logSettings.Load(this.ConfigReader);
+                    loggerFactory = ExtendedLoggerFactory.Create(logSettings, this.DataFolder);
+
+                    // Create the custom logger factory.
+                    loggerFactory.AddFilters(logSettings, this.DataFolder);
+                }
+
+                return loggerFactory;
+            }
+
+            private set
+            {
+                loggerFactory = value;
+            }
+        }
 
         /// <summary>An instance of the Full Node logger, which reports on the Full Node's activity.</summary>
         public ILogger Logger { get; private set; }
@@ -227,12 +249,6 @@ namespace Stratis.Bitcoin.Configuration
             else
                 this.DataFolder = new DataFolder(this.DataDir, this.GetDbType());
 
-            // Attempt to load NLog configuration from the DataFolder.
-            this.LogSettings = new LogSettings();
-            this.LogSettings.Load(this.ConfigReader);
-            this.LoggerFactory = ExtendedLoggerFactory.Create(this.LogSettings, this.DataFolder);
-            this.Logger = this.LoggerFactory.CreateLogger(typeof(NodeSettings).FullName);
-
             // Get the configuration file name for the network if it was not specified on the command line.
             if (this.ConfigurationFile == null)
             {
@@ -242,9 +258,6 @@ namespace Stratis.Bitcoin.Configuration
                 if (File.Exists(this.ConfigurationFile))
                     this.ReadConfigurationFile();
             }
-
-            // Create the custom logger factory.
-            this.LoggerFactory.AddFilters(this.LogSettings, this.DataFolder);
 
             // Load the configuration.
             this.LoadConfiguration();
@@ -447,7 +460,6 @@ namespace Stratis.Bitcoin.Configuration
         /// <inheritdoc />
         public void Dispose()
         {
-            this.LoggerFactory.Dispose();
         }
     }
 

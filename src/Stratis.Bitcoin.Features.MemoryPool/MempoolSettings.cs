@@ -99,7 +99,8 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             builder.AppendLine($"-acceptnonstdtxn=<0 or 1> Accept non-standard transactions. Default {(!(network.IsTest())?1:0)}.");
             builder.AppendLine($"-permitbaremultisig=<0 or 1> Relay non-P2SH multisig. Defaults to { MempoolValidator.DefaultPermitBareMultisig }.");
 
-            NodeSettings.Default(network).Logger.LogInformation(builder.ToString());
+            var logger = NodeSettings.Default(network).LoggerFactory.CreateLogger(typeof(MempoolSettings).FullName);
+            logger.LogInformation(builder.ToString());
         }
 
         /// <summary>

@@ -271,7 +271,8 @@ namespace Stratis.Bitcoin.Configuration.Settings
             builder.AppendLine($"-blocksonly=<0 or 1>      Enable bandwidth saving setting to send and received confirmed blocks only. Defaults to { DefaultBlocksOnly }.");
             builder.AppendLine($"-iprangefiltering=<0 or 1> Disallow connection to peers in same IP range. Default is 1 for remote hosts.");
 
-            defaults.Logger.LogInformation(builder.ToString());
+            var logger = defaults.LoggerFactory.CreateLogger(typeof(ConnectionManagerSettings).FullName);
+            logger.LogInformation(builder.ToString());
         }
 
         /// <summary>List of exclusive end points that the node should be connected to.</summary>

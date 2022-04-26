@@ -81,7 +81,8 @@ namespace Stratis.Bitcoin.Configuration.Settings
             builder.AppendLine($"-dbcache=<number>                  Max cache memory for the coindb in MB. Default 200 (this does not include the size of objects in memory).");
             builder.AppendLine($"-dbflush=<number>                  How often to flush the cache to disk when in IBD in minutes. Default 10 min (min=1min, max=60min).");
 
-            NodeSettings.Default(network).Logger.LogInformation(builder.ToString());
+            var logger = NodeSettings.Default(network).LoggerFactory.CreateLogger(typeof(ConsensusSettings).FullName);
+            logger.LogInformation(builder.ToString());
         }
 
         /// <summary>
