@@ -129,8 +129,10 @@ namespace Stratis.Features.Collateral
                             this.votingManager.CreatePendingPoll(blockConnectedData.PollsRepositoryTransaction, votingData, blockConnectedData.ConnectedBlock.ChainedHeader);
                         }
                     }
-
-                    this.votingManager.ScheduleVote(votingData);
+                    
+                    // If this node is a federation member the schedule a vote.
+                    if (this.votingManager.IsFederationMember())
+                        this.votingManager.ScheduleVote(votingData);
                 }
                 catch (Exception err)
                 {
