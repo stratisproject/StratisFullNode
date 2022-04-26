@@ -412,20 +412,20 @@ namespace Stratis.Bitcoin.Configuration
             builder.AppendLine();
             builder.AppendLine("Command line arguments:");
             builder.AppendLine();
-            builder.AppendLine($"-help/--help              Show this help.");
-            builder.AppendLine($"-conf=<Path>              Path to the configuration file. Defaults to {defaults.ConfigurationFile}.");
-            builder.AppendLine($"-datadir=<Path>           Path to the data directory. Defaults to {defaults.DataDir}.");
-            builder.AppendLine($"-datadirroot=<Path>       The path to the root data directory, which holds all node data on the machine. Defaults to 'StratisNode'.");
-            builder.AppendLine($"-debug[=<string>]         Set 'Debug' logging level. Specify what to log via e.g. '-debug=Stratis.Bitcoin.Miner,Stratis.Bitcoin.Wallet'.");
-            builder.AppendLine($"-loglevel=<string>        Direct control over the logging level: '-loglevel=trace/debug/info/warn/error/fatal'.");
+            builder.AppendLine($"-help/--help                   Show this help.");
+            builder.AppendLine($"-conf=<Path>                   Path to the configuration file. Defaults to {defaults.ConfigurationFile}.");
+            builder.AppendLine($"-datadir=<Path>                Path to the data directory. Defaults to {defaults.DataDir}.");
+            builder.AppendLine($"-datadirroot=<Path>            The path to the root data directory, which holds all node data on the machine. Defaults to 'StratisNode'.");
+            builder.AppendLine($"-debug[=<string>]              Set 'Debug' logging level. Specify what to log via e.g. '-debug=Stratis.Bitcoin.Miner,Stratis.Bitcoin.Wallet'.");
+            builder.AppendLine($"-loglevel=<string>             Direct control over the logging level: '-loglevel=trace/debug/info/warn/error/fatal'.");
 
             // Can be overridden in configuration file.
-            builder.AppendLine($"-testnet                  Use the testnet chain.");
-            builder.AppendLine($"-regtest                  Use the regtestnet chain.");
-            builder.AppendLine($"-mintxfee=<number>        Minimum fee rate. Defaults to {network.MinTxFee}.");
-            builder.AppendLine($"-fallbackfee=<number>     Fallback fee rate. Defaults to {network.FallbackFee}.");
-            builder.AppendLine($"-minrelaytxfee=<number>   Minimum relay fee rate. Defaults to {network.MinRelayTxFee}.");
-            builder.AppendLine($"-displaybenchstats=<bool> Logs benchmark statistics to the console window (true/false).");
+            builder.AppendLine($"-testnet                       Use the testnet chain.");
+            builder.AppendLine($"-regtest                       Use the regtestnet chain.");
+            builder.AppendLine($"-mintxfee=<number>             Minimum fee rate. Defaults to {network.MinTxFee}.");
+            builder.AppendLine($"-fallbackfee=<number>          Fallback fee rate. Defaults to {network.FallbackFee}.");
+            builder.AppendLine($"-minrelaytxfee=<number>        Minimum relay fee rate. Defaults to {network.MinRelayTxFee}.");
+            builder.AppendLine($"-displaybenchstats=<bool>      Logs benchmark statistics to the console window (true/false).");
 
             defaults.Logger.LogInformation(builder.ToString());
 
