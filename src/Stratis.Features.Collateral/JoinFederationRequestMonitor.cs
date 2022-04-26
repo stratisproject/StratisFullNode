@@ -16,6 +16,7 @@ namespace Stratis.Features.Collateral
 {
     public class JoinFederationRequestMonitor
     {
+        private readonly IFederationManager federationManager;
         private readonly ILogger logger;
         private readonly ISignals signals;
         private readonly VotingManager votingManager;
@@ -23,7 +24,7 @@ namespace Stratis.Features.Collateral
         private readonly Network counterChainNetwork;
         private readonly NodeDeployments nodeDeployments;
 
-        public JoinFederationRequestMonitor(VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, ISignals signals, NodeDeployments nodeDeployments)
+        public JoinFederationRequestMonitor(VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, ISignals signals, NodeDeployments nodeDeployments, IFederationManager federationManager)
         {
             this.signals = signals;
             this.logger = LogManager.GetCurrentClassLogger();
@@ -31,6 +32,7 @@ namespace Stratis.Features.Collateral
             this.network = network;
             this.counterChainNetwork = counterChainNetworkWrapper.CounterChainNetwork;
             this.nodeDeployments = nodeDeployments;
+            this.federationManager = federationManager;
 
             this.signals.Subscribe<VotingManagerProcessBlock>(this.OnBlockConnected);
         }
@@ -129,9 +131,9 @@ namespace Stratis.Features.Collateral
                             this.votingManager.CreatePendingPoll(blockConnectedData.PollsRepositoryTransaction, votingData, blockConnectedData.ConnectedBlock.ChainedHeader);
                         }
                     }
-                    
+
                     // If this node is a federation member then schedule a vote.
-                    if (this.votingManager.IsFederationMember)
+                    if (this.federationManager.IsFederationMember)
                         this.votingManager.ScheduleVote(votingData);
                 }
                 catch (Exception err)
