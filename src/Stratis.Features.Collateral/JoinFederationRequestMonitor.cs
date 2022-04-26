@@ -130,7 +130,7 @@ namespace Stratis.Features.Collateral
                         }
                     }
                     
-                    // If this node is a federation member the schedule a vote.
+                    // If this node is a federation member then schedule a vote.
                     if (this.votingManager.IsFederationMember)
                         this.votingManager.ScheduleVote(votingData);
                 }
