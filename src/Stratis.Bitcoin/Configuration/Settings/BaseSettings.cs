@@ -71,7 +71,7 @@ namespace Stratis.Bitcoin.Configuration.Settings
         }
 
         /// <summary>
-        /// Displays wallet configuration help information on the console.
+        /// Displays configuration help information on the console.
         /// </summary>
         /// <param name="settingsType">The type of the class defining the settings.</param>
         /// <param name="network">The network.</param>
