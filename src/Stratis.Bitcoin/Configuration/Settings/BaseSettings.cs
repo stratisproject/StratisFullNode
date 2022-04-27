@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Configuration.Settings
 {
@@ -14,14 +15,20 @@ namespace Stratis.Bitcoin.Configuration.Settings
 
         public string Description { get; private set; }
 
-        public CommandLineOptionAttribute(string option, string description)
+        public object DefaultValue { get; private set; }
+
+        public bool CanLog { get; private set; }
+
+        public CommandLineOptionAttribute(string option, string description, object defaultValue = null, bool canLog = true)
         {
             this.Option = option;
             this.Description = description;
+            this.DefaultValue = defaultValue;
+            this.CanLog = canLog;
         }
     }
 
-    public static class SettingsHelper
+    public class BaseSettings
     {
         private static string TypeDescription(Type type)
         {
@@ -45,10 +52,28 @@ namespace Stratis.Bitcoin.Configuration.Settings
             return raw ? value.ToString() : $" Default: {value}.";
         }
 
+        public BaseSettings(NodeSettings nodeSettings)
+        {
+            Guard.NotNull(nodeSettings, nameof(nodeSettings));
+
+            ILogger logger = nodeSettings.LoggerFactory.CreateLogger(this.GetType().FullName);
+
+            TextFileConfiguration config = nodeSettings.ConfigReader;
+
+            foreach (PropertyInfo pi in this.GetType().GetProperties())
+            {
+                CommandLineOptionAttribute attr = Attribute.GetCustomAttributes(pi).OfType<CommandLineOptionAttribute>().FirstOrDefault();
+                if (attr == null)
+                    continue;
+
+                pi.SetValue(this, config.GetOrDefault(attr.Option, attr.DefaultValue, attr.CanLog ? logger : null));
+            }
+        }
+
         /// <summary>
         /// Displays wallet configuration help information on the console.
         /// </summary>
-        /// <param name="settingsType">The settings class type.</param>
+        /// <param name="settingsType">The type of the class defining the settings.</param>
         /// <param name="network">The network.</param>
         public static void PrintHelp(Type settingsType, Network network)
         {
@@ -76,7 +101,7 @@ namespace Stratis.Bitcoin.Configuration.Settings
         /// <summary>
         /// Get the default configuration.
         /// </summary>
-        /// <param name="settingsType">The settings class type.</param>
+        /// <param name="settingsType">The type of the class defining the settings.</param>
         /// <param name="builder">The string builder to add the settings to.</param>
         /// <param name="network">The network to base the defaults off.</param>
         public static void BuildDefaultConfigurationFile(Type settingsType, StringBuilder builder, Network network)

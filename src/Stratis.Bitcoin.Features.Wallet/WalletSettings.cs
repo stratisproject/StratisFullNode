@@ -1,30 +1,23 @@
-﻿using System.Text;
-using Microsoft.Extensions.Logging;
-using NBitcoin;
-using Stratis.Bitcoin.Configuration;
+﻿using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Settings;
-using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.Wallet
 {
     /// <summary>
     /// Configuration related to the wallet.
     /// </summary>
-    public class WalletSettings
+    public class WalletSettings : BaseSettings
     {
-        /// <summary>Instance logger.</summary>
-        private readonly ILogger logger;
-
         /// <summary>
         /// A value indicating whether the transactions hex representations should be saved in the wallet file.
         /// </summary>
-        [CommandLineOption("savetrxhex" ,"Save the hex of transactions in the wallet file.")]
+        [CommandLineOption("savetrxhex", "Save the hex of transactions in the wallet file.", false)]
         public bool SaveTransactionHex { get; set; }
 
         /// <summary>
         /// A value indicating whether to unlock the supplied default wallet on startup.
         /// </summary>
-        [CommandLineOption("unlockdefaultwallet", "Unlocks the specified default wallet.")]
+        [CommandLineOption("unlockdefaultwallet", "Unlocks the specified default wallet.", false)]
         public bool UnlockDefaultWallet { get; set; }
 
         /// <summary>
@@ -36,35 +29,20 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <summary>
         /// Password for the default wallet if overriding the default.
         /// </summary>
-        [CommandLineOption("defaultwalletpassword", "Overrides the default wallet password.")]
+        [CommandLineOption("defaultwalletpassword", "Overrides the default wallet password.", "default", false)]
         public string DefaultWalletPassword { get; set; }
+
+        /// <summary>Size of the buffer of unused addresses maintained in an account.</summary>
+        [CommandLineOption("walletaddressbuffer", "Size of the buffer of unused addresses maintained in an account.", 20)]
+        public int UnusedAddressesBuffer { get; set; }
 
         /// <summary>
         /// A value indicating whether the wallet being run is the light wallet or the full wallet.
         /// </summary>
-        public bool IsLightWallet { get; set; }
+        public bool IsLightWallet { get; set; }        
 
-        /// <summary>Size of the buffer of unused addresses maintained in an account.</summary>
-        [CommandLineOption("walletaddressbuffer", "Size of the buffer of unused addresses maintained in an account.")]
-        public int UnusedAddressesBuffer { get; set; }
-
-        /// <summary>
-        /// Initializes an instance of the object from the node configuration.
-        /// </summary>
-        /// <param name="nodeSettings">The node configuration.</param>
-        public WalletSettings(NodeSettings nodeSettings)
+        public WalletSettings(NodeSettings nodeSettings) : base(nodeSettings)
         {
-            Guard.NotNull(nodeSettings, nameof(nodeSettings));
-
-            this.logger = nodeSettings.LoggerFactory.CreateLogger(typeof(WalletSettings).FullName);
-
-            TextFileConfiguration config = nodeSettings.ConfigReader;
-
-            this.SaveTransactionHex = config.GetOrDefault<bool>("savetrxhex", false, this.logger);
-            this.UnusedAddressesBuffer = config.GetOrDefault<int>("walletaddressbuffer", 20, this.logger);
-            this.DefaultWalletName = config.GetOrDefault<string>("defaultwalletname", null, this.logger);
-            this.DefaultWalletPassword = config.GetOrDefault<string>("defaultwalletpassword", "default", null); // No logging!
-            this.UnlockDefaultWallet = config.GetOrDefault<bool>("unlockdefaultwallet", false, this.logger);
         }
 
         /// <summary>
@@ -74,25 +52,6 @@ namespace Stratis.Bitcoin.Features.Wallet
         public bool IsDefaultWalletEnabled()
         {
             return !string.IsNullOrWhiteSpace(this.DefaultWalletName);
-        }
-
-        /// <summary>
-        /// Displays wallet configuration help information on the console.
-        /// </summary>
-        /// <param name="network">Not used.</param>
-        public static void PrintHelp(Network network)
-        {
-            SettingsHelper.PrintHelp(typeof(WalletSettings), network);
-        }
-
-        /// <summary>
-        /// Get the default configuration.
-        /// </summary>
-        /// <param name="builder">The string builder to add the settings to.</param>
-        /// <param name="network">The network to base the defaults off.</param>
-        public static void BuildDefaultConfigurationFile(StringBuilder builder, Network network)
-        {
-            SettingsHelper.BuildDefaultConfigurationFile(typeof(WalletSettings), builder, network);
         }
     }
 }
