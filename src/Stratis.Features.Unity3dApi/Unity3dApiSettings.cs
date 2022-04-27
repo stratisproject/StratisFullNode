@@ -117,7 +117,8 @@ namespace Stratis.Features.Unity3dApi
             builder.AppendLine($"-unityapi_usehttps=<bool>                  Use https protocol on the API. Defaults to false.");
             builder.AppendLine($"-unityapi_certificatefilepath=<string>     Path to the certificate used for https traffic encryption. Defaults to <null>. Password protected files are not supported. On MacOs, only p12 certificates can be used without password.");
 
-            NodeSettings.Default(network).Logger.LogInformation(builder.ToString());
+            var logger = NodeSettings.Default(network).LoggerFactory.CreateLogger(typeof(Unity3dApiSettings).FullName);
+            logger.LogInformation(builder.ToString());
         }
 
         /// <summary>
