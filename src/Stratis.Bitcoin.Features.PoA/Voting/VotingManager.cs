@@ -520,7 +520,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private void LogPollInfo(DBreeze.Transactions.Transaction transaction, ChainedHeaderBlock chBlock)
         {
             this.PollsRepository.HealthCheck(transaction, this.polls);
-            this.polls.LogPolls(chBlock.ChainedHeader.Previous, this.federationHistory.GetFederationForBlock(chBlock.ChainedHeader.Previous), this.pollResultExecutor);
+            this.polls.LogPolls(chBlock.ChainedHeader, this.federationHistory.GetFederationForBlock(chBlock.ChainedHeader), this.pollResultExecutor);
         }
 
         private void ProcessBlock(DBreeze.Transactions.Transaction transaction, ChainedHeaderBlock chBlock)
@@ -566,11 +566,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                     if (rawVotingData == null)
                     {
+                        this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader);
+                        this.logger.LogTrace($"'{chBlock.ChainedHeader}' does not contain any voting data.");
+
                         if (pollsRepositoryModified)
                             LogPollInfo(transaction, chBlock);
 
-                        this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader);
-                        this.logger.LogTrace($"'{chBlock.ChainedHeader}' does not contain any voting data.");
                         return;
                     }
 
@@ -594,10 +595,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         this.logger.LogError("The block at height {0} was mined by a non-federation-member! Potential public keys are: {1}.", chBlock.ChainedHeader.Height, string.Join(", ", pubKeys.Select(p => p.ToHex()))); 
                         this.logger.LogTrace("(-)[ALIEN_BLOCK]");
 
+                        this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader);
+
                         if (pollsRepositoryModified)
                             LogPollInfo(transaction, chBlock);
 
-                        this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader);
                         return;
                     }
 
@@ -681,7 +683,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                                 {
                                     if (this.idleFederationMembersKicker.ShouldMemberBeKicked(miner, chainedHeader, chBlock.ChainedHeader, out _))
                                     {
-                                        fedMembersHex.TryRemove(miner.PubKey.ToHex());
+                                        if (fedMembersHex.TryRemove(miner.PubKey.ToHex()))
+                                        {
+                                            this.logger.LogDebug("Excluding member to be kicked: {0}.", miner.PubKey.ToHex());
+                                        }
                                     }
                                 }
                             }
@@ -692,7 +697,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                             int requiredVotesCount = (fedMembersHex.Count / 2) + 1;
 
-                            this.logger.LogDebug("Fed members count: {0}, valid votes count: {1}, required votes count: {2}.", fedMembersHex.Count, validVotesCount, requiredVotesCount);
+                            this.logger.LogDebug("Fed members count: {0}, valid votes count: {1}, required votes count: {2}.", modifiedFederation.Count, validVotesCount, requiredVotesCount);
 
                             if (validVotesCount < requiredVotesCount)
                                 continue;
@@ -703,10 +708,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         }
                     }
 
+                    this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader);
+
                     if (pollsRepositoryModified)
                         LogPollInfo(transaction, chBlock);
-
-                    this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader);
                 }
             }
             catch (Exception ex)
