@@ -517,16 +517,15 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return this.federationManager.IsMultisigMember(member.PubKey);
         }
 
+        private void LogPollInfo(DBreeze.Transactions.Transaction transaction, ChainedHeaderBlock chBlock)
+        {
+            this.PollsRepository.HealthCheck(transaction, this.polls);
+            this.polls.LogPolls(chBlock.ChainedHeader.Previous, this.federationHistory.GetFederationForBlock(chBlock.ChainedHeader.Previous), this.pollResultExecutor);
+        }
+
         private void ProcessBlock(DBreeze.Transactions.Transaction transaction, ChainedHeaderBlock chBlock)
         {
             long flagFall = DateTime.Now.Ticks;
-
-            // Periodically log the polls collection.
-            if ((chBlock.ChainedHeader.Height % 10000) == 0)
-            {
-                this.PollsRepository.HealthCheck(transaction, this.polls);
-                this.polls.LogPolls(chBlock.ChainedHeader.Previous, this.federationHistory.GetFederationForBlock(chBlock.ChainedHeader.Previous), this.pollResultExecutor);
-            }
 
             try
             {
@@ -567,6 +566,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                     if (rawVotingData == null)
                     {
+                        if (pollsRepositoryModified)
+                            LogPollInfo(transaction, chBlock);
+
                         this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader);
                         this.logger.LogTrace($"'{chBlock.ChainedHeader}' does not contain any voting data.");
                         return;
@@ -591,6 +593,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                         this.logger.LogError("The block at height {0} was mined by a non-federation-member! Potential public keys are: {1}.", chBlock.ChainedHeader.Height, string.Join(", ", pubKeys.Select(p => p.ToHex()))); 
                         this.logger.LogTrace("(-)[ALIEN_BLOCK]");
+
+                        if (pollsRepositoryModified)
+                            LogPollInfo(transaction, chBlock);
 
                         this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader);
                         return;
@@ -697,6 +702,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             pollsRepositoryModified = true;
                         }
                     }
+
+                    if (pollsRepositoryModified)
+                        LogPollInfo(transaction, chBlock);
 
                     this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader);
                 }
