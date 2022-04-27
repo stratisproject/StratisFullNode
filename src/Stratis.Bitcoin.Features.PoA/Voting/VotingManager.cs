@@ -348,7 +348,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return poll;
         }
 
-        public bool IsFederationMember(PubKey pubKey)
+        public bool IsMemberOfFederation(PubKey pubKey)
         {
             return this.federationManager.GetFederationMembers().Any(fm => fm.PubKey == pubKey);
         }

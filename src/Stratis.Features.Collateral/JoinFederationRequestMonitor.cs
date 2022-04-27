@@ -16,6 +16,7 @@ namespace Stratis.Features.Collateral
 {
     public class JoinFederationRequestMonitor
     {
+        private readonly IFederationManager federationManager;
         private readonly ILogger logger;
         private readonly ISignals signals;
         private readonly VotingManager votingManager;
@@ -23,7 +24,7 @@ namespace Stratis.Features.Collateral
         private readonly Network counterChainNetwork;
         private readonly NodeDeployments nodeDeployments;
 
-        public JoinFederationRequestMonitor(VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, ISignals signals, NodeDeployments nodeDeployments)
+        public JoinFederationRequestMonitor(VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, ISignals signals, NodeDeployments nodeDeployments, IFederationManager federationManager)
         {
             this.signals = signals;
             this.logger = LogManager.GetCurrentClassLogger();
@@ -31,6 +32,7 @@ namespace Stratis.Features.Collateral
             this.network = network;
             this.counterChainNetwork = counterChainNetworkWrapper.CounterChainNetwork;
             this.nodeDeployments = nodeDeployments;
+            this.federationManager = federationManager;
 
             this.signals.Subscribe<VotingManagerProcessBlock>(this.OnBlockConnected);
         }
@@ -61,7 +63,7 @@ namespace Stratis.Features.Collateral
                         continue;
 
                     // Skip if the member already exists.
-                    if (this.votingManager.IsFederationMember(request.PubKey))
+                    if (this.votingManager.IsMemberOfFederation(request.PubKey))
                         continue;
 
                     // Check if the collateral amount is valid.
@@ -130,7 +132,9 @@ namespace Stratis.Features.Collateral
                         }
                     }
 
-                    this.votingManager.ScheduleVote(votingData);
+                    // If this node is a federation member then schedule a vote.
+                    if (this.federationManager.IsFederationMember)
+                        this.votingManager.ScheduleVote(votingData);
                 }
                 catch (Exception err)
                 {
