@@ -333,7 +333,7 @@ namespace Stratis.Bitcoin.Features.PoA
         {
             VotingManager votingManager = this.fullNode.NodeService<VotingManager>();
             this.federationMembers = votingManager.GetFederationFromExecutedPolls();
-            this.UpdateMultisigMiners(this.GetMultisigMinersApplicabilityHeight() != null);
+            this.UpdateMultisigMiners(votingManager.PollsRepository.CurrentTip != null && votingManager.PollsRepository.CurrentTip.Height >= (this.GetMultisigMinersApplicabilityHeight() ?? int.MaxValue));
         }
 
         /// <inheritdoc />
