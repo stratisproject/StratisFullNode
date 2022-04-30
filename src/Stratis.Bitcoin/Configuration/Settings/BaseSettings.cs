@@ -66,7 +66,8 @@ namespace Stratis.Bitcoin.Configuration.Settings
                 if (attr == null)
                     continue;
 
-                pi.SetValue(this, config.GetOrDefault(attr.Option, attr.DefaultValue, attr.CanLog ? logger : null));
+                pi.SetValue(this, config.GetType().GetMethod("GetOrDefault").MakeGenericMethod(pi.PropertyType).Invoke(config, 
+                    new object[] { attr.Option, attr.DefaultValue, attr.CanLog ? logger : null }));
             }
         }
 
