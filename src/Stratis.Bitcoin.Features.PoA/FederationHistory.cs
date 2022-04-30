@@ -182,7 +182,7 @@ namespace Stratis.Bitcoin.Features.PoA
             Parallel.For(0, headers.Length, i => miners[i] = GetFederationMemberForBlock(headers[i], federations[i], (i + startHeight) >= votingManagerV2ActivationHeight));
 
             if (startHeight == 0)
-                miners[0] = this.federationHistory[0].members.Last();
+                miners[0] = (this.network.Consensus.Options as PoAConsensusOptions).GenesisFederationMembers.Last();
 
             return miners;
         }
