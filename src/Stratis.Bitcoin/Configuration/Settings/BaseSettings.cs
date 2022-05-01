@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -52,6 +53,8 @@ namespace Stratis.Bitcoin.Configuration.Settings
             return raw ? value.ToString() : $" Default: {value}.";
         }
 
+        private static Dictionary<Type, MethodInfo> typeGetter = new Dictionary<Type, MethodInfo>();
+
         public BaseSettings(NodeSettings nodeSettings)
         {
             Guard.NotNull(nodeSettings, nameof(nodeSettings));
@@ -66,8 +69,16 @@ namespace Stratis.Bitcoin.Configuration.Settings
                 if (attr == null)
                     continue;
 
-                pi.SetValue(this, config.GetType().GetMethod("GetOrDefault").MakeGenericMethod(pi.PropertyType).Invoke(config, 
-                    new object[] { attr.Option, attr.DefaultValue, attr.CanLog ? logger : null }));
+                lock (typeGetter)
+                {
+                    if (!typeGetter.TryGetValue(pi.PropertyType, out MethodInfo getOrDefault))
+                    {
+                        getOrDefault = typeof(TextFileConfiguration).GetMethod(nameof(TextFileConfiguration.GetOrDefault)).MakeGenericMethod(pi.PropertyType);
+                        typeGetter[pi.PropertyType] = getOrDefault;
+                    }
+
+                    pi.SetValue(this, getOrDefault.Invoke(config, new object[] { attr.Option, attr.DefaultValue, attr.CanLog ? logger : null }));
+                }
             }
         }
 
