@@ -11,35 +11,35 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <summary>
         /// A value indicating whether the transactions hex representations should be saved in the wallet file.
         /// </summary>
-        [CommandLineOption("savetrxhex", "Save the hex of transactions in the wallet file.", false)]
-        public bool SaveTransactionHex { get; set; }
+        [CommandLineOption("savetrxhex", "Save the hex of transactions in the wallet file.")]
+        public bool SaveTransactionHex { get; private set; } = false;
 
         /// <summary>
         /// A value indicating whether to unlock the supplied default wallet on startup.
         /// </summary>
-        [CommandLineOption("unlockdefaultwallet", "Unlocks the specified default wallet.", false)]
-        public bool UnlockDefaultWallet { get; set; }
+        [CommandLineOption("unlockdefaultwallet", "Unlocks the specified default wallet.")]
+        public bool UnlockDefaultWallet { get; private set; } = false;
 
         /// <summary>
         /// Name for the default wallet.
         /// </summary>
         [CommandLineOption("defaultwalletname", "Loads the specified wallet on startup. If it doesn't exist, it will be created automatically.")]
-        public string DefaultWalletName { get; set; }
+        public string DefaultWalletName { get; private set; } = null;
 
         /// <summary>
         /// Password for the default wallet if overriding the default.
         /// </summary>
-        [CommandLineOption("defaultwalletpassword", "Overrides the default wallet password.", "default", false)]
-        public string DefaultWalletPassword { get; set; }
+        [CommandLineOption("defaultwalletpassword", "Overrides the default wallet password.", false)]
+        public string DefaultWalletPassword { get; private set; } = "default";
 
         /// <summary>Size of the buffer of unused addresses maintained in an account.</summary>
-        [CommandLineOption("walletaddressbuffer", "Size of the buffer of unused addresses maintained in an account.", 20)]
-        public int UnusedAddressesBuffer { get; set; }
+        [CommandLineOption("walletaddressbuffer", "Size of the buffer of unused addresses maintained in an account.")]
+        public int UnusedAddressesBuffer { get; private set; } = 20;
 
         /// <summary>
         /// A value indicating whether the wallet being run is the light wallet or the full wallet.
         /// </summary>
-        public bool IsLightWallet { get; set; }        
+        public bool IsLightWallet { get; set; }
 
         public WalletSettings(NodeSettings nodeSettings) : base(nodeSettings)
         {

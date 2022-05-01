@@ -20,17 +20,18 @@ namespace Stratis.Bitcoin.Configuration.Settings
 
         public bool CanLog { get; private set; }
 
-        public CommandLineOptionAttribute(string option, string description, object defaultValue = null, bool canLog = true)
+        public CommandLineOptionAttribute(string option, string description, bool canLog = true)
         {
             this.Option = option;
             this.Description = description;
-            this.DefaultValue = defaultValue;
             this.CanLog = canLog;
         }
     }
 
-    public class BaseSettings
+    public abstract class BaseSettings
     {
+        protected readonly NodeSettings nodeSettings;
+
         private static string TypeDescription(Type type)
         {
             if (type == typeof(bool))
@@ -59,6 +60,8 @@ namespace Stratis.Bitcoin.Configuration.Settings
         {
             Guard.NotNull(nodeSettings, nameof(nodeSettings));
 
+            this.nodeSettings = nodeSettings;
+
             ILogger logger = nodeSettings.LoggerFactory.CreateLogger(this.GetType().FullName);
 
             TextFileConfiguration config = nodeSettings.ConfigReader;
@@ -77,7 +80,7 @@ namespace Stratis.Bitcoin.Configuration.Settings
                         typeGetter[pi.PropertyType] = getOrDefault;
                     }
 
-                    pi.SetValue(this, getOrDefault.Invoke(config, new object[] { attr.Option, attr.DefaultValue, attr.CanLog ? logger : null }));
+                    pi.SetValue(this, getOrDefault.Invoke(config, new object[] { attr.Option, pi.GetValue(this), attr.CanLog ? logger : null }));
                 }
             }
         }
