@@ -284,8 +284,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// </summary>
         /// <param name="voteKey">See <see cref="VoteKey"/>.</param>
         /// <param name="federationMemberBytes">The bytes to compare <see cref="VotingData.Data"/> against.</param>
+        /// <param name="checkScheduledPolls">Determines whether the scheduled polls will be checked.</param>
         /// <returns><c>True</c> if we have already voted or <c>false</c> otherwise.</returns>
-        public bool AlreadyVotingFor(VoteKey voteKey, byte[] federationMemberBytes)
+        public bool AlreadyVotingFor(VoteKey voteKey, byte[] federationMemberBytes, bool checkScheduledPolls = true)
         {
             if (this.federationManager.CurrentFederationKey != null)
             {
@@ -312,7 +313,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             List<VotingData> scheduledVotes = this.GetScheduledVotes();
 
-            if (scheduledVotes.Any(x => x.Key == voteKey && x.Data.SequenceEqual(federationMemberBytes)))
+            if (checkScheduledPolls && scheduledVotes.Any(x => x.Key == voteKey && x.Data.SequenceEqual(federationMemberBytes)))
             {
                 // We have the vote queued to be put out next time we mine a block.
                 return true;
