@@ -155,6 +155,8 @@ namespace Stratis.Features.Unity3dApi
         /// <inheritdoc />
         public void ReindexAllContracts()
         {
+            this.logger.LogTrace("ReindexAllContracts()");
+
             int watchFromHeight = this.GetWatchFromHeight();
 
             foreach (NFTContractModel contractModel in this.NFTContractCollection.FindAll().ToList())
@@ -164,6 +166,8 @@ namespace Stratis.Features.Unity3dApi
 
                 this.NFTContractCollection.Upsert(contractModel);
             }
+
+            this.logger.LogTrace("ReindexAllContracts(-)");
         }
 
         private async Task IndexNFTsContinuouslyAsync()
@@ -224,10 +228,20 @@ namespace Stratis.Features.Unity3dApi
                             transferLogs.Add(infoObj.Data);
                         }
 
-                        foreach (TransferLog transferInfo in transferLogs)
+                        this.logger.LogDebug("Processing transafer logs.");
+
+                        for (int i = 0; i < transferLogs.Count; i++)
                         {
+                            TransferLog transferInfo = transferLogs[i];
+
+                            this.logger.LogDebug("log #{0}: From: {1} To: {2} Id:{3}", i, transferInfo.From, transferInfo.To, transferInfo.TokenId);
+
                             if ((transferInfo.From != null) && currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.From))
                             {
+                                bool fromExists = currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.From);
+
+                                this.logger.LogDebug("FromExists: {0} ",  fromExists);
+
                                 currentContract.OwnedIDsByAddress[transferInfo.From].Remove(transferInfo.TokenId);
 
                                 if (currentContract.OwnedIDsByAddress[transferInfo.From].Count == 0)
@@ -235,7 +249,12 @@ namespace Stratis.Features.Unity3dApi
                             }
 
                             if (!currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.To))
+                            {
+                                this.logger.LogDebug("Added ID to To");
                                 currentContract.OwnedIDsByAddress.Add(transferInfo.To, new HashSet<long>());
+                            }
+                            else
+                                this.logger.LogDebug("Already added!");
 
                             currentContract.OwnedIDsByAddress[transferInfo.To].Add(transferInfo.TokenId);
                         }
@@ -264,13 +283,13 @@ namespace Stratis.Features.Unity3dApi
 
         public void Dispose()
         {
-            this.logger.LogDebug("Disposing");
+            this.logger.LogDebug("Dispose()");
 
             this.cancellation.Cancel();
             this.indexingTask?.GetAwaiter().GetResult();
             this.db?.Dispose();
 
-            this.logger.LogDebug("Disposed");
+            this.logger.LogDebug("Dispose(-)");
         }
     }
 
