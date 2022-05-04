@@ -283,13 +283,13 @@ namespace Stratis.Features.Unity3dApi
 
         public void Dispose()
         {
-            this.logger.LogDebug("Disposing");
+            this.logger.LogDebug("Dispose()");
 
             this.cancellation.Cancel();
             this.indexingTask?.GetAwaiter().GetResult();
             this.db?.Dispose();
 
-            this.logger.LogDebug("Disposed");
+            this.logger.LogDebug("Dispose(-)");
         }
     }
 
