@@ -8,7 +8,6 @@ using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Validators;
-using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.PoA;
@@ -142,7 +141,7 @@ namespace Stratis.Features.Collateral
 
                     ChainedHeaderBlock blockData = this.consensusManager.GetBlockData(votingRequestHeader.HashBlock);
 
-                    this.joinFederationRequestMonitor.OnBlockConnected(new BlockConnected(new ChainedHeaderBlock(blockData.Block, votingRequestHeader)));
+                    this.joinFederationRequestMonitor.OnBlockConnected(new VotingManagerProcessBlock(new ChainedHeaderBlock(blockData.Block, votingRequestHeader)));
                 }
 
                 return;
