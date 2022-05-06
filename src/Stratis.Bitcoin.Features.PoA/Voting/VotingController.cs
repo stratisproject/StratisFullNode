@@ -172,6 +172,36 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>
+        /// Retrieves a list of executed member polls.
+        /// </summary>
+        /// <param name="pubKeyOfMemberBeingVotedOn">The public key of the member being voted on (in hexadecimal). If omitted or empty then all polls are returned.</param>
+        /// <returns>Finished polls</returns>
+        /// <response code="200">Returns a set of execute polls</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route("polls/members/executed")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult GetExecutedPolls([FromQuery] string pubKeyOfMemberBeingVotedOn = "")
+        {
+            try
+            {
+                IEnumerable<Poll> polls = this.votingManager.GetExecutedPolls().MemberPolls();
+                IEnumerable<PollViewModel> models = polls.Select(x => new PollViewModel(x, this.pollExecutor));
+
+                if (!string.IsNullOrEmpty(pubKeyOfMemberBeingVotedOn))
+                    models = models.Where(m => m.VotingDataString.Contains(pubKeyOfMemberBeingVotedOn));
+
+                return this.Json(models.OrderBy(p => p.PollExecutedBlockDataHeight));
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
         /// Retrieves a list of expired member polls.
         /// </summary>
         /// <returns>Expired polls</returns>
