@@ -14,7 +14,6 @@ namespace Stratis.Bitcoin.Features.SignalR.Events
         {
             if (@event is TransactionAddedToMemoryPool transactionAddedToMemoryPool)
             {
-                
                 return;
             }
 
