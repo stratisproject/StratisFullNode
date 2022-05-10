@@ -93,10 +93,10 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
         public int MaximumConfirmationsAtMaturityHeight(int maturityHeight)
         {
-            if (maturityHeight > this.Release1300ActivationHeight)
-                return this.retrievalTypeConfirmations.Values.Max();
+            if (maturityHeight < this.Release1300ActivationHeight)
+                return this.legacyRetrievalTypeConfirmations.Values.Max();
 
-            return this.legacyRetrievalTypeConfirmations.Values.Max();
+            return this.retrievalTypeConfirmations.Values.Max();
         }
 
         private int Release1300ActivationHeight => (this.nodeDeployments?.BIP9.ArraySize > 0) ? this.nodeDeployments.BIP9.ActivationHeightProviders[0 /* Release 1300 */].ActivationHeight : 0;
