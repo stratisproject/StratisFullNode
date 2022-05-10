@@ -1,8 +1,7 @@
 {
   "profiles": {
     "Stratis.CirrusD": {
-      "commandName": "Project",
-      "commandLineArgs": "-txindex=1 -addressindex=1 -unityapi_enable=true"
+      "commandName": "Project"
     },
     "Stratis.CirrusD Test": {
       "commandName": "Project",
