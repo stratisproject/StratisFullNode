@@ -24,12 +24,12 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
     public class RetrievalTypeConfirmations : IRetrievalTypeConfirmations
     {
-        private const int LowConfirmations = 10;
-        private const int MediumConfirmations = 25;
-        private const int HighConfirmations = 50;
-        private const int CirrusLowConfirmations = 30;
-        private const int CirrusMediumConfirmation = 70;
-        private const int CirrusHighConfirmations = 140;
+        private const int LowConfirmations = 10;         //  450 seconds - 7m30s
+        private const int MediumConfirmations = 25;      // 1125 seconds - 18m45s
+        private const int HighConfirmations = 50;        // 2250 seconds - 37m30s
+        private const int CirrusLowConfirmations = 30;   //  480 seconds - 8m0s
+        private const int CirrusMediumConfirmation = 70; // 1120 seconds - 18m40s
+        private const int CirrusHighConfirmations = 140; // 2240 seconds - 37m20s
 
         private readonly NodeDeployments nodeDeployments;
         private readonly Dictionary<DepositRetrievalType, int> legacyRetrievalTypeConfirmations;
