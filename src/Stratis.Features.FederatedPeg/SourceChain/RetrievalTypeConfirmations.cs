@@ -57,9 +57,12 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
             if (this.network.Name.StartsWith("Cirrus"))
             {
-                this.retrievalTypeConfirmations[DepositRetrievalType.Small] = CirrusLowConfirmations;
-                this.retrievalTypeConfirmations[DepositRetrievalType.Normal] = CirrusMediumConfirmation;
-                this.retrievalTypeConfirmations[DepositRetrievalType.Large] = CirrusHighConfirmations;
+                this.retrievalTypeConfirmations = new Dictionary<DepositRetrievalType, int>
+                {
+                    [DepositRetrievalType.Small] = CirrusLowConfirmations,
+                    [DepositRetrievalType.Normal] = CirrusMediumConfirmation,
+                    [DepositRetrievalType.Large] = CirrusHighConfirmations
+                };
 
                 if (federatedPegSettings.IsMainChain)
                 {
@@ -71,9 +74,12 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             }
             else
             {
-                this.retrievalTypeConfirmations[DepositRetrievalType.Small] = LowConfirmations;
-                this.retrievalTypeConfirmations[DepositRetrievalType.Normal] = MediumConfirmations;
-                this.retrievalTypeConfirmations[DepositRetrievalType.Large] = HighConfirmations;
+                this.retrievalTypeConfirmations = new Dictionary<DepositRetrievalType, int>()
+                {
+                    [DepositRetrievalType.Small] = LowConfirmations,
+                    [DepositRetrievalType.Normal] = MediumConfirmations,
+                    [DepositRetrievalType.Large] = HighConfirmations
+                };
 
                 if (federatedPegSettings.IsMainChain)
                 {
