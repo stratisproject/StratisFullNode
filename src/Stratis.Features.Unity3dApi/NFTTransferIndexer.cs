@@ -104,6 +104,16 @@ namespace Stratis.Features.Unity3dApi
         /// <inheritdoc />
         public void WatchNFTContract(string contractAddress)
         {
+            try
+            {
+                // Check that contract address is a valid address
+                var addr = new BitcoinPubKeyAddress(contractAddress, this.network);
+            }
+            catch (FormatException)
+            {
+                return;
+            }
+
             int watchFromHeight = this.GetWatchFromHeight();
 
             if (!this.NFTContractCollection.Exists(x => x.ContractAddress == contractAddress))
