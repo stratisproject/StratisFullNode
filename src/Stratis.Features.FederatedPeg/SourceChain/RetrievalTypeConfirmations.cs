@@ -100,10 +100,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             if (depositHeight + this.legacyRetrievalTypeConfirmations[retrievalType] < this.Release1300ActivationHeight)
                 return this.legacyRetrievalTypeConfirmations[retrievalType];
 
-            if (depositHeight >= this.Release1300ActivationHeight)
-                return this.retrievalTypeConfirmations[retrievalType];
-
-            return this.Release1300ActivationHeight - depositHeight;
+            return this.retrievalTypeConfirmations[retrievalType];
         }
 
         public int GetDepositMaturityHeight(int depositHeight, DepositRetrievalType retrievalType)
