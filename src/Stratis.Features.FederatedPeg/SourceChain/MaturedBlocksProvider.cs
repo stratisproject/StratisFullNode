@@ -105,16 +105,12 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                     continue;
                 }
 
-                var maturedDeposits = new List<IDeposit>();
-
-                // Inspect the deposits in the block for each retrieval type (validate against the retrieval type's confirmation requirement).
-                foreach ((DepositRetrievalType retrievalType, int requiredConfirmations) in this.retrievalTypeConfirmations)
-                {
-                    // If the block height is more than the required confirmations, then the potential deposits
-                    // contained within are valid for the given retrieval type.
-                    if (chainedHeaderBlock.ChainedHeader.Height > requiredConfirmations)
-                        maturedDeposits.AddRange(this.RecallBlockDeposits(chainedHeaderBlock.ChainedHeader.Height - requiredConfirmations, retrievalType));
-                }
+                // Record all deposits maturing in this block.
+                List<IDeposit> maturedDeposits = (
+                    from kv in this.deposits                                      
+                    from deposit in kv.Value.Deposits
+                    where this.retrievalTypeConfirmations.GetDepositMaturityHeight(kv.Key, deposit.RetrievalType) == chainedHeaderBlock.ChainedHeader.Height
+                    select deposit).ToList();
 
                 this.logger.LogDebug("{0} mature deposits retrieved from block '{1}'.", maturedDeposits.Count, chainedHeaderBlock.ChainedHeader);
 
@@ -185,11 +181,6 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 BlockHash = chainedHeaderBlock.ChainedHeader.HashBlock,
                 Deposits = deposits
             };
-        }
-
-        private IEnumerable<IDeposit> RecallBlockDeposits(int blockHeight, DepositRetrievalType retrievalType)
-        {
-            return this.deposits[blockHeight].Deposits.Where(d => d.RetrievalType == retrievalType);
         }
     }
 
