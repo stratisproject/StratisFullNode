@@ -2,14 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Base.Deployments.Models;
 using Stratis.Bitcoin.Configuration.Logging;
-using Stratis.Bitcoin.Controllers;
 using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Interfaces;
@@ -123,25 +121,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.logger = LogManager.GetCurrentClassLogger();
         }
 
-        public class ConsensusClient : RestApiClientBase
-        {
-            /// <summary>
-            /// Currently the <paramref name="url"/> is required as it needs to be configurable for testing.
-            /// <para>
-            /// In a production/live scenario the sidechain and mainnet federation nodes should run on the same machine.
-            /// </para>
-            /// </summary>
-            public ConsensusClient(ICounterChainSettings counterChainSettings, IHttpClientFactory httpClientFactory)
-                : base(httpClientFactory, counterChainSettings.CounterChainApiPort, "Consensus", $"http://{counterChainSettings.CounterChainApiHost}")
-            {
-            }
-
-            public Task<List<ThresholdActivationModel>> GetLockedInDeployments(CancellationToken cancellation = default)
-            {
-                return this.SendGetRequestAsync<List<ThresholdActivationModel>>("lockedindeployments", null, cancellation);
-            }
-        }
-
         public void RecordCounterChainActivations()
         {
             // If this is the main chain then ask the side-chain for its activation height.
@@ -152,7 +131,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             if (this.mainChainActivationHeight != int.MaxValue)
                 return;
 
-            ConsensusClient consensusClient = new ConsensusClient(this.counterChainSettings, this.httpClientFactory);
+            CounterChainConsensusClient consensusClient = new CounterChainConsensusClient(this.counterChainSettings, this.httpClientFactory);
             List<ThresholdActivationModel> lockedInActivations = consensusClient.GetLockedInDeployments(this.nodeLifetime.ApplicationStopping).ConfigureAwait(false).GetAwaiter().GetResult();
             if (lockedInActivations == null || lockedInActivations.Count == 0)
             {
