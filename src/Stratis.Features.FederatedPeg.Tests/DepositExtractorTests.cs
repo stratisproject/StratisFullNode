@@ -55,7 +55,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federationSettings, this.network, this.opReturnDataReader);
             this.transactionBuilder = new TestTransactionBuilder();
 
-            this.retrievalTypeConfirmations = new RetrievalTypeConfirmations(this.network, new NodeDeployments(this.network, new ChainIndexer(this.network)), this.federationSettings);
+            this.retrievalTypeConfirmations = new RetrievalTypeConfirmations(this.network, new NodeDeployments(this.network, new ChainIndexer(this.network)), this.federationSettings, null, null);
         }
 
         // Normal Deposits
