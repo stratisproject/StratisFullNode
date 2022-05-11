@@ -7,6 +7,13 @@ using Stratis.Features.FederatedPeg.SourceChain;
 
 namespace Stratis.Features.FederatedPeg.Models
 {
+    public class ActivationModel
+    {
+        public string ActivationType { get; set; }
+
+        public int ActivationHeight { get; set; }
+    }
+
     /// <summary>
     /// When a block matures, an instance of this class is created and passed on to the target chain.
     /// If there are no deposits, we still need to send an empty list with corresponding block (height
@@ -27,5 +34,8 @@ namespace Stratis.Features.FederatedPeg.Models
         [Required(ErrorMessage = "A block is required")]
         [JsonConverter(typeof(ConcreteConverter<MaturedBlockInfoModel>))]
         public IMaturedBlockInfo BlockInfo { get; set; }
+
+        [JsonConverter(typeof(ConcreteConverter<List<ActivationModel>>))]
+        public IReadOnlyList<ActivationModel> Activations { get; set; }
     }
 }

@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Controllers.Models;
@@ -57,6 +58,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         private readonly IMaturedBlocksProvider maturedBlocksProvider;
         private readonly Network network;
         private readonly IPeerBanning peerBanning;
+        private readonly NodeDeployments nodeDeployments;
 
         public FederationGatewayController(
             IAsyncProvider asyncProvider,
@@ -69,7 +71,8 @@ namespace Stratis.Features.FederatedPeg.Controllers
             IFederationWalletManager federationWalletManager,
             IFullNode fullNode,
             IPeerBanning peerBanning,
-            IFederationManager federationManager = null)
+            IFederationManager federationManager = null,
+            NodeDeployments nodeDeployments = null)
         {
             this.asyncProvider = asyncProvider;
             this.chainIndexer = chainIndexer;
@@ -83,6 +86,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             this.maturedBlocksProvider = maturedBlocksProvider;
             this.network = network;
             this.peerBanning = peerBanning;
+            this.nodeDeployments = nodeDeployments;
         }
 
         /// <summary>
@@ -109,6 +113,15 @@ namespace Stratis.Features.FederatedPeg.Controllers
             try
             {
                 SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = await this.maturedBlocksProvider.RetrieveDepositsAsync(blockHeight).ConfigureAwait(false);
+                if (depositsResult.Value.Count > 0 && this.nodeDeployments != null)
+                {
+                    depositsResult.Value[0].Activations = this.nodeDeployments.BIP9.ActivationHeightProviders
+                        .Select((p, n) => new ActivationModel()
+                        {
+                            ActivationHeight = p.ActivationHeight,
+                            ActivationType = this.network.Consensus.BIP9Deployments[n].Name
+                        }).ToList();
+                }
                 return this.Json(depositsResult);
             }
             catch (Exception e)
