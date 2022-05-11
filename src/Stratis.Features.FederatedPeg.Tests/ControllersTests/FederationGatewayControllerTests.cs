@@ -74,7 +74,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
         private FederationGatewayController CreateController(IFederatedPegSettings federatedPegSettings)
         {
-            var retrievalTypeConfirmations = new RetrievalTypeConfirmations(this.network, new NodeDeployments(this.network, new ChainIndexer(this.network)), federatedPegSettings);
+            var retrievalTypeConfirmations = new RetrievalTypeConfirmations(this.network, new NodeDeployments(this.network, new ChainIndexer(this.network)), federatedPegSettings, null, null);
 
             var controller = new FederationGatewayController(
                 Substitute.For<IAsyncProvider>(),
@@ -210,7 +210,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             var federatedPegSettings = new FederatedPegSettings(nodeSettings, new CounterChainNetworkWrapper(KnownNetworks.StraxRegTest));
 
-            var retrievalTypeConfirmations = new RetrievalTypeConfirmations(this.network, new NodeDeployments(this.network, new ChainIndexer(this.network)), federatedPegSettings);
+            var retrievalTypeConfirmations = new RetrievalTypeConfirmations(this.network, new NodeDeployments(this.network, new ChainIndexer(this.network)), federatedPegSettings, null, null);
 
             var controller = new FederationGatewayController(
                 Substitute.For<IAsyncProvider>(),
@@ -304,7 +304,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             this.federationWalletManager.IsFederationWalletActive().Returns(true);
 
             var settings = new FederatedPegSettings(nodeSettings, new CounterChainNetworkWrapper(KnownNetworks.StraxRegTest));
-            var retrievalTypeConfirmations = new RetrievalTypeConfirmations(this.network, new NodeDeployments(this.network, new ChainIndexer(this.network)), settings);
+            var retrievalTypeConfirmations = new RetrievalTypeConfirmations(this.network, new NodeDeployments(this.network, new ChainIndexer(this.network)), settings, null, null);
 
             var controller = new FederationGatewayController(
                 Substitute.For<IAsyncProvider>(),

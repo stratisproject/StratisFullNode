@@ -30,5 +30,17 @@ namespace Stratis.Bitcoin.Base.Deployments.Models
         /// </summary>
         [JsonProperty(PropertyName = "votes")]
         public int Votes { get; set; }
+
+        /// <summary>
+        /// The height at which the deployment was locked-in.
+        /// </summary>
+        [JsonProperty(PropertyName = "lockedInHeight")]
+        public int? lockedInHeight { get; set; }
+
+        /// <summary>
+        /// The timestamp of the blocked at the "lockedInHeight".
+        /// </summary>
+        [JsonProperty(PropertyName = "lockedInTimestamp")]
+        public long? lockedInTimestamp { get; set; }
     }
 }

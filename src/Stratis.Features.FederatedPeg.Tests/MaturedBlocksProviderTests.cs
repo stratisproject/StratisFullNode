@@ -80,7 +80,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 return this.blocks.SkipWhile(x => x.ChainedHeader.Height <= chainedHeader.Height).Where(x => x.ChainedHeader.Height <= this.consensusManager.Tip.Height).ToArray();
             });
 
-            this.retrievalTypeConfirmations = new RetrievalTypeConfirmations(this.network, new NodeDeployments(this.network, new ChainIndexer(this.network)), this.federatedPegSettings);
+            this.retrievalTypeConfirmations = new RetrievalTypeConfirmations(this.network, new NodeDeployments(this.network, new ChainIndexer(this.network)), this.federatedPegSettings, null, null);
         }
 
         [Fact]

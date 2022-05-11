@@ -1,11 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Base.Deployments.Models;
 using Stratis.Bitcoin.Configuration.Logging;
+using Stratis.Bitcoin.Controllers;
 using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Interfaces;
@@ -17,6 +21,7 @@ using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
 using Stratis.Features.FederatedPeg.SourceChain;
 using Stratis.Features.FederatedPeg.Wallet;
+using Stratis.Features.PoA.Collateral.CounterChain;
 
 namespace Stratis.Features.FederatedPeg.TargetChain
 {
@@ -38,6 +43,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <param name="deposit">The deposit that will be injected into the <see cref="CrossChainTransferStore"/> that distributes a fee to all the multisig nodes
         /// for submitting a interop transfer. This is currently used for SRC20 to ERC20 transfers.</param>
         void AddInterOpFeeDeposit(IDeposit deposit);
+
+        int GetMainChainActivationHeight();
     }
 
     /// <inheritdoc cref="IMaturedBlocksSyncManager"/>
@@ -53,11 +60,14 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly ILogger logger;
         private readonly INodeLifetime nodeLifetime;
         private readonly IConversionRequestRepository conversionRequestRepository;
+        private readonly ICounterChainSettings counterChainSettings;
+        private readonly IHttpClientFactory httpClientFactory;
         private readonly ChainIndexer chainIndexer;
         private readonly IExternalApiPoller externalApiPoller;
         private readonly IConversionRequestFeeService conversionRequestFeeService;
         private readonly Network network;
         private readonly IFederationManager federationManager;
+        private int mainChainActivationHeight;
         private IAsyncLoop requestDepositsTask;
 
         /// <summary>When we are fully synced we stop asking for more blocks for this amount of time.</summary>
@@ -85,7 +95,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             IFederatedPegSettings federatedPegSettings,
             IFederationManager federationManager = null,
             IExternalApiPoller externalApiPoller = null,
-            IConversionRequestFeeService conversionRequestFeeService = null)
+            IConversionRequestFeeService conversionRequestFeeService = null,
+            ICounterChainSettings counterChainSettings = null,
+            IHttpClientFactory httpClientFactory = null)
         {
             this.asyncProvider = asyncProvider;
             this.chainIndexer = chainIndexer;
@@ -97,14 +109,66 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.initialBlockDownloadState = initialBlockDownloadState;
             this.nodeLifetime = nodeLifetime;
             this.conversionRequestRepository = conversionRequestRepository;
+            this.counterChainSettings = counterChainSettings;
+            this.httpClientFactory = httpClientFactory;
             this.chainIndexer = chainIndexer;
             this.externalApiPoller = externalApiPoller;
             this.conversionRequestFeeService = conversionRequestFeeService;
             this.network = network;
             this.federationManager = federationManager;
+            this.mainChainActivationHeight = int.MaxValue;
 
             this.lockObject = new object();
             this.logger = LogManager.GetCurrentClassLogger();
+        }
+
+        public class ConsensusClient : RestApiClientBase
+        {
+            /// <summary>
+            /// Currently the <paramref name="url"/> is required as it needs to be configurable for testing.
+            /// <para>
+            /// In a production/live scenario the sidechain and mainnet federation nodes should run on the same machine.
+            /// </para>
+            /// </summary>
+            public ConsensusClient(ICounterChainSettings counterChainSettings, IHttpClientFactory httpClientFactory)
+                : base(httpClientFactory, counterChainSettings.CounterChainApiPort, "Consensus", $"http://{counterChainSettings.CounterChainApiHost}")
+            {
+            }
+
+            public Task<List<ThresholdActivationModel>> GetLockedInDeployments(CancellationToken cancellation = default)
+            {
+                return this.SendGetRequestAsync<List<ThresholdActivationModel>>("lockedindeployments", null, cancellation);
+            }
+        }
+
+        public void RecordCounterChainActivations()
+        {
+            // If this is the main chain then ask the side-chain for its activation height.
+            if (this.network.Name.StartsWith("Cirrus"))
+                return;
+
+            ConsensusClient consensusClient = new ConsensusClient(this.counterChainSettings, this.httpClientFactory);
+            List<ThresholdActivationModel> lockedInActivations = consensusClient.GetLockedInDeployments(this.nodeLifetime.ApplicationStopping).ConfigureAwait(false).GetAwaiter().GetResult();
+            if (lockedInActivations == null || lockedInActivations.Count == 0)
+                return;
+
+            ThresholdActivationModel model = lockedInActivations.FirstOrDefault(a => a.DeploymentName.ToLower() == "release1300");
+            if (model == null || model.lockedInTimestamp == null)
+                return;
+
+            if (this.chainIndexer.Tip.Header.Time < model.lockedInTimestamp.Value)
+                return;
+
+            int mainChainLockedInHeight = this.chainIndexer.Tip.EnumerateToGenesis().TakeWhile(h => h.Header.Time > (uint)(model.lockedInTimestamp)).FirstOrDefault().Height;
+
+            Network counterChainNetwork = this.counterChainSettings.CounterChainNetwork;
+            this.mainChainActivationHeight = mainChainLockedInHeight + 
+                (int)((counterChainNetwork.Consensus.MinerConfirmationWindow * counterChainNetwork.Consensus.TargetSpacing.TotalSeconds) / this.network.Consensus.TargetSpacing.TotalSeconds);
+        }
+
+        public int GetMainChainActivationHeight()
+        {
+            return this.mainChainActivationHeight;
         }
 
         /// <inheritdoc />
@@ -113,8 +177,12 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             // Initialization delay; give the counter chain node some time to start it's API service.
             await Task.Delay(TimeSpan.FromSeconds(InitializationDelaySeconds), this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
 
+            RecordCounterChainActivations();
+
             this.requestDepositsTask = this.asyncProvider.CreateAndRunAsyncLoop($"{nameof(MaturedBlocksSyncManager)}.{nameof(this.requestDepositsTask)}", async token =>
             {
+                RecordCounterChainActivations();
+
                 bool delayRequired = await this.SyncDepositsAsync().ConfigureAwait(false);
                 if (delayRequired)
                 {

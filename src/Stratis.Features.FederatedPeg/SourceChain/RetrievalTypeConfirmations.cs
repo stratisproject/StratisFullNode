@@ -3,6 +3,8 @@ using System.Linq;
 using NBitcoin;
 using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Features.FederatedPeg.Interfaces;
+using Stratis.Features.FederatedPeg.TargetChain;
+using Stratis.Features.PoA.Collateral.CounterChain;
 
 namespace Stratis.Features.FederatedPeg.SourceChain
 {
@@ -35,11 +37,15 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         private readonly Dictionary<DepositRetrievalType, int> legacyRetrievalTypeConfirmations;
         private readonly Dictionary<DepositRetrievalType, int> retrievalTypeConfirmations;
         private readonly Network network;
+        private readonly IMaturedBlocksSyncManager maturedBlocksSyncManager;
+        private readonly ICounterChainSettings counterChainSettings;
 
-        public RetrievalTypeConfirmations(Network network, NodeDeployments nodeDeployments, IFederatedPegSettings federatedPegSettings)
+        public RetrievalTypeConfirmations(Network network, NodeDeployments nodeDeployments, IFederatedPegSettings federatedPegSettings, IMaturedBlocksSyncManager maturedBlocksSyncManager, ICounterChainSettings counterChainSettings)
         {
             this.nodeDeployments = nodeDeployments;
             this.network = network;
+            this.maturedBlocksSyncManager = maturedBlocksSyncManager;
+            this.counterChainSettings = counterChainSettings;
             this.legacyRetrievalTypeConfirmations = new Dictionary<DepositRetrievalType, int>
             {
                 [DepositRetrievalType.Small] = federatedPegSettings.MinimumConfirmationsSmallDeposits,
@@ -99,7 +105,20 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             return this.retrievalTypeConfirmations.Values.Max();
         }
 
-        private int Release1300ActivationHeight => (this.nodeDeployments?.BIP9.ArraySize > 0) ? this.nodeDeployments.BIP9.ActivationHeightProviders[0 /* Release 1300 */].ActivationHeight : 0;
+        private int Release1300ActivationHeight
+        {
+            get
+            {
+                if (this.network.Name.StartsWith("Cirrus"))
+                    return (this.nodeDeployments?.BIP9.ArraySize > 0) ? this.nodeDeployments.BIP9.ActivationHeightProviders[0 /* Release 1300 */].ActivationHeight : 0;
+
+                // This code is running on the main chain.
+                if (this.counterChainSettings.CounterChainNetwork.Consensus.BIP9Deployments.Length == 0)
+                    return 0;
+
+                return this.maturedBlocksSyncManager.GetMainChainActivationHeight();
+            }
+        }
 
         public int GetDepositConfirmations(int depositHeight, DepositRetrievalType retrievalType)
         {
