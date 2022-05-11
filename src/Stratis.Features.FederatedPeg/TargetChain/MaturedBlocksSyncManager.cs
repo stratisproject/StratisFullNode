@@ -147,6 +147,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             if (this.network.Name.StartsWith("Cirrus"))
                 return;
 
+            if (this.mainChainActivationHeight != int.MaxValue)
+                return;
+
             ConsensusClient consensusClient = new ConsensusClient(this.counterChainSettings, this.httpClientFactory);
             List<ThresholdActivationModel> lockedInActivations = consensusClient.GetLockedInDeployments(this.nodeLifetime.ApplicationStopping).ConfigureAwait(false).GetAwaiter().GetResult();
             if (lockedInActivations == null || lockedInActivations.Count == 0)
