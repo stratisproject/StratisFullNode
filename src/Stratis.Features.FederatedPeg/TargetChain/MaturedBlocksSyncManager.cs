@@ -148,6 +148,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             if (this.network.Name.StartsWith("Cirrus"))
                 return;
 
+            // Ensures that we only check this once on startup.
             if (this.mainChainActivationHeight != int.MaxValue)
                 return;
 
