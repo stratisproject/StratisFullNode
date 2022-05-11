@@ -155,14 +155,23 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             ConsensusClient consensusClient = new ConsensusClient(this.counterChainSettings, this.httpClientFactory);
             List<ThresholdActivationModel> lockedInActivations = consensusClient.GetLockedInDeployments(this.nodeLifetime.ApplicationStopping).ConfigureAwait(false).GetAwaiter().GetResult();
             if (lockedInActivations == null || lockedInActivations.Count == 0)
+            {
+                this.logger.LogDebug("There are {0} locked-in deployments.", lockedInActivations?.Count);
                 return;
+            }
 
             ThresholdActivationModel model = lockedInActivations.FirstOrDefault(a => a.DeploymentName.ToLowerInvariant() == Release1300DeploymentNameLower);
             if (model == null || model.LockedInTimestamp == null)
+            {
+                this.logger.LogDebug("There are no locked-in deployments for '{0}'.", Release1300DeploymentNameLower);
                 return;
+            }
 
             if (this.chainIndexer.Tip.Header.Time < model.LockedInTimestamp.Value)
+            {
+                this.logger.LogDebug("The chain tip time {0} is still below the locked in time {1}.", this.chainIndexer.Tip.Header.Time, model.LockedInTimestamp.Value);
                 return;
+            }
 
             int mainChainLockedInHeight = this.chainIndexer.Tip.EnumerateToGenesis().TakeWhile(h => h.Header.Time > (uint)(model.LockedInTimestamp)).FirstOrDefault().Height;
 
