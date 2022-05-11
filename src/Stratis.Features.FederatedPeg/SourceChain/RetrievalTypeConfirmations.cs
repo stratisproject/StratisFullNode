@@ -76,12 +76,35 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             }
         }
 
+        /// <inheritdoc/>
         public int MaximumConfirmationsAtMaturityHeight(int maturityHeight)
         {
             if (maturityHeight < this.Release1300ActivationHeight)
                 return this.legacyRetrievalTypeConfirmations.Values.Max();
 
             return this.retrievalTypeConfirmations.Values.Max();
+        }
+
+        /// <inheritdoc/>
+        public int GetDepositConfirmations(int depositHeight, DepositRetrievalType retrievalType)
+        {
+            // Keep everything maturity-height-centric. Otherwise the way we use MaximumConfirmationsAtMaturityHeight will have to change as well.
+            if (depositHeight + this.legacyRetrievalTypeConfirmations[retrievalType] < this.Release1300ActivationHeight)
+                return this.legacyRetrievalTypeConfirmations[retrievalType];
+
+            return this.retrievalTypeConfirmations[retrievalType];
+        }
+
+        /// <inheritdoc/>
+        public int GetDepositMaturityHeight(int depositHeight, DepositRetrievalType retrievalType)
+        {
+            return depositHeight + GetDepositConfirmations(depositHeight, retrievalType);
+        }
+
+        /// <inheritdoc/>
+        public DepositRetrievalType[] GetRetrievalTypes()
+        {
+            return this.retrievalTypeConfirmations.Keys.ToArray();
         }
 
         private int Release1300ActivationHeight
@@ -97,25 +120,6 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
                 return this.maturedBlocksSyncManager.GetMainChainActivationHeight();
             }
-        }
-
-        public int GetDepositConfirmations(int depositHeight, DepositRetrievalType retrievalType)
-        {
-            // Keep everything maturity-height-centric. Otherwise the way we use MaximumConfirmationsAtMaturityHeight will have to change as well.
-            if (depositHeight + this.legacyRetrievalTypeConfirmations[retrievalType] < this.Release1300ActivationHeight)
-                return this.legacyRetrievalTypeConfirmations[retrievalType];
-
-            return this.retrievalTypeConfirmations[retrievalType];
-        }
-
-        public int GetDepositMaturityHeight(int depositHeight, DepositRetrievalType retrievalType)
-        {
-            return depositHeight + GetDepositConfirmations(depositHeight, retrievalType);
-        }
-
-        public DepositRetrievalType[] GetRetrievalTypes()
-        {
-            return this.retrievalTypeConfirmations.Keys.ToArray();
         }
     }
 }
