@@ -50,6 +50,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
     /// <inheritdoc cref="IMaturedBlocksSyncManager"/>
     public class MaturedBlocksSyncManager : IMaturedBlocksSyncManager
     {
+        private const string Release1300DeploymentNameLower = "release1300";
         private readonly IAsyncProvider asyncProvider;
         private readonly ICrossChainTransferStore crossChainTransferStore;
         private readonly IFederationGatewayClient federationGatewayClient;
@@ -155,14 +156,14 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             if (lockedInActivations == null || lockedInActivations.Count == 0)
                 return;
 
-            ThresholdActivationModel model = lockedInActivations.FirstOrDefault(a => a.DeploymentName.ToLower() == "release1300");
-            if (model == null || model.lockedInTimestamp == null)
+            ThresholdActivationModel model = lockedInActivations.FirstOrDefault(a => a.DeploymentName.ToLowerInvariant() == Release1300DeploymentNameLower);
+            if (model == null || model.LockedInTimestamp == null)
                 return;
 
-            if (this.chainIndexer.Tip.Header.Time < model.lockedInTimestamp.Value)
+            if (this.chainIndexer.Tip.Header.Time < model.LockedInTimestamp.Value)
                 return;
 
-            int mainChainLockedInHeight = this.chainIndexer.Tip.EnumerateToGenesis().TakeWhile(h => h.Header.Time > (uint)(model.lockedInTimestamp)).FirstOrDefault().Height;
+            int mainChainLockedInHeight = this.chainIndexer.Tip.EnumerateToGenesis().TakeWhile(h => h.Header.Time > (uint)(model.LockedInTimestamp)).FirstOrDefault().Height;
 
             Network counterChainNetwork = this.counterChainSettings.CounterChainNetwork;
             this.mainChainActivationHeight = mainChainLockedInHeight + 

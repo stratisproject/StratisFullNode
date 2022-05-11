@@ -23,7 +23,7 @@ namespace Stratis.Bitcoin.Base.Deployments.Models
         /// Activation height.
         /// </summary>
         [JsonProperty(PropertyName = "activationHeight")]
-        public int activationHeight { get; set; }
+        public int ActivationHeight { get; set; }
 
         /// <summary>
         /// Number of blocks with flags set that led to the deployment being locked in.
@@ -35,12 +35,12 @@ namespace Stratis.Bitcoin.Base.Deployments.Models
         /// The height at which the deployment was locked-in.
         /// </summary>
         [JsonProperty(PropertyName = "lockedInHeight")]
-        public int? lockedInHeight { get; set; }
+        public int? LockedInHeight { get; set; }
 
         /// <summary>
         /// The timestamp of the blocked at the "lockedInHeight".
         /// </summary>
         [JsonProperty(PropertyName = "lockedInTimestamp")]
-        public long? lockedInTimestamp { get; set; }
+        public long? LockedInTimestamp { get; set; }
     }
 }
