@@ -11,16 +11,12 @@ namespace Stratis.Bitcoin.Features.MemoryPool
     public class TransactionAddedToMemoryPoolEvent : EventBase
     {
         public Transaction AddedTransaction { get; }
-        private readonly ITxMempool memPool;
-        public long MemPoolSize { get; set; }
-        public TransactionAddedToMemoryPoolEvent(Transaction addedTransaction, ITxMempool memPool)
+        public readonly long MemPoolSize;
+       
+       public TransactionAddedToMemoryPoolEvent(Transaction addedTransaction, long mempoolSize)
         {
             this.AddedTransaction = addedTransaction;
-            this.MemPoolSize = memPool.Size;
-        }
-        public TransactionAddedToMemoryPoolEvent(Transaction addedTransaction)
-        {
-            this.AddedTransaction = addedTransaction;            
-        }
+            this.MemPoolSize = mempoolSize;
+        }        
     }
 }
