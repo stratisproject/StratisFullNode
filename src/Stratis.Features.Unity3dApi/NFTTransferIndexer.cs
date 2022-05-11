@@ -27,6 +27,9 @@ namespace Stratis.Features.Unity3dApi
         /// <summary>Adds NFT contract to watch list. Only contracts from the watch list are being indexed.</summary>
         void WatchNFTContract(string contractAddress);
 
+        /// <summary>Removes NFT contract from watch list.</summary>
+        void UnwatchNFTContract(string contractAddress);
+
         /// <summary>Provides a list of all nft contract addresses that are being tracked.</summary>
         List<string> GetWatchedNFTContracts();
 
@@ -101,6 +104,16 @@ namespace Stratis.Features.Unity3dApi
         /// <inheritdoc />
         public void WatchNFTContract(string contractAddress)
         {
+            try
+            {
+                // Check that contract address is a valid address
+                var addr = new BitcoinPubKeyAddress(contractAddress, this.network);
+            }
+            catch (FormatException)
+            {
+                return;
+            }
+
             int watchFromHeight = this.GetWatchFromHeight();
 
             if (!this.NFTContractCollection.Exists(x => x.ContractAddress == contractAddress))
@@ -118,6 +131,19 @@ namespace Stratis.Features.Unity3dApi
             }
             else
                 this.logger.LogDebug("Tried to add contract " + contractAddress + " to watchlist, but it's already tracked.");
+        }
+
+        /// <inheritdoc />
+        public void UnwatchNFTContract(string contractAddress)
+        {
+            NFTContractModel entryToRemove = this.NFTContractCollection.FindOne(x => x.ContractAddress == contractAddress);
+
+            if (entryToRemove == null)
+                return;
+
+            this.NFTContractCollection.Delete(entryToRemove.Id);
+
+            this.logger.LogDebug("Unwatched contract " + contractAddress);
         }
 
         /// <inheritdoc />
