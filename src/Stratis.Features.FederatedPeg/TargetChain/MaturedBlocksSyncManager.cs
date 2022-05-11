@@ -124,7 +124,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         public void RecordCounterChainActivations()
         {
             // If this is the main chain then ask the side-chain for its activation height.
-            if (this.network.Name.StartsWith("Cirrus"))
+            if (!this.federatedPegSettings.IsMainChain)
                 return;
 
             // Ensures that we only check this once on startup.
