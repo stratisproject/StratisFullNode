@@ -152,7 +152,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 return;
             }
 
-            int mainChainLockedInHeight = this.chainIndexer.Tip.EnumerateToGenesis().TakeWhile(h => h.Header.Time >= (uint)(model.LockedInTimestamp)).LastOrDefault().Height;
+            // The above condition ensures that the 'Last' below will always return a value.
+            int mainChainLockedInHeight = this.chainIndexer.Tip.EnumerateToGenesis().TakeWhile(h => h.Header.Time >= (uint)(model.LockedInTimestamp)).Last().Height;
 
             Network counterChainNetwork = this.counterChainSettings.CounterChainNetwork;
             this.mainChainActivationHeight = mainChainLockedInHeight + 
