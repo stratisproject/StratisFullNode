@@ -9,11 +9,12 @@ namespace Stratis.Bitcoin.Features.SignalR.Events
     public class TransactionAddedToMemoryPoolClientEvent : IClientEvent
     {
         public long MemPoolSize { get; set; }
-        public Type NodeEventType { get; } = typeof(TransactionAddedToMemoryPool);
+        public Type NodeEventType { get; } = typeof(TransactionAddedToMemoryPoolEvent);
         public void BuildFrom(EventBase @event)
         {
-            if (@event is TransactionAddedToMemoryPool transactionAddedToMemoryPool)
+            if (@event is TransactionAddedToMemoryPoolEvent transactionAddedToMemoryPool)
             {
+                this.MemPoolSize = transactionAddedToMemoryPool.MemPoolSize;
                 return;
             }
 
