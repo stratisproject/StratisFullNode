@@ -1189,21 +1189,23 @@ namespace Stratis.Bitcoin.Features.Interop
 
             foreach (ConversionRequest request in burnRequests)
             {
-                // Ignore old requests for the time being.
-                if (request.RequestStatus == ConversionRequestStatus.Unprocessed && (this.chainIndexer.Tip.Height - request.BlockHeight) > this.network.Consensus.MaxReorgLength)
-                {
-                    this.logger.Info("Ignoring old burn request '{0}' with status {1} from block height {2}.", request.RequestId, request.RequestStatus, request.BlockHeight);
+                // ** Put this back once the outstanding burns has been processed **
+                // 
+                // // Ignore old requests for the time being.
+                //if (request.RequestStatus == ConversionRequestStatus.Unprocessed && (this.chainIndexer.Tip.Height - request.BlockHeight) > this.network.Consensus.MaxReorgLength)
+                //{
+                //    this.logger.Info("Ignoring old burn request '{0}' with status {1} from block height {2}.", request.RequestId, request.RequestStatus, request.BlockHeight);
 
-                    request.RequestStatus = ConversionRequestStatus.Stale;
-                    request.Processed = true;
+                //    request.RequestStatus = ConversionRequestStatus.Stale;
+                //    request.Processed = true;
 
-                    lock (this.repositoryLock)
-                    {
-                        this.conversionRequestRepository.Save(request);
-                    }
+                //    lock (this.repositoryLock)
+                //    {
+                //        this.conversionRequestRepository.Save(request);
+                //    }
 
-                    continue;
-                }
+                //    continue;
+                //}
 
                 bool originator = DetermineConversionRequestOriginator(request.BlockHeight, out IFederationMember designatedMember);
 
