@@ -66,6 +66,7 @@ namespace Stratis.Bitcoin.Features.Interop
         private readonly ChainIndexer chainIndexer;
         private readonly ICirrusContractClient cirrusClient;
         private readonly Network counterChainNetwork;
+        private readonly IConversionRequestFeeKeyValueStore conversionRequestFeeKeyValueStore;
         private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
         private readonly IConversionRequestFeeService conversionRequestFeeService;
         private readonly IConversionRequestRepository conversionRequestRepository;
@@ -104,6 +105,7 @@ namespace Stratis.Bitcoin.Features.Interop
             INodeLifetime nodeLifetime,
             ChainIndexer chainIndexer,
             IConversionRequestRepository conversionRequestRepository,
+            IConversionRequestFeeKeyValueStore conversionRequestFeeKeyValueStore,
             IConversionRequestCoordinationService conversionRequestCoordinationService,
             IConversionRequestFeeService conversionRequestFeeService,
             CounterChainNetworkWrapper counterChainNetworkWrapper,
@@ -128,6 +130,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.federationManager = federationManager;
             this.federationHistory = federationHistory;
             this.federatedPegBroadcaster = federatedPegBroadcaster;
+            this.conversionRequestFeeKeyValueStore = conversionRequestFeeKeyValueStore;
             this.conversionRequestRepository = conversionRequestRepository;
             this.conversionRequestCoordinationService = conversionRequestCoordinationService;
             this.conversionRequestFeeService = conversionRequestFeeService;
@@ -480,7 +483,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                             lock (this.repositoryLock)
                             {
-                                this.conversionRequestRepository.Save(interopConversionRequestFee);
+                                this.conversionRequestFeeKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee);
                             }
 
                             this.logger.Warn($"A fixed fee for SRC20->ERC20 request '{receipt.TransactionHash}' was set with a value of {ConversionRequestFeeService.FallBackFee} CRS.");

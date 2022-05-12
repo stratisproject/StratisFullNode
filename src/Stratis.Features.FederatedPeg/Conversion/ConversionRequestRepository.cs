@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Stratis.Features.FederatedPeg.Coordination;
 
 namespace Stratis.Features.FederatedPeg.Conversion
 {
@@ -9,9 +8,6 @@ namespace Stratis.Features.FederatedPeg.Conversion
     {
         /// <summary>Saves <see cref="ConversionRequest"/> to the repository.</summary>
         void Save(ConversionRequest request);
-
-        /// <summary>Saves <see cref="InteropConversionRequestFee"/> to the repository.</summary>
-        void Save(InteropConversionRequestFee interopConversionRequestFee);
 
         /// <summary>Retrieves <see cref="ConversionRequest"/> with specified id.</summary>
         ConversionRequest Get(string requestId);
@@ -62,12 +58,6 @@ namespace Stratis.Features.FederatedPeg.Conversion
         public void Save(ConversionRequest request)
         {
             this.KeyValueStore.SaveValue(request.RequestId, request);
-        }
-
-        /// <inheritdoc />
-        public void Save(InteropConversionRequestFee interopConversionRequestFee)
-        {
-            this.KeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee);
         }
 
         /// <inheritdoc />
