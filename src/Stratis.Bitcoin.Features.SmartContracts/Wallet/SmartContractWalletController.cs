@@ -21,6 +21,9 @@ using Stratis.SmartContracts.Core.Receipts;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
 {
+    /// <summary>
+    /// Analyze and perform smart contract interactions using a wallet loaded on the node
+    /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
     public sealed class SmartContractWalletController : Controller

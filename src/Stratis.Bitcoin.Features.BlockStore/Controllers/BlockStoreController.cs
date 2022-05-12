@@ -31,7 +31,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
         public const string GetLastBalanceDecreaseTransaction = "getlastbalanceupdatetransaction";
     }
 
-    /// <summary>Controller providing operations on a blockstore.</summary>
+    /// <summary>
+    /// Retrieve data from the block store database
+    /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
     public class BlockStoreController : Controller

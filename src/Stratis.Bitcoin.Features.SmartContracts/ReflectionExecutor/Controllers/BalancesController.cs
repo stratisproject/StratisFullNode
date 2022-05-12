@@ -10,6 +10,9 @@ using Stratis.SmartContracts.Core.Util;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
 {
+    /// <summary>
+    /// Query addresses by balance
+    /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
     public class BalancesController : Controller

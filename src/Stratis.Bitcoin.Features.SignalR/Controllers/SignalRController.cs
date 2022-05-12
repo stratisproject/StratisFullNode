@@ -5,7 +5,7 @@ using Stratis.Bitcoin.Utilities;
 namespace Stratis.Bitcoin.Features.SignalR.Controllers
 {
     /// <summary>
-    /// Controller for connecting to SignalR.
+    /// Retrieve SignalR connection settings
     /// </summary>
     [Route("api/[controller]")]
     public class SignalRController : Controller

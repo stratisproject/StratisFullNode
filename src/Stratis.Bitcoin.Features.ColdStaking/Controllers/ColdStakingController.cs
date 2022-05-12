@@ -16,7 +16,7 @@ using Stratis.Bitcoin.Utilities.ModelStateErrors;
 namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
 {
     /// <summary>
-    /// Controller providing operations for cold staking.
+    /// Manage cold staking operations
     /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]

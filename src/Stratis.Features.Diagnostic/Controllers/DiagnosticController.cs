@@ -15,7 +15,7 @@ using Stratis.Features.Diagnostic.Utils;
 namespace Stratis.Features.Diagnostic.Controllers
 {
     /// <summary>
-    /// Controller providing diagnostic operations on fullnode.
+    /// Collect diagnostic information on network peers
     /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]/[action]")]

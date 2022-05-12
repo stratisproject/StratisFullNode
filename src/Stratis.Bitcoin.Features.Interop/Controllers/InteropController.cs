@@ -25,6 +25,9 @@ using Stratis.SmartContracts.CLR.Serialization;
 
 namespace Stratis.Bitcoin.Features.Interop.Controllers
 {
+    /// <summary>
+    /// Interact with InterFlux and the multisig contract
+    /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
     public sealed class InteropController : Controller

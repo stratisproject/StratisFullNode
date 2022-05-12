@@ -5,7 +5,7 @@ using Stratis.Bitcoin.AsyncWork;
 namespace Stratis.Bitcoin.Controllers
 {
     /// <summary>
-    /// Controller providing HTML Dashboard
+    /// Retrieve stats for the running node
     /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]

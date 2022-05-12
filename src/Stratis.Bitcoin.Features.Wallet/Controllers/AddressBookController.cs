@@ -13,7 +13,7 @@ using Stratis.Bitcoin.Utilities.ModelStateErrors;
 namespace Stratis.Bitcoin.Features.Wallet.Controllers
 {
     /// <summary>
-    /// Controller providing operations on a wallet.
+    /// Record and label wallet addresses
     /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]

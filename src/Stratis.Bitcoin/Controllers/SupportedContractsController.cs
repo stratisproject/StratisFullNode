@@ -10,6 +10,9 @@ using Stratis.Interop.Contracts;
 
 namespace Stratis.Bitcoin.Controllers
 {
+    /// <summary>
+    /// Retrieve InterFlux token information
+    /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
     public sealed class SupportedContractsController : Controller

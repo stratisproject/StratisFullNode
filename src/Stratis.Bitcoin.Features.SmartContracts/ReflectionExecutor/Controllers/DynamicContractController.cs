@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NBitcoin;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
@@ -20,8 +17,7 @@ using Stratis.SmartContracts.Core.State;
 namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
 {
     /// <summary>
-    /// Controller for receiving dynamically generated contract calls.
-    /// Maps calls from a json object to a request model and proxies this to the correct controller method.
+    /// Execute dynamically generated smart contract calls
     /// </summary>
     public class DynamicContractController : Controller
     {

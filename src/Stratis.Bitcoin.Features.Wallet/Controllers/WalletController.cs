@@ -15,7 +15,7 @@ using Stratis.Bitcoin.Utilities.JsonErrors;
 namespace Stratis.Bitcoin.Features.Wallet.Controllers
 {
     /// <summary>
-    /// Controller providing operations on a wallet.
+    /// Load and manage wallets and accounts and build and broadcast transactions
     /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]

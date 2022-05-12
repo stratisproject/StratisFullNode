@@ -13,7 +13,7 @@ using Stratis.Bitcoin.Utilities.JsonErrors;
 namespace Stratis.Bitcoin.Connection
 {
     /// <summary>
-    /// A <see cref="FeatureController"/> that implements API and RPC methods for the connection manager.
+    /// Manage connections to other nodes
     /// </summary>
     public class ConnectionManagerController : FeatureController
     {

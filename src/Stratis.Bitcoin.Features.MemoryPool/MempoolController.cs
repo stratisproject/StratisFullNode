@@ -12,7 +12,7 @@ using Stratis.Bitcoin.Utilities.JsonErrors;
 namespace Stratis.Bitcoin.Features.MemoryPool
 {
     /// <summary>
-    /// Controller providing operations on the Mempool.
+    /// Retrieve information about unconfirmed transactions
     /// </summary>
     [ApiVersion("1")]
     public class MempoolController : FeatureController

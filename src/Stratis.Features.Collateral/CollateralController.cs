@@ -19,7 +19,9 @@ namespace Stratis.Features.Collateral
         public const string JoinFederation = "joinfederation";
     }
 
-    /// <summary>Controller providing operations on collateral federation members.</summary>
+    /// <summary>
+    /// Put up collateral to join a federation
+    /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
     public sealed class CollateralController : Controller

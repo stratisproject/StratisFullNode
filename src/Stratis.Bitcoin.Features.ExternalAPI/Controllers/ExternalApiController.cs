@@ -9,7 +9,7 @@ using Stratis.Bitcoin.Utilities.JsonErrors;
 namespace Stratis.Features.ExternalApi.Controllers
 {
     /// <summary>
-    /// Controller for the External Api.
+    /// Retrieve data from external sources
     /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]

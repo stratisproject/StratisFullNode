@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -18,25 +19,6 @@ namespace Stratis.Bitcoin.Features.Api
     /// </remarks>
     public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
     {
-        private static readonly string[] ApiXmlDocuments = new string[]
-        {
-            "Stratis.Bitcoin.xml",
-            "Stratis.Bitcoin.Features.BlockStore.xml",
-            "Stratis.Bitcoin.Features.ColdStaking.xml",
-            "Stratis.Bitcoin.Features.Consensus.xml",
-            "Stratis.Bitcoin.Features.PoA.xml",
-            "Stratis.Bitcoin.Features.MemoryPool.xml",
-            "Stratis.Bitcoin.Features.Miner.xml",
-            "Stratis.Bitcoin.Features.Notifications.xml",
-            "Stratis.Bitcoin.Features.RPC.xml",
-            "Stratis.Bitcoin.Features.SignalR.xml",
-            "Stratis.Bitcoin.Features.SmartContracts.xml",
-            "Stratis.Bitcoin.Features.Wallet.xml",
-            "Stratis.Bitcoin.Features.WatchOnlyWallet.xml",
-            "Stratis.Features.Diagnostic.xml",
-            "Stratis.Features.FederatedPeg.xml"
-        };
-
         private readonly IApiVersionDescriptionProvider provider;
 
         /// <summary>
@@ -59,11 +41,17 @@ namespace Stratis.Bitcoin.Features.Api
 
             // Includes XML comments in Swagger documentation 
             string basePath = AppContext.BaseDirectory;
-            foreach (string xmlPath in ApiXmlDocuments.Select(xmlDocument => Path.Combine(basePath, xmlDocument)))
+            
+            // Retrieve XML documents
+            var xmlDocuments = AppDomain.CurrentDomain.GetAssemblies()
+                .Where(a => a.GetTypes().Any(t => t.IsSubclassOf(typeof(ControllerBase))))
+                .Select(a => $"{a.GetName().Name}.xml");
+            
+            foreach (string xmlPath in xmlDocuments.Select(xmlDocument => Path.Combine(basePath, xmlDocument)))
             {
                 if (File.Exists(xmlPath))
                 {
-                    options.IncludeXmlComments(xmlPath);
+                    options.IncludeXmlComments(xmlPath, true);
                 }
             }
         }
@@ -74,7 +62,9 @@ namespace Stratis.Bitcoin.Features.Api
             {
                 Title = "Stratis Node API",
                 Version = description.ApiVersion.ToString(),
-                Description = "Access to the Stratis Node's api."
+                Description = "The Stratis Node API allows you to manage and monitor the node, as well as query data from the running network.",
+                Contact = new OpenApiContact { Name = "Stratis Platform", Url = new Uri("https://www.stratisplatform.com") },
+                License = new OpenApiLicense { Name = "MIT", Url = new Uri("https://opensource.org/licenses/MIT") }
             };
 
             if (info.Version.Contains("dev"))

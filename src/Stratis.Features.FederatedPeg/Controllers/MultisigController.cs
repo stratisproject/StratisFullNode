@@ -14,7 +14,7 @@ using Stratis.Features.FederatedPeg.Models;
 namespace Stratis.Features.FederatedPeg.Controllers
 {
     /// <summary>
-    /// Controller providing operations on a wallet.
+    /// Operations for federation multisig wallets 
     /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]

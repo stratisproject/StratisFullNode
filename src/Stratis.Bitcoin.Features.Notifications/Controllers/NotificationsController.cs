@@ -7,7 +7,7 @@ using Stratis.Bitcoin.Utilities.JsonErrors;
 namespace Stratis.Bitcoin.Features.Notifications.Controllers
 {
     /// <summary>
-    /// Controller providing operations on blocks and transactions notifications.
+    /// Manage block and transaction notifications
     /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]

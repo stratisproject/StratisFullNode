@@ -14,6 +14,9 @@ using Stratis.Bitcoin.Utilities.ModelStateErrors;
 
 namespace Stratis.Bitcoin.Features.PoA.Voting
 {
+    /// <summary>
+    /// View and act on federation governance polls and decisions
+    /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
     public sealed class VotingController : Controller

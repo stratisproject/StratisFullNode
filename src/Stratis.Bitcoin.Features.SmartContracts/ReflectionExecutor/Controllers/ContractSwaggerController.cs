@@ -19,7 +19,7 @@ using Swashbuckle.AspNetCore.SwaggerUI;
 namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
 {
     /// <summary>
-    /// Controller for dynamically generating swagger documents for smart contract assemblies.
+    /// Dynamically generate swagger documents for smart contracts
     /// </summary>
     public class ContractSwaggerController : Controller
     {

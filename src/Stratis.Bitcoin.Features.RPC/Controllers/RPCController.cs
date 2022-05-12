@@ -15,7 +15,7 @@ using Stratis.Bitcoin.Utilities.JsonErrors;
 namespace Stratis.Bitcoin.Features.RPC.Controllers
 {
     /// <summary>
-    /// Controller providing API operations on the RPC feature.
+    /// Execute RPC operations
     /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]

@@ -15,7 +15,7 @@ using Stratis.Bitcoin.Utilities.JsonErrors;
 namespace Stratis.Bitcoin.Controllers
 {
     /// <summary>
-    /// Provides methods that interact with the network elements of the full node.
+    /// Manage network connection settings
     /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]

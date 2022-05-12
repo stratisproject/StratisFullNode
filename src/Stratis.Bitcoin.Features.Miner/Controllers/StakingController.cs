@@ -16,7 +16,7 @@ using Stratis.Bitcoin.Utilities.JsonErrors;
 namespace Stratis.Bitcoin.Features.Miner.Controllers
 {
     /// <summary>
-    /// Controller providing operations on mining feature.
+    /// Manage staking operations
     /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]

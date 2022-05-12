@@ -12,6 +12,9 @@ using Stratis.Bitcoin.Utilities.ModelStateErrors;
 
 namespace Stratis.Features.FederatedPeg.Controllers
 {
+    /// <summary>
+    /// Vote on collateral federation members
+    /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
     public class CollateralVotingController : Controller
@@ -33,7 +36,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             this.logger = LogManager.GetCurrentClassLogger();
         }
 
-        /// <summary>Schedules a vote to kick a federation member.</summary>
+        /// <summary>Schedules a vote to add or kick a federation member.</summary>
         /// <param name="request">See <see cref="CollateralFederationMemberModel"/>.</param>
         /// <response code="400">Not yet implemented</response>
         /// <response code="500">Request is null</response>

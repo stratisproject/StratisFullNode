@@ -12,6 +12,9 @@ using Stratis.Bitcoin.Utilities.JsonErrors;
 
 namespace Stratis.Bitcoin.Features.PoA.Voting
 {
+    /// <summary>
+    /// Monitor information about the group of nodes that are able to create blocks
+    /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
     public sealed class FederationController : Controller

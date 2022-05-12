@@ -33,6 +33,9 @@ using Stratis.SmartContracts.Core.State;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
 {
+    /// <summary>
+    /// Analyze and build smart contracts transactions
+    /// </summary>
     [ApiVersion("1")]
     public class SmartContractsController : FeatureController
     {

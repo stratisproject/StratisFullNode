@@ -33,7 +33,7 @@ using Target = NBitcoin.Target;
 namespace Stratis.Bitcoin.Features.Api
 {
     /// <summary>
-    /// Provides methods that interact with the full node.
+    /// Manage and monitor the node
     /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]

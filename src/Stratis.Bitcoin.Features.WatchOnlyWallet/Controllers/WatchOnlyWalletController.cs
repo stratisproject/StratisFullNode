@@ -10,7 +10,7 @@ using Stratis.Bitcoin.Utilities.JsonErrors;
 namespace Stratis.Bitcoin.Features.WatchOnlyWallet.Controllers
 {
     /// <summary>
-    /// Controller providing operations on a watch-only wallet.
+    /// Monitor wallet addresses and their transactions
     /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
