@@ -470,16 +470,33 @@ namespace Stratis.Bitcoin.Features.Interop
                         {
                             this.logger.Info($"Found a valid SRC20->ERC20 transfer transaction with metadata: {src20burn.To}.");
 
+                            var interopConversionRequestFee = new InteropConversionRequestFee()
+                            {
+                                Amount = ConversionRequestFeeService.FallBackFee,
+                                RequestId = receipt.TransactionHash,
+                                BlockHeight = (int)receipt.BlockNumber,
+                                State = InteropFeeState.AgreeanceConcluded,
+                            };
+
+                            lock (this.repositoryLock)
+                            {
+                                this.conversionRequestRepository.Save(interopConversionRequestFee);
+                            }
+
+                            this.logger.Warn($"A fixed fee for SRC20->ERC20 request '{receipt.TransactionHash}' was set with a value of {ConversionRequestFeeService.FallBackFee} CRS.");
+
+                            // ***! Skipping dynamic fee generation for the interim !***
+                            //
                             // ERC20 transfers out of the multisig wallet have the same cost structure as a wSTRAX conversion, so we can use the same fee estimation logic.
-                            InteropConversionRequestFee interopConversionRequestFee = await this.conversionRequestFeeService.AgreeFeeForConversionRequestAsync(receipt.TransactionHash, (int)receipt.BlockNumber).ConfigureAwait(false);
+                            // InteropConversionRequestFee interopConversionRequestFee = await this.conversionRequestFeeService.AgreeFeeForConversionRequestAsync(receipt.TransactionHash, (int)receipt.BlockNumber).ConfigureAwait(false);
 
                             // If a dynamic fee could not be determined, create a fallback fee.
-                            if (interopConversionRequestFee == null ||
-                                (interopConversionRequestFee != null && interopConversionRequestFee.State != InteropFeeState.AgreeanceConcluded))
-                            {
-                                interopConversionRequestFee.Amount = ConversionRequestFeeService.FallBackFee;
-                                this.logger.Warn($"A dynamic fee for SRC20->ERC20 request '{receipt.TransactionHash}' could not be determined, using a fixed fee of {ConversionRequestFeeService.FallBackFee} CRS.");
-                            }
+                            // if (interopConversionRequestFee == null ||
+                            //     (interopConversionRequestFee != null && interopConversionRequestFee.State != InteropFeeState.AgreeanceConcluded))
+                            // {
+                            //     interopConversionRequestFee.Amount = ConversionRequestFeeService.FallBackFee;
+                            //     this.logger.Warn($"A dynamic fee for SRC20->ERC20 request '{receipt.TransactionHash}' could not be determined, using a fixed fee of {ConversionRequestFeeService.FallBackFee} CRS.");
+                            // }
 
                             IFederation federation = this.network.Federations?.GetOnlyFederation();
 
@@ -523,7 +540,7 @@ namespace Stratis.Bitcoin.Features.Interop
                                 continue;
                             }
 
-                            if (Money.Satoshis(interopConversionRequestFee.Amount) >= conversionFeeOutput.Value)
+                            if (Money.Satoshis(interopConversionRequestFee.Amount) > conversionFeeOutput.Value)
                             {
                                 var message = $"Transfer transaction '{receipt.TransactionHash}' has an insufficient fee; estimated fee '{Money.Satoshis(interopConversionRequestFee.Amount).ToUnit(MoneyUnit.BTC)}'";
                                 this.logger.Warn(message);
@@ -569,7 +586,7 @@ namespace Stratis.Bitcoin.Features.Interop
                         }
 
                         // TODO: Awaiting an InterFluxNonFungibleToken contract that has a 'burn with metadata' method
-                        //TransferDetails src721burn = ExtractBurnFromTransferLog(log, zeroAddress);
+                        // TransferDetails src721burn = ExtractBurnFromTransferLog(log, zeroAddress);
                     }
                 }
                 catch (Exception e)
