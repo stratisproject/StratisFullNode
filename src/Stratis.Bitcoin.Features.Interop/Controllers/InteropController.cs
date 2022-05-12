@@ -182,7 +182,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         {
             try
             {
-                // Delete the conversion request and any associated fees.
+                // Delete the conversion request.
                 this.conversionRequestRepository.DeleteConversionRequest(requestId);
 
                 // Delete any associated fees.
