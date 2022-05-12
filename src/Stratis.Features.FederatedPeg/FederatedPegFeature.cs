@@ -260,6 +260,7 @@ namespace Stratis.Features.FederatedPeg
                     .FeatureServices(services =>
                     {
                         services.AddSingleton<IMaturedBlocksProvider, MaturedBlocksProvider>();
+                        services.AddSingleton<IRetrievalTypeConfirmations, RetrievalTypeConfirmations>();
                         services.AddSingleton<IFederatedPegSettings, FederatedPegSettings>();
                         services.AddSingleton<IOpReturnDataReader>(provider => new OpReturnDataReader(provider.GetService<CounterChainNetworkWrapper>().CounterChainNetwork));
                         services.AddSingleton<IDepositExtractor, DepositExtractor>();

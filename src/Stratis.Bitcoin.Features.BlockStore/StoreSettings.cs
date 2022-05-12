@@ -96,7 +96,8 @@ namespace Stratis.Bitcoin.Features.BlockStore
             builder.AppendLine($"-addressindex=<0 or 1>         Enable to maintain a full address index.");
             builder.AppendLine($"-compactionthreshold=<integer value>         Specify address indexer compaction threshold.");
 
-            NodeSettings.Default(network).Logger.LogInformation(builder.ToString());
+            var logger = NodeSettings.Default(network).LoggerFactory.CreateLogger(typeof(StoreSettings).FullName);
+            logger.LogInformation(builder.ToString());
         }
 
         /// <summary>
