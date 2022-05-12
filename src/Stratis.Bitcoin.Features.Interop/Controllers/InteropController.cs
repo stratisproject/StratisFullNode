@@ -33,6 +33,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         private readonly ChainIndexer chainIndexer;
         private readonly IContractPrimitiveSerializer contractPrimitiveSerializer;
         private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
+        private readonly IConversionRequestFeeKeyValueStore conversionRequestFeeKeyValueStore;
         private readonly IConversionRequestRepository conversionRequestRepository;
         private readonly IETHCompatibleClientProvider ethCompatibleClientProvider;
         private readonly IFederationManager federationManager;
@@ -47,6 +48,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             IContractPrimitiveSerializer contractPrimitiveSerializer,
             Network network,
             IConversionRequestCoordinationService conversionRequestCoordinationService,
+            IConversionRequestFeeKeyValueStore conversionRequestFeeKeyValueStore,
             IConversionRequestRepository conversionRequestRepository,
             IETHCompatibleClientProvider ethCompatibleClientProvider,
             IFederationManager federationManager,
@@ -57,6 +59,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             this.chainIndexer = chainIndexer;
             this.contractPrimitiveSerializer = contractPrimitiveSerializer;
             this.conversionRequestCoordinationService = conversionRequestCoordinationService;
+            this.conversionRequestFeeKeyValueStore = conversionRequestFeeKeyValueStore;
             this.conversionRequestRepository = conversionRequestRepository;
             this.ethCompatibleClientProvider = ethCompatibleClientProvider;
             this.federationManager = federationManager;
@@ -170,16 +173,20 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             }
         }
 
-        [Route("mint/delete")]
+        [Route("request/delete")]
         [HttpDelete]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult DeleteMintRequest(string requestId)
+        public IActionResult DeleteConversionRequest(string requestId)
         {
             try
             {
+                // Delete the conversion request and any associated fees.
                 this.conversionRequestRepository.DeleteConversionRequest(requestId);
+
+                // Delete any associated fees.
+                this.conversionRequestFeeKeyValueStore.Delete(requestId);
 
                 return Ok($"{requestId} has been deleted.");
             }
