@@ -76,7 +76,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
         private const decimal FeeProposalRange = 0.1m;
 
         /// <summary> The fallback fee incase the nodes can't agree.</summary>
-        public static readonly Money FallBackFee = Money.Coins(150);
+        public static readonly Money FallBackFee = Money.Coins(350);
 
         private readonly AsyncLock asyncLockObject = new AsyncLock();
 
