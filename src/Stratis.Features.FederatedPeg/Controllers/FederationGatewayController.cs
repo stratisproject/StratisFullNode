@@ -33,8 +33,9 @@ namespace Stratis.Features.FederatedPeg.Controllers
         public const string FederationMemberIpRemove = "member/ip/remove";
         public const string FederationMemberIpReplace = "member/ip/replace";
         public const string GetTransferByDepositIdEndpoint = "transfer";
-        public const string GetTransfersPartialEndpoint = "transfer/pending";
-        public const string GetTransfersFullySignedEndpoint = "transfer/fullysigned";
+        public const string GetTransfersPartialEndpoint = "transfers/pending";
+        public const string GetTransfersFullySignedEndpoint = "transfers/fullysigned";
+        public const string GetTransfersSuspendedEndpoint = "transfers/suspended";
         public const string VerifyPartialTransactionEndpoint = "transfer/verify";
     }
 
@@ -116,6 +117,29 @@ namespace Stratis.Features.FederatedPeg.Controllers
                 this.logger.LogError("Exception thrown calling /api/FederationGateway/{0}: {1}.", FederationGatewayRouteEndPoint.GetMaturedBlockDeposits, e.Message);
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, $"Could not re-sync matured block deposits: {e.Message}", e.ToString());
             }
+        }
+
+        [Route(FederationGatewayRouteEndPoint.GetTransfersSuspendedEndpoint)]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult GetTransfersSuspended([FromQuery(Name = "depositId")] string depositId = "", [FromQuery(Name = "transactionId")] string transactionId = "")
+        {
+            ICrossChainTransfer[] transfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Suspended }, false, false).ToArray();
+
+            CrossChainTransferModel[] transactions = transfers
+                .Where(t => ((string.IsNullOrEmpty(depositId) && string.IsNullOrEmpty(transactionId)) || (t.DepositTransactionId.ToString().StartsWith(depositId) && (t.PartialTransaction == null || t.PartialTransaction.GetHash().ToString().StartsWith(transactionId)))))
+                .Select(t => new CrossChainTransferModel()
+                {
+                    DepositAmount = t.DepositAmount,
+                    DepositId = t.DepositTransactionId,
+                    DepositHeight = t.DepositHeight,
+                    Transaction = new TransactionVerboseModel(t.PartialTransaction, this.network),
+                    TransferStatus = t.Status.ToString(),
+                }).ToArray();
+
+            return this.Json(transactions);
         }
 
         [Route(FederationGatewayRouteEndPoint.GetTransfersPartialEndpoint)]
