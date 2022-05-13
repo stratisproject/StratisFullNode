@@ -235,7 +235,7 @@ namespace Stratis.Bitcoin.Features.Interop
         private async Task BroadcastCoordinationVoteRequestAsync(string requestId, BigInteger transactionId, DestinationChain destinationChain, bool isTransfer)
         {
             string signature = this.federationManager.CurrentFederationKey.SignMessage(requestId + ((int)transactionId));
-            await this.federatedPegBroadcaster.BroadcastAsync(ConversionRequestPayload.Request(requestId, (int)transactionId, signature, destinationChain, isTransfer)).ConfigureAwait(false);
+            await this.federatedPegBroadcaster.BroadcastAsync(ConversionRequestPayload.Request(requestId, (int)transactionId, signature, destinationChain, isTransfer, false)).ConfigureAwait(false);
         }
     }
 }
