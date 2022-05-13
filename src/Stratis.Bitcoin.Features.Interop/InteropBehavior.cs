@@ -120,7 +120,7 @@ namespace Stratis.Bitcoin.Features.Interop
             if (!this.federationManager.IsFederationMember)
                 return;
 
-            this.logger.LogDebug($"Conversion request payload request for id '{payload.RequestId}' received from '{peer.PeerEndPoint.Address}':'{peer.RemoteSocketEndpoint.Address}' proposing transaction ID '{payload.TransactionId}', (IsTransfer: {payload.IsTransfer}).");
+            this.logger.LogDebug($"Conversion request payload request for id '{payload.RequestId}' received from '{peer.PeerEndPoint.Address}':'{peer.RemoteSocketEndpoint.Address}' proposing transaction ID '{payload.TransactionId}', (IsTransfer: {payload.IsTransfer}, IsReplenishment: {payload.IsReplenishment}).");
 
             if (payload.TransactionId == BigInteger.MinusOne)
                 return;
@@ -168,9 +168,9 @@ namespace Stratis.Bitcoin.Features.Interop
                 return;
             }
 
-            // Only add votes if the conversion request has not already been finalized.
+            // Only add votes if the conversion request has not already been finalized or if it is a replenishment.
             ConversionRequest conversionRequest = this.conversionRequestRepository.Get(payload.RequestId);
-            if (conversionRequest != null && conversionRequest.RequestStatus != ConversionRequestStatus.VoteFinalised)
+            if ((conversionRequest != null && conversionRequest.RequestStatus != ConversionRequestStatus.VoteFinalised) || payload.IsReplenishment)
                 this.conversionRequestCoordinationService.AddVote(payload.RequestId, payload.TransactionId, pubKey);
 
             if (payload.IsRequesting)
@@ -179,7 +179,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
 
                 string signature = this.federationManager.CurrentFederationKey.SignMessage(payload.RequestId + payload.TransactionId);
-                await this.AttachedPeer.SendMessageAsync(ConversionRequestPayload.Reply(payload.RequestId, payload.TransactionId, signature, payload.DestinationChain, payload.IsTransfer)).ConfigureAwait(false);
+                await this.AttachedPeer.SendMessageAsync(ConversionRequestPayload.Reply(payload.RequestId, payload.TransactionId, signature, payload.DestinationChain, payload.IsTransfer, payload.IsReplenishment)).ConfigureAwait(false);
             }
         }
 
