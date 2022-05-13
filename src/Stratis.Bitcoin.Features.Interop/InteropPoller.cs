@@ -1452,7 +1452,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 // Now we need to broadcast the mint transactionId to the other multisig nodes so that they can sign it off.
                 // TODO: The other multisig nodes must be careful not to blindly trust that any given transactionId relates to a mint transaction. Need to validate the recipient
 
-                await this.BroadcastCoordinationVoteRequestAsync(mintRequestId, mintTransactionId, request.DestinationChain, false).ConfigureAwait(false);
+                await this.BroadcastCoordinationVoteRequestAsync(mintRequestId, mintTransactionId, request.DestinationChain, false, true).ConfigureAwait(false);
             }
             else
                 this.logger.Info("Insufficient reserve balance remaining, waiting for originator to initiate mint transaction to replenish reserve.");
@@ -1479,7 +1479,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 {
                     this.logger.Debug("Originator broadcasting id {0}.", mintTransactionId);
 
-                    await this.BroadcastCoordinationVoteRequestAsync(mintRequestId, mintTransactionId, request.DestinationChain, false).ConfigureAwait(false);
+                    await this.BroadcastCoordinationVoteRequestAsync(mintRequestId, mintTransactionId, request.DestinationChain, false, true).ConfigureAwait(false);
                 }
                 else
                 {
@@ -1495,7 +1495,7 @@ namespace Stratis.Bitcoin.Features.Interop
                         this.conversionRequestCoordinationService.AddVote(mintRequestId, ourTransactionId, this.federationManager.CurrentFederationKey.PubKey);
 
                         // Broadcast our vote.
-                        await this.BroadcastCoordinationVoteRequestAsync(mintRequestId, ourTransactionId, request.DestinationChain, false).ConfigureAwait(false);
+                        await this.BroadcastCoordinationVoteRequestAsync(mintRequestId, ourTransactionId, request.DestinationChain, false, true).ConfigureAwait(false);
                     }
                 }
 
@@ -1556,10 +1556,10 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
-        private async Task BroadcastCoordinationVoteRequestAsync(string requestId, BigInteger transactionId, DestinationChain destinationChain, bool isTransfer)
+        private async Task BroadcastCoordinationVoteRequestAsync(string requestId, BigInteger transactionId, DestinationChain destinationChain, bool isTransfer, bool isReplenishment = false)
         {
             string signature = this.federationManager.CurrentFederationKey.SignMessage(requestId + ((int)transactionId));
-            await this.federatedPegBroadcaster.BroadcastAsync(ConversionRequestPayload.Request(requestId, (int)transactionId, signature, destinationChain, isTransfer)).ConfigureAwait(false);
+            await this.federatedPegBroadcaster.BroadcastAsync(ConversionRequestPayload.Request(requestId, (int)transactionId, signature, destinationChain, isTransfer, isReplenishment)).ConfigureAwait(false);
         }
 
         private BigInteger CoinsToWei(ulong satoshi)
