@@ -33,6 +33,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             this.logger = loggerFactory.CreateLogger(this.GetType().Name);
         }
 
+        /// <summary>
+        /// Retrieves a list of addresses with a balance at or above the specified amount.
+        /// </summary>
+        /// <param name="blockHeight">Block height at which to scan</param>
+        /// <param name="amount">Token amount</param>
+        /// <returns></returns>
         [Route("over-amount-at-height")]
         [HttpGet]
         public IActionResult GetBalancesOverAmount(int blockHeight, decimal amount)

@@ -358,6 +358,11 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
             }
         }
 
+        /// <summary>
+        /// Retrieves the transaction at which the address balance was last updated
+        /// </summary>
+        /// <param name="address">Wallet address</param>
+        /// <returns>The transaction where the balance was last updated, along with the block height.</returns>
         [Route(BlockStoreRouteEndPoint.GetLastBalanceDecreaseTransaction)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]

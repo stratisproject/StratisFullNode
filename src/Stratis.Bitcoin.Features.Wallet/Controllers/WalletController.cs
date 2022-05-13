@@ -627,9 +627,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <summary>
         /// Gets a specified number of new addresses (in the Base58 format) for a wallet account. These addresses
         /// will be newly created and will not have had any transactional activity.
-        /// <remarks>This differs from the unusedaddress(es) endpoints; the addresses will be added to the wallet without respecting the gap limit.
-        /// Therefore, each time the request is made a new set of addresses will be returned.</remarks>
         /// </summary>
+        /// <remarks>
+        /// This differs from the unusedaddress(es) endpoints; the addresses will be added to the wallet without respecting the gap limit.
+        /// Therefore, each time the request is made a new set of addresses will be returned.
+        /// </remarks>
         /// <param name="request">An object containing the necessary parameters to retrieve
         /// new addresses for a wallet account.</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
@@ -703,6 +705,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
                 async (req, token) => this.Json(await this.walletService.RemoveTransactions(req, token)));
         }
 
+        /// <summary>
+        /// Unloads a wallet from the node.
+        /// </summary>
         [Route("remove-wallet")]
         [HttpDelete]
         public async Task<IActionResult> RemoveWalletAsync([FromQuery] RemoveWalletModel request,

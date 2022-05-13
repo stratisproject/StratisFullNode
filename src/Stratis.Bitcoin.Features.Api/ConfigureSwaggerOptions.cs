@@ -39,15 +39,12 @@ namespace Stratis.Bitcoin.Features.Api
                 options.SwaggerDoc(description.GroupName, CreateInfoForApiVersion(description));
             }
 
-            // Includes XML comments in Swagger documentation 
-            string basePath = AppContext.BaseDirectory;
-            
-            // Retrieve XML documents
+            // Retrieve relevant XML documents via assembly scanning
             var xmlDocuments = AppDomain.CurrentDomain.GetAssemblies()
                 .Where(a => a.GetTypes().Any(t => t.IsSubclassOf(typeof(ControllerBase))))
-                .Select(a => $"{a.GetName().Name}.xml");
+                .Select(a => Path.Combine(AppContext.BaseDirectory, $"{a.GetName().Name}.xml"));
             
-            foreach (string xmlPath in xmlDocuments.Select(xmlDocument => Path.Combine(basePath, xmlDocument)))
+            foreach (string xmlPath in xmlDocuments)
             {
                 if (File.Exists(xmlPath))
                 {
