@@ -1061,7 +1061,7 @@ namespace Stratis.Bitcoin.Features.Interop
                                 }
                                 else
                                 {
-                                    this.logger.Info("Transaction '{0}' has finished voting but does not yet have {1} confirmations, re-broadcasting votes to peers.", transactionId3, this.interopSettings.GetSettingsByChain(request.DestinationChain).MultisigWalletQuorum);
+                                    this.logger.Info("Transaction '{0}' has finished voting but does not yet have {1} confirmations (current count {2}), re-broadcasting votes to peers.", transactionId3, this.interopSettings.GetSettingsByChain(request.DestinationChain).MultisigWalletQuorum, confirmationCount);
                                     // There are not enough confirmations yet.
                                     // Even though the vote is finalised, other nodes may come and go. So we re-broadcast the finalised votes to all federation peers.
                                     // Nodes will simply ignore the messages if they are not relevant.
