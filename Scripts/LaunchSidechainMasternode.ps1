@@ -158,18 +158,18 @@ function Get-Median($numberSeries)
 		}
 }
 
-function Check-TimeDifference
+function Check-TimeDifference3
 {
     Write-Host "Checking UTC Time Difference (unixtime.co.za)" -ForegroundColor Cyan
     $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
     $SystemTime0 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime0 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -ErrorAction SilentlyContinue| Select-Object -ExpandProperty content).replace('"','')
+    $RemoteTime0 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -TimeoutSec 3 -ErrorAction SilentlyContinue| Select-Object -ExpandProperty content).replace('"','')
     $timeDifSamples[0] = $RemoteTime0 - $SystemTime0
     $SystemTime1 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime1 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -ErrorAction SilentlyContinue | Select-Object -ExpandProperty content).replace('"','')
+    $RemoteTime1 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -TimeoutSec 3 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty content).replace('"','')
     $timeDifSamples[1] = $RemoteTime1 - $SystemTime1
     $SystemTime2 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime2 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -ErrorAction SilentlyContinue | Select-Object -ExpandProperty content).replace('"','')
+    $RemoteTime2 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -TimeoutSec 3 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty content).replace('"','')
     $timeDifSamples[2] = $RemoteTime2 - $SystemTime2
     $timeDif = Get-Median -numberSeries $timeDifSamples
 
@@ -190,13 +190,13 @@ function Check-TimeDifference2
     Write-Host "Checking UTC Time Difference (unixtimestamp.com)" -ForegroundColor Cyan
     $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
     $SystemTime0 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime0 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -UseBasicParsing -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
+    $RemoteTime0 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -TimeoutSec 3 -UseBasicParsing -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[0] = $RemoteTime0 - $SystemTime0
     $SystemTime1 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime1 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
+    $RemoteTime1 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -TimeoutSec 3 -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[1] = $RemoteTime1 - $SystemTime1
     $SystemTime2 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime2 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
+    $RemoteTime2 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -TimeoutSec 3 -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[2] = $RemoteTime2 - $SystemTime2
     $timeDif = Get-Median -numberSeries $timeDifSamples
 
@@ -212,18 +212,18 @@ function Check-TimeDifference2
         }
 }
 
-function Check-TimeDifference3
+function Check-TimeDifference
 {
     Write-Host "Checking UTC Time Difference (google.com)" -ForegroundColor Cyan
     $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
     $SystemTime0 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime0 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -UseBasicParsing -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
+    $RemoteTime0 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -TimeoutSec 3 -UseBasicParsing -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[0] = $RemoteTime0 - $SystemTime0
     $SystemTime1 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime1 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
+    $RemoteTime1 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -TimeoutSec 3 -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[1] = $RemoteTime1 - $SystemTime1
     $SystemTime2 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime2 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
+    $RemoteTime2 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -TimeoutSec 3 -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[2] = $RemoteTime2 - $SystemTime2
     $timeDif = Get-Median -numberSeries $timeDifSamples
 
@@ -368,7 +368,7 @@ if ($ethAddress -notmatch '^0x[a-fA-F0-9]{40}$')
     #Launching GETH
     $API = $gethAPIPort
     Write-Host (Get-TimeStamp) "Starting GETH Masternode" -ForegroundColor Cyan
-    $StartNode = Start-Process 'geth.exe' -ArgumentList "--syncmode fast --http --http.corsdomain=* --http.api web3,eth,debug,personal,net --datadir=$ethDataDir" -PassThru
+    $StartNode = Start-Process 'geth.exe' -ArgumentList "--syncmode snap --http --http.corsdomain=* --http.api web3,eth,debug,personal,net --datadir=$ethDataDir" -PassThru
 
     While ( -not ( Test-Connection -TargetName 127.0.0.1 -TCPPort $API ) ) 
     {
@@ -505,8 +505,7 @@ if ( $NodeType -eq "50K" )
 {
     if ( $ethGasPrice )
     {
-        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -eth_interopenabled=1 -eth_account=$ethAddress -eth_passphrase=$ethPassword -eth_multisigwalletcontractaddress=$ethMultiSigContract -eth_wrappedstraxcontractaddress=$ethWrappedStraxContract -eth_gasprice=$ethGasPrice -eth_gas=$ethGasLimit" -PassThru
-    }
+        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -eth_interopenabled=1 -ethereumgaspricetracking -pricetracking -eth_account=$ethAddress -eth_passphrase=$ethPassword -eth_multisigwalletcontractaddress=$ethMultiSigContract -eth_wrappedstraxcontractaddress=$ethWrappedStraxContract -eth_keyvaluestorecontractaddress=$ethKeyValueStoreContractAddress -eth_gasprice=$ethGasPrice -eth_gas=$ethGasLimit -cirrusmultisigcontractaddress=$cirrusMultiSigContract -cirrussmartcontractactiveaddress=$miningWalletAddress -eth_watcherc20=$Token1 -eth_watcherc20=$Token2 -eth_watcherc20=$Token3 -eth_watcherc20=$Token4 -eth_watcherc20=$Token5 -eth_watcherc20=$Token6 -ethereummultisigwalletquorum=7" -PassThru    }
         Else
         {
             $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -eth_interopenabled=1 -eth_account=$ethAddress -eth_passphrase=$ethPassword -eth_multisigwalletcontractaddress=$ethMultiSigContract -eth_wrappedstraxcontractaddress=$ethWrappedStraxContract" -PassThru
@@ -635,6 +634,62 @@ if ( $WalletNames -eq $null )
 }
 if ( $NodeType -eq "50K" )
 {
+	#Initialize InterFlux
+    Write-Host (Get-TimeStamp) "Initializing InterFlux" -ForegroundColor Cyan 
+    
+    if ( $miningWalletPassword.GetType().Name -eq "SecureString" )
+    {
+        $requestBody = ConvertTo-Json @{
+
+            name = $miningWalletName
+            password = ConvertFrom-SecureString -SecureString $miningWalletPassword -AsPlainText
+        }
+    }
+        Else {
+            $requestBody = ConvertTo-Json @{
+
+            name = $miningWalletName
+            password = $miningWalletPassword
+        }
+    }
+            
+    Invoke-RestMethod -Uri http://localhost:$sideChainAPIPort/api/Wallet/load -Method Post -Body $requestBody -ContentType "application/json-patch+json" -UseBasicParsing -ErrorVariable loadWallet
+
+    if ( $loadWallet )
+    {
+        Write-Host (Get-TimeStamp) "ERROR: Wallet could not be loaded. Please launch again" -ForegroundColor Red
+        Shutdown-SidechainNode
+        Shutdown-MainchainNode
+        Start-Sleep 30
+        Exit
+    }
+
+    if ( $miningWalletPassword.GetType().Name -eq "SecureString" )
+    {
+        $requestBody = ConvertTo-Json @{
+
+            walletName = $miningWalletName
+            walletPassword = ConvertFrom-SecureString -SecureString $miningWalletPassword -AsPlainText
+            accountName = "account 0"
+        }
+    }
+        Else {
+            $requestBody = ConvertTo-Json @{
+
+            walletName = $miningWalletName
+            walletPassword = $miningWalletPassword
+            accountName = "account 0"
+        }
+    }
+
+    $initializeInterFlux = Invoke-RestMethod -Uri http://localhost:$API/api/Interop/initializeinterflux -Method Post -Body $requestBody -ContentType "application/json-patch+json"
+    if ( $initializeInterFlux -ne $true )
+    {
+        Write-Host (Get-TimeStamp) "ERROR: Something went wrong. Cannot Initialize InterFlux! Please contact support in Discord" -ForegroundColor Red
+        Start-Sleep 30
+        Exit
+    }
+	
     #Enable Federation
     Write-Host (Get-TimeStamp) "Enabling Federation" -ForegroundColor Cyan
 
@@ -711,8 +766,8 @@ Exit
 # SIG # Begin signature block
 # MIIO+gYJKoZIhvcNAQcCoIIO6zCCDucCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUoJVoN2zur44Fl0V8e48warDR
-# eQOgggxCMIIFfjCCBGagAwIBAgIQCrk836uc/wPyOiuycqPb5zANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUejsUZ0JLxas+Jqi18Wly5q0+
+# JuugggxCMIIFfjCCBGagAwIBAgIQCrk836uc/wPyOiuycqPb5zANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTIxMDQyMjAwMDAwMFoXDTI0MDcxOTIzNTk1
@@ -782,11 +837,11 @@ Exit
 # ZXJ0LmNvbTErMCkGA1UEAxMiRGlnaUNlcnQgRVYgQ29kZSBTaWduaW5nIENBIChT
 # SEEyKQIQCrk836uc/wPyOiuycqPb5zAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIB
 # DDEKMAigAoAAoQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEE
-# AYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUzjxVSHQrtXeA
-# GtUYCke/s2cM8GYwDQYJKoZIhvcNAQEBBQAEggEAAE4grVagcgp4uYk+Zb2e0XgQ
-# MpJRQPVF2m0FJ8NbiY08Act6CBqIEqXZQzFyvRN44KcY30bPoIr54yZlrvwG7xmQ
-# 3KmLcd1t1X98aR+dRLPu5VlZrZ+pw/B4WD3z9kGZrwlSYewOaiKa4W21YIYl+1Zh
-# qEzt9Qy+eZkZ0f31DJpsO0yzlb70XYsNdjnOJ1KGYkgwG0h46jJ1crSmxvI35yS/
-# A0FeBvB04n2PhzCupd/uJeGvZv6FCsfOodqLMoh6dUf2CsFPuhHFwkZVGDwCwN6h
-# +Ma/AraN0VHUF0IBHLu/H8ECn6cCvGj/hTdMBVx8CVx7p2DqTKiT9LOn7p6+GA==
+# AYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQU0uX/VCXDvyJn
+# BQQNVZ7Sa/3rHyEwDQYJKoZIhvcNAQEBBQAEggEAREhkDWsFFW5NTq6O8Tu7XOrj
+# zVyt4YmbvHrOu4YtPRNsbs0Ch+OMa0oB2I5JSN5Ftez4YfjVyCt8xui+0hLpoZE5
+# HABgRZDZVpO5RLjB6j5DFx5nbWT1YZ32dM5DrATgYny3lf1/EIQUGlW6AKtxO8R4
+# PF64f7iq6v9Kv70e0HNc/hAFspRraOgwtJnMcVN4EsEMv8BqkKXoqUFJ/eycpMQJ
+# yGpodM6/FleM8t/clyx3roZVE81QZcYphMbG6YvCn/8IfD44ibEHBq7wyGIST2ZP
+# 9qoH+rk7qb16DiI0LT88CufOGxWPgEEB/Ic4oqiQC0sDG14SiWJ1mK3FuKbn1w==
 # SIG # End signature block
