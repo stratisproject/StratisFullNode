@@ -1398,8 +1398,8 @@ namespace Stratis.Bitcoin.Features.Interop
             BigInteger conversionAmountInWei = this.CoinsToWei(request.Amount.GetLow64());
 
             // We expect that every node will eventually enter this area of the code when the reserve balance is depleted.
-            if (conversionAmountInWei < balanceRemaining)
-                return;
+            //if (conversionAmountInWei < balanceRemaining)
+            //    return;
 
             this.logger.Info($"Initiating replenishment; {nameof(conversionAmountInWei)}={conversionAmountInWei} {nameof(balanceRemaining)}={balanceRemaining}");
 
