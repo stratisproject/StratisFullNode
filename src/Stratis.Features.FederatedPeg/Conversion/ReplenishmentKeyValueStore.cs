@@ -38,6 +38,9 @@ namespace Stratis.Features.FederatedPeg.Conversion
 
     public sealed class ReplenishmentTransaction
     {
+        [JsonProperty(PropertyName = "amount")]
+        public BigInteger Amount { get; set; }
+
         [JsonProperty(PropertyName = "transactionHash")]
         public string TransactionHash { get; set; }
 

@@ -1557,6 +1557,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     this.logger.Info("The contract's balance has been replenished, new balance {0}.", balance);
                     if (originator)
                     {
+                        replenishmentTransaction.Amount = conversionAmountInWei + this.ReserveBalanceTarget;
                         replenishmentTransaction.Processed = true;
                         this.replenishmentKeyValueStore.SaveValueJson(replenishmentTransaction.TransactionHash, replenishmentTransaction, true);
                     }
