@@ -49,8 +49,6 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <returns>The requested block</returns>
         Task<NBitcoin.Block> GetBlockByHeightAsync(int blockHeight);
 
-        Task<ConsensusTipModel> GetConsensusTipAsync();
-
         Task<TransactionVerboseModel> GetRawTransactionAsync(string transactionId);
 
         Task<WalletStatsModel> GetWalletStatsAsync(string walletName, string accountName, int minConfirmations = 1, bool verbose = false);
@@ -280,16 +278,6 @@ namespace Stratis.Bitcoin.Features.Interop
 
             var block = NBitcoin.Block.Parse(JsonConvert.DeserializeObject<string>(hexResponse), this.chainIndexer.Network.Consensus.ConsensusFactory);
             return block;
-        }
-
-        public async Task<ConsensusTipModel> GetConsensusTipAsync()
-        {
-            ConsensusTipModel response = await this.cirrusInteropSettings.CirrusClientUrl
-                .AppendPathSegment("api/Consensus/tip")
-                .GetJsonAsync<ConsensusTipModel>()
-                .ConfigureAwait(false);
-
-            return response;
         }
 
         public async Task<TransactionVerboseModel> GetRawTransactionAsync(string transactionId)

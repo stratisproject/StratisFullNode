@@ -289,11 +289,11 @@ namespace Stratis.Bitcoin.Features.Interop
                 {
                     CheckForBlockHeightOverrides(DestinationChain.CIRRUS);
 
-                    ConsensusTipModel cirrusTip = await this.cirrusClient.GetConsensusTipAsync().ConfigureAwait(false);
+                    var cirrusTipHeight = this.chainIndexer.Tip.Height;
 
-                    if (this.lastPolledBlock[DestinationChain.CIRRUS] < (cirrusTip.TipHeight - DestinationChainReorgWindow))
+                    if (this.lastPolledBlock[DestinationChain.CIRRUS] < (cirrusTipHeight - DestinationChainReorgWindow))
                     {
-                        this.logger.Info($"[CIRRUS] Polling for transfers, last polled block: {this.lastPolledBlock[DestinationChain.CIRRUS]}; chain height: {cirrusTip.TipHeight}");
+                        this.logger.Info($"[CIRRUS] Polling for transfers, last polled block: {this.lastPolledBlock[DestinationChain.CIRRUS]}; chain height: {cirrusTipHeight}");
                         await PollCirrusForTransfersAsync().ConfigureAwait(false);
                     }
                 }
@@ -357,10 +357,7 @@ namespace Stratis.Bitcoin.Features.Interop
             if (loaded == 0)
             {
                 if (destinationChain == DestinationChain.CIRRUS)
-                {
-                    ConsensusTipModel model = await this.cirrusClient.GetConsensusTipAsync().ConfigureAwait(false);
-                    this.lastPolledBlock[DestinationChain.CIRRUS] = model.TipHeight;
-                }
+                    this.lastPolledBlock[DestinationChain.CIRRUS] = this.chainIndexer.Tip.Height;
                 else
                     this.lastPolledBlock[destinationChain] = await this.ethClientProvider.GetClientForChain(destinationChain).GetBlockHeightAsync().ConfigureAwait(false);
             }
@@ -404,11 +401,11 @@ namespace Stratis.Bitcoin.Features.Interop
         /// </summary>
         private async Task EnsureLastPolledBlockIsSyncedWithCirrusChainAsync()
         {
-            ConsensusTipModel cirrusTip = await this.cirrusClient.GetConsensusTipAsync().ConfigureAwait(false);
+            var cirrusTipHeight = this.chainIndexer.Tip.Height;
 
-            while (this.lastPolledBlock[DestinationChain.CIRRUS] < (cirrusTip.TipHeight - DestinationChainReorgWindow - DestinationChainSyncToBuffer))
+            while (this.lastPolledBlock[DestinationChain.CIRRUS] < (cirrusTipHeight - DestinationChainReorgWindow - DestinationChainSyncToBuffer))
             {
-                this.logger.Info($"[CIRRUS] Polling for transfers, last polled block: {this.lastPolledBlock[DestinationChain.CIRRUS]}; chain height: {cirrusTip.TipHeight}");
+                this.logger.Info($"[CIRRUS] Polling for transfers, last polled block: {this.lastPolledBlock[DestinationChain.CIRRUS]}; chain height: {cirrusTipHeight}");
 
                 await PollCirrusForTransfersAsync().ConfigureAwait(false);
             }
