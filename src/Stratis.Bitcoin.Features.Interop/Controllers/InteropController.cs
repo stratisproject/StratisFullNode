@@ -40,6 +40,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         private readonly InteropSettings interopSettings;
         private readonly InteropPoller interopPoller;
         private readonly ILogger logger;
+        private readonly IReplenishmentKeyValueStore replenishmentKeyValueStore;
         private readonly Network network;
 
         public InteropController(
@@ -53,7 +54,8 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             IETHCompatibleClientProvider ethCompatibleClientProvider,
             IFederationManager federationManager,
             InteropSettings interopSettings,
-            InteropPoller interopPoller)
+            InteropPoller interopPoller,
+            IReplenishmentKeyValueStore replenishmentKeyValueStore)
         {
             this.callDataSerializer = callDataSerializer;
             this.chainIndexer = chainIndexer;
@@ -67,6 +69,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             this.interopPoller = interopPoller;
             this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
+            this.replenishmentKeyValueStore = replenishmentKeyValueStore;
         }
 
         [Route("initializeinterflux")]
@@ -107,6 +110,35 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             try
             {
                 return Ok(this.interopSettings.GetSettingsByChain(destinationChain));
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        [Route("state")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult InteropState()
+        {
+            try
+            {
+                List<ConversionRequest> burns = this.conversionRequestRepository.GetAllBurn(false);
+                List<ConversionRequest> mints = this.conversionRequestRepository.GetAllMint(false);
+                var burnsCount = burns.Count;
+                var mintsCount = mints.Count;
+
+                return this.Json(new
+                {
+                    burnsCount = burns.Count,
+                    mintsCount = mints.Count,
+                    burnsUnprocessed = burns.Count(b => !b.Processed),
+                    mintsUnprocessed = mints.Count(b => !b.Processed),
+                });
             }
             catch (Exception e)
             {
@@ -165,6 +197,24 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             try
             {
                 return this.Json(this.conversionRequestRepository.GetAllMint(false).Select(request => ConstructConversionRequestModel(request)).OrderByDescending(m => m.BlockHeight));
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        [Route("replenishments")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult InteropReplenishments()
+        {
+            try
+            {
+                return this.Json(this.replenishmentKeyValueStore.GetAllAsJson<ReplenishmentTransaction>());
             }
             catch (Exception e)
             {
