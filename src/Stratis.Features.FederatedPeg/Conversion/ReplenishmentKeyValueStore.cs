@@ -21,7 +21,7 @@ namespace Stratis.Features.FederatedPeg.Conversion
     /// </summary>
     public sealed class ReplenishmentKeyValueStore : LevelDbKeyValueRepository, IReplenishmentKeyValueStore
     {
-        public ReplenishmentKeyValueStore(DataFolder dataFolder, DBreezeSerializer dBreezeSerializer) : this(dataFolder.InteropFeeRepositoryPath, dBreezeSerializer)
+        public ReplenishmentKeyValueStore(DataFolder dataFolder, DBreezeSerializer dBreezeSerializer) : this(dataFolder.InteropReplenishmentRepositoryPath, dBreezeSerializer)
         {
         }
 
