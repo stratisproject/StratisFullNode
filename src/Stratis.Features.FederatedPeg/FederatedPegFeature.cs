@@ -286,6 +286,7 @@ namespace Stratis.Features.FederatedPeg
                             services.AddSingleton<IConversionRequestCoordinationService, ConversionRequestCoordinationService>();
                             services.AddSingleton<IConversionRequestFeeService, ConversionRequestFeeService>();
                             services.AddSingleton<IConversionRequestFeeKeyValueStore, ConversionRequestFeeKeyValueStore>();
+                            services.AddSingleton<IReplenishmentKeyValueStore, ReplenishmentKeyValueStore>();
                         }
 
                         services.AddSingleton<IMaturedBlocksSyncManager, MaturedBlocksSyncManager>();
