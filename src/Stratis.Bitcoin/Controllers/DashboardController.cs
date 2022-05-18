@@ -21,12 +21,12 @@ namespace Stratis.Bitcoin.Controllers
         }
 
         /// <summary>
-        /// Gets a web page containing the last log output for this node.
+        /// Retrieves the last log output for the node.
         /// </summary>
-        /// <returns>text/html content</returns>
-        /// <response code="200">Returns webpage result</response>
+        /// <returns>Full node log output</returns>
+        /// <response code="200">Full node stats returned</response>
         [HttpGet]
-        [Route("Stats")]
+        [Route("stats")]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         public IActionResult Stats()
         {
@@ -35,12 +35,12 @@ namespace Stratis.Bitcoin.Controllers
         }
 
         /// <summary>
-        /// Returns a web page with Async Loops statistics
+        /// Retrieves async loop debug data. An async loop is a task that is run on a timer at a fixed interval, optionally with a startup delay.
         /// </summary>
-        /// <returns>text/html content</returns>
-        /// <response code="200">Returns webpage result</response>
+        /// <returns>Async loop debug data</returns>
+        /// <response code="200">Async loop stats returned</response>
         [HttpGet]
-        [Route("AsyncLoopsStats")]
+        [Route("asyncLoopsStats")]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         public IActionResult AsyncLoopsStats()
         {

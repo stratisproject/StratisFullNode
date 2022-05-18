@@ -84,7 +84,7 @@ namespace Stratis.Bitcoin.Controllers
         /// <returns><see cref="OkResult"/></returns>
         /// <response code="200">Ban status updated</response>
         /// <response code="400">An exception occurred</response>
-        [Route("setban")]
+        [Route("setBan")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -131,7 +131,7 @@ namespace Stratis.Bitcoin.Controllers
         /// <returns>List of banned peers</returns>
         /// <response code="200">Returns banned peers</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("getbans")]
+        [Route("getBans")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -160,7 +160,7 @@ namespace Stratis.Bitcoin.Controllers
         /// <returns><see cref="OkResult"/></returns>
         /// <response code="200">Bans cleared</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("clearbanned")]
+        [Route("clearBanned")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]

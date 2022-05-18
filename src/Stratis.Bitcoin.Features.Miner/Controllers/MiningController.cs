@@ -120,7 +120,7 @@ namespace Stratis.Bitcoin.Features.Miner.Controllers
         /// </remarks>
         /// <response code="200">Mining stopped</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("stopmining")]
+        [Route("stopMining")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]

@@ -69,7 +69,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             this.network = network;
         }
 
-        [Route("initializeinterflux")]
+        [Route("initializeInterflux")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -266,7 +266,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         /// <param name="newOwnerAddress">The account of the new owner to be added.</param>
         /// <param name="gasPrice">The gas price to use for transaction submission.</param>
         /// <returns>The transactionId of the multisig wallet contract transaction, which is then used to confirm the transaction.</returns>
-        [Route("addowner")]
+        [Route("addOwner")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -302,7 +302,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         /// <param name="existingOwnerAddress">The account of the owner to be removed.</param>
         /// <param name="gasPrice">The gas price to use for transaction submission.</param>
         /// <returns>The transactionId of the multisig wallet contract transaction, which is then used to confirm the transaction.</returns>
-        [Route("removeowner")]
+        [Route("removeOwner")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -338,7 +338,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         /// <param name="transactionId">The multisig wallet transactionId (this is an integer, not an on-chain transaction hash).</param>
         /// <param name="gasPrice">The gas price to use for submitting the confirmation.</param>
         /// <returns>The on-chain transaction hash of the contract call transaction.</returns>
-        [Route("confirmtransaction")]
+        [Route("confirmTransaction")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -372,7 +372,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         /// <param name="requirement">The new threshold for confirmations on the multisig wallet contract. Can usually be numOwners / 2 rounded up.</param>
         /// <param name="gasPrice">The gas price to use for submitting the contract call transaction.</param>
         /// <returns>The multisig wallet transactionId of the changerequirement call.</returns>
-        [Route("changerequirement")]
+        [Route("changeRequirement")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -408,7 +408,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         /// <param name="transactionId">The multisig wallet transactionId (this is an integer, not an on-chain transaction hash).</param>
         /// <param name="raw">Indicates whether to partially decode the transaction or leave it in raw hex format.</param>
         /// <returns>The multisig wallet transaction data.</returns>
-        [Route("multisigtransaction")]
+        [Route("multiSigTransaction")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -451,7 +451,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         /// <param name="destinationChain">The chain the multisig wallet contract is deployed to.</param>
         /// <param name="transactionId">The multisig wallet transactionId (this is an integer, not an on-chain transaction hash).</param>
         /// <returns>A list of owner addresses that confirmed the transaction.</returns>
-        [Route("multisigconfirmations")]
+        [Route("multiSigConfirmations")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -524,7 +524,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         /// <param name="account">The account to retrieve the balance for.</param>
         /// <param name="contractAddress">The address of the contract on the given chain.</param>
         /// <returns>The account balance.</returns>
-        [Route("erc20balance")]
+        [Route("erc20Balance")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -568,7 +568,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         /// Endpoint that allows the multisig operator to set the state on a conversion request.
         /// </summary>
         /// <param name="model">The request details to set to.</param>
-        [Route("requests/setstate")]
+        [Route("requests/setState")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -607,7 +607,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         /// Endpoint that allows the multisig operator to reset the request as NotOriginator.
         /// </summary>
         /// <param name="model">The request id and height at which to reprocess the burn request at.</param>
-        [Route("requests/reprocessburn")]
+        [Route("requests/reprocessBurn")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -633,7 +633,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         /// Endpoint that allows the multisig operator to manually add a vote if they are originator of the request.
         /// </summary>
         /// <param name="model">The request id and vote in question.</param>
-        [Route("requests/pushvote")]
+        [Route("requests/pushVote")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -658,7 +658,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         /// Endpoint that allows the multisig operator to reset the scan height of the interop poller.
         /// </summary>
         /// <param name="model">The chain identifier and block height to reset the scan height for.</param>
-        [Route("resetscanheight")]
+        [Route("resetScanHeight")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -684,7 +684,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         /// Endpoint that allows the user to decode the method parameters for an interflux transaction.
         /// </summary>
         /// <param name="hex">Hex of the interflux transaction.</param>
-        [Route("decodeinterfluxtransaction")]
+        [Route("decodeInterFluxTransaction")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]

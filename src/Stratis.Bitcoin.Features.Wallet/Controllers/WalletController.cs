@@ -41,7 +41,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         }
 
         /// <summary>
-        /// Generates a mnemonic to use for an HD wallet.
+        /// Generates a mnemonic to use for an hierarchical-deterministic (HD) wallet.
+        /// A mnemonic is a series of words that is used to backup your wallet. It is sometimes referred to as a seed phrase, or recovery phrase.
         /// </summary>
         /// <param name="language">The language for the words in the mnemonic. The options are: English, French, Spanish, Japanese, ChineseSimplified and ChineseTraditional. Defaults to English.</param>
         /// <param name="wordCount">The number of words in the mnemonic. The options are: 12,15,18,21 or 24. Defaults to 12.</param>
@@ -86,15 +87,15 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         }
 
         /// <summary>
-        /// Signs a message and returns the signature.
+        /// Signs a message and returns the signature. Signing a message can be done to prove a claim to a private key.
         /// </summary>
-        /// <param name="request">The object containing the parameters used to sign a message.</param>
+        /// <param name="request">Parameters used to sign a message.</param>
         /// <param name="cancellationToken">The cancellation token</param>
         /// <returns>A JSON object containing the generated signature.</returns>
         /// <response code="200">Returns signature</response>
         /// <response code="400">Invalid request or unexpected exception occurred</response>
         /// <response code="500">Request is null</response>
-        [Route("signmessage")]
+        [Route("signMessage")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -119,7 +120,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="200">Returns public key</response>
         /// <response code="400">Invalid request or unexpected exception occurred</response>
         /// <response code="500">Request is null</response>
-        [Route("pubkey")]
+        [Route("pubKey")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -136,15 +137,15 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         }
 
         /// <summary>
-        /// Verifies the signature of a message.
+        /// Verifies the signature of a message is valid.
         /// </summary>
-        /// <param name="request">The object containing the parameters verify a signature.</param>
+        /// <param name="request">Parameters for verifying a signature.</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
         /// <returns>A JSON object containing the result of the verification.</returns>
-        /// <response code="200">Returns verification result</response>
+        /// <response code="200">Returns "True" string if signature can be verified, otherwise "False" string</response>
         /// <response code="400">Invalid request or unexpected exception occurred</response>
         /// <response code="500">Request is null</response>
-        [Route("verifymessage")]
+        [Route("verifyMessage")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -228,7 +229,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="404">Wallet not found</response>
         /// <response code="409">Wallet already exists</response>
         /// <response code="500">Request is null</response>
-        [Route("recover-via-extpubkey")]
+        [Route("recover-via-extPubKey")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -355,7 +356,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="200">Returns spendable balance</response>
         /// <response code="400">Invalid request or unexpected exception occurred</response>
         /// <response code="500">Request is null</response>
-        [Route("maxbalance")]
+        [Route("maxBalance")]
         [HttpGet]
         public async Task<IActionResult> GetMaximumSpendableBalanceAsync([FromQuery] WalletMaximumBalanceRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
@@ -400,7 +401,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="200">Returns fee estimate</response>
         /// <response code="400">Invalid request or unexpected exception occurred</response>
         /// <response code="500">Request is null</response>
-        [Route("estimate-txfee")]
+        [Route("estimate-txFee")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -577,7 +578,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="200">Returns address</response>
         /// <response code="400">Invalid request, or unexpected exception occurred</response>
         /// <response code="500">Request is null</response>
-        [Route("unusedaddress")]
+        [Route("unusedAddress")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -606,7 +607,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="200">Returns address list</response>
         /// <response code="400">Invalid request, or unexpected exception occurred</response>
         /// <response code="500">Request is null or cannot be parsed</response>
-        [Route("unusedaddresses")]
+        [Route("unusedAddresses")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -639,7 +640,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="200">Returns address list</response>
         /// <response code="400">Invalid request, or unexpected exception occurred</response>
         /// <response code="500">Request is null or cannot be parsed</response>
-        [Route("newaddresses")]
+        [Route("newAddresses")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -731,7 +732,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="200">Returns extended public key</response>
         /// <response code="400">Invalid request, or unexpected exception occurred</response>
         /// <response code="500">Request is null</response>
-        [Route("extpubkey")]
+        [Route("extPubKey")]
         [HttpGet]
         public async Task<IActionResult> GetExtPubKeyAsync([FromQuery] GetExtPubKeyModel request,
             CancellationToken cancellationToken = default(CancellationToken))
@@ -751,7 +752,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="200">Returns private key</response>
         /// <response code="400">Invalid request, or unexpected exception occurred</response>
         /// <response code="500">Request is null</response>
-        [Route("privatekey")]
+        [Route("privateKey")]
         [HttpPost]
         public async Task<IActionResult> RetrievePrivateKeyAsync([FromBody] RetrievePrivateKeyModel request,
             CancellationToken cancellationToken = default(CancellationToken))
@@ -848,7 +849,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="403">No connected peers</response>
         /// <response code="500">Request is null</response>
         [HttpPost]
-        [Route("splitcoins")]
+        [Route("splitCoins")]
         public async Task<IActionResult> SplitCoinsAsync([FromBody] SplitCoinsRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
         {

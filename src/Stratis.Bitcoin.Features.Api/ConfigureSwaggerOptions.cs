@@ -51,6 +51,10 @@ namespace Stratis.Bitcoin.Features.Api
                     options.IncludeXmlComments(xmlPath, true);
                 }
             }
+            
+            options.DocumentFilter<CamelCaseRouteFilter>();
+            
+            options.DescribeAllParametersInCamelCase();
         }
 
         static OpenApiInfo CreateInfoForApiVersion(ApiVersionDescription description)

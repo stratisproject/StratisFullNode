@@ -41,7 +41,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         /// <response code="400">Not yet implemented</response>
         /// <response code="500">Request is null</response>
         /// <returns>See <see cref="cref="IActionResult"/>.</returns>
-        [Route("schedulevote-kickfedmember")]
+        [Route("scheduleVote-kickFedMember")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]

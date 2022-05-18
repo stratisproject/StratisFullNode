@@ -195,7 +195,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <returns>Pubkey of federation member at specified height</returns>
         /// <response code="200">Returns pubkey of miner at block height</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("mineratheight")]
+        [Route("minerAtHeight")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -225,7 +225,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <returns>Federation membership at the given height</returns>
         /// <response code="200">Returns a list of pubkeys representing the federation membership at the given block height.</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("federationatheight")]
+        [Route("federationAtHeight")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]

@@ -18,27 +18,27 @@ namespace Stratis.Features.ExternalApi.Controllers
         /// <summary>
         /// Name of api method which estimates the total gas a conversion will require.
         /// </summary>
-        public const string EstimateConversionGasEndpoint = "estimateconversiongas";
+        public const string EstimateConversionGasEndpoint = "estimateConversionGas";
 
         /// <summary>
         /// Name of api method which estimates the conversion fee (in STRAX).
         /// </summary>
-        public const string EstimateConversionFeeEndpoint = "estimateconversionfee";
+        public const string EstimateConversionFeeEndpoint = "estimateConversionFee";
 
         /// <summary>
         /// Name of api method which estimates a recommended gas price based on historical measured samples.
         /// </summary>
-        public const string GasPriceEndpoint = "gasprice";
+        public const string GasPriceEndpoint = "gasPrice";
 
         /// <summary>
         /// Name of api method which returns the most recently retrieved Stratis price.
         /// </summary>
-        public const string StratisPriceEndpoint = "stratisprice";
+        public const string StratisPriceEndpoint = "stratisPrice";
 
         /// <summary>
         /// Name of api method which returns the most recently retrieved Ethereum price.
         /// </summary>
-        public const string EthereumPriceEndpoint = "ethereumprice";
+        public const string EthereumPriceEndpoint = "ethereumPrice";
 
         private readonly IExternalApiPoller externalApiPoller;
 

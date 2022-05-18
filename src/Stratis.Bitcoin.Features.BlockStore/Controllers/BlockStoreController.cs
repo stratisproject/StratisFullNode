@@ -21,14 +21,14 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
 {
     public static class BlockStoreRouteEndPoint
     {
-        public const string GetAddressesBalances = "getaddressesbalances";
-        public const string GetVerboseAddressesBalances = "getverboseaddressesbalances";
-        public const string GetAddressIndexerTip = "addressindexertip";
+        public const string GetAddressesBalances = "getAddressesBalances";
+        public const string GetVerboseAddressesBalances = "getVerboseAddressesBalances";
+        public const string GetAddressIndexerTip = "addressIndexerTip";
         public const string GetBlock = "block";
-        public const string GetBlockCount = "getblockcount";
-        public const string GetUtxoSet = "getutxoset";
-        public const string GetUtxoSetForAddress = "getutxosetforaddress";
-        public const string GetLastBalanceDecreaseTransaction = "getlastbalanceupdatetransaction";
+        public const string GetBlockCount = "getBlockCount";
+        public const string GetUtxoSet = "getUtxoSet";
+        public const string GetUtxoSetForAddress = "getUtxoSetForAddress";
+        public const string GetLastBalanceDecreaseTransaction = "getLastBalanceUpdateTransaction";
     }
 
     /// <summary>

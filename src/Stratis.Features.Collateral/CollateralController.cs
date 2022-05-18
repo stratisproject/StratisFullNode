@@ -16,7 +16,7 @@ namespace Stratis.Features.Collateral
 {
     public static class CollateralRouteEndPoint
     {
-        public const string JoinFederation = "joinfederation";
+        public const string JoinFederation = "joinFederation";
     }
 
     /// <summary>

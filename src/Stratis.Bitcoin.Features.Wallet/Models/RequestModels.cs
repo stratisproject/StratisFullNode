@@ -33,12 +33,13 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
     }
 
     /// <summary>
-    /// A class containing the necessary parameters for a create wallet request.
+    /// Contains the necessary parameters for a create wallet request.
     /// </summary>
     public class WalletCreationRequest : RequestModel
     {
         /// <summary>
-        /// The mnemonic used to create the HD wallet.
+        /// A mnemonic used to create the HD wallet. Sometimes this is referred to as the seed phrase or recovery phrase.
+        /// This is optional and if omitted, a 12 word mnemonic will be generated.
         /// </summary>
         public string Mnemonic { get; set; }
 

@@ -223,7 +223,7 @@ namespace Stratis.Bitcoin.Features.Api
         /// <returns>Json formatted <see cref="BlockHeaderModel"/>. <c>null</c> if block not found. Returns <see cref="Microsoft.AspNetCore.Mvc.IActionResult"/> formatted error if fails.</returns>
         /// <response code="200">Returns the blockheader if found.</response>
         /// <response code="400">Null hash provided, BlockHeader does not exist or if isJsonFormat = false</response>
-        [Route("getblockheader")]
+        [Route("getBlockHeader")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -266,7 +266,7 @@ namespace Stratis.Bitcoin.Features.Api
         /// <exception cref="ArgumentNullException">Thrown if fullNode, network, or chain are not available.</exception>
         /// <exception cref="ArgumentException">Thrown if trxid is empty or not a valid<see cref="uint256"/>.</exception>
         /// <remarks>Requires txindex=1, otherwise only txes that spend or create UTXOs for a wallet can be returned.</remarks>
-        [Route("getrawtransaction")]
+        [Route("getRawTransaction")]
         [HttpGet]
         public async Task<IActionResult> GetRawTransactionAsync([FromQuery] string trxid, bool verbose = false)
         {
@@ -315,7 +315,7 @@ namespace Stratis.Bitcoin.Features.Api
         /// <param name="request">A class containing the necessary parameters for a block search request.</param>
         /// <returns>The JSON representation of the transaction.</returns>
         [HttpPost]
-        [Route("decoderawtransaction")]
+        [Route("decodeRawTransaction")]
         public IActionResult DecodeRawTransaction([FromBody] DecodeRawTransactionModel request)
         {
             try
@@ -341,7 +341,7 @@ namespace Stratis.Bitcoin.Features.Api
         /// <returns>Json formatted <see cref="ValidatedAddress"/> containing a boolean indicating address validity. Returns <see cref="Microsoft.AspNetCore.Mvc.IActionResult"/> formatted error if fails.</returns>
         /// <exception cref="ArgumentException">Thrown if address provided is empty.</exception>
         /// <exception cref="ArgumentNullException">Thrown if network is not provided.</exception>
-        [Route("validateaddress")]
+        [Route("validateAddress")]
         [HttpGet]
         public IActionResult ValidateAddress([FromQuery] string address)
         {
@@ -403,7 +403,7 @@ namespace Stratis.Bitcoin.Features.Api
         /// <returns>Json formatted <see cref="GetTxOutModel"/>. <c>null</c> if no unspent outputs given parameters. Returns <see cref="Microsoft.AspNetCore.Mvc.IActionResult"/> formatted error if fails.</returns>
         /// <exception cref="ArgumentNullException">Thrown if network or chain not provided.</exception>
         /// <exception cref="ArgumentException">Thrown if trxid is empty or not a valid <see cref="uint256"/></exception>
-        [Route("gettxout")]
+        [Route("getTxOut")]
         [HttpGet]
         public async Task<IActionResult> GetTxOutAsync([FromQuery] string trxid, uint vout = 0, bool includeMemPool = true)
         {
@@ -451,7 +451,7 @@ namespace Stratis.Bitcoin.Features.Api
         /// <param name="txids">The txids to filter</param>
         /// <param name="blockhash">If specified, looks for txid in the block with this hash</param>
         /// <returns>The hex-encoded merkle proof.</returns>
-        [Route("gettxoutproof")]
+        [Route("getTxOutProof")]
         [HttpGet]
         public Task<IActionResult> GetTxOutProofAsync([FromQuery] string[] txids, string blockhash = "")
         {
@@ -556,7 +556,7 @@ namespace Stratis.Bitcoin.Features.Api
         /// <param name="request">The request containing the loggers to modify.</param>
         /// <returns><see cref="Microsoft.AspNetCore.Mvc.OkResult"/></returns>
         [HttpPut]
-        [Route("loglevels")]
+        [Route("logLevels")]
         public IActionResult UpdateLogLevel([FromBody] LogRulesRequest request)
         {
             Guard.NotNull(request, nameof(request));
@@ -610,7 +610,7 @@ namespace Stratis.Bitcoin.Features.Api
         /// </summary>
         /// <returns>A list of log rules.</returns>
         [HttpGet]
-        [Route("logrules")]
+        [Route("logRules")]
         public IActionResult GetLogRules()
         {
             // Checks the request is valid.
@@ -669,7 +669,7 @@ namespace Stratis.Bitcoin.Features.Api
         /// </summary>
         /// <returns>A list of running async loops/delegates/tasks.</returns>
         [HttpGet]
-        [Route("asyncloops")]
+        [Route("asyncLoops")]
         public IActionResult GetAsyncLoops()
         {
             // Checks the request is valid.
@@ -701,7 +701,7 @@ namespace Stratis.Bitcoin.Features.Api
         /// </summary>
         /// <returns>Returns an <see cref="OkResult"/>.</returns>
         [HttpDelete]
-        [Route("datafolder/chain")]
+        [Route("dataFolder/chain")]
         public IActionResult DeleteChain()
         {
             this.nodeSettings.DataFolder.ScheduleChainDeletion();

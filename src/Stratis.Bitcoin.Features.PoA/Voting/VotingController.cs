@@ -262,7 +262,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <returns>List of whitelisted hashes</returns>
         /// <response code="200">Returns the hashes</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("whitelistedhashes")]
+        [Route("whitelistedHashes")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -289,7 +289,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <response code="200">Voted to add hash to whitelist</response>
         /// <response code="400">Invalid request, node is not a federation member, or an unexpected exception occurred</response>
         /// <response code="500">The request is null</response>
-        [Route("schedulevote-whitelisthash")]
+        [Route("scheduleVote-whitelistHash")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -307,7 +307,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <response code="200">Voted to remove hash from whitelist</response>
         /// <response code="400">Invalid request, node is not a federation member, or an unexpected exception occurred</response>
         /// <response code="500">The request is null</response>
-        [Route("schedulevote-removehash")]
+        [Route("scheduleVote-removeHash")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -352,7 +352,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <returns>Scheduled voting data</returns>
         /// <response code="200">Returns the voting data</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("scheduledvotes")]
+        [Route("scheduledVotes")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -381,7 +381,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <response code="200">Voted to remove a member from the federation.</response>
         /// <response code="400">Invalid request, node is not a federation member, or an unexpected exception occurred</response>
         /// <response code="500">The request is null</response>
-        [Route("schedulevote-kickmember")]
+        [Route("scheduleVote-kickMember")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]

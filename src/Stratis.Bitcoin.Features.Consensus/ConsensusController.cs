@@ -59,7 +59,7 @@ namespace Stratis.Bitcoin.Features.Consensus
         /// Returns an <see cref="ErrorResult"/> if the method fails.</returns>
         /// <response code="200">Returns the list of deployment flags</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("api/[controller]/deploymentflags")]
+        [Route("api/[controller]/deploymentFlags")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -92,7 +92,7 @@ namespace Stratis.Bitcoin.Features.Consensus
         /// Returns an <see cref="ErrorResult"/> if the method fails.</returns>
         /// <response code="200">Returns the list of locked in or active deployments.</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("api/[controller]/lockedindeployments")]
+        [Route("api/[controller]/lockedInDeployments")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -131,7 +131,7 @@ namespace Stratis.Bitcoin.Features.Consensus
         /// <remarks>This is an API implementation of an RPC call.</remarks>
         /// <response code="200">Returns the block hash</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("api/[controller]/getbestblockhash")]
+        [Route("api/[controller]/getBestBlockHash")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -181,7 +181,7 @@ namespace Stratis.Bitcoin.Features.Consensus
         /// <remarks>This is an API implementation of an RPC call.</remarks>
         /// <response code="200">Returns the block hash</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("api/[controller]/getblockhash")]
+        [Route("api/[controller]/getBlockHash")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]

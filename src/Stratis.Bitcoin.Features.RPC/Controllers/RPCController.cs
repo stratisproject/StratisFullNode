@@ -96,7 +96,7 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
         /// <response code="400">An exception occurred</response>
         /// <response code="405">RPC is disabled</response>
         /// <response code="500">Body is null</response>
-        [Route("callbyname")]
+        [Route("callByName")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -164,7 +164,7 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
         /// <response code="200">Returns available methods</response>
         /// <response code="400">Unexpected exception occurred</response>
         /// <response code="405">RPC is disabled</response>
-        [Route("listmethods")]
+        [Route("listMethods")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]

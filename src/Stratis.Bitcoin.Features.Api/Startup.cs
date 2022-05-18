@@ -66,7 +66,7 @@ namespace Stratis.Bitcoin.Features.Api
                         }
                     );
                 });
-
+            
             // Add framework services.
             services
                 .AddMvc(options =>

@@ -25,7 +25,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
 {
     public static class FederationGatewayRouteEndPoint
     {
-        public const string DeleteSuspended = "transfers/deletesuspended";
+        public const string DeleteSuspended = "transfers/deleteSuspended";
         public const string GetMaturedBlockDeposits = "deposits";
         public const string GetFederationInfo = "info";
         public const string GetFederationMemberInfo = "member/info";
@@ -34,7 +34,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         public const string FederationMemberIpReplace = "member/ip/replace";
         public const string GetTransferByDepositIdEndpoint = "transfer";
         public const string GetTransfersPartialEndpoint = "transfer/pending";
-        public const string GetTransfersFullySignedEndpoint = "transfer/fullysigned";
+        public const string GetTransfersFullySignedEndpoint = "transfer/fullySigned";
         public const string VerifyPartialTransactionEndpoint = "transfer/verify";
     }
 
