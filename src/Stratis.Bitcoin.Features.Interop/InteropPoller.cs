@@ -938,22 +938,24 @@ namespace Stratis.Bitcoin.Features.Interop
 
             foreach (ConversionRequest request in mintRequests)
             {
+                // ** Re-include this at some point when we can introduce a re-process state **
+                //
                 // Ignore old conversion requests for the time being.
                 // If this is not an originator node, we can also check its state.
-                if ((request.RequestStatus == ConversionRequestStatus.Unprocessed) && (this.chainIndexer.Tip.Height - request.BlockHeight) > this.network.Consensus.MaxReorgLength)
-                {
-                    this.logger.Info("Ignoring old mint request '{0}' with status {1} from block height {2}.", request.RequestId, request.RequestStatus, request.BlockHeight);
+                //if ((request.RequestStatus == ConversionRequestStatus.Unprocessed) && (this.chainIndexer.Tip.Height - request.BlockHeight) > this.network.Consensus.MaxReorgLength)
+                //{
+                //    this.logger.Info("Ignoring old mint request '{0}' with status {1} from block height {2}.", request.RequestId, request.RequestStatus, request.BlockHeight);
 
-                    request.RequestStatus = ConversionRequestStatus.Stale;
-                    request.Processed = true;
+                //    request.RequestStatus = ConversionRequestStatus.Stale;
+                //    request.Processed = true;
 
-                    lock (this.repositoryLock)
-                    {
-                        this.conversionRequestRepository.Save(request);
-                    }
+                //    lock (this.repositoryLock)
+                //    {
+                //        this.conversionRequestRepository.Save(request);
+                //    }
 
-                    continue;
-                }
+                //    continue;
+                //}
 
                 bool isTransfer = false;
                 if (!string.IsNullOrWhiteSpace(request.TokenContract) && request.DestinationChain == DestinationChain.CIRRUS)
