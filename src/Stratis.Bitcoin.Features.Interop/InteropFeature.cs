@@ -109,6 +109,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     .AddSingleton<IETHCompatibleClientProvider, ETHCompatibleClientProvider>()
                     .AddSingleton<ICirrusContractClient, CirrusContractClient>()
                     .AddSingleton<InteropPoller>()
+                    .AddSingleton<IMultiSigFeeService, MultiSigFeeService>()
                     ));
 
             return fullNodeBuilder;
