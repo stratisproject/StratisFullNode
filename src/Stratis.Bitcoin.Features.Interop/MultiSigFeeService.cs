@@ -52,6 +52,7 @@ namespace Stratis.Bitcoin.Features.Interop
             {
                 var item = new MultisigFeeReportItem()
                 {
+                    RequestBlockHeight = burn.BlockHeight,
                     RequestId = burn.RequestId
                 };
 
@@ -59,8 +60,9 @@ namespace Stratis.Bitcoin.Features.Interop
                 if (deposit != null)
                 {
                     item.ExistInStore = true;
+                    item.DepositBlockHeight = deposit.BlockHeight;
                     item.AmountInStore = deposit.DepositAmount;
-                    item.FeeDepositState = deposit.Status;
+                    item.FeeDepositState = deposit.Status.ToString();
                 }
 
                 reportItems.Add(item);
@@ -148,6 +150,12 @@ namespace Stratis.Bitcoin.Features.Interop
         public decimal AmountInStore { get; set; }
 
         [JsonProperty("feeDepositState")]
-        public CrossChainTransferStatus FeeDepositState { get; set; }
+        public string FeeDepositState { get; set; }
+
+        [JsonProperty("depositBlockHeight")]
+        public int? DepositBlockHeight { get; set; }
+
+        [JsonProperty("requestBlockHeight")]
+        public int RequestBlockHeight { get; set; }
     }
 }
