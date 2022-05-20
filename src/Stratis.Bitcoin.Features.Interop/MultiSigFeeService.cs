@@ -45,6 +45,8 @@ namespace Stratis.Bitcoin.Features.Interop
             // Find all processed burn requests.
             List<ConversionRequest> burns = this.conversionRequestRepository.GetAllBurn(false);
 
+            ICrossChainTransfer[] deposits = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Suspended, CrossChainTransferStatus.SeenInBlock });
+
             var reportItems = new List<MultisigFeeReportItem>();
             foreach (ConversionRequest burn in burns)
             {
@@ -53,7 +55,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     RequestId = burn.RequestId
                 };
 
-                ICrossChainTransfer deposit = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Suspended, CrossChainTransferStatus.SeenInBlock }).FirstOrDefault(d => d.DepositTransactionId == uint256.Parse(burn.RequestId));
+                ICrossChainTransfer deposit = deposits.FirstOrDefault(d => d.DepositTransactionId == uint256.Parse(burn.RequestId));
                 if (deposit != null)
                 {
                     item.ExistInStore = true;
