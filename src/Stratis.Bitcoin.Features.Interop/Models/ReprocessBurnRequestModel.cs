@@ -2,11 +2,8 @@
 
 namespace Stratis.Bitcoin.Features.Interop.Models
 {
-    public sealed class ReprocessBurnRequestModel
+    public sealed class ReprocessBurnRequestModel : RequestIdModel
     {
-        [JsonProperty(PropertyName = "id")]
-        public string RequestId { get; set; }
-
         [JsonProperty(PropertyName = "height")]
         public int BlockHeight { get; set; }
     }

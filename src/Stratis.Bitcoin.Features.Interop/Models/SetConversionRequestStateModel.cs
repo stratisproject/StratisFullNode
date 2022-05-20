@@ -3,11 +3,8 @@ using Stratis.Features.FederatedPeg.Conversion;
 
 namespace Stratis.Bitcoin.Features.Interop.Models
 {
-    public sealed class SetConversionRequestStateModel
+    public sealed class SetConversionRequestStateModel : RequestIdModel
     {
-        [JsonProperty(PropertyName = "id")]
-        public string RequestId { get; set; }
-
         [JsonProperty(PropertyName = "status")]
         public ConversionRequestStatus Status { get; set; }
 
