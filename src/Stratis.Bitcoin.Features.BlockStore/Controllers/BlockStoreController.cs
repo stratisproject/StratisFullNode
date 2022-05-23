@@ -189,7 +189,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
                     tip = this.chainIndexer.Tip.Height;
                 }
 
-                List<ChainedHeader> chainedHeaders = this.chainIndexer.Tip.EnumerateToGenesis().Take(query.NumberOfBlocks).Reverse().ToList();
+                List<ChainedHeader> chainedHeaders = this.chainIndexer[tip].EnumerateToGenesis().Take(query.NumberOfBlocks).Reverse().ToList();
                 List<uint256> blockIds = chainedHeaders.Select(h => h.HashBlock).ToList();
                 List<Block> blocks = this.blockStore.GetBlocks(blockIds);
 
