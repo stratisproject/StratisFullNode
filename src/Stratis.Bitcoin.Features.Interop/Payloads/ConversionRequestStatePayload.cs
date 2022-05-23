@@ -4,7 +4,7 @@ using Stratis.Features.FederatedPeg.Conversion;
 
 namespace Stratis.Bitcoin.Features.Interop.Payloads
 {
-    [Payload("conversionrequeststate")]
+    [Payload("convrqst")]
     public sealed class ConversionRequestStatePayload : Payload
     {
         private bool isRequesting;
