@@ -56,7 +56,7 @@ namespace Stratis.Bitcoin.Features.Consensus
         /// <param name="blockLocator">The list of provided hashes.</param>
         /// <returns>A <see cref="JsonResult"/> derived from a <see cref="HashHeightPair"/> object.</returns>
         [Route("api/[controller]/commonblock")]
-        [HttpGet]
+        [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         public IActionResult CommonBlock([FromBody] uint256[] blockLocator)
