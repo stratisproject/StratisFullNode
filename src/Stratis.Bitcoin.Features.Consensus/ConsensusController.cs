@@ -51,6 +51,32 @@ namespace Stratis.Bitcoin.Features.Consensus
         }
 
         /// <summary>
+        /// Finds the first block in common with the list of provided hashes. Include the genesis hash.
+        /// </summary>
+        /// <param name="blockLocator">The list of provided hashes.</param>
+        /// <returns>A <see cref="JsonResult"/> derived from a <see cref="HashHeightPair"/> object.</returns>
+        [Route("api/[controller]/commonblock")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult CommonBlock([FromBody] uint256[] blockLocator)
+        {
+            try
+            {
+                ChainedHeader commonHeader = this.ChainIndexer.FindFork(blockLocator);
+                if (commonHeader == null)
+                    throw new BlockNotFoundException($"No common block found");
+
+                return this.Json(new HashHeightPair(commonHeader));
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
         /// Get the threshold states of softforks currently being deployed.
         /// Allowable states are: Defined, Started, LockedIn, Failed, Active.
         /// </summary>
