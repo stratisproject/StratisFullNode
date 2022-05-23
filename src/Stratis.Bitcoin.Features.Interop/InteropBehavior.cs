@@ -92,6 +92,9 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private async Task ProcessMessageAsync(INetworkPeer peer, IncomingMessage message)
         {
+            if (!this.federationManager.IsFederationMember)
+                return;
+
             try
             {
                 switch (message.Message.Payload)
@@ -107,6 +110,10 @@ namespace Stratis.Bitcoin.Features.Interop
                     case FeeAgreePayload feeAgreePayload:
                         await this.ProcessFeeAgreeAsync(feeAgreePayload).ConfigureAwait(false);
                         break;
+
+                    case ConversionRequestStatePayload conversionRequestStatePayload:
+                        await this.ProcessConversionRequestStateAsync(conversionRequestStatePayload).ConfigureAwait(false);
+                        break;
                 }
             }
             catch (OperationCanceledException)
@@ -117,33 +124,15 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private async Task ProcessConversionRequestPayloadAsync(INetworkPeer peer, ConversionRequestPayload payload)
         {
-            if (!this.federationManager.IsFederationMember)
-                return;
-
             this.logger.LogDebug($"Conversion request payload request for id '{payload.RequestId}' received from '{peer.PeerEndPoint.Address}':'{peer.RemoteSocketEndpoint.Address}' proposing transaction ID '{payload.TransactionId}', (IsTransfer: {payload.IsTransfer}, IsReplenishment: {payload.IsReplenishment}).");
 
             if (payload.TransactionId == BigInteger.MinusOne)
                 return;
 
             // Check that the payload is signed by a multisig federation member.
-            PubKey pubKey;
-
-            try
-            {
-                pubKey = PubKey.RecoverFromMessage(payload.RequestId + payload.TransactionId, payload.Signature);
-
-                if (!this.federationManager.IsMultisigMember(pubKey))
-                {
-                    this.logger.LogWarning("Conversion request payload for '{0}'. Computed pubkey '{1}'.", payload.RequestId, pubKey?.ToHex());
-
-                    return;
-                }
-            }
-            catch (Exception)
-            {
-                this.logger.LogWarning("Received malformed conversion request payload for '{0}'.", payload.RequestId);
+            PubKey pubKey = RecoverPubKeyAndValidateMultiSigMember(payload.RequestId + payload.TransactionId, payload.RequestId, payload.Signature);
+            if (pubKey == null)
                 return;
-            }
 
             BigInteger confirmationCount;
 
@@ -185,27 +174,10 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private async Task ProcessFeeProposalAsync(FeeProposalPayload payload)
         {
-            if (!this.federationManager.IsFederationMember)
-                return;
-
             // Check that the payload is signed by a multisig federation member.
-            PubKey pubKey;
-
-            try
-            {
-                pubKey = PubKey.RecoverFromMessage(payload.RequestId + payload.FeeAmount, payload.Signature);
-
-                if (!this.federationManager.IsMultisigMember(pubKey))
-                {
-                    this.logger.LogWarning("Received unverified fee proposal payload for '{0}' from pubkey '{1}'.", payload.RequestId, pubKey?.ToHex());
-                    return;
-                }
-            }
-            catch (Exception)
-            {
-                this.logger.LogWarning("Received malformed fee proposal payload for '{0}'.", payload.RequestId);
+            PubKey pubKey = RecoverPubKeyAndValidateMultiSigMember(payload.RequestId + payload.FeeAmount, payload.RequestId, payload.Signature);
+            if (pubKey == null)
                 return;
-            }
 
             // Reply back to the peer with this node's proposal.
             FeeProposalPayload replyToPayload = await this.conversionRequestFeeService.MultiSigMemberProposedInteropFeeAsync(payload.RequestId, payload.FeeAmount, pubKey).ConfigureAwait(false);
@@ -220,27 +192,10 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private async Task ProcessFeeAgreeAsync(FeeAgreePayload payload)
         {
-            if (!this.federationManager.IsFederationMember)
-                return;
-
             // Check that the payload is signed by a multisig federation member.
-            PubKey pubKey;
-
-            try
-            {
-                pubKey = PubKey.RecoverFromMessage(payload.RequestId + payload.FeeAmount, payload.Signature);
-
-                if (!this.federationManager.IsMultisigMember(pubKey))
-                {
-                    this.logger.LogWarning("Received unverified fee vote payload for '{0}' from pubkey '{1}'.", payload.RequestId, pubKey?.ToHex());
-                    return;
-                }
-            }
-            catch (Exception)
-            {
-                this.logger.LogWarning("Received malformed fee vote payload for '{0}'.", payload.RequestId);
+            PubKey pubKey = RecoverPubKeyAndValidateMultiSigMember(payload.RequestId + payload.FeeAmount, payload.RequestId, payload.Signature);
+            if (pubKey == null)
                 return;
-            }
 
             // Reply back to the peer with this node's amount.
             FeeAgreePayload replyToPayload = await this.conversionRequestFeeService.MultiSigMemberAgreedOnInteropFeeAsync(payload.RequestId, payload.FeeAmount, pubKey).ConfigureAwait(false);
@@ -251,6 +206,72 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 await this.AttachedPeer.SendMessageAsync(replyToPayload).ConfigureAwait(false);
             }
+        }
+
+        private async Task ProcessConversionRequestStateAsync(ConversionRequestStatePayload payload)
+        {
+            PubKey pubKey = RecoverPubKeyAndValidateMultiSigMember(payload.RequestId, payload.RequestId, payload.Signature);
+            if (pubKey == null)
+                return;
+
+            ConversionRequest conversionRequest = this.conversionRequestRepository.Get(payload.RequestId);
+            if (conversionRequest == null)
+            {
+                this.logger.LogDebug($"PubKey '{pubKey}' requested the state of request '{payload.RequestId}' but it does exist.");
+                return;
+            }
+
+            if (payload.IsRequesting)
+            {
+                // Execute a small delay to prevent network congestion.
+                await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+                string signature = this.federationManager.CurrentFederationKey.SignMessage(conversionRequest.RequestId);
+
+                await this.AttachedPeer.SendMessageAsync(ConversionRequestStatePayload.Reply(conversionRequest.RequestId, conversionRequest.RequestStatus, signature)).ConfigureAwait(false);
+            }
+            else
+            {
+                // If the other node is replying with its state of the conversion request in question, then check and update ours.
+                if (payload.RequestState == ConversionRequestStatus.Processed)
+                {
+                    conversionRequest.Processed = true;
+                    conversionRequest.RequestStatus = ConversionRequestStatus.Processed;
+
+                    this.conversionRequestRepository.Save(conversionRequest);
+
+                    this.logger.LogDebug($"A conversion request with a processed state was received from PubKey '{pubKey}', updating ours.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Check that the payload is signed by a multisig federation member.
+        /// </summary>
+        /// <param name="signatureText">The signature test to verify.</param>
+        /// <param name="requestId">The conversion request in question.</param>
+        /// <param name="signature">The signature to verify against.</param>
+        /// <returns>A valid <see cref="PubKey"/> if signed by a multisig member.</returns>
+        private PubKey RecoverPubKeyAndValidateMultiSigMember(string signatureText, string requestId, string signature)
+        {
+            PubKey pubKey;
+
+            try
+            {
+                pubKey = PubKey.RecoverFromMessage(signatureText, signature);
+
+                if (!this.federationManager.IsMultisigMember(pubKey))
+                {
+                    this.logger.LogWarning("Conversion request payload for '{0}'. Computed pubkey '{1}'.", requestId, pubKey?.ToHex());
+                    return null;
+                }
+            }
+            catch (Exception)
+            {
+                this.logger.LogWarning("Received malformed conversion request payload for '{0}'.", requestId);
+                return null;
+            }
+
+            return pubKey;
         }
     }
 }
