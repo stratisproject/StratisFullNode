@@ -53,6 +53,7 @@ namespace Stratis.Bitcoin.Features.Api
             }
             
             options.DocumentFilter<CamelCaseRouteFilter>();
+            options.DocumentFilter<AlphabeticalTagOrderingFilter>();
             
             options.DescribeAllParametersInCamelCase();
         }

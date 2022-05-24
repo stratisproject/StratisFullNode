@@ -15,7 +15,10 @@ namespace Stratis.Bitcoin.Features.Api
             var paths = swaggerDoc.Paths.ToDictionary(entry =>
                 {
                     var pathParts = entry.Key.Split('/', StringSplitOptions.RemoveEmptyEntries);
-                    var camelCasePathParts = pathParts.Select(part => part.StartsWith('{') ? part : char.ToLowerInvariant(part[0]) + part[1..]);
+                    var camelCasePathParts = pathParts.Select(
+                        part => part.StartsWith('{') || part.All(char.IsUpper)
+                            ? part
+                            : char.ToLowerInvariant(part[0]) + part[1..]);
                     return $"/{string.Join('/', camelCasePathParts)}";
                 },
                 entry => entry.Value);
