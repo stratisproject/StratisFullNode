@@ -26,12 +26,16 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public InteropMonitor(
             IAsyncProvider asyncProvider,
+            IConversionRequestRepository conversionRequestRepository,
             IFederationManager federationManager,
+            IFederatedPegBroadcaster federatedPegBroadcaster,
             IInitialBlockDownloadState initialBlockDownloadState,
             INodeLifetime nodeLifetime)
         {
             this.asyncProvider = asyncProvider;
+            this.conversionRequestRepository = conversionRequestRepository;
             this.federationManager = federationManager;
+            this.federatedPegBroadcaster = federatedPegBroadcaster;
             this.initialBlockDownloadState = initialBlockDownloadState;
             this.nodeLifetime = nodeLifetime;
             this.logger = LogManager.GetCurrentClassLogger();
@@ -87,6 +91,7 @@ namespace Stratis.Bitcoin.Features.Interop
         {
             string signature = this.federationManager.CurrentFederationKey.SignMessage(conversionRequest.RequestId);
             await this.federatedPegBroadcaster.BroadcastAsync(ConversionRequestStatePayload.Request(conversionRequest.RequestId, signature)).ConfigureAwait(false);
+            this.logger.Info($"Requesting state for request '{conversionRequest.RequestId}'");
         }
 
         /// <inheritdoc />

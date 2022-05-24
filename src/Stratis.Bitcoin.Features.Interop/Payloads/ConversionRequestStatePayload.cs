@@ -48,8 +48,9 @@ namespace Stratis.Bitcoin.Features.Interop.Payloads
         public override void ReadWriteCore(BitcoinStream stream)
         {
             stream.ReadWrite(ref this.requestId);
-            stream.ReadWrite(ref this.requestState);
+            stream.ReadWrite(ref this.signature);
             stream.ReadWrite(ref this.isRequesting);
+            stream.ReadWriteNullIntField(ref this.requestState);
         }
 
         public static ConversionRequestStatePayload Request(string requestId, string signature)
