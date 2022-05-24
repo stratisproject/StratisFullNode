@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Features.Interop.Payloads;
@@ -15,8 +16,14 @@ namespace Stratis.Bitcoin.Features.Interop
 {
     public sealed class InteropMonitor : IDisposable
     {
+        /// <summary>
+        /// Only attempt to process conversion requests which arrived this amount of block ago or less.
+        /// </summary>
+        private const int ProcessingThresholdBlocks = 2000;
+
         private IAsyncLoop periodicCheckForProcessedRequests;
         private readonly IAsyncProvider asyncProvider;
+        private readonly ChainIndexer chainIndexer;
         private readonly IConversionRequestRepository conversionRequestRepository;
         private readonly IFederationManager federationManager;
         private readonly IFederatedPegBroadcaster federatedPegBroadcaster;
@@ -26,6 +33,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public InteropMonitor(
             IAsyncProvider asyncProvider,
+            ChainIndexer chainIndexer,
             IConversionRequestRepository conversionRequestRepository,
             IFederationManager federationManager,
             IFederatedPegBroadcaster federatedPegBroadcaster,
@@ -33,6 +41,7 @@ namespace Stratis.Bitcoin.Features.Interop
             INodeLifetime nodeLifetime)
         {
             this.asyncProvider = asyncProvider;
+            this.chainIndexer = chainIndexer;
             this.conversionRequestRepository = conversionRequestRepository;
             this.federationManager = federationManager;
             this.federatedPegBroadcaster = federatedPegBroadcaster;
@@ -58,7 +67,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 try
                 {
                     // Request the state for all unprocessed mint requests.
-                    List<ConversionRequest> mintRequests = this.conversionRequestRepository.GetAllMint(true);
+                    List<ConversionRequest> mintRequests = this.conversionRequestRepository.GetAllMint(true).Where(r => r.BlockHeight < this.chainIndexer.Tip.Height - ProcessingThresholdBlocks).ToList();
                     if (mintRequests.Any())
                         this.logger.Info($"Requesting state for {mintRequests.Count} unprocessed mint requests.");
 
@@ -68,7 +77,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     }
 
                     // Request the state for all unprocessed burn requests.
-                    List<ConversionRequest> burnRequests = this.conversionRequestRepository.GetAllBurn(true);
+                    List<ConversionRequest> burnRequests = this.conversionRequestRepository.GetAllBurn(true).Where(r => r.BlockHeight < this.chainIndexer.Tip.Height - ProcessingThresholdBlocks).ToList();
                     if (burnRequests.Any())
                         this.logger.Info($"Requesting state for {burnRequests.Count} unprocessed burn requests.");
 
