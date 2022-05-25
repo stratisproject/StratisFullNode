@@ -36,12 +36,14 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         private readonly ChainIndexer chainIndexer;
         private readonly IContractPrimitiveSerializer contractPrimitiveSerializer;
         private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
+        private readonly IConversionRequestFeeKeyValueStore conversionRequestFeeKeyValueStore;
         private readonly IConversionRequestRepository conversionRequestRepository;
         private readonly IETHCompatibleClientProvider ethCompatibleClientProvider;
         private readonly IFederationManager federationManager;
         private readonly InteropSettings interopSettings;
         private readonly InteropPoller interopPoller;
         private readonly ILogger logger;
+        private readonly IReplenishmentKeyValueStore replenishmentKeyValueStore;
         private readonly Network network;
 
         public InteropController(
@@ -50,16 +52,19 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             IContractPrimitiveSerializer contractPrimitiveSerializer,
             Network network,
             IConversionRequestCoordinationService conversionRequestCoordinationService,
+            IConversionRequestFeeKeyValueStore conversionRequestFeeKeyValueStore,
             IConversionRequestRepository conversionRequestRepository,
             IETHCompatibleClientProvider ethCompatibleClientProvider,
             IFederationManager federationManager,
             InteropSettings interopSettings,
-            InteropPoller interopPoller)
+            InteropPoller interopPoller,
+            IReplenishmentKeyValueStore replenishmentKeyValueStore)
         {
             this.callDataSerializer = callDataSerializer;
             this.chainIndexer = chainIndexer;
             this.contractPrimitiveSerializer = contractPrimitiveSerializer;
             this.conversionRequestCoordinationService = conversionRequestCoordinationService;
+            this.conversionRequestFeeKeyValueStore = conversionRequestFeeKeyValueStore;
             this.conversionRequestRepository = conversionRequestRepository;
             this.ethCompatibleClientProvider = ethCompatibleClientProvider;
             this.federationManager = federationManager;
@@ -67,6 +72,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             this.interopPoller = interopPoller;
             this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
+            this.replenishmentKeyValueStore = replenishmentKeyValueStore;
         }
 
         [Route("initializeInterflux")]
@@ -107,6 +113,35 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             try
             {
                 return Ok(this.interopSettings.GetSettingsByChain(destinationChain));
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        [Route("state")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult InteropState()
+        {
+            try
+            {
+                List<ConversionRequest> burns = this.conversionRequestRepository.GetAllBurn(false);
+                List<ConversionRequest> mints = this.conversionRequestRepository.GetAllMint(false);
+                var burnsCount = burns.Count;
+                var mintsCount = mints.Count;
+
+                return this.Json(new
+                {
+                    burnsCount = burns.Count,
+                    mintsCount = mints.Count,
+                    burnsUnprocessed = burns.Count(b => !b.Processed),
+                    mintsUnprocessed = mints.Count(b => !b.Processed),
+                });
             }
             catch (Exception e)
             {
@@ -173,16 +208,38 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             }
         }
 
-        [Route("mint/delete")]
+        [Route("replenishments")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult InteropReplenishments()
+        {
+            try
+            {
+                return this.Json(this.replenishmentKeyValueStore.GetAllAsJson<ReplenishmentTransaction>());
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        [Route("request/delete")]
         [HttpDelete]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult DeleteMintRequest(string requestId)
+        public IActionResult DeleteConversionRequest(string requestId)
         {
             try
             {
+                // Delete the conversion request.
                 this.conversionRequestRepository.DeleteConversionRequest(requestId);
+
+                // Delete any associated fees.
+                this.conversionRequestFeeKeyValueStore.Delete(requestId);
 
                 return Ok($"{requestId} has been deleted.");
             }
