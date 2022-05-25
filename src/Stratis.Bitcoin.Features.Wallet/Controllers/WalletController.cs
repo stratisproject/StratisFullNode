@@ -436,7 +436,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         }
 
         /// <summary>
-        /// Same as <see cref="BuildTransactionAsync"/> but overrides OP_RETURN data and encodes destination chain and address for InterFlux transaction.
+        /// Same as /api/wallet/build-transaction, but overrides OP_RETURN data and encodes destination chain and address for InterFlux transaction.
         /// </summary>
         /// <param name="request">See <see cref="BuildInterFluxTransactionRequest"/>.</param>
         /// <returns>The asynchronous task returning an <see cref="IActionResult"/>.</returns>
@@ -464,7 +464,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
 
         /// <summary>
         /// Sends a transaction that has already been built.
-        /// Use the /api/Wallet/build-transaction call to create transactions.
+        /// Use the /api/wallet/build-transaction or /api/wallet/build-interflux-transaction call to create transactions.
         /// </summary>
         /// <param name="request">An object containing the necessary parameters used to a send transaction request.</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
@@ -487,7 +487,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         }
 
         /// <summary>
-        /// Lists all the files found in the database
+        /// Lists all the wallet files found on this device
         /// </summary>
         /// <returns>A JSON object containing the available wallet name
         /// </returns>
@@ -857,7 +857,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
                 async (req, token) => this.Json(await this.walletService.SplitCoins(req, token)));
         }
 
-        /// <summary>Splits and distributes UTXOs across wallet addresses</summary>
+        /// <summary>Splits and distributes UTXOs across wallet addresses.</summary>
         /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
         /// <param name="request">An object containing the necessary parameters.</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
@@ -870,6 +870,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
                 async (req, token) => this.Json(await this.walletService.DistributeUtxos(req, token)));
         }
 
+        /// <summary>
+        /// Builds a transaction that sends all tokens belonging to the private key(s) to a new address on your wallet.
+        /// </summary>
+        /// <param name="request">Sweep request parameters</param>
+        /// <param name="cancellationToken">Cancellaton token</param>
+        /// <returns>HTTP response</returns>
         [HttpPost]
         [Route("sweep")]
         public async Task<IActionResult> SweepAsync([FromBody] SweepRequest request,
@@ -878,7 +884,13 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
             return await this.ExecuteAsync(request, cancellationToken,
                 async (req, token) => this.Json(await this.walletService.Sweep(req, token)));
         }
-
+        
+        /// <summary>
+        /// Partially signs an offline transaction, without the private key. Signing is generally completed by an offline device which stores the private key.
+        /// </summary>
+        /// <param name="request">Partial signing request</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Unsigned transaction</returns>
         [Route("build-offline-sign-request")]
         [HttpPost]
         public async Task<IActionResult> BuildOfflineSignRequestAsync([FromBody] BuildOfflineSignRequest request,
@@ -888,6 +900,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
                 async (req, token) => this.Json(await this.walletService.BuildOfflineSignRequest(req, token)));
         }
 
+        /// <summary>
+        /// Completes signing of a partially signed offline transaction.
+        /// </summary>
+        /// <param name="request">Offline transaction sign request</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Built transaction</returns>
         // TODO: Make this support PSBT directly?
         [Route("offline-sign-request")]
         [HttpPost]
@@ -897,6 +915,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
             return await this.ExecuteAsync(request, cancellationToken, async (req, token) => this.Json(await this.walletService.OfflineSignRequest(req, token)));
         }
 
+        /// <summary>
+        /// Builds a transaction that consolidates UTXOs in an account.
+        /// </summary>
+        /// <param name="request">Consolidation request parameters</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>HTTP response</returns>
         [HttpPost]
         [Route("consolidate")]
         public async Task<IActionResult> ConsolidateAsync([FromBody] ConsolidationRequest request,

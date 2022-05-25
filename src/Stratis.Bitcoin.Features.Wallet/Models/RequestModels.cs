@@ -61,7 +61,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public string Passphrase { get; set; }
 
         /// <summary>
-        /// The name of the wallet.
+        /// The name to give the wallet, on this device.
         /// </summary>
         [Required(ErrorMessage = "The name of the wallet to create is missing.")]
         public string Name { get; set; }
@@ -79,7 +79,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public string Password { get; set; }
 
         /// <summary>
-        /// The name of the wallet.
+        /// The name to give the wallet, on this device.
         /// </summary>
         [Required(ErrorMessage = "The name of the wallet is missing.")]
         public string Name { get; set; }
@@ -112,11 +112,15 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public string Passphrase { get; set; }
 
         /// <summary>
-        /// The name of the wallet.
+        /// The name to give the wallet, on this device.
         /// </summary>
         [Required(ErrorMessage = "The name of the wallet is missing.")]
         public string Name { get; set; }
 
+        /// <summary>
+        /// Optionally, the date at which the wallet was created.
+        /// Providing a creation date can reduce sync times when resyncing the wallet, as it avoids resyncing from the genesis block.
+        /// </summary>
         [JsonConverter(typeof(IsoDateTimeConverter))]
         public DateTime CreationDate { get; set; }
     }
@@ -143,13 +147,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public int AccountIndex { get; set; }
 
         /// <summary>
-        /// The name to give the recovered wallet.
+        /// The name to give the recovered wallet, on this device.
         /// </summary>
         [Required(ErrorMessage = "The name of the wallet is missing.")]
         public string Name { get; set; }
 
         /// <summary>
-        /// The creation date and time to give the recovered wallet. 
+        /// Optionally, the date at which the wallet was created.
+        /// Providing a creation date can reduce sync times when resyncing the wallet, as it avoids resyncing from the genesis block.
         /// </summary>
         [JsonConverter(typeof(IsoDateTimeConverter))]
         public DateTime CreationDate { get; set; }
@@ -169,7 +174,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public string WalletName { get; set; }
 
         /// <summary>
-        /// Optional. The name of the account to query transaction count for. If no account name is specified,
+        /// Optional. The name of the account to query transaction count for, such as 'account 0'. If no account name is specified,
         /// the default account is used.
         /// </summary>
         public string AccountName { get; set; }
@@ -192,7 +197,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public string WalletName { get; set; }
 
         /// <summary>
-        /// Optional. The name of the account to recover the history for. If no account name is specified,
+        /// Optional. The name of the account to recover the history for, such as 'account 0'. If no account name is specified,
         /// the entire history of the wallet is recovered.
         /// </summary>
         public string AccountName { get; set; }
@@ -243,7 +248,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public string WalletName { get; set; }
 
         /// <summary>
-        /// The name of the account to retrieve the balance for. If no account name is supplied,
+        /// The name of the account to retrieve the balance for, such as 'account 0'. If no account name is supplied,
         /// then the balance for the entire wallet (all accounts) is retrieved.
         /// </summary>         
         public string AccountName { get; set; }
@@ -273,7 +278,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public string WalletName { get; set; }
 
         /// <summary>
-        /// The name of the account to retrieve the maximum spendable amount for.
+        /// The name of the account to retrieve the maximum spendable amount for, such as 'account 0'.
         /// </summary>   
         public string AccountName { get; set; }
 
@@ -297,12 +302,18 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
     /// <seealso cref="Stratis.Bitcoin.Features.Wallet.Models.RequestModel" />
     public class ReceivedByAddressRequest : RequestModel
     {
+        /// <summary>
+        /// Address to retrieve the balance at.
+        /// </summary>
         [Required(ErrorMessage = "An address is required.")]
         public string Address { get; set; }
     }
 
     public class WalletName : RequestModel
     {
+        /// <summary>
+        /// Name of the wallet
+        /// </summary>
         [Required(ErrorMessage = "The name of the wallet is missing.")]
         public string Name { get; set; }
     }
@@ -325,7 +336,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public string WalletName { get; set; }
 
         /// <summary>
-        /// The name of the account containing the UTXOs to use in the transaction.
+        /// The name of the account containing the UTXOs to use in the transaction, such as 'account 0'.
         /// </summary> 
         public string AccountName { get; set; }
 
@@ -615,7 +626,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public string WalletName { get; set; }
 
         /// <summary>
-        /// The name of the account for which to get the address.
+        /// The name of the account for which to get the address, such as 'account 0'.
         /// </summary>
         public string AccountName { get; set; }
 
@@ -642,7 +653,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public string WalletName { get; set; }
 
         /// <summary>
-        /// The name of the account for which to get the addresses.
+        /// The name of the account for which to get the addresses, such as 'account 0'.
         /// </summary>
         public string AccountName { get; set; }
 
@@ -675,7 +686,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public string WalletName { get; set; }
 
         /// <summary>
-        /// The name of the account for which to get the addresses.
+        /// The name of the account for which to get the addresses, such as 'account 0'.
         /// </summary>
         public string AccountName { get; set; }
 
@@ -708,7 +719,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public string WalletName { get; set; }
 
         /// <summary>
-        /// The name of the account for which to get the addresses.
+        /// The name of the account for which to get the addresses, such as 'account 0'.
         /// </summary>
         public string AccountName { get; set; }
 
@@ -735,7 +746,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public string WalletName { get; set; }
 
         /// <summary>
-        /// The name of the account for which to get the extended public key.
+        /// The name of the account for which to get the extended public key, such as 'account 0'.
         /// </summary>
         public string AccountName { get; set; }
     }
@@ -799,7 +810,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public bool All { get; set; }
 
         /// <summary>
-        /// The WalletName to Sync
+        /// The name of the wallet to sync
         /// </summary>
         public string WalletName { get; set; }
     }
@@ -822,8 +833,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
 
 
         /// <summary>
-        /// The name of the account for which to get the stats.
-        /// <summary>
+        /// The name of the account for which to get the stats, such as 'account 0'.
+        /// </summary>
         public string AccountName { get; set; }
 
         /// <summary>
@@ -877,8 +888,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public string WalletName { get; set; }
 
         /// <summary>
-        /// The name of the account to retrieve the spendable transaction for. If no account name is specified,
+        /// The name of the account to retrieve the spendable transaction for, such as 'account 0'. If no account name is specified,
         /// the entire history of the wallet is recovered.
+        /// </summary>
         public string AccountName { get; set; }
 
         /// <summary>
@@ -895,11 +907,20 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
             this.AccountName = WalletManager.DefaultAccount;
         }
 
+        /// <summary>
+        /// Name of the wallet
+        /// </summary>
         [Required(ErrorMessage = "The name of the wallet is missing.")]
         public string WalletName { get; set; }
-
+        
+        /// <summary>
+        /// Name of the account, such as 'account 0'
+        /// </summary>
         public string AccountName { get; set; }
 
+        /// <summary>
+        /// Password for the wallet on the device
+        /// </summary>
         [Required(ErrorMessage = "A password is required.")]
         public string WalletPassword { get; set; }
 
@@ -908,6 +929,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         [MoneyFormat(ErrorMessage = "The amount is not in the correct format.")]
         public string TotalAmountToSplit { get; set; }
 
+        /// <summary>
+        /// Amount of outputs
+        /// </summary>
         [Required]
         public int UtxosCount { get; set; }
     }
@@ -922,8 +946,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         [Required(ErrorMessage = "The name of the wallet is missing.")]
         public string WalletName { get; set; }
 
+        /// <summary>
+        /// Name of the account, such as 'account 0'
+        /// </summary>
         public string AccountName { get; set; }
 
+        /// <summary>
+        /// Password for the wallet on the device
+        /// </summary>
         [Required(ErrorMessage = "A password is required.")]
         public string WalletPassword { get; set; }
 
@@ -982,15 +1012,27 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
     /// </summary>
     public class SignMessageRequest : RequestModel
     {
+        /// <summary>
+        /// Name of the loaded wallet
+        /// </summary>
         [Required(ErrorMessage = "The name of the wallet is missing.")]
         public string WalletName { get; set; }
 
+        /// <summary>
+        /// Password for the wallet on the device
+        /// </summary>
         [Required(ErrorMessage = "A password is required.")]
         public string Password { get; set; }
 
+        /// <summary>
+        /// Address to use to sign the message
+        /// </summary>
         [Required(ErrorMessage = "An address is required.")]
         public string ExternalAddress { get; set; }
 
+        /// <summary>
+        /// Message to sign
+        /// </summary>
         [Required(ErrorMessage = "A message is required.")]
         public string Message { get; set; }
     }
@@ -1001,9 +1043,15 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
     /// </summary>
     public class PubKeyRequest : RequestModel
     {
+        /// <summary>
+        /// Name of the loaded wallet
+        /// </summary>
         [Required(ErrorMessage = "The name of the wallet is missing.")]
         public string WalletName { get; set; }
 
+        /// <summary>
+        /// Wallet address derived from the public key
+        /// </summary>
         [Required(ErrorMessage = "An address is required.")]
         public string ExternalAddress { get; set; }
     }
@@ -1013,24 +1061,42 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
     /// </summary>
     public class VerifyRequest : RequestModel
     {
+        /// <summary>
+        /// Signed message
+        /// </summary>
         [Required(ErrorMessage = "A signature is required.")]
         public string Signature { get; set; }
 
+        /// <summary>
+        /// Wallet address that is understood to have signed the message
+        /// </summary>
         [Required(ErrorMessage = "An address is required.")]
         public string ExternalAddress { get; set; }
 
+        /// <summary>
+        /// Raw message
+        /// </summary>
         [Required(ErrorMessage = "A message is required.")]
         public string Message { get; set; }
     }
 
     public class SweepRequest : RequestModel
     {
+        /// <summary>
+        /// List of private keys to sweep
+        /// </summary>
         [Required(ErrorMessage = "One or more private keys is required.")]
         public List<string> PrivateKeys { get; set; }
 
+        /// <summary>
+        /// Wallet address to send tokens to
+        /// </summary>
         [Required(ErrorMessage = "A destination address is required.")]
         public string DestinationAddress { get; set; }
 
+        /// <summary>
+        /// If true, broadcasts the built transaction
+        /// </summary>
         public bool Broadcast { get; set; }
     }
 
@@ -1041,15 +1107,21 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
             this.AccountName = WalletManager.DefaultAccount;
         }
 
+        /// <summary>
+        /// Name of the loaded wallet
+        /// </summary>
         [Required(ErrorMessage = "The name of the wallet is missing.")]
         public string WalletName { get; set; }
 
         /// <summary>
-        /// The account from which UTXOs should be consolidated.
+        /// The account from which UTXOs should be consolidated, such as 'account 0'.
         /// If this is not set the default account of the selected wallet will be used.
         /// </summary>
         public string AccountName { get; set; }
 
+        /// <summary>
+        /// Password for the wallet on the device
+        /// </summary>
         [Required(ErrorMessage = "A password is required.")]
         public string WalletPassword { get; set; }
 
