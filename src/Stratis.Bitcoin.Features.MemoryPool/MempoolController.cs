@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Mime;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -44,7 +45,8 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// <response code="400">Unexpected exception occurred</response>
         [Route("api/[controller]/getRawMempool")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(IEnumerable<uint256>), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public async Task<IActionResult> GetRawMempoolAsync()
         {

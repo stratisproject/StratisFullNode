@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Mime;
 using System.Text;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
@@ -559,7 +560,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <response code="500">Unable to deserialize method parameters</response>
         [Route("api/[controller]/local-call")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(LocalExecutionResponse), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult LocalCallSmartContractTransaction([FromBody] LocalCallContractRequest request)

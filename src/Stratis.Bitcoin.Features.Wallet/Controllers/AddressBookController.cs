@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Mime;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
@@ -47,6 +48,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">The request is null</response>
         [Route("address")]
         [HttpPost]
+        [Produces(MediaTypeNames.Application.Json)]
         [ProducesResponseType(typeof(AddressBookEntryModel), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.Conflict)]
@@ -90,6 +92,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">The label is null or empty</response>
         [Route("address")]
         [HttpDelete]
+        [Produces(MediaTypeNames.Application.Json)]
         [ProducesResponseType(typeof(AddressBookEntryModel), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
@@ -133,6 +136,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="404">Address book was not found</response>
         [Route("")]
         [HttpGet]
+        [Produces(MediaTypeNames.Application.Json)]
         [ProducesResponseType(typeof(AddressBookModel), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]

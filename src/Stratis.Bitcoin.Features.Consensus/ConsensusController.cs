@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Mime;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -61,7 +62,8 @@ namespace Stratis.Bitcoin.Features.Consensus
         /// <response code="400">Unexpected exception occurred</response>
         [Route("api/[controller]/deploymentFlags")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(IEnumerable<ThresholdStateModel>), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult DeploymentFlags()
         {
@@ -94,7 +96,8 @@ namespace Stratis.Bitcoin.Features.Consensus
         /// <response code="400">Unexpected exception occurred</response>
         [Route("api/[controller]/lockedInDeployments")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(IEnumerable<ThresholdActivationModel>), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult LockedInDeployments()
         {
@@ -133,7 +136,8 @@ namespace Stratis.Bitcoin.Features.Consensus
         /// <response code="400">Unexpected exception occurred</response>
         [Route("api/[controller]/getBestBlockHash")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(uint256), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetBestBlockHashAPI()
         {
@@ -183,7 +187,8 @@ namespace Stratis.Bitcoin.Features.Consensus
         /// <response code="400">Unexpected exception occurred</response>
         [Route("api/[controller]/getBlockHash")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(uint256), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetBlockHashAPI([FromQuery] int height)
         {
@@ -207,6 +212,7 @@ namespace Stratis.Bitcoin.Features.Consensus
         /// <response code="400">Unexpected exception occurred</response>
         [Route("api/[controller]/tip")]
         [HttpGet]
+        [Produces(MediaTypeNames.Application.Json)]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult ConsensusTip()

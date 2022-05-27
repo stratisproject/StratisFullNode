@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi;
 using Microsoft.OpenApi.Extensions;
@@ -52,8 +53,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <param name="address">The contract's address.</param>
         /// <returns>A swagger document serialized as an OpenApi 3.0 json string.</returns>
         /// <exception cref="Exception"></exception>
+        /// <response code="200">Swagger document created</response>
+        /// <response code="500">Contract does not exist, assembly could not be loaded or something unexpected happened</response>
         [Route("swagger/contracts/{address}")]
         [HttpGet]
+        [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public Task<IActionResult> ContractSwaggerDoc(string address)
         {
             var code = this.stateRepository.GetCode(address.ToUint160(this.network));
@@ -90,8 +95,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// </summary>
         /// <param name="address">The contract's address.</param>
         /// <returns>A success response.</returns>
+        /// <response code="200">Contract added</response>
+        /// <response code="500">Contract does not exist, or something unexpected happened</response>
         [HttpPost]
         [Route("api/swagger/contracts")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public Task<IActionResult> AddContractToSwagger([FromBody] AddContractRequest address)
         {
             // Check that the contract exists

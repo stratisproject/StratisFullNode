@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Mime;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.Controllers;
@@ -82,6 +83,7 @@ namespace Stratis.Bitcoin.Connection
         /// <response code="400">An exception occurred</response>
         [Route("api/[controller]/addNode")]
         [HttpGet]
+        [Produces(MediaTypeNames.Application.Json)]
         [ProducesResponseType(typeof(bool), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult AddNodeAPI([FromQuery] string endpoint, string command)
@@ -161,6 +163,7 @@ namespace Stratis.Bitcoin.Connection
         /// <response code="400">Unexpected exception occurred</response>
         [Route("api/[controller]/getPeerInfo")]
         [HttpGet]
+        [Produces(MediaTypeNames.Application.Json)]
         [ProducesResponseType(typeof(IEnumerable<PeerNodeModel>), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetPeerInfoAPI()

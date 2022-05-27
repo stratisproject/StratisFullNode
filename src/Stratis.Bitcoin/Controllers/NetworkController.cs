@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Mime;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -133,7 +134,8 @@ namespace Stratis.Bitcoin.Controllers
         /// <response code="400">Unexpected exception occurred</response>
         [Route("getBans")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(IEnumerable<BannedPeerModel>), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetBans()
         {

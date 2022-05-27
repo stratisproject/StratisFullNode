@@ -66,6 +66,7 @@ namespace Stratis.Bitcoin.Features.Api
             options.MapType<uint256>(() => new OpenApiSchema { Type = "string" });
             options.MapType<Script>(() => new OpenApiSchema { Type = "string" });
             options.MapType<Money>(() => new OpenApiSchema { Type = "int64" });
+            options.MapType<PubKey>(() => new OpenApiSchema { Type = "string" });
             
             options.DocumentFilter<CamelCaseRouteFilter>();
             options.DocumentFilter<AlphabeticalTagOrderingFilter>();

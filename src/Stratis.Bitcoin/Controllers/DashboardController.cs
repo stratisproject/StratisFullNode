@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Net.Mime;
 using Microsoft.AspNetCore.Mvc;
 using Stratis.Bitcoin.AsyncWork;
 
@@ -27,7 +28,8 @@ namespace Stratis.Bitcoin.Controllers
         /// <response code="200">Full node stats returned</response>
         [HttpGet]
         [Route("stats")]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [Produces(MediaTypeNames.Text.Plain)]
+        [ProducesResponseType(typeof(string), (int)HttpStatusCode.OK)]
         public IActionResult Stats()
         {
             string content = (this.fullNode as FullNode).LastLogOutput;
@@ -41,7 +43,8 @@ namespace Stratis.Bitcoin.Controllers
         /// <response code="200">Async loop stats returned</response>
         [HttpGet]
         [Route("asyncLoopsStats")]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [Produces(MediaTypeNames.Text.Plain)]
+        [ProducesResponseType(typeof(string), (int)HttpStatusCode.OK)]
         public IActionResult AsyncLoopsStats()
         {
             return this.Content(this.asyncProvider.GetStatistics(false));

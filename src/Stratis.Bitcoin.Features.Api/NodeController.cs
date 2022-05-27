@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
+using System.Net.Mime;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -136,8 +138,13 @@ namespace Stratis.Bitcoin.Features.Api
         /// </summary>
         /// <param name="publish">If true, publish a full node event with the status.</param>
         /// <returns>A <see cref="StatusModel"/> with information about the node.</returns>
+        /// <response type="200">Full node information returned</response>
+        /// <response type="500">Unexpected error occurred</response>
         [HttpGet]
         [Route("status")]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(StatusModel), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult Status([FromQuery] bool publish)
         {
             // Output has been merged with RPC's GetInfo() since they provided similar functionality.
@@ -222,9 +229,11 @@ namespace Stratis.Bitcoin.Features.Api
         /// <returns>Json formatted <see cref="BlockHeaderModel"/>. Returns <see cref="HexModel"/> if Json format is not requested. <c>null</c> if block not found. Returns <see cref="Microsoft.AspNetCore.Mvc.IActionResult"/> formatted error if fails.</returns>
         /// <response code="200">Returns the block header if found.</response>
         /// <response code="400">Null hash provided, or block header does not exist.</response>
+        /// <response code="404">Block header not found.</response>
         [Route("getBlockHeader")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(BlockHeaderModel), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public IActionResult GetBlockHeader([FromQuery] string hash, bool isJsonFormat = true)
@@ -265,6 +274,8 @@ namespace Stratis.Bitcoin.Features.Api
         /// <remarks>Requires txindex=1, otherwise only txes that spend or create UTXOs for a wallet can be returned.</remarks>
         [Route("getRawTransaction")]
         [HttpGet]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> GetRawTransactionAsync([FromQuery] string trxid, bool verbose = false)
         {
             try
@@ -311,8 +322,13 @@ namespace Stratis.Bitcoin.Features.Api
         /// </summary>
         /// <param name="request">A class containing the necessary parameters for a block search request.</param>
         /// <returns>The JSON representation of the transaction.</returns>
+        /// <response code="200">Raw transaction decoded</response>
+        /// <response code="400">Validation error or unexpected error occurred</response>
         [HttpPost]
         [Route("decodeRawTransaction")]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(TransactionVerboseModel), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
         public IActionResult DecodeRawTransaction([FromBody] DecodeRawTransactionModel request)
         {
             try
@@ -338,8 +354,13 @@ namespace Stratis.Bitcoin.Features.Api
         /// <returns>Json formatted <see cref="ValidatedAddress"/> containing a boolean indicating address validity. Returns <see cref="Microsoft.AspNetCore.Mvc.IActionResult"/> formatted error if fails.</returns>
         /// <exception cref="ArgumentException">Thrown if address provided is empty.</exception>
         /// <exception cref="ArgumentNullException">Thrown if network is not provided.</exception>
+        /// <response code="200">Returns validation result</response>
+        /// <response code="400">Unexpected error occurred</response>
         [Route("validateAddress")]
         [HttpGet]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(ValidatedAddress), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
         public IActionResult ValidateAddress([FromQuery] string address)
         {
             Guard.NotEmpty(address, nameof(address));
@@ -400,8 +421,13 @@ namespace Stratis.Bitcoin.Features.Api
         /// <returns>Json formatted <see cref="GetTxOutModel"/>. <c>null</c> if no unspent outputs given parameters. Returns <see cref="Microsoft.AspNetCore.Mvc.IActionResult"/> formatted error if fails.</returns>
         /// <exception cref="ArgumentNullException">Thrown if network or chain not provided.</exception>
         /// <exception cref="ArgumentException">Thrown if trxid is empty or not a valid <see cref="uint256"/></exception>
+        /// <response code="200">Unspent outputs returned</response>
+        /// <response code="400">Unexpected error occurred</response>
         [Route("getTxOut")]
         [HttpGet]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(GetTxOutModel), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> GetTxOutAsync([FromQuery] string trxid, uint vout = 0, bool includeMemPool = true)
         {
             try
@@ -448,8 +474,13 @@ namespace Stratis.Bitcoin.Features.Api
         /// <param name="txids">The txids to filter</param>
         /// <param name="blockhash">If specified, looks for txid in the block with this hash</param>
         /// <returns>The hex-encoded merkle proof.</returns>
+        /// <response code="200">Proof returned</response>
+        /// <response code="500">Block or transactions not found, or unexpected error occurred</response>
         [Route("getTxOutProof")]
         [HttpGet]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(MerkleBlock), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public Task<IActionResult> GetTxOutProofAsync([FromQuery] string[] txids, string blockhash = "")
         {
             List<uint256> transactionIds = txids.Select(txString => uint256.Parse(txString)).ToList();
@@ -510,9 +541,13 @@ namespace Stratis.Bitcoin.Features.Api
         /// <seealso cref="https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#Simple_requests"/>
         /// </remarks>
         /// <returns><see cref="OkResult"/></returns>
+        /// <response type="200">Shut down the node successfully</response>
+        /// <response type="500">Unexpected error occurred</response>
         [HttpPost]
         [Route("shutdown")]
         [Route("stop")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult Shutdown([FromBody] bool corsProtection = true)
         {
             // Start the node shutdown process, by calling StopApplication, which will signal to
@@ -528,9 +563,12 @@ namespace Stratis.Bitcoin.Features.Api
         /// </summary>
         /// <param name="height">The rewind height.</param>
         /// <returns>A json text result indicating success or an <see cref="ErrorResult"/> indicating failure.</returns>
+        /// <response type="200">Rewind flag set</response>
+        /// <response type="400">Unexpected error occurred</response>
         [Route("rewind")]
         [HttpPut]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(string), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult Rewind([FromQuery] int height)
         {
@@ -552,8 +590,12 @@ namespace Stratis.Bitcoin.Features.Api
         /// </summary>
         /// <param name="request">The request containing the loggers to modify.</param>
         /// <returns><see cref="Microsoft.AspNetCore.Mvc.OkResult"/></returns>
+        /// <response type="200">Log rules updated</response>
+        /// <response type="400">Invalid request, rule name doesn't exist, or unexpected error occurred</response>
         [HttpPut]
         [Route("logLevels")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
         public IActionResult UpdateLogLevel([FromBody] LogRulesRequest request)
         {
             Guard.NotNull(request, nameof(request));
@@ -606,8 +648,13 @@ namespace Stratis.Bitcoin.Features.Api
         /// Get the enabled log rules.
         /// </summary>
         /// <returns>A list of log rules.</returns>
+        /// <response type="200">Log rules retrieved</response>
+        /// <response type="400">Invalid request, or unexpected error occurred</response>
         [HttpGet]
         [Route("logRules")]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(IEnumerable<LogRuleModel>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
         public IActionResult GetLogRules()
         {
             // Checks the request is valid.
@@ -665,8 +712,13 @@ namespace Stratis.Bitcoin.Features.Api
         /// Get the currently running async loops/delegates/tasks for diagnostic purposes.
         /// </summary>
         /// <returns>A list of running async loops/delegates/tasks.</returns>
+        /// <response type="200">Async loops retrieved</response>
+        /// <response type="400">Invalid request, or unexpected error occurred</response>
         [HttpGet]
         [Route("asyncLoops")]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(IEnumerable<AsyncLoopModel>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
         public IActionResult GetAsyncLoops()
         {
             // Checks the request is valid.
@@ -697,8 +749,12 @@ namespace Stratis.Bitcoin.Features.Api
         /// Schedules data folder storing chain state in the <see cref="DataFolder"/> for deletion on the next graceful shutdown.
         /// </summary>
         /// <returns>Returns an <see cref="OkResult"/>.</returns>
+        /// <response type="200">Chain state scheduled for deletion</response>
+        /// <response type="500">Unexpected error occurred</response>
         [HttpDelete]
         [Route("dataFolder/chain")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult DeleteChain()
         {
             this.nodeSettings.DataFolder.ScheduleChainDeletion();

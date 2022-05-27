@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Mime;
 using System.Text;
 using CSharpFunctionalExtensions;
 using Microsoft.AspNetCore.Mvc;
@@ -294,7 +295,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         /// <response code="400">Invalid request, failed to build transaction, or could not broadcast transaction</response>
         [Route("call")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(BuildCallContractTransactionResponse), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult Call([FromBody] BuildCallContractTransactionRequest request)
         {

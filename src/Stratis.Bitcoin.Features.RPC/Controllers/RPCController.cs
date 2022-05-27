@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Mime;
 using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
@@ -9,6 +10,7 @@ using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using Stratis.Bitcoin.Controllers;
+using Stratis.Bitcoin.Features.RPC.Models;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 
@@ -98,6 +100,7 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
         /// <response code="500">Body is null</response>
         [Route("callByName")]
         [HttpPost]
+        [Produces(MediaTypeNames.Application.Json)]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.MethodNotAllowed)]
@@ -166,7 +169,8 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
         /// <response code="405">RPC is disabled</response>
         [Route("listMethods")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(IEnumerable<RpcCommandModel>), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.MethodNotAllowed)]
         public IActionResult ListMethods()

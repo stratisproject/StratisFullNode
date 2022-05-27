@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Mime;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -57,7 +58,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <response code="400">Unexpected exception occurred</response>
         [Route("reconstruct")]
         [HttpPut]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(string), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult Reconstruct()
         {
@@ -82,7 +84,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <response code="400">Unexpected exception occurred</response>
         [Route("members/current")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(FederationMemberDetailedModel), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetCurrentMemberInfo()
         {
@@ -156,7 +159,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <response code="400">Unexpected exception occurred</response>
         [Route("members")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(IEnumerable<FederationMemberModel>), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetMembers()
         {
@@ -197,7 +201,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <response code="400">Unexpected exception occurred</response>
         [Route("minerAtHeight")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(PubKey), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetPubkeyAtHeight([FromQuery(Name = "blockHeight")] int blockHeight)
         {
@@ -227,7 +232,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <response code="400">Unexpected exception occurred</response>
         [Route("federationAtHeight")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(IEnumerable<PubKey>), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetFederationAtHeight([FromQuery(Name = "blockHeight")] int blockHeight)
         {
