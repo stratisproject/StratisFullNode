@@ -45,7 +45,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         [Route("api/[controller]/getRawMempool")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public async Task<IActionResult> GetRawMempoolAsync()
         {
             try

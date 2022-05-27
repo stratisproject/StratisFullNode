@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -52,8 +53,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="400">Unexpected exception occurred</response>
         [Route("mnemonic")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(string), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public async Task<IActionResult> GenerateMnemonicAsync([FromQuery] string language = "English", int wordCount = 12,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -75,8 +76,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null</response>
         [Route("create")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(string), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.Conflict)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> CreateAsync([FromBody] WalletCreationRequest request,
@@ -97,8 +98,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null</response>
         [Route("signMessage")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(string), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> SignMessageAsync([FromBody] SignMessageRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
@@ -122,8 +123,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null</response>
         [Route("pubKey")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(string), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> GetPubKeyAsync([FromBody] PubKeyRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
@@ -147,8 +148,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null</response>
         [Route("verifyMessage")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(string), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> VerifyMessageAsync([FromBody] VerifyRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
@@ -175,7 +176,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         [Route("load")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.Forbidden)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
@@ -203,7 +204,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         [Route("recover")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType((int)HttpStatusCode.Conflict)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
@@ -232,7 +233,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         [Route("recover-via-extPubKey")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType((int)HttpStatusCode.Conflict)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
@@ -259,8 +260,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null</response>
         [Route("general-info")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(WalletGeneralInfoModel), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public Task<IActionResult> GetGeneralInfo([FromQuery] WalletName request,
             CancellationToken cancellationToken = default(CancellationToken))
@@ -275,8 +276,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <param name="request">The Transaction Count request Object</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
         /// <returns>Transaction Count</returns>
+        /// <response code="200">Returns transaction count</response>
+        /// <response code="400">Invalid request or unexpected exception occurred</response>
+        /// <response code="500">Request is null</response>
         [Route("transactionCount")]
         [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetTransactionCountAsync([FromQuery] WalletTransactionCountRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -298,6 +305,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null</response>
         [Route("history")]
         [HttpGet]
+        [ProducesResponseType(typeof(WalletHistoryModel), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult GetHistory([FromQuery] WalletHistoryRequest request)
         {
             return this.Execute(request, (req) => this.Json(this.walletService.GetHistory(req)));
@@ -314,6 +324,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null</response>
         [Route("balance")]
         [HttpGet]
+        [ProducesResponseType(typeof(WalletBalanceModel), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetBalanceAsync([FromQuery] WalletBalanceRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -337,6 +350,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null</response>
         [Route("received-by-address")]
         [HttpGet]
+        [ProducesResponseType(typeof(AddressBalanceModel), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetReceivedByAddressAsync([FromQuery] ReceivedByAddressRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -358,6 +374,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null</response>
         [Route("maxBalance")]
         [HttpGet]
+        [ProducesResponseType(typeof(MaxSpendableAmountModel), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetMaximumSpendableBalanceAsync([FromQuery] WalletMaximumBalanceRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -379,8 +398,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null</response>
         [Route("spendable-transactions")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(SpendableTransactionsModel), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> GetSpendableTransactionsAsync([FromQuery] SpendableTransactionsRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
@@ -403,8 +422,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null</response>
         [Route("estimate-txFee")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(Money), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> GetTransactionFeeEstimateAsync([FromBody] TxFeeEstimateRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
@@ -425,8 +444,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null</response>
         [Route("build-transaction")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(WalletBuildTransactionModel), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> BuildTransactionAsync([FromBody] BuildTransactionRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
@@ -442,8 +461,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <returns>The asynchronous task returning an <see cref="IActionResult"/>.</returns>
         [Route("build-interflux-transaction")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(WalletBuildTransactionModel), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> BuildInterFluxTransactionAsync([FromBody] BuildInterFluxTransactionRequest request)
         {
@@ -475,8 +494,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null</response>
         [Route("send-transaction")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(WalletSendTransactionModel), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.Forbidden)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> SendTransactionAsync([FromBody] SendTransactionRequest request,
@@ -492,8 +511,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <returns>A JSON object containing the available wallet name
         /// </returns>
         /// <param name="cancellationToken">The Cancellation Token</param>
+        /// <response code="200">Returns list of wallet names</response>
+        /// <response code="400">Invalid request, or unexpected exception occurred</response>
+        /// <response code="500">Request is null</response>
         [Route("list-wallets")]
         [HttpGet]
+        [ProducesResponseType(typeof(IEnumerable<string>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> ListWalletsAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             return await this.ExecuteAsAsync((object)null, cancellationToken, (req, token) =>
@@ -521,8 +546,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null</response>
         [Route("account")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(string), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.Forbidden)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> CreateNewAccountAsync([FromBody] GetUnusedAccountModel request,
@@ -554,8 +579,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null</response>
         [Route("accounts")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(IEnumerable<string>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> ListAccountsAsync([FromQuery] ListAccountsModel request,
             CancellationToken cancellationToken = default(CancellationToken))
@@ -580,8 +605,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null</response>
         [Route("unusedAddress")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(string), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> GetUnusedAddressAsync([FromQuery] GetUnusedAddressModel request,
             CancellationToken cancellationToken = default(CancellationToken))
@@ -609,8 +634,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null or cannot be parsed</response>
         [Route("unusedAddresses")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(IEnumerable<string>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> GetUnusedAddressesAsync([FromQuery] GetUnusedAddressesModel request,
             CancellationToken cancellationToken = default(CancellationToken))
@@ -642,8 +667,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null or cannot be parsed</response>
         [Route("newAddresses")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(IEnumerable<string>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> GetNewAddressesAsync([FromQuery] GetNewAddressesModel request,
             CancellationToken cancellationToken = default(CancellationToken))
@@ -670,6 +695,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null</response>
         [Route("addresses")]
         [HttpGet]
+        [ProducesResponseType(typeof(AddressesModel), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> GetAllAddressesAsync([FromQuery] GetAllAddressesModel request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -699,6 +727,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null</response>
         [Route("remove-transactions")]
         [HttpDelete]
+        [ProducesResponseType(typeof(IEnumerable<RemovedTransactionModel>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> RemoveTransactionsAsync([FromQuery] RemoveTransactionsModel request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -707,10 +738,16 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         }
 
         /// <summary>
-        /// Unloads a wallet from the node.
+        /// Unloads a wallet from the node
         /// </summary>
+        /// <param name="request">Unload wallet request</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>HTTP response</returns>
         [Route("remove-wallet")]
         [HttpDelete]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> RemoveWalletAsync([FromQuery] RemoveWalletModel request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -734,6 +771,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null</response>
         [Route("extPubKey")]
         [HttpGet]
+        [ProducesResponseType(typeof(string), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> GetExtPubKeyAsync([FromQuery] GetExtPubKeyModel request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -754,6 +794,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null</response>
         [Route("privateKey")]
         [HttpPost]
+        [ProducesResponseType(typeof(string), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> RetrievePrivateKeyAsync([FromBody] RetrievePrivateKeyModel request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -770,10 +813,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <param name="model">The Hash of the block to Sync From</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
         /// <returns>A value of Ok if the re-sync was successful.</returns>
+        /// <response code="200">Returns private key</response>
+        /// <response code="400">Invalid request, or unexpected exception occurred</response>
+        /// <response code="500">Request is null</response>
         [HttpPost]
         [Route("sync")]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> SyncAsync([FromBody] HashModel model,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -802,8 +849,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <returns>A value of Ok if the resync was successful.</returns>
         /// <response code="200">Resync requested</response>
         /// <response code="400">Invalid request</response>
+        /// <response code="500">Request is null</response>
         [HttpPost]
         [Route("sync-from-date")]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> SyncFromDateAsync([FromBody] WalletSyncRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -833,6 +884,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null</response>
         [Route("wallet-stats")]
         [HttpGet]
+        [ProducesResponseType(typeof(WalletStatsModel), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> WalletStatsAsync([FromQuery] WalletStatsRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -846,10 +900,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <param name="cancellationToken">The Cancellation Token</param>
         /// <response code="200">Returns transaction details</response>
         /// <response code="400">Invalid request, cannot broadcast transaction, or unexpected exception occurred</response>
-        /// <response code="403">No connected peers</response>
         /// <response code="500">Request is null</response>
         [HttpPost]
         [Route("splitCoins")]
+        [ProducesResponseType(typeof(WalletSendTransactionModel), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> SplitCoinsAsync([FromBody] SplitCoinsRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -861,8 +917,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
         /// <param name="request">An object containing the necessary parameters.</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
+        /// <response code="200">Returns transaction details</response>
+        /// <response code="400">Invalid request, cannot broadcast transaction, or unexpected exception occurred</response>
+        /// <response code="500">Request is null</response>
         [HttpPost]
         [Route("distribute-utxos")]
+        [ProducesResponseType(typeof(DistributeUtxoModel), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> DistributeUtxosAsync([FromBody] DistributeUtxosRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -876,8 +938,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <param name="request">Sweep request parameters</param>
         /// <param name="cancellationToken">Cancellaton token</param>
         /// <returns>HTTP response</returns>
+        /// <response code="200">Returns all sweep transaction hashes</response>
+        /// <response code="400">Invalid request, cannot broadcast transaction(s), or unexpected exception occurred</response>
+        /// <response code="500">Request is null</response>
         [HttpPost]
         [Route("sweep")]
+        [ProducesResponseType(typeof(IEnumerable<string>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> SweepAsync([FromBody] SweepRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -891,8 +959,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <param name="request">Partial signing request</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Unsigned transaction</returns>
+        /// <response code="200">Returns partially signed transaction</response>
+        /// <response code="400">Invalid request, or unexpected exception occurred</response>
+        /// <response code="500">Request is null</response>
         [Route("build-offline-sign-request")]
         [HttpPost]
+        [ProducesResponseType(typeof(BuildOfflineSignResponse), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> BuildOfflineSignRequestAsync([FromBody] BuildOfflineSignRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -906,9 +980,15 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <param name="request">Offline transaction sign request</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Built transaction</returns>
+        /// <response code="200">Returns fully signed transaction</response>
+        /// <response code="400">Invalid request, or unexpected exception occurred</response>
+        /// <response code="500">Request is null</response>
         // TODO: Make this support PSBT directly?
         [Route("offline-sign-request")]
         [HttpPost]
+        [ProducesResponseType(typeof(WalletBuildTransactionModel), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> OfflineSignRequestAsync([FromBody] OfflineSignRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -921,8 +1001,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <param name="request">Consolidation request parameters</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>HTTP response</returns>
+        /// <response code="200">Returns consolidate transaction hex</response>
+        /// <response code="400">Invalid request, or unexpected exception occurred</response>
+        /// <response code="500">Request is null</response>
         [HttpPost]
         [Route("consolidate")]
+        [ProducesResponseType(typeof(string), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> ConsolidateAsync([FromBody] ConsolidationRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
         {

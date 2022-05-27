@@ -61,7 +61,7 @@ namespace Stratis.Features.ExternalApi.Controllers
         [Route(EstimateConversionGasEndpoint)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult EstimateConversionGas()
         {
@@ -83,7 +83,7 @@ namespace Stratis.Features.ExternalApi.Controllers
         [Route(EstimateConversionFeeEndpoint)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult EstimateConversionFee()
         {
@@ -105,7 +105,7 @@ namespace Stratis.Features.ExternalApi.Controllers
         [Route(GasPriceEndpoint)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult GasPrice()
         {
@@ -127,7 +127,7 @@ namespace Stratis.Features.ExternalApi.Controllers
         [Route(StratisPriceEndpoint)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult StratisPrice()
         {
@@ -149,7 +149,7 @@ namespace Stratis.Features.ExternalApi.Controllers
         [Route(EthereumPriceEndpoint)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult EthereumPrice()
         {

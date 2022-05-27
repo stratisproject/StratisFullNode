@@ -58,7 +58,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [Route("reconstruct")]
         [HttpPut]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult Reconstruct()
         {
             try
@@ -83,7 +83,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [Route("members/current")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetCurrentMemberInfo()
         {
             try
@@ -157,7 +157,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [Route("members")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetMembers()
         {
             try
@@ -198,7 +198,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [Route("minerAtHeight")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetPubkeyAtHeight([FromQuery(Name = "blockHeight")] int blockHeight)
         {
             try
@@ -228,7 +228,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [Route("federationAtHeight")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetFederationAtHeight([FromQuery(Name = "blockHeight")] int blockHeight)
         {
             try

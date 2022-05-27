@@ -6,7 +6,10 @@ using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
+using NBitcoin;
+using Stratis.Bitcoin.Controllers.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using Script = NBitcoin.Script;
 
 namespace Stratis.Bitcoin.Features.Api
 {
@@ -51,6 +54,18 @@ namespace Stratis.Bitcoin.Features.Api
                     options.IncludeXmlComments(xmlPath, true);
                 }
             }
+            
+            options.CustomSchemaIds(type => type switch
+                {
+                    // resolve naming clash
+                    { } scriptType when scriptType == typeof(Stratis.Bitcoin.Controllers.Models.Script) => "HexEncodedScript",
+                    _ => type.ToString()
+                });
+            
+            // map custom types to openapi schema types
+            options.MapType<uint256>(() => new OpenApiSchema { Type = "string" });
+            options.MapType<Script>(() => new OpenApiSchema { Type = "string" });
+            options.MapType<Money>(() => new OpenApiSchema { Type = "int64" });
             
             options.DocumentFilter<CamelCaseRouteFilter>();
             options.DocumentFilter<AlphabeticalTagOrderingFilter>();

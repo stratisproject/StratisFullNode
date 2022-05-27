@@ -88,7 +88,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         [Route("account-addresses")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetAccountAddresses(string walletName)
         {
             if (string.IsNullOrWhiteSpace(walletName))
@@ -156,7 +156,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         [Route("history")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult GetHistory(GetHistoryRequest request)
         {
@@ -253,7 +253,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         [Route("create")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult Create([FromBody] BuildCreateContractTransactionRequest request)
         {
             if (!this.ModelState.IsValid)
@@ -295,7 +295,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         [Route("call")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult Call([FromBody] BuildCallContractTransactionRequest request)
         {
             if (!this.ModelState.IsValid)
@@ -337,7 +337,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         [Route("send-transaction")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult SendTransaction([FromBody] SendTransactionRequest request)
         {

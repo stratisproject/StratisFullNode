@@ -55,7 +55,7 @@ namespace Stratis.Bitcoin.Controllers
         [Route("disconnect")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult DisconnectPeer([FromBody] DisconnectPeerViewModel viewModel)
         {
             try
@@ -87,7 +87,7 @@ namespace Stratis.Bitcoin.Controllers
         [Route("setBan")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult SetBan([FromBody] SetBanPeerViewModel viewModel)
         {
             try
@@ -134,7 +134,7 @@ namespace Stratis.Bitcoin.Controllers
         [Route("getBans")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetBans()
         {
             try
@@ -163,7 +163,7 @@ namespace Stratis.Bitcoin.Controllers
         [Route("clearBanned")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult ClearBannedPeers([FromBody] bool corsProtection = true)
         {
             try

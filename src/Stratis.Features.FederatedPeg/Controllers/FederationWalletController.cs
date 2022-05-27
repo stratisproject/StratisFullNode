@@ -73,7 +73,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [Route(FederationWalletRouteEndPoint.GeneralInfo)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public IActionResult GetGeneralInfo()
         {
@@ -116,7 +116,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [Route(FederationWalletRouteEndPoint.Balance)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public IActionResult GetBalance()
         {
@@ -160,7 +160,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [Route(FederationWalletRouteEndPoint.History)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public IActionResult GetHistory([FromQuery] int maxEntriesToReturn)
         {
@@ -192,7 +192,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [HttpPost]
         [Route(FederationWalletRouteEndPoint.Sync)]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult Sync([FromBody] HashModel model)
         {
             if (!this.ModelState.IsValid)
@@ -221,7 +221,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [Route(FederationWalletRouteEndPoint.EnableFederation)]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult EnableFederation([FromBody] EnableFederationRequest request)
@@ -269,7 +269,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [Route(FederationWalletRouteEndPoint.RemoveTransactions)]
         [HttpDelete]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult RemoveTransactions([FromQuery] RemoveFederationTransactionsModel request)
         {

@@ -2,7 +2,10 @@
   "profiles": {
     "Stratis.CirrusMinerD": {
       "commandName": "Project",
-      "commandLineArgs": "-devmode=miner"
+      "commandLineArgs": "-devmode=miner",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
     },
     "Stratis.CirrusMinerD TestNet": {
       "commandName": "Project",

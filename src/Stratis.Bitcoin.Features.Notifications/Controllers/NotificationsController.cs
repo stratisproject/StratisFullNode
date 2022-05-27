@@ -40,7 +40,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Controllers
         [HttpGet]
         [Route("sync")]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult SyncFrom([FromQuery] string from)
         {
             if (string.IsNullOrEmpty(from))

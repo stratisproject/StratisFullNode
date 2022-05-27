@@ -56,7 +56,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [Route("polls/tip")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetPollsRepositoryTip()
         {
             try
@@ -92,7 +92,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [Route("polls/pending")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetPendingPolls([FromQuery] VoteKey voteType, [FromQuery] string pubKeyOfMemberBeingVotedOn = "")
         {
             try
@@ -123,7 +123,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [Route("polls/finished")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetFinishedPolls([FromQuery] VoteKey voteType, [FromQuery] string pubKeyOfMemberBeingVotedOn = "")
         {
             try
@@ -154,7 +154,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [Route("polls/executed")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetExecutedPolls([FromQuery] VoteKey voteType, [FromQuery] string pubKeyOfMemberBeingVotedOn = "")
         {
             try
@@ -184,7 +184,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [Route("polls/members/executed")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetExecutedPolls([FromQuery] string pubKeyOfMemberBeingVotedOn = "")
         {
             try
@@ -213,7 +213,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [Route("polls/expired/members")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetExpiredPollsMembers()
         {
             try
@@ -239,7 +239,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [Route("polls/expired/whitelist")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetExpiredPollsWhitelist()
         {
             try
@@ -265,7 +265,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [Route("whitelistedHashes")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetWhitelistedHashes()
         {
             try
@@ -292,7 +292,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [Route("scheduleVote-whitelistHash")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult VoteWhitelistHash([FromBody] HashModel request)
         {
@@ -310,7 +310,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [Route("scheduleVote-removeHash")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult VoteRemoveHash([FromBody] HashModel request)
         {
@@ -355,7 +355,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [Route("scheduledVotes")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetScheduledVotes()
         {
             try
@@ -384,7 +384,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [Route("scheduleVote-kickMember")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult VoteKickFederationMember([FromBody] KickFederationMemberModel model)
         {

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Versioning;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
@@ -141,6 +142,11 @@ namespace Stratis.Bitcoin.Features.Api
             app.UseRouting();
 
             app.UseCors("CorsPolicy");
+
+            if (env.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+            }
 
             // Register this before MVC and Swagger.
             app.UseMiddleware<NoCacheMiddleware>();

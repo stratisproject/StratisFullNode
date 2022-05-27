@@ -171,7 +171,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         [Route("api/[controller]/storage")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetStorage([FromQuery] GetStorageRequest request)
         {
             if (!this.ModelState.IsValid)
@@ -247,7 +247,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         [Route("api/[controller]/receipt")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetReceiptAPI([FromQuery] string txHash)
         {
             ReceiptResponse receiptResponse = this.GetReceiptRPC(txHash);
@@ -332,7 +332,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         [Route("api/[controller]/build-create")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult BuildCreateSmartContractTransaction([FromBody] BuildCreateContractTransactionRequest request)
         {
             if (!this.ModelState.IsValid)
@@ -363,7 +363,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         [Route("api/[controller]/build-call")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult BuildCallSmartContractTransaction([FromBody] BuildCallContractTransactionRequest request)
         {
             if (!this.ModelState.IsValid)
@@ -389,7 +389,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         [Route("api/[controller]/build-transaction")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult BuildTransaction([FromBody] BuildContractTransactionRequest request)
         {
             if (!this.ModelState.IsValid)
@@ -419,7 +419,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         [Route("api/[controller]/estimate-fee")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult EstimateFee([FromBody] ScTxFeeEstimateRequest request)
         {
             if (!this.ModelState.IsValid)
@@ -453,7 +453,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         [Route("api/[controller]/build-and-send-create")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.Forbidden)]
         public async Task<IActionResult> BuildAndSendCreateSmartContractTransactionAsync([FromBody] BuildCreateContractTransactionRequest request)
         {
@@ -506,7 +506,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         [Route("api/[controller]/build-and-send-call")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.Forbidden)]
         public async Task<IActionResult> BuildAndSendCallSmartContractTransactionAsync([FromBody] BuildCallContractTransactionRequest request)
         {
@@ -560,7 +560,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         [Route("api/[controller]/local-call")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult LocalCallSmartContractTransaction([FromBody] LocalCallContractRequest request)
         {

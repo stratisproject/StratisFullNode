@@ -82,8 +82,8 @@ namespace Stratis.Bitcoin.Connection
         /// <response code="400">An exception occurred</response>
         [Route("api/[controller]/addNode")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(bool), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult AddNodeAPI([FromQuery] string endpoint, string command)
         {
             try
@@ -161,8 +161,8 @@ namespace Stratis.Bitcoin.Connection
         /// <response code="400">Unexpected exception occurred</response>
         [Route("api/[controller]/getPeerInfo")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(IEnumerable<PeerNodeModel>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetPeerInfoAPI()
         {
             try

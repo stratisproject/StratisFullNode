@@ -49,8 +49,8 @@ namespace Stratis.Features.Collateral
         /// <response code="400">Unexpected exception occurred</response>
         [Route(CollateralRouteEndPoint.JoinFederation)]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(JoinFederationResponseModel), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> JoinFederationAsync([FromBody] JoinFederationRequestModel request, CancellationToken cancellationToken = default)
         {

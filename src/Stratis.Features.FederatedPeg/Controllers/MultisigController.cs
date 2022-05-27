@@ -49,7 +49,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [Route("build-transaction")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult BuildTransaction([FromBody] BuildMultisigTransactionRequest request)
         {

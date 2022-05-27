@@ -31,7 +31,7 @@ namespace Stratis.Bitcoin.Controllers
         [Route("list")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult ListSupportedContractAddresses(NetworkType networkType)
         {

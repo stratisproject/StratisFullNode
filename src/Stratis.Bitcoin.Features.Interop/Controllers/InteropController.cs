@@ -78,7 +78,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [Route("initializeInterflux")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult InitializeInterflux([FromBody] InitializeInterfluxRequestModel model)
         {
@@ -106,7 +106,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [Route("configuration")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult Configuration(DestinationChain destinationChain)
         {
@@ -124,7 +124,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [Route("state")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult InteropState()
         {
@@ -153,7 +153,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [Route("request")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult InteropStatusBurnRequests([FromBody] string requestId)
         {
@@ -175,7 +175,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [Route("burns")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult InteropStatusBurnRequests()
         {
@@ -193,7 +193,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [Route("mints")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult InteropStatusMintRequests()
         {
@@ -211,7 +211,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [Route("replenishments")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult InteropReplenishments()
         {
@@ -229,7 +229,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [Route("request/delete")]
         [HttpDelete]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult DeleteConversionRequest(string requestId)
         {
@@ -253,7 +253,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [Route("status/votes")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult InteropStatusVotes()
         {
@@ -294,7 +294,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [Route("owners")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> OwnersAsync(DestinationChain destinationChain)
         {
@@ -326,7 +326,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [Route("addOwner")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> AddOwnerAsync(DestinationChain destinationChain, string newOwnerAddress, int gasPrice)
         {
@@ -362,7 +362,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [Route("removeOwner")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> RemoveOwnerAsync(DestinationChain destinationChain, string existingOwnerAddress, int gasPrice)
         {
@@ -398,7 +398,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [Route("confirmTransaction")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> ConfirmTransactionAsync(DestinationChain destinationChain, int transactionId, int gasPrice)
         {
@@ -432,7 +432,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [Route("changeRequirement")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> ChangeRequirementAsync(DestinationChain destinationChain, int requirement, int gasPrice)
         {
@@ -468,7 +468,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [Route("multiSigTransaction")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> MultisigTransactionAsync(DestinationChain destinationChain, int transactionId, bool raw)
         {
@@ -511,7 +511,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [Route("multiSigConfirmations")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> MultisigConfirmationsAsync(DestinationChain destinationChain, int transactionId)
         {
@@ -553,7 +553,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [Route("balance")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> BalanceAsync(DestinationChain destinationChain, string account)
         {
@@ -584,7 +584,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [Route("erc20Balance")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> Erc20BalanceAsync(DestinationChain destinationChain, string account, string contractAddress)
         {
@@ -608,7 +608,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [Route("requests/delete")]
         [HttpDelete]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult DeleteConversionRequests()
         {
@@ -628,7 +628,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [Route("requests/setState")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult SetConversionRequestState([FromBody] SetConversionRequestStateModel model)
         {
@@ -667,7 +667,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [Route("requests/reprocessBurn")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult ReprocessBurnRequest([FromBody] ReprocessBurnRequestModel model)
         {
@@ -693,7 +693,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [Route("requests/pushVote")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult PushVoteManually([FromBody] PushManualVoteForRequest model)
         {
@@ -718,7 +718,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [Route("resetScanHeight")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult ResetScanHeight([FromBody] ResetScanHeightModel model)
         {
@@ -744,7 +744,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [Route("decodeInterFluxTransaction")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult DecodeInterFluxTransaction(string hex)
         {

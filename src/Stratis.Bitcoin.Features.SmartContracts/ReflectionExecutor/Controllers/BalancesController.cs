@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -39,8 +40,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <param name="blockHeight">Block height at which to scan</param>
         /// <param name="amount">Token amount</param>
         /// <returns></returns>
+        /// <response code="200">Returns list of addresses</response>
+        /// <response code="500">Unexpected exception occurred</response>
         [Route("over-amount-at-height")]
         [HttpGet]
+        [ProducesResponseType(typeof(IEnumerable<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult GetBalancesOverAmount(int blockHeight, decimal amount)
         {
             Money thresholdBalance = Money.Coins(amount);

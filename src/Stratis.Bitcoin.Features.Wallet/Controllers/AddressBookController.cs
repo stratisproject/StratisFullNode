@@ -47,8 +47,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">The request is null</response>
         [Route("address")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(AddressBookEntryModel), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.Conflict)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult AddAddress([FromBody]AddressBookEntryRequest request)
@@ -90,8 +90,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">The label is null or empty</response>
         [Route("address")]
         [HttpDelete]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(AddressBookEntryModel), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult RemoveAddress([FromQuery]string label)
@@ -133,8 +133,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="404">Address book was not found</response>
         [Route("")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(AddressBookModel), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public IActionResult GetAddressBook([FromQuery]int? skip, int? take)
         {

@@ -62,7 +62,7 @@ namespace Stratis.Bitcoin.Features.Consensus
         [Route("api/[controller]/deploymentFlags")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult DeploymentFlags()
         {
             try
@@ -95,7 +95,7 @@ namespace Stratis.Bitcoin.Features.Consensus
         [Route("api/[controller]/lockedInDeployments")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult LockedInDeployments()
         {
             try
@@ -134,7 +134,7 @@ namespace Stratis.Bitcoin.Features.Consensus
         [Route("api/[controller]/getBestBlockHash")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetBestBlockHashAPI()
         {
             try
@@ -184,7 +184,7 @@ namespace Stratis.Bitcoin.Features.Consensus
         [Route("api/[controller]/getBlockHash")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetBlockHashAPI([FromQuery] int height)
         {
             try
@@ -208,7 +208,7 @@ namespace Stratis.Bitcoin.Features.Consensus
         [Route("api/[controller]/tip")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult ConsensusTip()
         {
             try

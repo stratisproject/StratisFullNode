@@ -99,7 +99,7 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
         [Route("callByName")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.MethodNotAllowed)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult CallByName([FromBody]JObject body)
@@ -167,7 +167,7 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
         [Route("listMethods")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.MethodNotAllowed)]
         public IActionResult ListMethods()
         {

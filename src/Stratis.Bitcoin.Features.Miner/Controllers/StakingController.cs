@@ -63,7 +63,7 @@ namespace Stratis.Bitcoin.Features.Miner.Controllers
         [Route("getStakingInfo")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.MethodNotAllowed)]
         public IActionResult GetStakingInfo()
         {
@@ -95,7 +95,7 @@ namespace Stratis.Bitcoin.Features.Miner.Controllers
         [Route("startStaking")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.MethodNotAllowed)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult StartStaking([FromBody]StartStakingRequest request)
@@ -148,7 +148,7 @@ namespace Stratis.Bitcoin.Features.Miner.Controllers
         [Route("startMultiStaking")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.MethodNotAllowed)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult StartMultiStaking([FromBody] StartMultiStakingRequest request)
@@ -206,7 +206,7 @@ namespace Stratis.Bitcoin.Features.Miner.Controllers
         [Route("stopStaking")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.MethodNotAllowed)]
         public IActionResult StopStaking([FromBody] bool corsProtection = true)
         {

@@ -66,7 +66,7 @@ namespace Stratis.Bitcoin.Features.Miner.Controllers
         [Route("generate")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.Forbidden)]
         [ProducesResponseType((int)HttpStatusCode.MethodNotAllowed)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
@@ -123,7 +123,7 @@ namespace Stratis.Bitcoin.Features.Miner.Controllers
         [Route("stopMining")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult StopMining([FromBody] bool corsProtection = true)
         {
             try

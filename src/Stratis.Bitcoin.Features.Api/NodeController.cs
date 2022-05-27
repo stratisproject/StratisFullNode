@@ -225,7 +225,7 @@ namespace Stratis.Bitcoin.Features.Api
         [Route("getBlockHeader")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public IActionResult GetBlockHeader([FromQuery] string hash, bool isJsonFormat = true)
         {
@@ -531,7 +531,7 @@ namespace Stratis.Bitcoin.Features.Api
         [Route("rewind")]
         [HttpPut]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult Rewind([FromQuery] int height)
         {
             try
