@@ -7,7 +7,7 @@ using Stratis.Bitcoin.Utilities.JsonErrors;
 namespace Stratis.Bitcoin.Features.Notifications.Controllers
 {
     /// <summary>
-    /// Controller providing operations on blocks and transactions notifications.
+    /// Manage block and transaction notifications
     /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
@@ -40,7 +40,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Controllers
         [HttpGet]
         [Route("sync")]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult SyncFrom([FromQuery] string from)
         {
             if (string.IsNullOrEmpty(from))

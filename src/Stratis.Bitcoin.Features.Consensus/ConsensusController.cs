@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Mime;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -16,7 +17,7 @@ using Stratis.Bitcoin.Utilities.JsonErrors;
 namespace Stratis.Bitcoin.Features.Consensus
 {
     /// <summary>
-    /// A <see cref="FeatureController"/> that provides API and RPC methods from the consensus loop.
+    /// Retrieve consensus data
     /// </summary>
     [ApiVersion("1")]
     public class ConsensusController : FeatureController
@@ -59,10 +60,11 @@ namespace Stratis.Bitcoin.Features.Consensus
         /// Returns an <see cref="ErrorResult"/> if the method fails.</returns>
         /// <response code="200">Returns the list of deployment flags</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("api/[controller]/deploymentflags")]
+        [Route("api/[controller]/deploymentFlags")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(IEnumerable<ThresholdStateModel>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult DeploymentFlags()
         {
             try
@@ -92,10 +94,11 @@ namespace Stratis.Bitcoin.Features.Consensus
         /// Returns an <see cref="ErrorResult"/> if the method fails.</returns>
         /// <response code="200">Returns the list of locked in or active deployments.</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("api/[controller]/lockedindeployments")]
+        [Route("api/[controller]/lockedInDeployments")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(IEnumerable<ThresholdActivationModel>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult LockedInDeployments()
         {
             try
@@ -131,10 +134,11 @@ namespace Stratis.Bitcoin.Features.Consensus
         /// <remarks>This is an API implementation of an RPC call.</remarks>
         /// <response code="200">Returns the block hash</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("api/[controller]/getbestblockhash")]
+        [Route("api/[controller]/getBestBlockHash")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(uint256), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetBestBlockHashAPI()
         {
             try
@@ -181,10 +185,11 @@ namespace Stratis.Bitcoin.Features.Consensus
         /// <remarks>This is an API implementation of an RPC call.</remarks>
         /// <response code="200">Returns the block hash</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("api/[controller]/getblockhash")]
+        [Route("api/[controller]/getBlockHash")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(uint256), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetBlockHashAPI([FromQuery] int height)
         {
             try
@@ -207,8 +212,9 @@ namespace Stratis.Bitcoin.Features.Consensus
         /// <response code="400">Unexpected exception occurred</response>
         [Route("api/[controller]/tip")]
         [HttpGet]
+        [Produces(MediaTypeNames.Application.Json)]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult ConsensusTip()
         {
             try

@@ -10,7 +10,7 @@ using Stratis.Bitcoin.Utilities.JsonErrors;
 namespace Stratis.Bitcoin.Features.WatchOnlyWallet.Controllers
 {
     /// <summary>
-    /// Controller providing operations on a watch-only wallet.
+    /// Monitor wallet addresses and their transactions
     /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
@@ -39,7 +39,7 @@ namespace Stratis.Bitcoin.Features.WatchOnlyWallet.Controllers
         [Route("watch")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.Conflict)]
         public IActionResult Watch([FromBody]string address)
         {
@@ -69,7 +69,7 @@ namespace Stratis.Bitcoin.Features.WatchOnlyWallet.Controllers
         /// <response code="400">Unexpected exception occurred</response>
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetWatchOnlyWallet()
         {
             try

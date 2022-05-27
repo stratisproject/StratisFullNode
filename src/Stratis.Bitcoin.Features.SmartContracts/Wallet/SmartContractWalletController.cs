@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Mime;
 using System.Text;
 using CSharpFunctionalExtensions;
 using Microsoft.AspNetCore.Mvc;
@@ -21,6 +22,9 @@ using Stratis.SmartContracts.Core.Receipts;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
 {
+    /// <summary>
+    /// Analyze and perform smart contract interactions using a wallet loaded on the node
+    /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
     public sealed class SmartContractWalletController : Controller
@@ -85,7 +89,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         [Route("account-addresses")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetAccountAddresses(string walletName)
         {
             if (string.IsNullOrWhiteSpace(walletName))
@@ -153,7 +157,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         [Route("history")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult GetHistory(GetHistoryRequest request)
         {
@@ -250,7 +254,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         [Route("create")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult Create([FromBody] BuildCreateContractTransactionRequest request)
         {
             if (!this.ModelState.IsValid)
@@ -291,8 +295,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         /// <response code="400">Invalid request, failed to build transaction, or could not broadcast transaction</response>
         [Route("call")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(BuildCallContractTransactionResponse), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult Call([FromBody] BuildCallContractTransactionRequest request)
         {
             if (!this.ModelState.IsValid)
@@ -334,7 +339,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         [Route("send-transaction")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult SendTransaction([FromBody] SendTransactionRequest request)
         {

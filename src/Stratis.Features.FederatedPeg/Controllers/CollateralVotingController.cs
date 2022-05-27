@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -12,6 +13,9 @@ using Stratis.Bitcoin.Utilities.ModelStateErrors;
 
 namespace Stratis.Features.FederatedPeg.Controllers
 {
+    /// <summary>
+    /// Vote on collateral federation members
+    /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
     public class CollateralVotingController : Controller
@@ -33,14 +37,15 @@ namespace Stratis.Features.FederatedPeg.Controllers
             this.logger = LogManager.GetCurrentClassLogger();
         }
 
-        /// <summary>Schedules a vote to kick a federation member.</summary>
+        /// <summary>Schedules a vote to add or kick a federation member.</summary>
         /// <param name="request">See <see cref="CollateralFederationMemberModel"/>.</param>
-        /// <response code="400">Not yet implemented</response>
+        /// <response code="400">Invalid request</response>
         /// <response code="500">Request is null</response>
-        /// <returns>See <see cref="cref="IActionResult"/>.</returns>
-        [Route("schedulevote-kickfedmember")]
+        /// <returns>HTTP response</returns>
+        [Route("scheduleVote-kickFedMember")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult VoteKickFedMember([FromBody] CollateralFederationMemberModel request)
         {

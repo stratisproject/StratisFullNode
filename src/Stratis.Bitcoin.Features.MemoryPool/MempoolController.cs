@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Mime;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -12,7 +13,7 @@ using Stratis.Bitcoin.Utilities.JsonErrors;
 namespace Stratis.Bitcoin.Features.MemoryPool
 {
     /// <summary>
-    /// Controller providing operations on the Mempool.
+    /// Retrieve information about unconfirmed transactions
     /// </summary>
     [ApiVersion("1")]
     public class MempoolController : FeatureController
@@ -40,12 +41,13 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// Gets a hash of each transaction in the memory pool. In other words, a list of the TX IDs for all the transactions in the mempool are retrieved.
         /// </summary>
         /// <returns>Json formatted <see cref="List{uint256}"/> containing the memory pool contents. Returns <see cref="IActionResult"/> formatted error if fails.</returns>
-        /// <response code="200">Returns memory pool transactions</response>
+        /// <response code="200">Returns memory pool transaction hashes</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("api/[controller]/getrawmempool")]
+        [Route("api/[controller]/getRawMempool")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(IEnumerable<uint256>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public async Task<IActionResult> GetRawMempoolAsync()
         {
             try

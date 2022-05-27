@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Mime;
 using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
@@ -9,13 +10,14 @@ using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using Stratis.Bitcoin.Controllers;
+using Stratis.Bitcoin.Features.RPC.Models;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 
 namespace Stratis.Bitcoin.Features.RPC.Controllers
 {
     /// <summary>
-    /// Controller providing API operations on the RPC feature.
+    /// Execute RPC operations
     /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
@@ -96,10 +98,11 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
         /// <response code="400">An exception occurred</response>
         /// <response code="405">RPC is disabled</response>
         /// <response code="500">Body is null</response>
-        [Route("callbyname")]
+        [Route("callByName")]
         [HttpPost]
+        [Produces(MediaTypeNames.Application.Json)]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.MethodNotAllowed)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult CallByName([FromBody]JObject body)
@@ -164,10 +167,11 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
         /// <response code="200">Returns available methods</response>
         /// <response code="400">Unexpected exception occurred</response>
         /// <response code="405">RPC is disabled</response>
-        [Route("listmethods")]
+        [Route("listMethods")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(IEnumerable<RpcCommandModel>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.MethodNotAllowed)]
         public IActionResult ListMethods()
         {

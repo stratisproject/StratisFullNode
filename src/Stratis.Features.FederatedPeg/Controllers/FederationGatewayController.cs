@@ -25,7 +25,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
 {
     public static class FederationGatewayRouteEndPoint
     {
-        public const string DeleteSuspended = "transfers/deletesuspended";
+        public const string DeleteSuspended = "transfers/deleteSuspended";
         public const string GetMaturedBlockDeposits = "deposits";
         public const string GetFederationInfo = "info";
         public const string GetFederationMemberInfo = "member/info";
@@ -34,13 +34,13 @@ namespace Stratis.Features.FederatedPeg.Controllers
         public const string FederationMemberIpReplace = "member/ip/replace";
         public const string GetTransferByDepositIdEndpoint = "transfer";
         public const string GetTransfersPartialEndpoint = "transfers/pending";
-        public const string GetTransfersFullySignedEndpoint = "transfers/fullysigned";
+        public const string GetTransfersFullySignedEndpoint = "transfers/fullySigned";
         public const string GetTransfersSuspendedEndpoint = "transfers/suspended";
         public const string VerifyPartialTransactionEndpoint = "transfer/verify";
     }
 
     /// <summary>
-    /// API used to communicate across to the counter chain.
+    /// Communicate across to the counter chain
     /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
@@ -97,7 +97,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [Route(FederationGatewayRouteEndPoint.GetMaturedBlockDeposits)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> GetMaturedBlockDepositsAsync([FromQuery(Name = "blockHeight")] int blockHeight)
         {
@@ -122,7 +122,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [Route(FederationGatewayRouteEndPoint.GetTransfersSuspendedEndpoint)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult GetTransfersSuspended([FromQuery(Name = "depositId")] string depositId = "", [FromQuery(Name = "transactionId")] string transactionId = "")
         {
@@ -145,7 +145,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [Route(FederationGatewayRouteEndPoint.GetTransfersPartialEndpoint)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult GetTransfersPending([FromQuery(Name = "depositId")] string depositId = "", [FromQuery(Name = "transactionId")] string transactionId = "")
         {
@@ -168,7 +168,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [Route(FederationGatewayRouteEndPoint.GetTransfersFullySignedEndpoint)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult GetTransfers([FromQuery(Name = "depositId")] string depositId = "", [FromQuery(Name = "transactionId")] string transactionId = "")
         {
@@ -191,7 +191,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [Route(FederationGatewayRouteEndPoint.GetTransferByDepositIdEndpoint)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> GetTransferByDepositIdAsync([FromQuery(Name = "depositId")] string depositId)
         {
@@ -224,7 +224,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [Route(FederationGatewayRouteEndPoint.GetFederationMemberInfo)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetFederationMemberInfo()
         {
             try
@@ -281,7 +281,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [Route(FederationGatewayRouteEndPoint.GetFederationInfo)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetInfo()
         {
             try
@@ -323,7 +323,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [Route(FederationGatewayRouteEndPoint.FederationMemberIpAdd)]
         [HttpPut]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult AddFederationMemberIp([FromBody] FederationMemberIpModel model)
         {
             if (!this.ModelState.IsValid)
@@ -356,7 +356,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [Route(FederationGatewayRouteEndPoint.FederationMemberIpRemove)]
         [HttpPut]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult RemoveFederationMemberIp([FromBody] FederationMemberIpModel model)
         {
             if (!this.ModelState.IsValid)
@@ -389,7 +389,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [Route(FederationGatewayRouteEndPoint.FederationMemberIpReplace)]
         [HttpPut]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult ReplaceFederationMemberIp([FromBody] ReplaceFederationMemberIpModel model)
         {
             if (!this.ModelState.IsValid)
@@ -424,7 +424,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [Route(FederationGatewayRouteEndPoint.VerifyPartialTransactionEndpoint)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> VerifyPartialTransactionAsync([FromQuery(Name = "depositIdTransactionId")] string depositIdTransactionId)
         {
@@ -445,7 +445,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [Route(FederationGatewayRouteEndPoint.DeleteSuspended)]
         [HttpDelete]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult DeleteSuspendedTransfers([FromBody] DeleteSuspendedTransferModel model)
         {
             (bool result, string message) deleteResult = this.crossChainTransferStore.DeleteSuspendedTransfer(new uint256(model.DepositId));

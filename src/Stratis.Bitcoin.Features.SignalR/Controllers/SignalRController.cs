@@ -1,11 +1,12 @@
 using System.Net;
+using System.Net.Mime;
 using Microsoft.AspNetCore.Mvc;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.SignalR.Controllers
 {
     /// <summary>
-    /// Controller for connecting to SignalR.
+    /// Retrieve SignalR connection settings
     /// </summary>
     [Route("api/[controller]")]
     public class SignalRController : Controller
@@ -26,6 +27,7 @@ namespace Stratis.Bitcoin.Features.SignalR.Controllers
         /// <response code="200">Returns connection info</response>
         [Route("getConnectionInfo")]
         [HttpGet]
+        [Produces(MediaTypeNames.Application.Json)]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         public IActionResult GetConnectionInfo()
         {

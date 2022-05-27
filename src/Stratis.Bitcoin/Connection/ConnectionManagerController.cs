@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Mime;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.Controllers;
@@ -13,7 +14,7 @@ using Stratis.Bitcoin.Utilities.JsonErrors;
 namespace Stratis.Bitcoin.Connection
 {
     /// <summary>
-    /// A <see cref="FeatureController"/> that implements API and RPC methods for the connection manager.
+    /// Manage connections to other nodes
     /// </summary>
     public class ConnectionManagerController : FeatureController
     {
@@ -80,10 +81,11 @@ namespace Stratis.Bitcoin.Connection
         /// <exception cref="ArgumentException">Thrown if either command not supported/empty or if endpoint is invalid/empty.</exception>
         /// <response code="200">The node was added</response>
         /// <response code="400">An exception occurred</response>
-        [Route("api/[controller]/addnode")]
+        [Route("api/[controller]/addNode")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(bool), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult AddNodeAPI([FromQuery] string endpoint, string command)
         {
             try
@@ -159,10 +161,11 @@ namespace Stratis.Bitcoin.Connection
         /// <returns>Json formatted <see cref="List{PeerNodeModel}"/> of connected nodes. Returns <see cref="IActionResult"/> formatted error if fails.</returns>
         /// <response code="200">Returns peer information list</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("api/[controller]/getpeerinfo")]
+        [Route("api/[controller]/getPeerInfo")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(IEnumerable<PeerNodeModel>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetPeerInfoAPI()
         {
             try

@@ -19,6 +19,11 @@
     <Authors>Stratis Group Ltd.</Authors>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+  </PropertyGroup>
+
   <ItemGroup>
     <Compile Remove="Stratis.Bitcoin.Features.Miner\**" />
     <EmbeddedResource Remove="Stratis.Bitcoin.Features.Miner\**" />
@@ -40,11 +45,6 @@
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
     <DefineConstants>$(DefineConstants);NETCORE</DefineConstants>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <NoWarn>1701;1702;1705;IDE0008;</NoWarn>
-    <DocumentationFile></DocumentationFile>
   </PropertyGroup>
 
 </Project>

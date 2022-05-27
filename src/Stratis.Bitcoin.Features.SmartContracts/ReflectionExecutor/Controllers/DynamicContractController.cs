@@ -1,18 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Net;
+using System.Net.Mime;
 using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NBitcoin;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Models;
+using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Loader;
 using Stratis.SmartContracts.Core.State;
@@ -20,8 +20,7 @@ using Stratis.SmartContracts.Core.State;
 namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
 {
     /// <summary>
-    /// Controller for receiving dynamically generated contract calls.
-    /// Maps calls from a json object to a request model and proxies this to the correct controller method.
+    /// Execute dynamically generated smart contract calls
     /// </summary>
     public class DynamicContractController : Controller
     {
@@ -59,9 +58,15 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <param name="address">The address of the contract to call.</param>
         /// <param name="method">The name of the method on the contract being called.</param>
         /// <returns>A model of the transaction data, if created and broadcast successfully.</returns>
-        /// <exception cref="Exception"></exception>
+        /// <response code="200">Returns build transaction response</response>
+        /// <response code="400">Invalid request, failed to build transaction, or could not broadcast transaction</response>
+        /// <response code="500">Method does not exist, parameters do not match signature, or something unexpected happened</response>
         [Route("api/contract/{address}/method/{method}")]
         [HttpPost]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(BuildCallContractTransactionResponse), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public Task<IActionResult> CallMethod([FromRoute] string address, [FromRoute] string method, [FromBody] JObject requestData)
         {
             var contractCode = this.stateRoot.GetCode(address.ToUint160(this.network));
@@ -97,8 +102,15 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <param name="address">The address of the contract to query.</param>
         /// <param name="property">The name of the property to query.</param>
         /// <returns>A model of the query result.</returns>
+        /// <response code="200">Returns call response</response>
+        /// <response code="400">Invalid request</response>
+        /// <response code="500">Unable to deserialize method parameters</response>
         [Route("api/contract/{address}/property/{property}")]
         [HttpGet]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(LocalExecutionResponse), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult LocalCallProperty([FromRoute] string address, [FromRoute] string property)
         {
             LocalCallContractRequest request = this.MapLocalCallRequest(address, property, this.Request.Headers);

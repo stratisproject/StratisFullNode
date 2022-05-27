@@ -1,11 +1,12 @@
 ﻿using System.Net;
+using System.Net.Mime;
 using Microsoft.AspNetCore.Mvc;
 using Stratis.Bitcoin.AsyncWork;
 
 namespace Stratis.Bitcoin.Controllers
 {
     /// <summary>
-    /// Controller providing HTML Dashboard
+    /// Retrieve stats for the running node
     /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
@@ -21,13 +22,14 @@ namespace Stratis.Bitcoin.Controllers
         }
 
         /// <summary>
-        /// Gets a web page containing the last log output for this node.
+        /// Retrieves the last log output for the node.
         /// </summary>
-        /// <returns>text/html content</returns>
-        /// <response code="200">Returns webpage result</response>
+        /// <returns>Full node log output</returns>
+        /// <response code="200">Full node stats returned</response>
         [HttpGet]
-        [Route("Stats")]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [Route("stats")]
+        [Produces(MediaTypeNames.Text.Plain)]
+        [ProducesResponseType(typeof(string), (int)HttpStatusCode.OK)]
         public IActionResult Stats()
         {
             string content = (this.fullNode as FullNode).LastLogOutput;
@@ -35,13 +37,14 @@ namespace Stratis.Bitcoin.Controllers
         }
 
         /// <summary>
-        /// Returns a web page with Async Loops statistics
+        /// Retrieves async loop debug data. An async loop is a task that is run on a timer at a fixed interval, optionally with a startup delay.
         /// </summary>
-        /// <returns>text/html content</returns>
-        /// <response code="200">Returns webpage result</response>
+        /// <returns>Async loop debug data</returns>
+        /// <response code="200">Async loop stats returned</response>
         [HttpGet]
-        [Route("AsyncLoopsStats")]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [Route("asyncLoopsStats")]
+        [Produces(MediaTypeNames.Text.Plain)]
+        [ProducesResponseType(typeof(string), (int)HttpStatusCode.OK)]
         public IActionResult AsyncLoopsStats()
         {
             return this.Content(this.asyncProvider.GetStatistics(false));

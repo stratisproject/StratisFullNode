@@ -16,10 +16,12 @@ namespace Stratis.Features.Collateral
 {
     public static class CollateralRouteEndPoint
     {
-        public const string JoinFederation = "joinfederation";
+        public const string JoinFederation = "joinFederation";
     }
 
-    /// <summary>Controller providing operations on collateral federation members.</summary>
+    /// <summary>
+    /// Put up collateral to join a federation
+    /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
     public sealed class CollateralController : Controller
@@ -47,8 +49,8 @@ namespace Stratis.Features.Collateral
         /// <response code="400">Unexpected exception occurred</response>
         [Route(CollateralRouteEndPoint.JoinFederation)]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(JoinFederationResponseModel), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> JoinFederationAsync([FromBody] JoinFederationRequestModel request, CancellationToken cancellationToken = default)
         {

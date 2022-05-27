@@ -104,7 +104,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// </summary>
         /// <returns>See <see cref="GetUTXOsResponseModel"/>.</returns>
         /// <param name="address">Address to get UTXOs for.</param>
-        [Route("getutxosforaddress")]
+        [Route("getUtxosForAddress")]
         [HttpGet]
         public GetUTXOsResponseModel GetUTXOsForAddress([FromQuery] string address)
         {
@@ -185,10 +185,10 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// <returns>A result object containing the balance for each requested address and if so, a message stating why the indexer is not queryable.</returns>
         /// <response code="200">Returns balances for the requested addresses</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("getaddressbalance")]
+        [Route("getAddressBalance")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetAddressBalance(string address)
         {
             long money = -1;
@@ -225,7 +225,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// <exception cref="ArgumentException">Thrown if hash is empty.</exception>
         /// <exception cref="ArgumentNullException">Thrown if logger is not provided.</exception>
         /// <remarks>Binary serialization is not supported with this method.</remarks>
-        [Route("getblockheader")]
+        [Route("getBlockHeader")]
         [HttpGet]
         public BlockHeaderModel GetBlockHeader([FromQuery] string hash)
         {
@@ -260,7 +260,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// <exception cref="ArgumentNullException">Thrown if fullNode, network, or chain are not available.</exception>
         /// <exception cref="ArgumentException">Thrown if trxid is empty or not a valid<see cref="uint256"/>.</exception>
         /// <remarks>Requires txindex=1, otherwise only txes that spend or create UTXOs for a wallet can be returned.</remarks>
-        [Route("getrawtransaction")]
+        [Route("getRawTransaction")]
         [HttpGet]
         public RawTxModel GetRawTransaction([FromQuery] string trxid)
         {
@@ -305,7 +305,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         [Route("send-transaction")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.Forbidden)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> SendTransactionAsync([FromBody] SendTransactionRequest request,
@@ -321,7 +321,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// <returns>Json formatted <see cref="ValidatedAddress"/> containing a boolean indicating address validity. Returns <see cref="Microsoft.AspNetCore.Mvc.IActionResult"/> formatted error if fails.</returns>
         /// <exception cref="ArgumentException">Thrown if address provided is empty.</exception>
         /// <exception cref="ArgumentNullException">Thrown if network is not provided.</exception>
-        [Route("validateaddress")]
+        [Route("validateAddress")]
         [HttpGet]
         public ValidatedAddress ValidateAddress([FromQuery] string address)
         {
@@ -478,7 +478,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         [Route("receipt")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public ReceiptResponse GetReceiptAPI([FromQuery] string txHash)
         {
             ReceiptResponse receiptResponse;
@@ -522,7 +522,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         [Route("local-call")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult LocalCallSmartContractTransaction([FromBody] LocalCallContractRequest request)
         {
@@ -585,7 +585,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         [Route("watch-nft-contract")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public void WatchNFTContract([FromQuery] string contractAddress)
         {
             this.NFTTransferIndexer.WatchNFTContract(contractAddress);
@@ -594,7 +594,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         [Route("watch-nft-contracts")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult WatchNFTContracts([FromBody] List<string> contractAddresses)
         {
             foreach (string contractAddress in contractAddresses)
@@ -608,7 +608,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         [Route("unwatch-nft-contract")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public void UnwatchNFTContract([FromQuery] string contractAddress)
         {
             this.NFTTransferIndexer.UnwatchNFTContract(contractAddress);
@@ -617,7 +617,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         [Route("reindex-all-contracts")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult ReindexAllContracts()
         {
             this.NFTTransferIndexer.ReindexAllContracts();
@@ -628,7 +628,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         [Route("get-watched-nft-contracts")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public List<string> GetWatchedNFTContracts()
         {
             return this.NFTTransferIndexer.GetWatchedNFTContracts();
@@ -637,7 +637,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         [Route("get-owned-nfts")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public OwnedNFTsModel GetOwnedNFTs([FromQuery] string ownerAddress)
         {
             return this.NFTTransferIndexer.GetOwnedNFTs(ownerAddress);
@@ -646,7 +646,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         [Route("get-all-nft-owners-by-contract-address")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public NFTContractModel GetAllNFTOwnersByContractAddress([FromQuery] string contractAddress)
         {
             return this.NFTTransferIndexer.GetAllNFTOwnersByContractAddress(contractAddress);

@@ -16,7 +16,7 @@ using Stratis.Bitcoin.Utilities.JsonErrors;
 namespace Stratis.Bitcoin.Features.Miner.Controllers
 {
     /// <summary>
-    /// Controller providing operations on mining feature.
+    /// Manage staking operations
     /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
@@ -60,10 +60,10 @@ namespace Stratis.Bitcoin.Features.Miner.Controllers
         /// <response code="200">Returns staking info</response>
         /// <response code="400">Unexpected exception occurred</response>
         /// <response code="405">Consensus is not PoS</response>
-        [Route("getstakinginfo")]
+        [Route("getStakingInfo")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.MethodNotAllowed)]
         public IActionResult GetStakingInfo()
         {
@@ -92,10 +92,10 @@ namespace Stratis.Bitcoin.Features.Miner.Controllers
         /// <response code="400">An exception occurred</response>
         /// <response code="405">Consensus is not PoS</response>
         /// <response code="500">Request is null</response>
-        [Route("startstaking")]
+        [Route("startStaking")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.MethodNotAllowed)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult StartStaking([FromBody]StartStakingRequest request)
@@ -145,10 +145,10 @@ namespace Stratis.Bitcoin.Features.Miner.Controllers
         /// <response code="400">An exception occurred</response>
         /// <response code="405">Consensus is not PoS</response>
         /// <response code="500">Request is null</response>
-        [Route("startmultistaking")]
+        [Route("startMultiStaking")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.MethodNotAllowed)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult StartMultiStaking([FromBody] StartMultiStakingRequest request)
@@ -203,10 +203,10 @@ namespace Stratis.Bitcoin.Features.Miner.Controllers
         /// <response code="200">Staking has stopped</response>
         /// <response code="400">An exception occurred</response>
         /// <response code="405">Consensus is not PoS</response>
-        [Route("stopstaking")]
+        [Route("stopStaking")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.MethodNotAllowed)]
         public IActionResult StopStaking([FromBody] bool corsProtection = true)
         {

@@ -16,7 +16,7 @@ using Stratis.Bitcoin.Utilities.ModelStateErrors;
 namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
 {
     /// <summary>
-    /// Controller providing operations for cold staking.
+    /// Manage cold staking operations
     /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
@@ -63,8 +63,8 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
         /// <response code="500">Request is null</response>
         [Route("cold-staking-info")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(GetColdStakingInfoResponse), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult GetColdStakingInfo([FromQuery]GetColdStakingInfoRequest request)
         {
@@ -107,8 +107,8 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
         /// <response code="500">Request is null</response>
         [Route("cold-staking-account")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(CreateColdStakingAccountResponse), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult CreateColdStakingAccount([FromBody]CreateColdStakingAccountRequest request)
         {
@@ -162,8 +162,8 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
         /// <response code="500">Request is null</response>
         [Route("cold-staking-address")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(GetColdStakingAddressResponse), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult GetColdStakingAddress([FromQuery]GetColdStakingAddressRequest request)
         {
@@ -212,8 +212,8 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
         /// <response code="500">Request is null</response>
         [Route("setup-cold-staking")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(SetupColdStakingResponse), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult SetupColdStaking([FromBody]SetupColdStakingRequest request)
         {
@@ -272,8 +272,8 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
         /// <response code="500">Request is null</response>
         [Route("setup-offline-cold-staking")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(BuildOfflineSignResponse), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult SetupOfflineColdStaking([FromBody] SetupOfflineColdStakingRequest request)
         {
@@ -355,8 +355,8 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
 
         [Route("estimate-cold-staking-setup-tx-fee")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(Money), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult EstimateColdStakingSetupFee([FromBody] SetupColdStakingRequest request)
         {
@@ -399,8 +399,8 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
 
         [Route("estimate-offline-cold-staking-setup-tx-fee")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(Money), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult EstimateOfflineColdStakingSetupFee([FromBody] SetupOfflineColdStakingRequest request)
         {
@@ -453,8 +453,8 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
         /// <response code="500">Request is null</response>
         [Route("cold-staking-withdrawal")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ColdStakingWithdrawalResponse), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult ColdStakingWithdrawal([FromBody]ColdStakingWithdrawalRequest request)
         {
@@ -494,8 +494,8 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
 
         [Route("offline-cold-staking-withdrawal")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(BuildOfflineSignResponse), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult OfflineColdStakingWithdrawal([FromBody] OfflineColdStakingWithdrawalRequest request)
         {
@@ -530,8 +530,8 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
 
         [Route("estimate-offline-cold-staking-withdrawal-tx-fee")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(Money), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult EstimateOfflineColdStakingWithdrawalFee([FromBody] OfflineColdStakingWithdrawalFeeEstimationRequest request)
         {
@@ -565,8 +565,8 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
 
         [Route("estimate-cold-staking-withdrawal-tx-fee")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(Money), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult EstimateColdStakingWithdrawalFee([FromBody] ColdStakingWithdrawalRequest request)
         {
@@ -600,8 +600,8 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
 
         [Route("retrieve-filtered-utxos")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(IEnumerable<string>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult RetrieveFilteredUtxos([FromBody] RetrieveFilteredUtxosRequest request)
         {

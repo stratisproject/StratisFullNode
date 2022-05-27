@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Mime;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -21,17 +22,19 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
 {
     public static class BlockStoreRouteEndPoint
     {
-        public const string GetAddressesBalances = "getaddressesbalances";
-        public const string GetVerboseAddressesBalances = "getverboseaddressesbalances";
-        public const string GetAddressIndexerTip = "addressindexertip";
+        public const string GetAddressesBalances = "getAddressesBalances";
+        public const string GetVerboseAddressesBalances = "getVerboseAddressesBalances";
+        public const string GetAddressIndexerTip = "addressIndexerTip";
         public const string GetBlock = "block";
-        public const string GetBlockCount = "getblockcount";
-        public const string GetUtxoSet = "getutxoset";
-        public const string GetUtxoSetForAddress = "getutxosetforaddress";
-        public const string GetLastBalanceDecreaseTransaction = "getlastbalanceupdatetransaction";
+        public const string GetBlockCount = "getBlockCount";
+        public const string GetUtxoSet = "getUtxoSet";
+        public const string GetUtxoSetForAddress = "getUtxoSetForAddress";
+        public const string GetLastBalanceDecreaseTransaction = "getLastBalanceUpdateTransaction";
     }
 
-    /// <summary>Controller providing operations on a blockstore.</summary>
+    /// <summary>
+    /// Retrieve data from the block store database
+    /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
     public class BlockStoreController : Controller
@@ -95,8 +98,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
         /// <response code="400">Unexpected exception occurred</response>
         [Route(BlockStoreRouteEndPoint.GetAddressIndexerTip)]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(AddressIndexerTipModel), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetAddressIndexerTip()
         {
             try
@@ -120,8 +124,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
         /// <response code="400">Block hash invalid, or an unexpected exception occurred</response>
         [Route(BlockStoreRouteEndPoint.GetBlock)]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(BlockModel), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public IActionResult GetBlock([FromQuery] SearchByHashRequest query)
         {
@@ -189,8 +194,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
         /// <response code="400">Unexpected exception occurred</response>
         [Route(BlockStoreRouteEndPoint.GetBlockCount)]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(int), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetBlockCount()
         {
             try
@@ -212,8 +218,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
         /// <response code="400">Unexpected exception occurred</response>
         [Route(BlockStoreRouteEndPoint.GetAddressesBalances)]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(AddressBalancesResult), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetAddressesBalances(string addresses, int minConfirmations)
         {
             try
@@ -243,8 +250,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
         /// <response code="400">Unexpected exception occurred</response>
         [Route(BlockStoreRouteEndPoint.GetVerboseAddressesBalances)]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(VerboseAddressBalancesResult), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetVerboseAddressesBalancesData(string addresses)
         {
             try
@@ -271,8 +278,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
         /// <response code="400">Unexpected exception occurred</response>
         [Route(BlockStoreRouteEndPoint.GetUtxoSet)]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(IEnumerable<UtxoModel>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetUtxoSet(int atBlockHeight)
         {
             try
@@ -305,8 +313,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
         /// <response code="400">Unexpected exception occurred</response>
         [Route(BlockStoreRouteEndPoint.GetUtxoSetForAddress)]
         [HttpGet]
+        [Produces(MediaTypeNames.Application.Json)]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetUtxoSetForAddress(string address)
         {
             // Get coinview at current height (SLOW)
@@ -356,10 +365,16 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
             }
         }
 
+        /// <summary>
+        /// Retrieves the transaction at which the address balance was last updated
+        /// </summary>
+        /// <param name="address">Wallet address</param>
+        /// <returns>The transaction where the balance was last updated, along with the block height.</returns>
         [Route(BlockStoreRouteEndPoint.GetLastBalanceDecreaseTransaction)]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(LastBalanceDecreaseTransactionModel), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetLastBalanceUpdateTransaction(string address)
         {
             try

@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Mime;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -12,6 +13,9 @@ using Stratis.Bitcoin.Utilities.JsonErrors;
 
 namespace Stratis.Bitcoin.Features.PoA.Voting
 {
+    /// <summary>
+    /// Monitor information about the group of nodes that are able to create blocks
+    /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
     public sealed class FederationController : Controller
@@ -54,8 +58,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <response code="400">Unexpected exception occurred</response>
         [Route("reconstruct")]
         [HttpPut]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(string), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult Reconstruct()
         {
             try
@@ -79,8 +84,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <response code="400">Unexpected exception occurred</response>
         [Route("members/current")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(FederationMemberDetailedModel), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetCurrentMemberInfo()
         {
             try
@@ -153,8 +159,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <response code="400">Unexpected exception occurred</response>
         [Route("members")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(IEnumerable<FederationMemberModel>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetMembers()
         {
             try
@@ -192,10 +199,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <returns>Pubkey of federation member at specified height</returns>
         /// <response code="200">Returns pubkey of miner at block height</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("mineratheight")]
+        [Route("minerAtHeight")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(PubKey), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetPubkeyAtHeight([FromQuery(Name = "blockHeight")] int blockHeight)
         {
             try
@@ -222,10 +230,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <returns>Federation membership at the given height</returns>
         /// <response code="200">Returns a list of pubkeys representing the federation membership at the given block height.</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("federationatheight")]
+        [Route("federationAtHeight")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(IEnumerable<PubKey>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetFederationAtHeight([FromQuery(Name = "blockHeight")] int blockHeight)
         {
             try

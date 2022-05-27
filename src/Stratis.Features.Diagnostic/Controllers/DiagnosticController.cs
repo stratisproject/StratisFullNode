@@ -15,7 +15,7 @@ using Stratis.Features.Diagnostic.Utils;
 namespace Stratis.Features.Diagnostic.Controllers
 {
     /// <summary>
-    /// Controller providing diagnostic operations on fullnode.
+    /// Collect diagnostic information on network peers
     /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]/[action]")]
@@ -43,7 +43,7 @@ namespace Stratis.Features.Diagnostic.Controllers
         /// <response code="400">Unexpected exception occurred</response>
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetConnectedPeersInfo()
         {
             try
@@ -77,7 +77,7 @@ namespace Stratis.Features.Diagnostic.Controllers
         /// <response code="400">Unexpected exception occurred</response>
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetStatus()
         {
             try
@@ -102,7 +102,7 @@ namespace Stratis.Features.Diagnostic.Controllers
         /// <response code="400">Unexpected exception occurred</response>
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public ActionResult<List<PeerStatisticsModel>> GetPeerStatistics(bool connectedOnly)
         {
             try
@@ -131,7 +131,7 @@ namespace Stratis.Features.Diagnostic.Controllers
         /// <response code="400">Unexpected exception occurred</response>
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult StartCollectingPeerStatistics()
         {
             try
@@ -161,7 +161,7 @@ namespace Stratis.Features.Diagnostic.Controllers
         /// <response code="400">Unexpected exception occurred</response>
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult StopCollectingPeerStatistics()
         {
             try

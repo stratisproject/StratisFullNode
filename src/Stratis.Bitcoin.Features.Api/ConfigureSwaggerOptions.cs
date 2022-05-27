@@ -1,11 +1,15 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
+using NBitcoin;
+using Stratis.Bitcoin.Controllers.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using Script = NBitcoin.Script;
 
 namespace Stratis.Bitcoin.Features.Api
 {
@@ -18,25 +22,6 @@ namespace Stratis.Bitcoin.Features.Api
     /// </remarks>
     public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
     {
-        private static readonly string[] ApiXmlDocuments = new string[]
-        {
-            "Stratis.Bitcoin.xml",
-            "Stratis.Bitcoin.Features.BlockStore.xml",
-            "Stratis.Bitcoin.Features.ColdStaking.xml",
-            "Stratis.Bitcoin.Features.Consensus.xml",
-            "Stratis.Bitcoin.Features.PoA.xml",
-            "Stratis.Bitcoin.Features.MemoryPool.xml",
-            "Stratis.Bitcoin.Features.Miner.xml",
-            "Stratis.Bitcoin.Features.Notifications.xml",
-            "Stratis.Bitcoin.Features.RPC.xml",
-            "Stratis.Bitcoin.Features.SignalR.xml",
-            "Stratis.Bitcoin.Features.SmartContracts.xml",
-            "Stratis.Bitcoin.Features.Wallet.xml",
-            "Stratis.Bitcoin.Features.WatchOnlyWallet.xml",
-            "Stratis.Features.Diagnostic.xml",
-            "Stratis.Features.FederatedPeg.xml"
-        };
-
         private readonly IApiVersionDescriptionProvider provider;
 
         /// <summary>
@@ -57,15 +42,36 @@ namespace Stratis.Bitcoin.Features.Api
                 options.SwaggerDoc(description.GroupName, CreateInfoForApiVersion(description));
             }
 
-            // Includes XML comments in Swagger documentation 
-            string basePath = AppContext.BaseDirectory;
-            foreach (string xmlPath in ApiXmlDocuments.Select(xmlDocument => Path.Combine(basePath, xmlDocument)))
+            // Retrieve relevant XML documents via assembly scanning
+            var xmlDocuments = AppDomain.CurrentDomain.GetAssemblies()
+                .Where(a => a.GetTypes().Any(t => t.IsSubclassOf(typeof(ControllerBase))))
+                .Select(a => Path.Combine(AppContext.BaseDirectory, $"{a.GetName().Name}.xml"));
+            
+            foreach (string xmlPath in xmlDocuments)
             {
                 if (File.Exists(xmlPath))
                 {
-                    options.IncludeXmlComments(xmlPath);
+                    options.IncludeXmlComments(xmlPath, true);
                 }
             }
+            
+            options.CustomSchemaIds(type => type switch
+                {
+                    // resolve naming clash
+                    { } scriptType when scriptType == typeof(Stratis.Bitcoin.Controllers.Models.Script) => "HexEncodedScript",
+                    _ => type.ToString()
+                });
+            
+            // map custom types to openapi schema types
+            options.MapType<uint256>(() => new OpenApiSchema { Type = "string" });
+            options.MapType<Script>(() => new OpenApiSchema { Type = "string" });
+            options.MapType<Money>(() => new OpenApiSchema { Type = "int64" });
+            options.MapType<PubKey>(() => new OpenApiSchema { Type = "string" });
+            
+            options.DocumentFilter<CamelCaseRouteFilter>();
+            options.DocumentFilter<AlphabeticalTagOrderingFilter>();
+            
+            options.DescribeAllParametersInCamelCase();
         }
 
         static OpenApiInfo CreateInfoForApiVersion(ApiVersionDescription description)
@@ -74,7 +80,9 @@ namespace Stratis.Bitcoin.Features.Api
             {
                 Title = "Stratis Node API",
                 Version = description.ApiVersion.ToString(),
-                Description = "Access to the Stratis Node's api."
+                Description = "The Stratis Node API allows you to manage and monitor the node, as well as query data from the running network.",
+                Contact = new OpenApiContact { Name = "Stratis Platform", Url = new Uri("https://www.stratisplatform.com") },
+                License = new OpenApiLicense { Name = "MIT", Url = new Uri("https://opensource.org/licenses/MIT") }
             };
 
             if (info.Version.Contains("dev"))

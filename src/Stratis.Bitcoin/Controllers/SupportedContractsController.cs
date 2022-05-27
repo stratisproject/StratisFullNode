@@ -10,6 +10,9 @@ using Stratis.Interop.Contracts;
 
 namespace Stratis.Bitcoin.Controllers
 {
+    /// <summary>
+    /// Retrieve InterFlux token information
+    /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
     public sealed class SupportedContractsController : Controller
@@ -25,11 +28,12 @@ namespace Stratis.Bitcoin.Controllers
         /// Endpoint that returns the supported/official native chain/SRC20 token contract addresses for the given network type.
         /// </summary>
         /// <param name="networkType">The network type to return the addresses for.</param>
+        /// <response type="200">Official InterFlux token details returned</response>
+        /// <response type="400">Unexpected error occurred</response>
         [Route("list")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        [ProducesResponseType(typeof(IEnumerable<SupportedContractAddress>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult ListSupportedContractAddresses(NetworkType networkType)
         {
             try

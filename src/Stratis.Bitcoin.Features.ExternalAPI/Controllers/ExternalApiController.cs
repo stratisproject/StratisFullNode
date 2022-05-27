@@ -9,7 +9,7 @@ using Stratis.Bitcoin.Utilities.JsonErrors;
 namespace Stratis.Features.ExternalApi.Controllers
 {
     /// <summary>
-    /// Controller for the External Api.
+    /// Retrieve data from external sources
     /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
@@ -18,27 +18,27 @@ namespace Stratis.Features.ExternalApi.Controllers
         /// <summary>
         /// Name of api method which estimates the total gas a conversion will require.
         /// </summary>
-        public const string EstimateConversionGasEndpoint = "estimateconversiongas";
+        public const string EstimateConversionGasEndpoint = "estimateConversionGas";
 
         /// <summary>
         /// Name of api method which estimates the conversion fee (in STRAX).
         /// </summary>
-        public const string EstimateConversionFeeEndpoint = "estimateconversionfee";
+        public const string EstimateConversionFeeEndpoint = "estimateConversionFee";
 
         /// <summary>
         /// Name of api method which estimates a recommended gas price based on historical measured samples.
         /// </summary>
-        public const string GasPriceEndpoint = "gasprice";
+        public const string GasPriceEndpoint = "gasPrice";
 
         /// <summary>
         /// Name of api method which returns the most recently retrieved Stratis price.
         /// </summary>
-        public const string StratisPriceEndpoint = "stratisprice";
+        public const string StratisPriceEndpoint = "stratisPrice";
 
         /// <summary>
         /// Name of api method which returns the most recently retrieved Ethereum price.
         /// </summary>
-        public const string EthereumPriceEndpoint = "ethereumprice";
+        public const string EthereumPriceEndpoint = "ethereumPrice";
 
         private readonly IExternalApiPoller externalApiPoller;
 
@@ -61,7 +61,7 @@ namespace Stratis.Features.ExternalApi.Controllers
         [Route(EstimateConversionGasEndpoint)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult EstimateConversionGas()
         {
@@ -83,7 +83,7 @@ namespace Stratis.Features.ExternalApi.Controllers
         [Route(EstimateConversionFeeEndpoint)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult EstimateConversionFee()
         {
@@ -105,7 +105,7 @@ namespace Stratis.Features.ExternalApi.Controllers
         [Route(GasPriceEndpoint)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult GasPrice()
         {
@@ -127,7 +127,7 @@ namespace Stratis.Features.ExternalApi.Controllers
         [Route(StratisPriceEndpoint)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult StratisPrice()
         {
@@ -149,7 +149,7 @@ namespace Stratis.Features.ExternalApi.Controllers
         [Route(EthereumPriceEndpoint)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult EthereumPrice()
         {

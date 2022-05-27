@@ -18,7 +18,7 @@ using Stratis.Bitcoin.Utilities.JsonErrors;
 namespace Stratis.Bitcoin.Features.Miner.Controllers
 {
     /// <summary>
-    /// API controller for calls related to PoW mining and PoS minting.
+    /// Perform PoW mining or PoS minting operations
     /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
@@ -66,7 +66,7 @@ namespace Stratis.Bitcoin.Features.Miner.Controllers
         [Route("generate")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.Forbidden)]
         [ProducesResponseType((int)HttpStatusCode.MethodNotAllowed)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
@@ -120,10 +120,10 @@ namespace Stratis.Bitcoin.Features.Miner.Controllers
         /// </remarks>
         /// <response code="200">Mining stopped</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("stopmining")]
+        [Route("stopMining")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult StopMining([FromBody] bool corsProtection = true)
         {
             try

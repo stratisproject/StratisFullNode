@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mime;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -10,6 +12,9 @@ using Stratis.SmartContracts.Core.Util;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
 {
+    /// <summary>
+    /// Query addresses by balance
+    /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
     public class BalancesController : Controller
@@ -30,8 +35,19 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             this.logger = loggerFactory.CreateLogger(this.GetType().Name);
         }
 
+        /// <summary>
+        /// Retrieves a list of addresses with a balance at or above the specified amount.
+        /// </summary>
+        /// <param name="blockHeight">Block height at which to scan</param>
+        /// <param name="amount">Token amount</param>
+        /// <returns></returns>
+        /// <response code="200">Returns list of addresses</response>
+        /// <response code="500">Unexpected exception occurred</response>
         [Route("over-amount-at-height")]
         [HttpGet]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(IEnumerable<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult GetBalancesOverAmount(int blockHeight, decimal amount)
         {
             Money thresholdBalance = Money.Coins(amount);

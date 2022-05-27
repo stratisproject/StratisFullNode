@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Mime;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -15,7 +16,7 @@ using Stratis.Bitcoin.Utilities.JsonErrors;
 namespace Stratis.Bitcoin.Controllers
 {
     /// <summary>
-    /// Provides methods that interact with the network elements of the full node.
+    /// Manage network connection settings
     /// </summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
@@ -55,7 +56,7 @@ namespace Stratis.Bitcoin.Controllers
         [Route("disconnect")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult DisconnectPeer([FromBody] DisconnectPeerViewModel viewModel)
         {
             try
@@ -84,10 +85,10 @@ namespace Stratis.Bitcoin.Controllers
         /// <returns><see cref="OkResult"/></returns>
         /// <response code="200">Ban status updated</response>
         /// <response code="400">An exception occurred</response>
-        [Route("setban")]
+        [Route("setBan")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult SetBan([FromBody] SetBanPeerViewModel viewModel)
         {
             try
@@ -131,10 +132,11 @@ namespace Stratis.Bitcoin.Controllers
         /// <returns>List of banned peers</returns>
         /// <response code="200">Returns banned peers</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("getbans")]
+        [Route("getBans")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(typeof(IEnumerable<BannedPeerModel>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult GetBans()
         {
             try
@@ -160,10 +162,10 @@ namespace Stratis.Bitcoin.Controllers
         /// <returns><see cref="OkResult"/></returns>
         /// <response code="200">Bans cleared</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("clearbanned")]
+        [Route("clearBanned")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         public IActionResult ClearBannedPeers([FromBody] bool corsProtection = true)
         {
             try
