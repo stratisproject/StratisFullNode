@@ -15,7 +15,6 @@ using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Consensus.Interfaces;
 using Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders;
-using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
@@ -106,17 +105,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
         protected T CreateRule<T>() where T : ConsensusRuleBase, new()
         {
             return new T()
-            {
-                Logger = this.logger.Object,
-                Parent = new TestPosConsensusRules(this.network, this.loggerFactory.Object, this.dateTimeProvider.Object, this.ChainIndexer, this.nodeDeployments,
-                    this.consensusSettings, this.checkpoints.Object, this.coinView.Object, this.stakeChain.Object, this.stakeValidator.Object, this.chainState.Object,
-                    new InvalidBlockHashStore(new DateTimeProvider()), new NodeStats(this.dateTimeProvider.Object, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), this.rewindDataIndexStore.Object, this.asyncProvider, new ConsensusRulesContainer())
-            };
-        }
-
-        protected StratisHeaderVersionRule CreateStratisHeaderVersionRule(NodeDeployments nodeDeployments)
-        {
-            return new StratisHeaderVersionRule(nodeDeployments)
             {
                 Logger = this.logger.Object,
                 Parent = new TestPosConsensusRules(this.network, this.loggerFactory.Object, this.dateTimeProvider.Object, this.ChainIndexer, this.nodeDeployments,

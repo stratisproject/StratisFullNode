@@ -146,7 +146,7 @@ namespace Stratis.Bitcoin.Features.Miner
         {
             this.height = this.ChainTip.Height + 1;
             var headerVersionRule = this.ConsensusManager.ConsensusRules.GetRule<HeaderVersionRule>();
-            this.block.Header.Version = headerVersionRule.ComputeBlockVersion(this.ChainTip);
+            this.block.Header.Version = headerVersionRule.ComputeBlockVersion(this.nodeDeployments, this.ChainTip);
         }
 
         protected virtual bool IsWitnessEnabled(ChainedHeader chainedHeader)
