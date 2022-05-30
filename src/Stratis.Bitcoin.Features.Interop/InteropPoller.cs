@@ -66,6 +66,7 @@ namespace Stratis.Bitcoin.Features.Interop
         private readonly ChainIndexer chainIndexer;
         private readonly ICirrusContractClient cirrusClient;
         private readonly Network counterChainNetwork;
+        private readonly IConversionRequestFeeService conversionRequestFeeService;
         private readonly IConversionRequestFeeKeyValueStore conversionRequestFeeKeyValueStore;
         private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
         private readonly IConversionRequestRepository conversionRequestRepository;
@@ -104,6 +105,7 @@ namespace Stratis.Bitcoin.Features.Interop
             IAsyncProvider asyncProvider,
             INodeLifetime nodeLifetime,
             ChainIndexer chainIndexer,
+            IConversionRequestFeeService conversionRequestFeeService,
             IConversionRequestRepository conversionRequestRepository,
             IConversionRequestFeeKeyValueStore conversionRequestFeeKeyValueStore,
             IConversionRequestCoordinationService conversionRequestCoordinationService,
@@ -130,6 +132,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.federationManager = federationManager;
             this.federationHistory = federationHistory;
             this.federatedPegBroadcaster = federatedPegBroadcaster;
+            this.conversionRequestFeeService = conversionRequestFeeService;
             this.conversionRequestFeeKeyValueStore = conversionRequestFeeKeyValueStore;
             this.conversionRequestRepository = conversionRequestRepository;
             this.conversionRequestCoordinationService = conversionRequestCoordinationService;
@@ -470,52 +473,7 @@ namespace Stratis.Bitcoin.Features.Interop
                         {
                             this.logger.Info($"Found a valid SRC20->ERC20 transfer transaction with metadata: {src20burn.To}.");
 
-                            var interopConversionRequestFee = new InteropConversionRequestFee()
-                            {
-                                Amount = ConversionRequestFeeService.FallBackFee,
-                                RequestId = receipt.TransactionHash,
-                                BlockHeight = (int)receipt.BlockNumber,
-                                State = InteropFeeState.AgreeanceConcluded,
-                            };
-
-                            lock (this.repositoryLock)
-                            {
-                                this.conversionRequestFeeKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee);
-                            }
-
-                            this.logger.Warn($"A fixed fee for SRC20->ERC20 request '{receipt.TransactionHash}' was set with a value of {ConversionRequestFeeService.FallBackFee} CRS.");
-
-                            // ***! Skipping dynamic fee generation for the interim !***
-                            //
-                            // ERC20 transfers out of the multisig wallet have the same cost structure as a wSTRAX conversion, so we can use the same fee estimation logic.
-                            // InteropConversionRequestFee interopConversionRequestFee = await this.conversionRequestFeeService.AgreeFeeForConversionRequestAsync(receipt.TransactionHash, (int)receipt.BlockNumber).ConfigureAwait(false);
-
-                            // If a dynamic fee could not be determined, create a fallback fee.
-                            // if (interopConversionRequestFee == null ||
-                            //     (interopConversionRequestFee != null && interopConversionRequestFee.State != InteropFeeState.AgreeanceConcluded))
-                            // {
-                            //     interopConversionRequestFee.Amount = ConversionRequestFeeService.FallBackFee;
-                            //     this.logger.Warn($"A dynamic fee for SRC20->ERC20 request '{receipt.TransactionHash}' could not be determined, using a fixed fee of {ConversionRequestFeeService.FallBackFee} CRS.");
-                            // }
-
-                            IFederation federation = this.network.Federations?.GetOnlyFederation();
-
-                            Script multisigScript = PayToFederationTemplate.Instance.GenerateScriptPubKey(federation.Id).PaymentScript;
-
-                            // Since we have no reliable way (yet) of extracting pricing data for all the potential tokens being transferred, there has to be a transaction output paying the multisig the conversion fee in order for the burn to be processed.
-                            // In future perhaps the fee could be taken out of the token value directly e.g. calculate a dollar fee and retain the equivalent SRC20 USDT. The distribution could then be done via an updated multisig contract instead.
-                            TxOut conversionFeeOutput = null;
-                            foreach (TxOut txOut in transaction.Outputs)
-                            {
-                                this.logger.Debug($"Output payment script '{txOut.ScriptPubKey}', multisigScript '{multisigScript}'");
-
-                                // For now, pay it directly to the multisig.
-                                if (txOut.ScriptPubKey == multisigScript)
-                                {
-                                    conversionFeeOutput = txOut;
-                                }
-                            }
-
+                            // Create the conversion request object.
                             var request = new ConversionRequest()
                             {
                                 RequestId = receipt.TransactionHash,
@@ -526,48 +484,27 @@ namespace Stratis.Bitcoin.Features.Interop
                                 DestinationChain = DestinationChain.ETH,
                             };
 
-                            if (conversionFeeOutput == null)
+                            // Save it.
+                            lock (this.repositoryLock)
                             {
-                                this.logger.Warn("Transfer transaction '{0}' has no fee output.", receipt.TransactionHash);
-                                request.Processed = true;
-                                request.RequestStatus = ConversionRequestStatus.FailedNoFeeOutput;
-
-                                lock (this.repositoryLock)
-                                {
-                                    this.conversionRequestRepository.Save(request);
-                                }
-
-                                continue;
+                                this.conversionRequestRepository.Save(request);
                             }
 
-                            if (Money.Satoshis(interopConversionRequestFee.Amount) > conversionFeeOutput.Value)
-                            {
-                                var message = $"Transfer transaction '{receipt.TransactionHash}' has an insufficient fee; estimated fee '{Money.Satoshis(interopConversionRequestFee.Amount).ToUnit(MoneyUnit.BTC)}'";
-                                this.logger.Warn(message);
-
-                                request.Processed = true;
-                                request.RequestStatus = ConversionRequestStatus.FailedInsufficientFee;
-                                request.StatusMessage = message;
-
-                                lock (this.repositoryLock)
-                                {
-                                    this.conversionRequestRepository.Save(request);
-                                }
-
+                            // First determine if the transaction contains a fee paying the multisig, if not, fail the transfer.
+                            TxOut feeProvidedFromTransaction = RetrieveConversionRequestFeeOutput(transaction, request, receipt);
+                            if (feeProvidedFromTransaction == null)
                                 continue;
-                            }
 
-                            // Add the fee to the matured block sync manager so that the CrossChainTransferStore can process it.
-                            this.maturedBlocksSyncManager.AddInterOpFeeDeposit(new Deposit(
-                                new uint256(receipt.TransactionHash),
-                                DepositRetrievalType.Distribution,
-                                Money.Satoshis(interopConversionRequestFee.Amount),
-                                this.network.ConversionTransactionFeeDistributionDummyAddress,
-                                DestinationChain.CIRRUS,
-                                applicableHeight,
-                                block.GetHash()
-                               ));
+                            // Determine and agree on a fee via all the multisig nodes.
+                            // ERC20 transfers out of the multisig wallet have the same cost structure as a wSTRAX conversion, so we can use the same fee estimation logic.
+                            InteropConversionRequestFee feeDeterminedByMultiSig = await this.conversionRequestFeeService.AgreeFeeForConversionRequestAsync(receipt.TransactionHash, (int)receipt.BlockNumber).ConfigureAwait(false);
 
+                            // If a dynamic fee could not be determined, ignore the fee for now.
+                            // Subsequent work in progress will allow us to reprocess "missed" multisig fees.
+                            if (feeDeterminedByMultiSig == null || (feeDeterminedByMultiSig != null && feeDeterminedByMultiSig.State != InteropFeeState.AgreeanceConcluded))
+                                this.logger.Warn($"A dynamic fee for SRC20->ERC20 request '{receipt.TransactionHash}' could not be determined, ignoring fee until reprocessing at some later stage.");
+                            else
+                                ProcessConversionRequestFee(feeProvidedFromTransaction, feeDeterminedByMultiSig, receipt, applicableHeight, block);
 
                             KeyValuePair<string, string> contractMapping = this.interopSettings.GetSettingsByChain(DestinationChain.ETH).WatchedErc20Contracts.First(c => c.Value == receipt.To);
                             SupportedContractAddress token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.NativeNetworkAddress.ToLowerInvariant() == contractMapping.Key.ToLowerInvariant());
@@ -598,6 +535,83 @@ namespace Stratis.Bitcoin.Features.Interop
             this.lastPolledBlock[DestinationChain.CIRRUS] += 1;
 
             SaveLastPolledBlockForBurnsAndTransfers(DestinationChain.CIRRUS);
+        }
+
+        private TxOut RetrieveConversionRequestFeeOutput(NBitcoin.Transaction transaction, ConversionRequest request, CirrusReceiptResponse receipt)
+        {
+            IFederation federation = this.network.Federations?.GetOnlyFederation();
+
+            Script multisigScript = PayToFederationTemplate.Instance.GenerateScriptPubKey(federation.Id).PaymentScript;
+
+            // Since we have no reliable way (yet) of extracting pricing data for all the potential tokens being transferred, there has to be a transaction output paying the multisig the conversion fee in order for the burn to be processed.
+            // In future perhaps the fee could be taken out of the token value directly e.g. calculate a dollar fee and retain the equivalent SRC20 USDT. The distribution could then be done via an updated multisig contract instead.
+            TxOut conversionFeeOutput = null;
+
+            foreach (TxOut txOut in transaction.Outputs)
+            {
+                this.logger.Debug($"Output payment script '{txOut.ScriptPubKey}', multisigScript '{multisigScript}'");
+
+                // For now, pay it directly to the multisig.
+                if (txOut.ScriptPubKey == multisigScript)
+                {
+                    conversionFeeOutput = txOut;
+                }
+            }
+
+            if (conversionFeeOutput == null)
+            {
+                this.logger.Warn("Transfer transaction '{0}' has no fee output.", receipt.TransactionHash);
+                request.Processed = true;
+                request.RequestStatus = ConversionRequestStatus.FailedNoFeeOutput;
+
+                lock (this.repositoryLock)
+                {
+                    this.conversionRequestRepository.Save(request);
+                }
+            }
+
+            return conversionFeeOutput;
+        }
+
+        private void ProcessConversionRequestFee(TxOut feeProvidedFromTransaction, InteropConversionRequestFee feeDeterminedByMultiSig, CirrusReceiptResponse receipt, int applicableHeight, NBitcoin.Block block)
+        {
+            ulong feeToUse = 0;
+
+            // Check if the fee determined by the multisig is valid and in an acceptable range from the fee added the incoming transaction. 
+            var upperBoundFeeAmount = ((long)feeProvidedFromTransaction.Value * 0.2m) + (long)feeProvidedFromTransaction.Value;
+
+            // Use the fee provided by the transaction.
+            if (feeDeterminedByMultiSig.Amount <= feeProvidedFromTransaction.Value)
+            {
+                feeToUse = feeProvidedFromTransaction.Value;
+                this.logger.Debug($"Transfer transaction '{receipt.TransactionHash}' will pay the fee provided by the transaction: {Money.Satoshis(feeProvidedFromTransaction.Value).ToUnit(MoneyUnit.BTC)}");
+            }
+
+            // Use the higher fee provided by the MultiSig.
+            if (feeDeterminedByMultiSig.Amount > feeProvidedFromTransaction.Value && feeDeterminedByMultiSig.Amount <= upperBoundFeeAmount)
+            {
+                feeToUse = feeDeterminedByMultiSig.Amount;
+                this.logger.Debug($"Transfer transaction '{receipt.TransactionHash}' will pay the fee determined by the multisig: {Money.Satoshis(feeDeterminedByMultiSig.Amount).ToUnit(MoneyUnit.BTC)}");
+            }
+
+            // Ignore the fee if it is more than the acceptable range but still process the transfer.
+            // Subsequent work in progress will allow us to reprocess "missed" multisig fees.
+            if (feeDeterminedByMultiSig.Amount > upperBoundFeeAmount)
+                this.logger.Warn($"Transfer transaction '{receipt.TransactionHash}' has an insufficient fee; fee from transaction {Money.Satoshis(feeProvidedFromTransaction.Value).ToUnit(MoneyUnit.BTC)} fee determined by MultiSig '{Money.Satoshis(feeDeterminedByMultiSig.Amount).ToUnit(MoneyUnit.BTC)}'");
+
+            if (feeToUse != 0)
+            {
+                // Add the fee to the matured block sync manager so that the CrossChainTransferStore can process it.
+                this.maturedBlocksSyncManager.AddInterOpFeeDeposit(new Deposit(
+                    new uint256(receipt.TransactionHash),
+                    DepositRetrievalType.Distribution,
+                    Money.Satoshis(feeDeterminedByMultiSig.Amount),
+                    this.network.ConversionTransactionFeeDistributionDummyAddress,
+                    DestinationChain.CIRRUS,
+                    applicableHeight,
+                    block.GetHash()
+                   ));
+            }
         }
 
         /// <summary>
