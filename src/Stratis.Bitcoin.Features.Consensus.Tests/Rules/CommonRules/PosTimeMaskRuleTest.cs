@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using NBitcoin;
+using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Xunit;
@@ -8,7 +9,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
 {
     public class PosTimeMaskRuleTest : PosConsensusRuleUnitTestBase
     {
-        private const int MaxFutureDriftBeforeHardFork = 128 * 60 * 60;
         private const int MaxFutureDriftAfterHardFork = 15;
 
         public PosTimeMaskRuleTest()
@@ -19,7 +19,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public void RunAsync_HeaderVersionBelowMinimalHeaderVersion_ThrowsBadVersionConsensusError()
         {
-            var rule = this.CreateRule<StratisHeaderVersionRule>();
+            var rule = this.CreateStratisHeaderVersionRule(new NodeDeployments(this.network, this.ChainIndexer));
 
             int MinimalHeaderVersion = 7;
             this.ruleContext.ValidationContext.ChainedHeaderToValidate = this.ChainIndexer.GetHeader(1);

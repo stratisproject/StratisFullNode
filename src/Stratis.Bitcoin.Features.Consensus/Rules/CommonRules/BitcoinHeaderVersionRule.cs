@@ -1,4 +1,5 @@
-﻿using Stratis.Bitcoin.Consensus.Rules;
+﻿using Stratis.Bitcoin.Base.Deployments;
+using Stratis.Bitcoin.Consensus.Rules;
 
 namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
 {
@@ -8,6 +9,10 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
     /// </summary>
     public class BitcoinHeaderVersionRule : HeaderVersionRule
     {
+        public BitcoinHeaderVersionRule(NodeDeployments nodeDeployments) : base(nodeDeployments)
+        {
+        }
+
         /// <inheritdoc />
         public override void Run(RuleContext context)
         {

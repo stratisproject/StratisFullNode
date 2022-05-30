@@ -67,7 +67,6 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
                 testContext.consensusManager,
                 DateTimeProvider.Default,
                 testContext.ExecutorFactory,
-                new LoggerFactory(),
                 testContext.mempool,
                 testContext.mempoolLock,
                 new MinerSettings(testContext.NodeSettings),
