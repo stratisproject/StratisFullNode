@@ -14,11 +14,13 @@ using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Validators;
 using Stratis.Bitcoin.Features.Miner;
+using Stratis.Bitcoin.Features.PoA.Events;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Mining;
+using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 using TracerAttributes;
 
@@ -104,6 +106,8 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private Script walletScriptPubKey;
 
+        private readonly ISignals signals;
+
         public PoAMiner(
             IConsensusManager consensusManager,
             IDateTimeProvider dateTimeProvider,
@@ -124,6 +128,7 @@ namespace Stratis.Bitcoin.Features.PoA
             PoASettings poAMinerSettings,
             IAsyncProvider asyncProvider,
             IIdleFederationMembersKicker idleFederationMembersKicker,
+            ISignals signals,
             NodeSettings nodeSettings)
         {
             this.consensusManager = consensusManager;
@@ -150,6 +155,7 @@ namespace Stratis.Bitcoin.Features.PoA
             this.nodeSettings = nodeSettings;
 
             this.miningStatistics = new MiningStatisticsModel();
+            this.signals = signals;
 
             nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
         }
@@ -298,6 +304,8 @@ namespace Stratis.Bitcoin.Features.PoA
             }
 
             this.miningStatistics.MinerHits = hitCount;
+
+            this.signals.Publish(new MiningStatisticsEvent(this.miningStatistics));
 
             log.Append("...");
             log.AppendLine();
