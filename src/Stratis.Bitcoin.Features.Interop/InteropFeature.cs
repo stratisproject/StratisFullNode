@@ -45,6 +45,7 @@ namespace Stratis.Bitcoin.Features.Interop
             IETHCompatibleClientProvider ethCompatibleClientProvider,
             IFederationManager federationManager,
             IFullNode fullNode,
+            InteropMonitor interopMonitor,
             InteropPoller interopPoller,
             InteropSettings interopSettings,
             Network network)
@@ -57,6 +58,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.conversionRequestRepository = conversionRequestRepository;
             this.ethClientProvider = ethCompatibleClientProvider;
             this.federationManager = federationManager;
+            this.interopMonitor = interopMonitor;
             this.interopPoller = interopPoller;
             this.interopSettings = interopSettings;
             this.network = network;
