@@ -41,7 +41,7 @@ namespace Stratis.Features.PoA.Collateral
             byte[] commitmentData = null;
             byte[] magic = null;
 
-            this.logger.LogDebug("Transaction contains {0} OP_RETURN outputs.", opReturnOutputs.Count());
+            this.logger.LogTrace("Transaction contains {0} OP_RETURN outputs.", opReturnOutputs.Count());
 
             foreach (Script script in opReturnOutputs)
             {

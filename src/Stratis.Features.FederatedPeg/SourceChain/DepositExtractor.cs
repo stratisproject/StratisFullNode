@@ -64,7 +64,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         };
 
         /// <inheritdoc />
-        public async Task<IReadOnlyList<IDeposit>> ExtractDepositsFromBlock(Block block, int blockHeight, Dictionary<DepositRetrievalType, int> confirmationsByRetrievalType)
+        public async Task<IReadOnlyList<IDeposit>> ExtractDepositsFromBlock(Block block, int blockHeight, IRetrievalTypeConfirmations confirmationsByRetrievalType)
         {
             List<IDeposit> deposits;
 
@@ -82,7 +82,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 ((Deposit)deposit).BlockHash = block.GetHash();
             }
 
-            DepositRetrievalType[] retrievalTypes = confirmationsByRetrievalType.Keys.ToArray();
+            DepositRetrievalType[] retrievalTypes = confirmationsByRetrievalType.GetRetrievalTypes();
 
             // If it's an empty block (i.e. only the coinbase transaction is present), there's no deposits inside.
             if (block.Transactions.Count > 1)
@@ -110,7 +110,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         /// <param name="deposits">Add burn requests to this list of deposits.</param>
         /// <param name="inspectForDepositsAtHeight">The block height to inspect.</param>
         /// <param name="confirmationsByRetrievalType">The various retrieval types and their required confirmations.</param>
-        private void ProcessInterFluxBurnRequests(List<IDeposit> deposits, int inspectForDepositsAtHeight, Dictionary<DepositRetrievalType, int> confirmationsByRetrievalType)
+        private void ProcessInterFluxBurnRequests(List<IDeposit> deposits, int inspectForDepositsAtHeight, IRetrievalTypeConfirmations confirmationsByRetrievalType)
         {
             List<ConversionRequest> burnRequests = this.conversionRequestRepository.GetAllBurn(true);
 
@@ -141,7 +141,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 if (inspectForDepositsAtHeight > burnRequest.BlockHeight)
                 {
                     DepositRetrievalType retrievalType = DetermineDepositRetrievalType(burnRequest.Amount.GetLow64());
-                    var requiredConfirmations = confirmationsByRetrievalType[retrievalType];
+                    var requiredConfirmations = confirmationsByRetrievalType.GetDepositConfirmations(burnRequest.BlockHeight, retrievalType);
 
                     // If the inspection height is now equal to the burn request's processing height plus
                     // the required confirmations, set it to processed.

@@ -358,6 +358,13 @@ if ( $NodeType -eq "50K" )
     ""
     Start-Sleep 10
 
+if ($ethAddress -notmatch '^0x[a-fA-F0-9]{40}$')
+{
+    Write-Host (Get-TimeStamp) "ERROR: Invalid ETH Address Loaded.. Is GETH already running?" -ForegroundColor Red
+    Start-Sleep 30
+    Exit
+}
+
     #Launching GETH
     $API = $gethAPIPort
     Write-Host (Get-TimeStamp) "Starting GETH Masternode" -ForegroundColor Cyan

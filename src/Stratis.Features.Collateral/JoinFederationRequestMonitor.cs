@@ -16,6 +16,7 @@ namespace Stratis.Features.Collateral
 {
     public class JoinFederationRequestMonitor
     {
+        private readonly IFederationManager federationManager;
         private readonly ILogger logger;
         private readonly ISignals signals;
         private readonly VotingManager votingManager;
@@ -23,7 +24,7 @@ namespace Stratis.Features.Collateral
         private readonly Network counterChainNetwork;
         private readonly NodeDeployments nodeDeployments;
 
-        public JoinFederationRequestMonitor(VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, ISignals signals, NodeDeployments nodeDeployments)
+        public JoinFederationRequestMonitor(VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, ISignals signals, NodeDeployments nodeDeployments, IFederationManager federationManager)
         {
             this.signals = signals;
             this.logger = LogManager.GetCurrentClassLogger();
@@ -31,6 +32,7 @@ namespace Stratis.Features.Collateral
             this.network = network;
             this.counterChainNetwork = counterChainNetworkWrapper.CounterChainNetwork;
             this.nodeDeployments = nodeDeployments;
+            this.federationManager = federationManager;
 
             this.signals.Subscribe<VotingManagerProcessBlock>(this.OnBlockConnected);
         }
@@ -60,9 +62,15 @@ namespace Stratis.Features.Collateral
                     if (request == null)
                         continue;
 
+                    this.logger.LogDebug("Found federation join request at block {0}, transaction '{1}' for member '{2}'.", 
+                        blockConnectedData.ConnectedBlock.ChainedHeader.Height, tx.GetHash(), request.PubKey.ToHex());
+
                     // Skip if the member already exists.
-                    if (this.votingManager.IsFederationMember(request.PubKey))
+                    if (this.votingManager.IsMemberOfFederation(request.PubKey))
+                    {
+                        this.logger.LogDebug("Ignoring request because the member is already a member of the federation.");
                         continue;
+                    }
 
                     // Check if the collateral amount is valid.
                     decimal collateralAmount = request.CollateralAmount.ToDecimal(MoneyUnit.BTC);
@@ -78,8 +86,8 @@ namespace Stratis.Features.Collateral
                     // Fill in the request.removalEventId (if any).
                     byte[] federationMemberBytes = JoinFederationRequestService.GetFederationMemberBytes(request, this.network, this.counterChainNetwork);
 
-                    // Nothing to do if already voted.
-                    if (this.votingManager.AlreadyVotingFor(VoteKey.AddFederationMember, federationMemberBytes))
+                    // Nothing to do if already voted. Ignore scheduled polls as we could be in IBD.
+                    if (this.votingManager.AlreadyVotingFor(VoteKey.AddFederationMember, federationMemberBytes, false))
                     {
                         this.logger.LogDebug("Skipping because already voted for adding '{0}'.", request.PubKey.ToHex());
                         continue;
@@ -130,7 +138,9 @@ namespace Stratis.Features.Collateral
                         }
                     }
 
-                    this.votingManager.ScheduleVote(votingData);
+                    // If this node is a federation member then schedule a vote.
+                    if (this.federationManager.IsFederationMember)
+                        this.votingManager.ScheduleVote(votingData);
                 }
                 catch (Exception err)
                 {
