@@ -109,7 +109,6 @@ namespace Stratis.Bitcoin.Features.PoA
             IDateTimeProvider dateTimeProvider,
             Network network,
             INodeLifetime nodeLifetime,
-            ILoggerFactory loggerFactory,
             IInitialBlockDownloadState ibdState,
             BlockDefinition blockDefinition,
             ISlotsManager slotsManager,
