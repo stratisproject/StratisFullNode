@@ -113,6 +113,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     .AddSingleton<IBNBClient, BNBClient>()
                     .AddSingleton<IETHCompatibleClientProvider, ETHCompatibleClientProvider>()
                     .AddSingleton<ICirrusContractClient, CirrusContractClient>()
+                    .AddSingleton<InteropMonitor>()
                     .AddSingleton<InteropPoller>()
                     ));
 
