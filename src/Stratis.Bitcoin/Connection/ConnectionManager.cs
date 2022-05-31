@@ -316,6 +316,7 @@ namespace Stratis.Bitcoin.Connection
 
             int inbound = this.ConnectedPeers.Count(x => x.Inbound);
 
+            builder.AppendLine();
             builder.AppendLine($">> Connections (In:{inbound}) (Out:{this.ConnectedPeers.Count() - inbound})");
             builder.AppendLine("Data Transfer".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": Received: {totalRead.BytesToMegaBytes()} MB Sent: {totalWritten.BytesToMegaBytes()} MB");
 

@@ -296,7 +296,7 @@ namespace Stratis.Bitcoin.Features.PoA
             {
                 if (this.federationMembers.IsCollateralAddressRegistered(collateralFederationMember.CollateralMainchainAddress))
                 {
-                    this.logger.LogTrace("(-)[DUPLICATED_COLLATERAL_ADDR]");
+                    this.logger.LogWarning($"Federation member with address '{collateralFederationMember.CollateralMainchainAddress}' already exists.");
                     return;
                 }
 
