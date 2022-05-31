@@ -79,7 +79,7 @@ namespace NBitcoin
         /// </summary>
         /// <param name="hashes">Hash to search for.</param>
         /// <returns>First found chained block header or <c>null</c> if not found.</returns>
-        internal ChainedHeader FindFork(IEnumerable<uint256> hashes)
+        public ChainedHeader FindFork(IEnumerable<uint256> hashes)
         {
             if (hashes == null)
                 throw new ArgumentNullException("hashes");
