@@ -37,7 +37,7 @@ namespace Stratis.Bitcoin.Configuration.Settings
             if (type == typeof(bool))
                 return "0 or 1";
 
-            if (type == typeof(int))
+            if (type.IsValueType)
                 return "number";
 
             return type.ToString().Split('.').Last().ToLower();
@@ -66,7 +66,9 @@ namespace Stratis.Bitcoin.Configuration.Settings
 
             TextFileConfiguration config = nodeSettings.ConfigReader;
 
-            foreach (PropertyInfo pi in this.GetType().GetProperties())
+            BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+
+            foreach (PropertyInfo pi in this.GetType().GetProperties(bindingFlags))
             {
                 CommandLineOptionAttribute attr = Attribute.GetCustomAttributes(pi).OfType<CommandLineOptionAttribute>().FirstOrDefault();
                 if (attr == null)
@@ -80,7 +82,9 @@ namespace Stratis.Bitcoin.Configuration.Settings
                         typeGetter[pi.PropertyType] = getOrDefault;
                     }
 
-                    pi.SetValue(this, getOrDefault.Invoke(config, new object[] { attr.Option, pi.GetValue(this), attr.CanLog ? logger : null }));
+                    object? value = getOrDefault.Invoke(config, bindingFlags, null, new object[] { attr.Option, pi.GetValue(this), attr.CanLog ? logger : null }, null);
+
+                    pi.SetValue(this, value);
                 }
             }
         }
