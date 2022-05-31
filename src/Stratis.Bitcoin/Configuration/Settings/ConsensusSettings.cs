@@ -74,14 +74,15 @@ namespace Stratis.Bitcoin.Configuration.Settings
 
             var builder = new StringBuilder();
 
-            builder.AppendLine($"-checkpoints=<0 or 1>              Use checkpoints. Default 1.");
-            builder.AppendLine($"-assumevalid=<hex>                 If this block is in the chain assume that it and its ancestors are valid and potentially skip their script verification (0 to verify all). Defaults to { network.Consensus.DefaultAssumeValid }.");
-            builder.AppendLine($"-maxtipage=<number>                Max tip age. Default {network.MaxTipAge}.");
-            builder.AppendLine($"-maxblkmem=<number>                Max memory to use for unconsumed blocks in MB. Default 200 (this does not include the size of objects in memory).");
-            builder.AppendLine($"-dbcache=<number>                  Max cache memory for the coindb in MB. Default 200 (this does not include the size of objects in memory).");
-            builder.AppendLine($"-dbflush=<number>                  How often to flush the cache to disk when in IBD in minutes. Default 10 min (min=1min, max=60min).");
+            builder.AppendLine($"-checkpoints=<0 or 1>          Use checkpoints. Default 1.");
+            builder.AppendLine($"-assumevalid=<hex>             If this block is in the chain assume that it and its ancestors are valid and potentially skip their script verification (0 to verify all). Defaults to { network.Consensus.DefaultAssumeValid }.");
+            builder.AppendLine($"-maxtipage=<number>            Max tip age. Default {network.MaxTipAge}.");
+            builder.AppendLine($"-maxblkmem=<number>            Max memory to use for unconsumed blocks in MB. Default 200 (this does not include the size of objects in memory).");
+            builder.AppendLine($"-dbcache=<number>              Max cache memory for the coindb in MB. Default 200 (this does not include the size of objects in memory).");
+            builder.AppendLine($"-dbflush=<number>              How often to flush the cache to disk when in IBD in minutes. Default 10 min (min=1min, max=60min).");
 
-            NodeSettings.Default(network).Logger.LogInformation(builder.ToString());
+            var logger = NodeSettings.Default(network).LoggerFactory.CreateLogger(typeof(ConsensusSettings).FullName);
+            logger.LogInformation(builder.ToString());
         }
 
         /// <summary>

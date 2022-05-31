@@ -99,6 +99,7 @@ namespace Stratis.Bitcoin.Persistence.KeyValueStores
             return value;
         }
 
+        /// <inheritdoc />
         public List<T> GetAllAsJson<T>()
         {
             var values = new List<T>();
@@ -116,6 +117,16 @@ namespace Stratis.Bitcoin.Persistence.KeyValueStores
             }
 
             return values;
+        }
+
+        /// <inheritdoc />
+        public void Delete(string key)
+        {
+            byte[] keyBytes = Encoding.ASCII.GetBytes(key);
+
+            byte[] row = this.leveldb.Get(keyBytes);
+            if (row != null)
+                this.leveldb.Delete(keyBytes);
         }
 
         /// <inheritdoc />

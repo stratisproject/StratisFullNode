@@ -27,6 +27,9 @@ namespace Stratis.Features.Unity3dApi
         /// <summary>Adds NFT contract to watch list. Only contracts from the watch list are being indexed.</summary>
         void WatchNFTContract(string contractAddress);
 
+        /// <summary>Removes NFT contract from watch list.</summary>
+        void UnwatchNFTContract(string contractAddress);
+
         /// <summary>Provides a list of all nft contract addresses that are being tracked.</summary>
         List<string> GetWatchedNFTContracts();
 
@@ -35,6 +38,9 @@ namespace Stratis.Features.Unity3dApi
 
         /// <summary>Returns collection of all users that own nft.</summary>
         NFTContractModel GetAllNFTOwnersByContractAddress(string contractAddress);
+
+        /// <summary>Reindexes all tracked contracts.</summary>
+        void ReindexAllContracts();
     }
 
     /// <summary>This component maps addresses to NFT Ids they own.</summary>
@@ -44,8 +50,7 @@ namespace Stratis.Features.Unity3dApi
 
         private const string DatabaseFilename = "NFTTransferIndexer.litedb";
         private const string DbOwnedNFTsKey = "OwnedNfts";
-        private const int SyncBufferBlocks = 50;
-        
+
         private readonly DataFolder dataFolder;
         private readonly ILogger logger;
         private readonly ChainIndexer chainIndexer;
@@ -57,8 +62,8 @@ namespace Stratis.Features.Unity3dApi
         private LiteCollection<NFTContractModel> NFTContractCollection;
         private CancellationTokenSource cancellation;
         private Task indexingTask;
-        
-        public NFTTransferIndexer(DataFolder dataFolder, ILoggerFactory loggerFactory, IAsyncProvider asyncProvider, 
+
+        public NFTTransferIndexer(DataFolder dataFolder, ILoggerFactory loggerFactory, IAsyncProvider asyncProvider,
             ChainIndexer chainIndexer, Network network, ISmartContractTransactionService smartContractTransactionService = null)
         {
             this.network = network;
@@ -89,10 +94,27 @@ namespace Stratis.Features.Unity3dApi
             this.logger.LogDebug("NFTTransferIndexer initialized.");
         }
 
+        private int GetWatchFromHeight()
+        {
+            int watchFromHeight = this.network.IsTest() ? 3000000 : 3400000;
+
+            return watchFromHeight;
+        }
+
         /// <inheritdoc />
         public void WatchNFTContract(string contractAddress)
         {
-            int watchFromHeight = this.network.IsTest() ? 3000000 : 3400000;
+            try
+            {
+                // Check that contract address is a valid address
+                var addr = new BitcoinPubKeyAddress(contractAddress, this.network);
+            }
+            catch (FormatException)
+            {
+                return;
+            }
+
+            int watchFromHeight = this.GetWatchFromHeight();
 
             if (!this.NFTContractCollection.Exists(x => x.ContractAddress == contractAddress))
             {
@@ -109,6 +131,19 @@ namespace Stratis.Features.Unity3dApi
             }
             else
                 this.logger.LogDebug("Tried to add contract " + contractAddress + " to watchlist, but it's already tracked.");
+        }
+
+        /// <inheritdoc />
+        public void UnwatchNFTContract(string contractAddress)
+        {
+            NFTContractModel entryToRemove = this.NFTContractCollection.FindOne(x => x.ContractAddress == contractAddress);
+
+            if (entryToRemove == null)
+                return;
+
+            this.NFTContractCollection.Delete(entryToRemove.Id);
+
+            this.logger.LogDebug("Unwatched contract " + contractAddress);
         }
 
         /// <inheritdoc />
@@ -141,6 +176,24 @@ namespace Stratis.Features.Unity3dApi
 
             NFTContractModel currentContract = this.NFTContractCollection.FindOne(x => x.ContractAddress == contractAddress);
             return currentContract;
+        }
+
+        /// <inheritdoc />
+        public void ReindexAllContracts()
+        {
+            this.logger.LogTrace("ReindexAllContracts()");
+
+            int watchFromHeight = this.GetWatchFromHeight();
+
+            foreach (NFTContractModel contractModel in this.NFTContractCollection.FindAll().ToList())
+            {
+                contractModel.OwnedIDsByAddress = new Dictionary<string, HashSet<long>>();
+                contractModel.LastUpdatedBlock = watchFromHeight;
+
+                this.NFTContractCollection.Upsert(contractModel);
+            }
+
+            this.logger.LogTrace("ReindexAllContracts(-)");
         }
 
         private async Task IndexNFTsContinuouslyAsync()
@@ -200,11 +253,21 @@ namespace Stratis.Features.Unity3dApi
                             TransferLogRoot infoObj = JsonConvert.DeserializeObject<TransferLogRoot>(jsonLog);
                             transferLogs.Add(infoObj.Data);
                         }
-                    
-                        foreach (TransferLog transferInfo in transferLogs)
+
+                        this.logger.LogDebug("Processing transafer logs.");
+
+                        for (int i = 0; i < transferLogs.Count; i++)
                         {
+                            TransferLog transferInfo = transferLogs[i];
+
+                            this.logger.LogDebug("log #{0}: From: {1} To: {2} Id:{3}", i, transferInfo.From, transferInfo.To, transferInfo.TokenId);
+
                             if ((transferInfo.From != null) && currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.From))
                             {
+                                bool fromExists = currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.From);
+
+                                this.logger.LogDebug("FromExists: {0} ",  fromExists);
+
                                 currentContract.OwnedIDsByAddress[transferInfo.From].Remove(transferInfo.TokenId);
 
                                 if (currentContract.OwnedIDsByAddress[transferInfo.From].Count == 0)
@@ -212,7 +275,12 @@ namespace Stratis.Features.Unity3dApi
                             }
 
                             if (!currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.To))
+                            {
+                                this.logger.LogDebug("Added ID to To");
                                 currentContract.OwnedIDsByAddress.Add(transferInfo.To, new HashSet<long>());
+                            }
+                            else
+                                this.logger.LogDebug("Already added!");
 
                             currentContract.OwnedIDsByAddress[transferInfo.To].Add(transferInfo.TokenId);
                         }
@@ -241,13 +309,13 @@ namespace Stratis.Features.Unity3dApi
 
         public void Dispose()
         {
-            this.logger.LogDebug("Disposing");
+            this.logger.LogDebug("Dispose()");
 
             this.cancellation.Cancel();
             this.indexingTask?.GetAwaiter().GetResult();
             this.db?.Dispose();
 
-            this.logger.LogDebug("Disposed");
+            this.logger.LogDebug("Dispose(-)");
         }
     }
 
