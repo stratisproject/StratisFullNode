@@ -79,7 +79,7 @@ namespace Stratis.Bitcoin.Features.Miner
         /// <param name="network">The network to extract values from.</param>
         public static void PrintHelp(Network network)
         {
-            MinerSettings.PrintHelp(network);
+            BaseSettings.PrintHelp(typeof(MinerSettings), network);
         }
 
         /// <summary>
@@ -89,7 +89,7 @@ namespace Stratis.Bitcoin.Features.Miner
         /// <param name="network">The network to base the defaults off.</param>
         public static void BuildDefaultConfigurationFile(StringBuilder builder, Network network)
         {
-            MinerSettings.BuildDefaultConfigurationFile(builder, network);
+            BaseSettings.BuildDefaultConfigurationFile(typeof(MinerSettings), builder, network);
         }
 
         /// <summary>

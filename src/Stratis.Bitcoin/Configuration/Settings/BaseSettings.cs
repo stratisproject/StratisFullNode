@@ -37,7 +37,7 @@ namespace Stratis.Bitcoin.Configuration.Settings
             if (type == typeof(bool))
                 return "0 or 1";
 
-            if (type == typeof(int))
+            if (type.IsValueType)
                 return "number";
 
             return type.ToString().Split('.').Last().ToLower();
