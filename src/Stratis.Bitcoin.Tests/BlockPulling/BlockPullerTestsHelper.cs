@@ -152,13 +152,15 @@ namespace Stratis.Bitcoin.Tests.BlockPulling
 
         public Dictionary<int, List<ChainedHeader>> AssignedHeadersByPeerId => (Dictionary<int, List<ChainedHeader>>)this.puller.GetMemberValue("assignedHeadersByPeerId");
 
-        public int PeerSpeedLimitWhenNotInIbdBytesPerSec => typeof(BlockPuller).GetPrivateConstantValue<int>("PeerSpeedLimitWhenNotInIbdBytesPerSec");
+        public int PeerSpeedLimitWhenNotInIbdBytesPerSec => this.BlockPullerSettings.PeerSpeedLimitWhenNotInIbdBytesPerSec;
 
-        public int ImportantHeightMargin => typeof(BlockPuller).GetPrivateConstantValue<int>("ImportantHeightMargin");
+        private BlockPuller.Settings BlockPullerSettings => (BlockPuller.Settings)this.puller.GetMemberValue("settings");
 
-        public int StallingLoopIntervalMs => typeof(BlockPuller).GetPrivateConstantValue<int>("StallingLoopIntervalMs");
+        public int ImportantHeightMargin => this.BlockPullerSettings.ImportantHeightMargin;
 
-        public int MaxSecondsToDeliverBlock => typeof(BlockPuller).GetPrivateConstantValue<int>("MaxSecondsToDeliverBlock");
+        public int StallingLoopIntervalMs => this.BlockPullerSettings.StallingLoopIntervalMs;
+
+        public int MaxSecondsToDeliverBlock => this.BlockPullerSettings.MaxSecondsToDeliverBlock;
 
         public void RecalculateQualityScoreLocked(IBlockPullerBehavior pullerBehavior, int peerId)
         {

@@ -102,6 +102,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         private readonly FeeRate minRelayTxFee;
 
         // TODO: Verify these
+
         /// <summary>Flags that determine how transaction should be validated in non-consensus code.</summary>
         public static Transaction.LockTimeFlags StandardLocktimeVerifyFlags = Transaction.LockTimeFlags.VerifySequence | Transaction.LockTimeFlags.MedianTimePast;
 
@@ -304,6 +305,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// <param name="state">Validation state for creating the validation context.</param>
         /// <param name="tx">The transaction to validate.</param>
         /// <param name="vHashTxnToUncache">Not currently used</param>
+        /// <returns>The asynchronous task.</returns>
         private async Task AcceptToMemoryPoolWorkerAsync(MempoolValidationState state, Transaction tx, List<uint256> vHashTxnToUncache)
         {
             var context = new MempoolValidationContext(tx, state)

@@ -426,38 +426,14 @@ namespace Stratis.Bitcoin.Features.BlockStore
             if (blockStoreTip != null)
                 return blockStoreTip;
 
-            var blockStoreResetList = new List<uint256>();
+            int firstNotFound = BinarySearch.BinaryFindFirst((h) => this.chainIndexer[h] == null || this.blockRepository.GetBlock(this.chainIndexer[h].HashBlock) == null, 1, this.chainIndexer.Height);
+            if (firstNotFound < 0)
+                return this.chainIndexer.Tip;
 
-            uint256 resetBlockHash = this.blockRepository.TipHashAndHeight.Hash;
-            Block resetBlock = this.blockRepository.GetBlock(resetBlockHash);
+            ChainedHeader newTip = this.chainIndexer[firstNotFound - 1];
 
-            while (this.chainIndexer.GetHeader(resetBlockHash) == null)
-            {
-                blockStoreResetList.Add(resetBlockHash);
-
-                if (resetBlock.Header.HashPrevBlock == this.chainIndexer.Genesis.HashBlock)
-                {
-                    resetBlockHash = this.chainIndexer.Genesis.HashBlock;
-                    break;
-                }
-
-                resetBlock = this.blockRepository.GetBlock(resetBlock.Header.HashPrevBlock);
-
-                if (resetBlock == null)
-                {
-                    // This can happen only if block store is corrupted.
-                    throw new BlockStoreException("Block store failed to recover.");
-                }
-
-                resetBlockHash = resetBlock.GetHash();
-            }
-
-            ChainedHeader newTip = this.chainIndexer.GetHeader(resetBlockHash);
-
-            if (blockStoreResetList.Count != 0)
-                this.blockRepository.Delete(new HashHeightPair(newTip), blockStoreResetList);
-
-            this.chainIndexer.Initialize(newTip); // we have to set chain store to be same as the store tip.
+            // Set chain store to be same as the store tip.
+            this.chainIndexer.Initialize(newTip);
 
             this.logger.LogWarning("Block store tip recovered to block '{0}'.", newTip);
 

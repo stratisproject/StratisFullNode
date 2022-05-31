@@ -514,19 +514,18 @@ namespace Stratis.Bitcoin.Tests.Controllers
         }
 
         [Fact]
-        public void GetBlockHeader_NotUsingJsonFormat_ThrowsNotImplementedException()
+        public void GetBlockHeader_NotUsingJsonFormat_ReturnsHexModel()
         {
-            string hash = "1341323442";
+            ChainedHeader block = this.chainIndexer.GetHeader(2);
+            string bits = GetBlockHeaderBits(block.Header);
+            string hash = block.HashBlock.ToString();
             bool isJsonFormat = false;
 
-            IActionResult result = this.controller.GetBlockHeader(hash, isJsonFormat);
+            var json = (JsonResult)this.controller.GetBlockHeader(hash, isJsonFormat);
+            var resultModel = (HexModel)json.Value;
 
-            var errorResult = Assert.IsType<ErrorResult>(result);
-            var errorResponse = Assert.IsType<ErrorResponse>(errorResult.Value);
-            Assert.Single(errorResponse.Errors);
-            ErrorModel error = errorResponse.Errors[0];
-            Assert.Equal(400, error.Status);
-            Assert.StartsWith("Binary serialization is not", error.Description);
+            Assert.NotNull(resultModel);
+            Assert.Equal(block.Header.ToHex(this.network), resultModel.Hex);
         }
 
         [Fact]

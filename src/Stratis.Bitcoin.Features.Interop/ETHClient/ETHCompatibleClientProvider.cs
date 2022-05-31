@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Stratis.Bitcoin.Features.Interop.Settings;
 using Stratis.Bitcoin.Features.Wallet;
 
 namespace Stratis.Bitcoin.Features.Interop.ETHClient
@@ -40,6 +41,9 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// <inheritdoc />
         public IETHClient GetClientForChain(DestinationChain chain)
         {
+            if (chain == DestinationChain.CIRRUS)
+                return null;
+
             if (!this.supportedChains.ContainsKey(chain))
                 throw new NotImplementedException("Provided chain type not supported: " + chain);
 

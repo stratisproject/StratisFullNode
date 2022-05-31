@@ -70,6 +70,7 @@ namespace Stratis.CirrusD
             .AddPoAFeature()
             .UsePoAConsensus(dbType)
             .CheckCollateralCommitment()
+            .AddDynamicMemberhip()
 
             // This needs to be set so that we can check the magic bytes during the Strat to Strax changeover.
             // Perhaps we can introduce a block height check rather?

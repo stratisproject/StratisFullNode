@@ -115,7 +115,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                    $"{nameof(this.PollStartBlockData)}:{this.PollStartBlockData?.ToString() ?? "null"}, " +
                    $"{nameof(this.PollVotedInFavorBlockData)}:{this.PollVotedInFavorBlockData?.ToString() ?? "null"}, " +
                    $"{nameof(this.PollExecutedBlockData)}:{this.PollExecutedBlockData?.ToString() ?? "null"}, " +
-                   $"{nameof(this.PubKeysHexVotedInFavor)}:{string.Join(" ", this.PubKeysHexVotedInFavor)}";
+                   $"{nameof(this.PubKeysHexVotedInFavor)}:{string.Join(",", this.PubKeysHexVotedInFavor.Select(v => v.PubKey).ToList())}";
         }
 
         public override int GetHashCode()
