@@ -3,9 +3,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Moq;
 using NBitcoin;
 using NSubstitute;
 using Stratis.Bitcoin;
+using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Networks;
@@ -29,7 +31,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         private readonly Network network;
         private readonly MultisigAddressHelper addressHelper;
         private readonly TestTransactionBuilder transactionBuilder;
-        private readonly Dictionary<DepositRetrievalType, int> retrievalTypeConfirmations;
+        private readonly RetrievalTypeConfirmations retrievalTypeConfirmations;
 
         public DepositExtractorTests()
         {
@@ -53,16 +55,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federationSettings, this.network, this.opReturnDataReader);
             this.transactionBuilder = new TestTransactionBuilder();
 
-            this.retrievalTypeConfirmations = new Dictionary<DepositRetrievalType, int>
-            {
-                [DepositRetrievalType.Small] = this.federationSettings.MinimumConfirmationsSmallDeposits,
-                [DepositRetrievalType.Normal] = this.federationSettings.MinimumConfirmationsNormalDeposits,
-                [DepositRetrievalType.Large] = this.federationSettings.MinimumConfirmationsLargeDeposits,
-                [DepositRetrievalType.Distribution] = this.federationSettings.MinimumConfirmationsDistributionDeposits,
-                [DepositRetrievalType.ConversionSmall] = this.federationSettings.MinimumConfirmationsSmallDeposits,
-                [DepositRetrievalType.ConversionNormal] = this.federationSettings.MinimumConfirmationsNormalDeposits,
-                [DepositRetrievalType.ConversionLarge] = this.federationSettings.MinimumConfirmationsLargeDeposits
-            };
+            this.retrievalTypeConfirmations = new RetrievalTypeConfirmations(this.network, new NodeDeployments(this.network, new ChainIndexer(this.network)), this.federationSettings, null, null);
         }
 
         // Normal Deposits
