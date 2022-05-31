@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -8,6 +11,7 @@ using NBitcoin;
 using NBitcoin.Policy;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
+using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
@@ -42,13 +46,41 @@ namespace Stratis.Bitcoin.Features.SmartContracts
         private readonly ILogger logger;
         private readonly Network network;
         private readonly IStateRepositoryRoot stateRoot;
+        private readonly DataFolder dataFolder;
 
-        public SmartContractFeature(IConsensusManager consensusLoop, ILoggerFactory loggerFactory, Network network, IStateRepositoryRoot stateRoot)
+        public SmartContractFeature(IConsensusManager consensusLoop, ILoggerFactory loggerFactory, Network network, IStateRepositoryRoot stateRoot, DataFolder dataFolder)
         {
             this.consensusManager = consensusLoop;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;
             this.stateRoot = stateRoot;
+            this.dataFolder = dataFolder;
+        }
+
+        public void InitializeState()
+        {
+            string directoryName = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
+            // Find the latest state checkpoint file above the current tip.
+            foreach (KeyValuePair<int, CheckpointInfo> checkpoint in this.network.Checkpoints.OrderByDescending(c => c.Key))
+            {
+                if (checkpoint.Key <= this.consensusManager.Tip.Height)
+                    break;
+
+                string checkPointFileName = Path.Combine(directoryName, $"{this.network.Name}Contracts{checkpoint.Key}.zip");
+                if (File.Exists(checkPointFileName))
+                {
+                    // Un-zip "contracts" and "contractsreceipts" to sub-folders within the data folder.
+                    if (Directory.Exists(this.dataFolder.SmartContractStatePath))
+                        Directory.Delete(this.dataFolder.SmartContractStatePath, true);
+
+                    if (Directory.Exists(this.dataFolder.SmartContractStatePath + "receipts"))
+                        Directory.Delete(this.dataFolder.SmartContractStatePath + "receipts", true);
+
+                    System.IO.Compression.ZipFile.ExtractToDirectory(checkPointFileName, this.dataFolder.RootPath);
+                    break;
+                }
+            }
         }
 
         public override Task InitializeAsync()
@@ -57,6 +89,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts
             Guard.Assert(this.network.Consensus.ConsensusFactory is SmartContractPowConsensusFactory
                          || this.network.Consensus.ConsensusFactory is SmartContractPoAConsensusFactory
                          || this.network.Consensus.ConsensusFactory is SmartContractCollateralPoAConsensusFactory);
+
+            this.InitializeState();
 
             this.stateRoot.SyncToRoot(((ISmartContractBlockHeader)this.consensusManager.Tip.Header).HashStateRoot.ToBytes());
 

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
+using Stratis.Bitcoin.Tests.Common;
 using Xunit;
 
 namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
@@ -50,7 +51,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             int blockWeight = this.CalculateBlockWeight(this.ruleContext.ValidationContext.BlockToValidate, TransactionOptions.All);
 
             // increase max block weight to be able to hit this if statement
-            this.options.MaxBlockWeight = (uint) (blockWeight * 4) + 100;
+            this.options.SetPrivatePropertyValue("MaxBlockWeight", (uint) (blockWeight * 4) + 100);
 
             ConsensusErrorException exception = await Assert.ThrowsAsync<ConsensusErrorException>(() => this.consensusRules.RegisterRule<BlockSizeRule>().RunAsync(this.ruleContext));
 
@@ -64,7 +65,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             int blockWeight = this.CalculateBlockWeight(this.ruleContext.ValidationContext.BlockToValidate, TransactionOptions.All);
 
             // increase max block weight to be able to hit this if statement
-            this.options.MaxBlockWeight = (uint) (blockWeight * 4) + 1;
+            this.options.SetPrivatePropertyValue("MaxBlockWeight", (uint) (blockWeight * 4) + 1);
 
             ConsensusErrorException exception = await Assert.ThrowsAsync<ConsensusErrorException>(() => this.consensusRules.RegisterRule<BlockSizeRule>().RunAsync(this.ruleContext));
 
@@ -75,7 +76,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         public async Task RunAsync_AtBlockWeight_BelowMaxBlockBaseSize_DoesNotThrowExceptionAsync()
         {
             this.ruleContext.ValidationContext.BlockToValidate = GenerateBlockWithWeight((int)this.options.MaxBlockWeight / this.options.WitnessScaleFactor, TransactionOptions.All);
-            this.options.MaxBlockBaseSize = this.options.MaxBlockWeight + 1000;
+            this.options.SetPrivatePropertyValue("MaxBlockBaseSize", this.options.MaxBlockWeight + 1000);
 
             await this.consensusRules.RegisterRule<BlockSizeRule>().RunAsync(this.ruleContext);
         }
@@ -84,7 +85,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         public async Task RunAsync_BelowBlockWeight_BelowMaxBlockBaseSize_DoesNotThrowExceptionAsync()
         {
             this.ruleContext.ValidationContext.BlockToValidate = GenerateBlockWithWeight((int)(this.options.MaxBlockWeight / this.options.WitnessScaleFactor) - 1, TransactionOptions.All);
-            this.options.MaxBlockBaseSize = this.options.MaxBlockWeight + 1000;
+            this.options.SetPrivatePropertyValue("MaxBlockBaseSize", this.options.MaxBlockWeight + 1000);
 
             await this.consensusRules.RegisterRule<BlockSizeRule>().RunAsync(this.ruleContext);
         }
@@ -106,7 +107,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         public async Task RunAsync_BlockAtMaxBlockBaseSize_DoesNotThrowExceptionAsync()
         {
             this.ruleContext.ValidationContext.BlockToValidate = GenerateBlockWithWeight((int)this.options.MaxBlockBaseSize, TransactionOptions.All);
-            this.options.MaxBlockWeight = (this.options.MaxBlockBaseSize * 4) + 1000;
+            this.options.SetPrivatePropertyValue("MaxBlockWeight", (this.options.MaxBlockBaseSize * 4) + 1000);
 
             await this.consensusRules.RegisterRule<BlockSizeRule>().RunAsync(this.ruleContext);
         }
@@ -115,7 +116,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         public async Task RunAsync_BlockBelowMaxBlockBaseSize_DoesNotThrowExceptionAsync()
         {
             this.ruleContext.ValidationContext.BlockToValidate = GenerateBlockWithWeight((int)this.options.MaxBlockBaseSize - 1, TransactionOptions.All);
-            this.options.MaxBlockWeight = (this.options.MaxBlockBaseSize * 4) + 1000;
+            this.options.SetPrivatePropertyValue("MaxBlockWeight", (this.options.MaxBlockBaseSize * 4) + 1000);
 
             await this.consensusRules.RegisterRule<BlockSizeRule>().RunAsync(this.ruleContext);
         }

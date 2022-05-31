@@ -1121,6 +1121,21 @@ namespace Stratis.Bitcoin.Features.Wallet
             return res;
         }
 
+        public IEnumerable<TransactionData> GetAllTransactionsInWallet(string walletName, Func<HdAccount, bool> accountFilter)
+        {
+            Guard.NotEmpty(walletName, nameof(walletName));
+
+            Wallet wallet = this.GetWallet(walletName);
+            IEnumerable<TransactionData> res = null;
+
+            lock (this.lockObject)
+            {
+                res = wallet.GetAllTransactions(accountFilter: accountFilter);
+            }
+
+            return res;
+        }
+
         /// <inheritdoc />
         public void RemoveBlocks(ChainedHeader fork)
         {

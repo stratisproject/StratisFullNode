@@ -14,6 +14,8 @@ using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.PoA.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
+using Stratis.Bitcoin.Utilities.Extensions;
+using Stratis.Sidechains.Networks.Deployments;
 
 namespace Stratis.Sidechains.Networks
 {
@@ -170,20 +172,18 @@ namespace Stratis.Sidechains.Networks
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
                 autoKickIdleMembers: true,
-                federationMemberMaxIdleTimeSeconds: 60 * 60 * 24 * 2 // 2 days
-            )
-            {
-                EnforceMinProtocolVersionAtBlockHeight = 384675, // setting the value to zero makes the functionality inactive
-                EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
-                FederationMemberActivationTime = 1605862800, // Friday, November 20, 2020 9:00:00 AM
-                InterFluxV2MainChainActivationHeight = 460_000,
-                VotingManagerV2ActivationHeight = 1_683_000, // Tuesday, 12 January 2021 9:00:00 AM (Estimated)
-                Release1100ActivationHeight = 3_426_950, // Monday, 20 December 2021 10:00:00 AM (Estimated)
-                PollExpiryBlocks = 50_000, // Roughly 9 days
-                GetMiningTimestampV2ActivationHeight = 3_709_000, // Monday 14 February 00:00:00 (Estimated)
-                GetMiningTimestampV2ActivationStrictHeight = 3_783_000, // Monday 28 February 07:00:00 (London Time) (Estimated)
-                ContractSerializerV2ActivationHeight = 3_386_335 // Monday 13 December 16:00:00 (Estimated)
-            };
+                federationMemberMaxIdleTimeSeconds: 60 * 60 * 24 * 2, // 2 days
+                enforceMinProtocolVersionAtBlockHeight: 384675, // setting the value to zero makes the functionality inactive
+                enforcedMinProtocolVersion: ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
+                federationMemberActivationTime: 1605862800, // Friday, November 20, 2020 9:00:00 AM
+                interFluxV2MainChainActivationHeight: 460_000,
+                votingManagerV2ActivationHeight: 1_683_000, // Tuesday, 12 January 2021 9:00:00 AM (Estimated)
+                getMiningTimestampV2ActivationHeight: 3_709_000, // Monday 14 February 00:00:00 (Estimated)
+                getMiningTimestampV2ActivationStrictHeight: 3_783_000, // Monday 28 February 07:00:00 (London Time) (Estimated)
+                release1100ActivationHeight: 3_426_950, // Monday, 20 December 2021 10:00:00 AM (Estimated)
+                pollExpiryBlocks: 50_000, // Roughly 9 days
+                contractSerializerV2ActivationHeight: 3_386_335 // Monday 13 December 16:00:00 (Estimated)
+            );
 
             var buriedDeployments = new BuriedDeploymentsArray
             {
@@ -192,7 +192,11 @@ namespace Stratis.Sidechains.Networks
                 [BuriedDeployments.BIP66] = 0
             };
 
-            var bip9Deployments = new NoBIP9Deployments();
+            var bip9Deployments = new CirrusBIP9Deployments()
+            {
+                // Deployment will go active once 75% of nodes are on 1.3.0.0 or later.
+                [CirrusBIP9Deployments.Release1300] = new BIP9DeploymentsParameters("Release1300", 0, DateTime.Parse("2022-3-22 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-1-1 +0").ToUnixTimestamp(), 1512 /* 75% Activation Threshold */)
+            };
 
             this.Consensus = new Consensus(
                 consensusFactory: consensusFactory,
@@ -279,7 +283,9 @@ namespace Stratis.Sidechains.Networks
                 { 3_000_000, new CheckpointInfo(new uint256("0x79afa4a91a24b5e72632ad01d2a18330aecd1bc2cd4eea82eda5e3945fb0b238")) },
                 { 3_200_000, new CheckpointInfo(new uint256("0x6ec55b3b252f45e6677abf553601fb7bc97637319a9646e84d787769afe65988")) },
                 { 3_500_000, new CheckpointInfo(new uint256("0x1772356d6498935ab93cbd5eaf1b868c5265480edeef2b5fec133fbc21b292cb")) },
-                { 3_700_000, new CheckpointInfo(new uint256("0x16b41558dedb4945476f0212034bd148bef3cdeccdd1b55a198f8b1d6900716b")) }
+                { 3_700_000, new CheckpointInfo(new uint256("0x16b41558dedb4945476f0212034bd148bef3cdeccdd1b55a198f8b1d6900716b")) },
+                { 3_834_160, new CheckpointInfo(new uint256("0xa0e7b27d1e642301a5b3a985dc98953858d89849e9b864de7e9b62e6856973a0")) },
+                { 4_100_000, new CheckpointInfo(new uint256("0x4f099739c22560ce27b7d5e6d30e86e7e6f52062504f0d31c25a427074de85f8")) }
             };
 
             this.DNSSeeds = new List<DNSSeedData>
