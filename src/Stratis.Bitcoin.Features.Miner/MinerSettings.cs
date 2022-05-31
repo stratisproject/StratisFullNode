@@ -86,6 +86,15 @@ namespace Stratis.Bitcoin.Features.Miner
         public MinerSettings(NodeSettings nodeSettings) : base(nodeSettings)
         {
             this.BlockDefinitionOptions = new BlockDefinitionOptions(this.BlockMaxWeight, this.BlockMaxSize).RestrictForNetwork(nodeSettings.Network);
+
+            if (!this.Mine)
+                this.MineAddress = null;
+
+            if (!this.Stake)
+            {
+                this.WalletName = null;
+                this.WalletPassword = null;
+            }
         }
     }
 }
