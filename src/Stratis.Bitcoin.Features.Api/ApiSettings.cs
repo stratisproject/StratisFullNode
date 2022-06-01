@@ -18,6 +18,7 @@ namespace Stratis.Bitcoin.Features.Api
         private string ApiHost { get { return this.apiHost ?? (this.UseHttps ? DefaultApiHost.Replace(@"http://", @"https://") : DefaultApiHost); } set { this.apiHost = value; } }
         private string apiHost = null;
 
+        // If a port is set in the -apiuri, it takes precedence over the default port or the port passed in -apiport.
         public Uri ApiUri => new Uri(this.ApiHost.Contains(":") ? this.ApiHost : $"{this.ApiHost}:{this.ApiPort}");
 
         /// <summary>Port of node's API interface.</summary>
