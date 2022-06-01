@@ -26,7 +26,7 @@ namespace Stratis.Bitcoin.Features.Api
         public int ApiPort { get { return this.apiPort ?? this.nodeSettings.Network.DefaultAPIPort; } set { this.apiPort = value; } }
         private int? apiPort = null;
 
-        /// <summary>URI to node's API interface.</summary>
+        /// <summary>Sets the keepalive interval (set in seconds).</summary>
         [CommandLineOption("keepalive", "Keep Alive interval (set in seconds).")]
         private int KeepAlive { get; set; } = 0;
 
