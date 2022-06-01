@@ -56,6 +56,8 @@ namespace Stratis.Bitcoin.Configuration.Settings
 
         private static Dictionary<Type, MethodInfo> typeGetter = new Dictionary<Type, MethodInfo>();
 
+        private static BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+
         public BaseSettings(NodeSettings nodeSettings)
         {
             Guard.NotNull(nodeSettings, nameof(nodeSettings));
@@ -65,8 +67,6 @@ namespace Stratis.Bitcoin.Configuration.Settings
             ILogger logger = nodeSettings.LoggerFactory.CreateLogger(this.GetType().FullName);
 
             TextFileConfiguration config = nodeSettings.ConfigReader;
-
-            BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
 
             foreach (PropertyInfo pi in this.GetType().GetProperties(bindingFlags))
             {
@@ -100,7 +100,7 @@ namespace Stratis.Bitcoin.Configuration.Settings
             var builder = new StringBuilder();
             var defaultValues = Activator.CreateInstance(settingsType, new object[] { defaultSettings });
 
-            foreach (PropertyInfo pi in settingsType.GetProperties())
+            foreach (PropertyInfo pi in settingsType.GetProperties(bindingFlags))
             {
                 CommandLineOptionAttribute attr = Attribute.GetCustomAttributes(pi).OfType<CommandLineOptionAttribute>().FirstOrDefault();
                 if (attr == null)
@@ -130,7 +130,7 @@ namespace Stratis.Bitcoin.Configuration.Settings
             NodeSettings defaultSettings = NodeSettings.Default(network);
             var defaultValues = Activator.CreateInstance(settingsType, new object[] { defaultSettings });
 
-            foreach (PropertyInfo pi in settingsType.GetProperties())
+            foreach (PropertyInfo pi in settingsType.GetProperties(bindingFlags))
             {
                 CommandLineOptionAttribute attr = Attribute.GetCustomAttributes(pi).OfType<CommandLineOptionAttribute>().FirstOrDefault();
                 if (attr == null)
