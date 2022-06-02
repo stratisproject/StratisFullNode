@@ -15,15 +15,15 @@ namespace Stratis.Bitcoin.Features.Api
 
         /// <summary>URI to node's API interface.</summary>
         [CommandLineOption("apiuri", "URI to node's API interface.")]
-        private string ApiHost { get { return this.apiHost ?? (this.UseHttps ? DefaultApiHost.Replace(@"http://", @"https://") : DefaultApiHost); } set { this.apiHost = value; } }
+        private string ApiHost { get { return this.UseHttps ? (this.apiHost ?? DefaultApiHost).Replace(@"http://", @"https://") : this.apiHost ?? DefaultApiHost; } set { this.apiHost = value; } }
         private string apiHost = null;
 
         // If a port is set in the -apiuri, it takes precedence over the default port or the port passed in -apiport.
-        public Uri ApiUri => new Uri(this.ApiHost.Contains(":") ? this.ApiHost : $"{this.ApiHost}:{this.ApiPort}");
+        public Uri ApiUri { get { Uri uri = new Uri(this.ApiHost); return uri.IsDefaultPort ? new Uri($"{this.ApiHost}:{this.apiPort ?? this.nodeSettings.Network.DefaultAPIPort}") : uri; } }
 
         /// <summary>Port of node's API interface.</summary>
         [CommandLineOption("apiport", "Port of node's API interface.")]
-        public int ApiPort { get { return this.apiPort ?? this.nodeSettings.Network.DefaultAPIPort; } set { this.apiPort = value; } }
+        public int ApiPort { get { return this.ApiUri.Port; } set { this.apiPort = value; } }
         private int? apiPort = null;
 
         /// <summary>Sets the keepalive interval (set in seconds).</summary>
