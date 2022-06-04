@@ -8,6 +8,7 @@ using NBitcoin;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
+using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.Wallet.Controllers;
 using Stratis.Features.Unity3dApi.Controllers;
@@ -95,7 +96,7 @@ namespace Stratis.Features.Unity3dApi
         /// <param name="network">The network to extract values from.</param>
         public static void PrintHelp(Network network)
         {
-            ApiSettings.PrintHelp(network);
+            BaseSettings.PrintHelp(typeof(ApiSettings), network);
         }
 
         /// <summary>
@@ -105,7 +106,7 @@ namespace Stratis.Features.Unity3dApi
         /// <param name="network">The network to base the defaults off.</param>
         public static void BuildDefaultConfigurationFile(StringBuilder builder, Network network)
         {
-            ApiSettings.BuildDefaultConfigurationFile(builder, network);
+            BaseSettings.BuildDefaultConfigurationFile(typeof(ApiSettings), builder, network);
         }
 
         /// <inheritdoc />
