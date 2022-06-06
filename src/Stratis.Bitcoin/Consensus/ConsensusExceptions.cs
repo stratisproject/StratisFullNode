@@ -34,7 +34,7 @@ namespace Stratis.Bitcoin.Consensus
     /// </summary>
     public class HeaderInvalidException : ConsensusException
     {
-        public HeaderInvalidException() : base()
+        public HeaderInvalidException(ConsensusError reason) : base(reason.Code + ": " + reason.Message)
         {
         }
     }

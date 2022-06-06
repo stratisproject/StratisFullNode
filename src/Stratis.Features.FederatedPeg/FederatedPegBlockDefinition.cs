@@ -49,7 +49,7 @@ namespace Stratis.Features.FederatedPeg
             MinerSettings minerSettings,
             FederatedPegSettings federatedPegSettings,
             NodeDeployments nodeDeployments)
-            : base(blockBufferGenerator, coinView, consensusManager, dateTimeProvider, executorFactory, loggerFactory, mempool, mempoolLock, network, senderRetriever, stateRoot, executionCache, callDataSerializer, minerSettings, nodeDeployments)
+            : base(blockBufferGenerator, coinView, consensusManager, dateTimeProvider, executorFactory, mempool, mempoolLock, network, senderRetriever, stateRoot, executionCache, callDataSerializer, minerSettings, nodeDeployments)
         {
             this.payToMultisigScript = federatedPegSettings.MultiSigAddress.ScriptPubKey;
 

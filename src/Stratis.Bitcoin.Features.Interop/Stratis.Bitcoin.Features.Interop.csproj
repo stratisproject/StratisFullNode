@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>    
-    <Version>1.2.1.0</Version>
+    <Version>1.3.0.0</Version>
     <Authors>Stratis Group Ltd.</Authors>
     <PackageId>Stratis.Features.Interop</PackageId>
     <Product>Stratis.Features.Interop</Product>
@@ -14,6 +14,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CSharpFunctionalExtensions" Version="1.10.0" />
+    <PackageReference Include="Flurl" Version="3.0.1" />
+    <PackageReference Include="Flurl.Http" Version="3.0.1" />
     <PackageReference Include="Microsoft.AspNet.WebApi.Client" Version="5.2.7" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Versioning" Version="3.0.1" />
     <PackageReference Include="Nethereum.Web3" Version="3.8.0" />

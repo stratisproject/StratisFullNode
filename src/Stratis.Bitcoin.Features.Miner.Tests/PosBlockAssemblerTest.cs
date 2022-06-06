@@ -97,7 +97,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                     .Returns(new Target(new uint256(1123123123)))
                     .Verifiable();
 
-                var posBlockAssembler = new PosBlockDefinition(this.consensusManager.Object, this.dateTimeProvider.Object, this.LoggerFactory.Object, this.mempool.Object, new MempoolSchedulerLock(), this.minerSettings, this.Network, this.stakeChain.Object, this.stakeValidator.Object, new NodeDeployments(this.Network, chainIndexer));
+                var posBlockAssembler = new PosBlockDefinition(this.consensusManager.Object, this.dateTimeProvider.Object, this.mempool.Object, new MempoolSchedulerLock(), this.minerSettings, this.Network, this.stakeChain.Object, this.stakeValidator.Object, new NodeDeployments(this.Network, chainIndexer));
                 BlockTemplate blockTemplate = posBlockAssembler.Build(chainIndexer.Tip, this.key.ScriptPubKey);
 
                 Assert.Equal(new Money(1000), blockTemplate.TotalFee);
@@ -152,7 +152,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
 
                 SetupTxMempool(chainIndexer, newOptions, txFee, transaction);
 
-                var posBlockAssembler = new PosBlockDefinition(this.consensusManager.Object, this.dateTimeProvider.Object, this.LoggerFactory.Object, this.mempool.Object, new MempoolSchedulerLock(), this.minerSettings, this.Network, this.stakeChain.Object, this.stakeValidator.Object, new NodeDeployments(this.Network, chainIndexer));
+                var posBlockAssembler = new PosBlockDefinition(this.consensusManager.Object, this.dateTimeProvider.Object, this.mempool.Object, new MempoolSchedulerLock(), this.minerSettings, this.Network, this.stakeChain.Object, this.stakeValidator.Object, new NodeDeployments(this.Network, chainIndexer));
 
                 BlockTemplate blockTemplate = posBlockAssembler.Build(chainIndexer.Tip, this.key.ScriptPubKey);
 
@@ -515,7 +515,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                 IStakeValidator stakeValidator,
                 ILoggerFactory loggerFactory,
                 NodeDeployments nodeDeployments)
-                : base(consensusManager, dateTimeProvider, loggerFactory, mempool, mempoolLock, minerSettings, network, stakeChain, stakeValidator, nodeDeployments)
+                : base(consensusManager, dateTimeProvider, mempool, mempoolLock, minerSettings, network, stakeChain, stakeValidator, nodeDeployments)
             {
                 base.block = this.BlockTemplate.Block;
             }

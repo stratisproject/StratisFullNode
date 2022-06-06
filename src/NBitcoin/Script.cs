@@ -1247,7 +1247,7 @@ namespace NBitcoin
 
             Script scriptSig1 = input1.ScriptSig;
             Script scriptSig2 = input2.ScriptSig;
-            var hashVersion = HashVersion.Original;
+            HashVersion hashVersion = HashVersion.Original;
             bool isWitness = input1.WitSig != WitScript.Empty || input2.WitSig != WitScript.Empty;
             if (isWitness)
             {

@@ -130,7 +130,7 @@ namespace Stratis.Bitcoin
         {
             get
             {
-                string versionString = this.versionProvider.GetVersion();
+                string versionString = this.versionProvider.GetVersionNoSuffix();
 
                 if (!string.IsNullOrEmpty(versionString))
                 {

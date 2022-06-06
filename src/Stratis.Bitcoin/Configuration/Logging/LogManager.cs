@@ -31,7 +31,6 @@ namespace Stratis.Bitcoin.Configuration.Logging
                 var stackTrace = new StackTrace();
                 if (stackTrace.FrameCount > 1)
                 {
-
                     MethodBase methodInfo = stackTrace.GetFrame(1).GetMethod();
                     return new Logger(NLog.LogManager.GetLogger(methodInfo.ReflectedType.ToString()));
                 }
