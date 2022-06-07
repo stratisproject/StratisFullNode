@@ -22,10 +22,6 @@ namespace Stratis.Bitcoin.Base
 
         /// <summary>Indicates whether consensus tip is equal to the tip of the most advanced peer node is connected to.</summary>
         bool IsAtBestChainTip { get; set; }
-
-        /// <summary>Maximal length of reorganization that the node is willing to accept, or 0 to disable long reorganization protection.</summary>
-        /// <remarks>TODO: This should be removed once consensus options are part of network.</remarks>
-        uint MaxReorgLength { get; set; }
     }
 
     /// <summary>
@@ -47,9 +43,5 @@ namespace Stratis.Bitcoin.Base
 
         /// <inheritdoc />
         public bool IsAtBestChainTip { get; set; }
-
-        /// <summary>Maximal length of reorganization that the node is willing to accept, or 0 to disable long reorganization protection.</summary>
-        /// <remarks>TODO: This should be removed once consensus options are part of network.</remarks>
-        public uint MaxReorgLength { get; set; }
     }
 }

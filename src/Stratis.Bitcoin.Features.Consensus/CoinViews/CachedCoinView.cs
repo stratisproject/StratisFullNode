@@ -570,7 +570,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             }
         }
 
-        public HashHeightPair Rewind()
+        public HashHeightPair Rewind(HashHeightPair target = null)
         {
             if (this.innerBlockHash == null)
             {
@@ -582,7 +582,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
             lock (this.lockobj)
             {
-                HashHeightPair hash = this.coindb.Rewind();
+                HashHeightPair hash = this.coindb.Rewind(target);
 
                 foreach (KeyValuePair<OutPoint, CacheItem> cachedUtxoItem in this.cachedUtxoItems)
                 {

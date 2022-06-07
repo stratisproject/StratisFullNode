@@ -3,22 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Moq;
 using NBitcoin;
 using NBitcoin.DataEncoders;
-using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Configuration.Logging;
-using Stratis.Bitcoin.Configuration.Settings;
-using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Consensus.Rules;
-using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.MemoryPool.Fee;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
@@ -26,12 +21,8 @@ using Stratis.Bitcoin.Features.MemoryPool.Rules;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
-using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Mining;
 using Stratis.Bitcoin.Networks;
-using Stratis.Bitcoin.P2P;
-using Stratis.Bitcoin.P2P.Peer;
-using Stratis.Bitcoin.P2P.Protocol.Payloads;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
 using Xunit;
@@ -51,7 +42,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
         public static PowBlockDefinition AssemblerForTest(TestContext testContext)
         {
-            return new PowBlockDefinition(testContext.consensus, testContext.DateTimeProvider, new LoggerFactory(), testContext.mempool, testContext.mempoolLock, new MinerSettings(NodeSettings.Default(testContext.network)), testContext.network, testContext.ConsensusRules, new NodeDeployments(testContext.network, testContext.ChainIndexer));
+            return new PowBlockDefinition(testContext.consensus, testContext.DateTimeProvider, testContext.mempool, testContext.mempoolLock, new MinerSettings(NodeSettings.Default(testContext.network)), testContext.network, testContext.ConsensusRules, new NodeDeployments(testContext.network, testContext.ChainIndexer));
         }
 
         public class Blockinfo
@@ -114,8 +105,8 @@ namespace Stratis.Bitcoin.IntegrationTests
             public uint256 hash;
             public TestMemPoolEntryHelper entry;
             public ChainIndexer ChainIndexer;
-            public ConsensusManager consensus;
-            public ConsensusRuleEngine ConsensusRules;
+            public IConsensusManager consensus;
+            public IConsensusRuleEngine ConsensusRules;
             public DateTimeProvider DateTimeProvider;
             public TxMempool mempool;
             public MempoolSchedulerLock mempoolLock;
@@ -140,64 +131,46 @@ namespace Stratis.Bitcoin.IntegrationTests
                 this.scriptPubKey = new Script(new[] { Op.GetPushOp(hex), OpcodeType.OP_CHECKSIG });
 
                 this.entry = new TestMemPoolEntryHelper();
-                this.ChainIndexer = new ChainIndexer(this.network);
-                this.network.Consensus.Options = new ConsensusOptions();
 
-                IDateTimeProvider dateTimeProvider = DateTimeProvider.Default;
+                var mockingServices = ConsensusManagerHelper.GetMockingServices(this.network,
+                    nodeSettings: ctx => new NodeSettings(this.network, args: new string[] { "-checkpoints" }),
+                    chainState: ctx =>
+                    {
+                        var genesis = this.network.GetGenesis();
+                        return new ChainState()
+                        {
+                            BlockStoreTip = new ChainedHeader(genesis.Header, genesis.GetHash(), 0)
+                        };
+                    })
+                    .AddSingleton(ctx => new InMemoryCoinView(new HashHeightPair(ctx.GetService<ChainIndexer>().Tip)))
+                    .AddSingleton<ICoinView, InMemoryCoinView>()
+                    .AddSingleton<ICoindb, InMemoryCoinView>()
+                    .AddSingleton<IConsensusRuleEngine>(ctx => ctx.GetService<PowConsensusRuleEngine>().SetupRulesEngineParent())
+                    .AddSingleton(ctx =>
+                    {
+                        var consensusRulesContainer = new ConsensusRulesContainer();
 
-                var loggerFactory = ExtendedLoggerFactory.Create();
+                        foreach (var ruleType in this.network.Consensus.ConsensusRules.HeaderValidationRules)
+                            consensusRulesContainer.HeaderValidationRules.Add(ctx.GetService(ruleType) as HeaderValidationConsensusRule);
 
-                var nodeSettings = new NodeSettings(this.network, args: new string[] { "-checkpoints" });
-                var consensusSettings = new ConsensusSettings(nodeSettings);
+                        foreach (var ruleType in this.network.Consensus.ConsensusRules.FullValidationRules)
+                            consensusRulesContainer.FullValidationRules.Add(ctx.GetService(ruleType) as FullValidationConsensusRule);
 
-                var inMemoryCoinView = new InMemoryCoinView(new HashHeightPair(this.ChainIndexer.Tip));
-                var nodeStats = new NodeStats(dateTimeProvider, nodeSettings, new Mock<IVersionProvider>().Object);
-                this.cachedCoinView = new CachedCoinView(this.network, new Checkpoints(), inMemoryCoinView, dateTimeProvider, new LoggerFactory(), nodeStats, consensusSettings);
+                        return consensusRulesContainer;
+                    });
 
-                var signals = new Signals.Signals(loggerFactory, null);
-                var asyncProvider = new AsyncProvider(loggerFactory, signals);
+                var mockingContext = new MockingContext(mockingServices);
+                this.ChainIndexer = mockingContext.GetService<ChainIndexer>();
 
-                var connectionSettings = new ConnectionManagerSettings(nodeSettings);
-                var peerAddressManager = new PeerAddressManager(DateTimeProvider.Default, nodeSettings.DataFolder, loggerFactory, new SelfEndpointTracker(loggerFactory, connectionSettings));
-                var networkPeerFactory = new NetworkPeerFactory(this.network, dateTimeProvider, loggerFactory, new PayloadProvider().DiscoverPayloads(), new SelfEndpointTracker(loggerFactory, connectionSettings), new Mock<IInitialBlockDownloadState>().Object, new ConnectionManagerSettings(nodeSettings), asyncProvider, peerAddressManager);
+                var dateTimeProvider = mockingContext.GetService<IDateTimeProvider>();
+                var loggerFactory = mockingContext.GetService<ILoggerFactory>();
+                var nodeSettings = mockingContext.GetService<NodeSettings>();
 
-                var peerDiscovery = new PeerDiscovery(asyncProvider, loggerFactory, this.network, networkPeerFactory, new NodeLifetime(), nodeSettings, peerAddressManager);
-                var selfEndpointTracker = new SelfEndpointTracker(loggerFactory, connectionSettings);
-                var connectionManager = new ConnectionManager(dateTimeProvider, loggerFactory, this.network, networkPeerFactory,
-                    nodeSettings, new NodeLifetime(), new NetworkPeerConnectionParameters(), peerAddressManager, new IPeerConnector[] { },
-                    peerDiscovery, selfEndpointTracker, connectionSettings, new VersionProvider(), new Mock<INodeStats>().Object, asyncProvider, new PayloadProvider());
+                this.cachedCoinView = mockingContext.GetService<CachedCoinView>();
+                this.ConsensusRules = mockingContext.GetService<IConsensusRuleEngine>();
+                this.consensus = mockingContext.GetService<IConsensusManager>();
 
-                var peerBanning = new PeerBanning(connectionManager, loggerFactory, dateTimeProvider, peerAddressManager);
-                var deployments = new NodeDeployments(this.network, this.ChainIndexer);
-
-                var genesis = this.network.GetGenesis();
-
-                var chainState = new ChainState()
-                {
-                    BlockStoreTip = new ChainedHeader(genesis.Header, genesis.GetHash(), 0)
-                };
-
-                var consensusRulesContainer = new ConsensusRulesContainer();
-                foreach (var ruleType in this.network.Consensus.ConsensusRules.HeaderValidationRules)
-                    consensusRulesContainer.HeaderValidationRules.Add(Activator.CreateInstance(ruleType) as HeaderValidationConsensusRule);
-
-                foreach (var ruleType in this.network.Consensus.ConsensusRules.FullValidationRules)
-                {
-                    FullValidationConsensusRule rule = null;
-                    if (ruleType == typeof(FlushCoinviewRule))
-                        rule = new FlushCoinviewRule(new Mock<IInitialBlockDownloadState>().Object);
-                    else
-                        rule = Activator.CreateInstance(ruleType) as FullValidationConsensusRule;
-
-                    consensusRulesContainer.FullValidationRules.Add(rule);
-                }
-
-                this.ConsensusRules = new PowConsensusRuleEngine(this.network, loggerFactory, dateTimeProvider, this.ChainIndexer, deployments, consensusSettings,
-                    new Checkpoints(), this.cachedCoinView, chainState, new InvalidBlockHashStore(dateTimeProvider), nodeStats, asyncProvider, consensusRulesContainer).SetupRulesEngineParent();
-
-                this.consensus = ConsensusManagerHelper.CreateConsensusManager(this.network, chainState: chainState, inMemoryCoinView: inMemoryCoinView, chainIndexer: this.ChainIndexer, consensusRules: this.ConsensusRules);
-
-                await this.consensus.InitializeAsync(chainState.BlockStoreTip);
+                await this.consensus.InitializeAsync(mockingContext.GetService<IChainState>().BlockStoreTip);
 
                 this.entry.Fee(11);
                 this.entry.Height(11);

@@ -106,7 +106,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         private readonly object lockObject;
 
         private readonly CancellationTokenSource cancellation;
-        
+
         private readonly ChainIndexer chainIndexer;
 
         private readonly AverageCalculator averageTimePerBlock;
@@ -139,7 +139,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         /// We assume that nodes usually don't have view that is different from other nodes by that constant of blocks.
         /// </summary>
         public const int SyncBuffer = 50;
-        
+
         public IFullNodeFeature InitializingFeature { get; set; }
 
         public AddressIndexer(StoreSettings storeSettings, DataFolder dataFolder, Network network, INodeStats nodeStats,
@@ -338,7 +338,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
                 this.IndexerTip = nextHeader;
             }
-            
+
             this.SaveAll();
         }
 

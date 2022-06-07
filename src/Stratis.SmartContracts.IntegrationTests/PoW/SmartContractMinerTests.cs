@@ -67,7 +67,6 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
                 testContext.consensusManager,
                 DateTimeProvider.Default,
                 testContext.ExecutorFactory,
-                new LoggerFactory(),
                 testContext.mempool,
                 testContext.mempoolLock,
                 new MinerSettings(testContext.NodeSettings),
@@ -143,7 +142,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
             public uint256 hash;
             public TestMemPoolEntryHelper entry;
             public ChainIndexer ChainIndexer;
-            public ConsensusManager consensusManager;
+            public IConsensusManager consensusManager;
             public ConsensusRuleEngine consensusRules;
             public TxMempool mempool;
             public MempoolSchedulerLock mempoolLock;
@@ -261,7 +260,9 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
                         consensusRulesContainer)
                     .SetupRulesEngineParent();
 
-                this.consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network, chainState: chainState, inMemoryCoinView: inMemoryCoinView, chainIndexer: this.ChainIndexer, consensusRules: this.consensusRules);
+                var finalizedBlockInfoRepository = new FinalizedBlockInfoRepository(new HashHeightPair());
+
+                this.consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network, chainState: chainState, inMemoryCoinView: inMemoryCoinView, chainIndexer: this.ChainIndexer, consensusRules: this.consensusRules, finalizedBlockInfoRepository: finalizedBlockInfoRepository);
 
                 await this.consensusManager.InitializeAsync(chainState.BlockStoreTip);
 
@@ -327,8 +328,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
                 this.keyEncodingStrategy = BasicKeyEncodingStrategy.Default;
 
                 this.Folder = TestBase.AssureEmptyDir(Path.Combine(AppContext.BaseDirectory, "TestCase", callingMethod)).FullName;
-                var engine = new DBreezeEngine(Path.Combine(this.Folder, "contracts"));
-                var byteStore = new DBreezeByteStore(engine, "ContractState1");
+                var byteStore = new DBreezeByteStore(Path.Combine(this.Folder, "contracts"), "ContractState1");
                 byteStore.Empty();
                 ISource<byte[], byte[]> stateDB = new NoDeleteSource<byte[], byte[]>(byteStore);
 

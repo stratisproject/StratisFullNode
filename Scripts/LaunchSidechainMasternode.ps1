@@ -440,11 +440,11 @@ $API = $mainChainAPIPort
 Write-Host (Get-TimeStamp) "Starting Mainchain Masternode" -ForegroundColor Cyan
 if ( $NodeType -eq "50K" ) 
 {
-    $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -mainchain -addressindex=1 -apiport=$mainChainAPIPort -counterchainapiport=$sideChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs" -PassThru
+    $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -mainchain -addressindex=1 -compactionthreshold=150 -apiport=$mainChainAPIPort -counterchainapiport=$sideChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs" -PassThru
 }
     Else
     {
-        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -mainchain -addressindex=1 -apiport=$mainChainAPIPort" -PassThru
+        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -mainchain -addressindex=1 -compactionthreshold=150 -apiport=$mainChainAPIPort" -PassThru
     }
 
 #Wait for API

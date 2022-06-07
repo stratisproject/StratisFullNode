@@ -1,15 +1,13 @@
 ﻿using System;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NBitcoin;
-using Stratis.Bitcoin.AsyncWork;
-using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Notifications.Controllers;
+using Stratis.Bitcoin.Features.Notifications.Interfaces;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Tests.Common.Logging;
-using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 using Xunit;
 
@@ -30,16 +28,10 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
         [Trait("Module", "NotificationsController")]
         public void Given_SyncActionIsCalled_When_QueryParameterIsNullOrEmpty_Then_ReturnBadRequest(string from)
         {
-            var chain = new Mock<ChainIndexer>();
-            ConsensusManager consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network);
+            var mockingContext = new MockingContext(ConsensusManagerHelper.GetMockingServices(this.network)
+                .AddSingleton<IBlockNotification>(ctx => ctx.GetService<Mock<BlockNotification>>().Object));
 
-            var loggerFactory = new Mock<LoggerFactory>();
-            var signals = new Signals.Signals(loggerFactory.Object, null);
-            var nodeLifetime = new NodeLifetime();
-            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals);
-            var blockNotification = new Mock<BlockNotification>(this.LoggerFactory.Object, chain.Object, consensusManager, signals, asyncProvider, nodeLifetime);
-
-            var notificationController = new NotificationsController(blockNotification.Object, chain.Object);
+            var notificationController = mockingContext.GetService<NotificationsController>();
             IActionResult result = notificationController.SyncFrom(from);
 
             var errorResult = Assert.IsType<ErrorResult>(result);
@@ -62,20 +54,16 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
             var chain = new Mock<ChainIndexer>();
             chain.Setup(c => c.GetHeader(heightLocation)).Returns(chainedHeader);
 
-            ConsensusManager consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network);
-            var loggerFactory = new Mock<LoggerFactory>();
-            var signals = new Signals.Signals(loggerFactory.Object, null);
-            var nodeLifetime = new NodeLifetime();
-            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals);
-            var blockNotification = new Mock<BlockNotification>(this.LoggerFactory.Object, chain.Object, consensusManager, signals, asyncProvider, nodeLifetime);
+            var mockingContext = new MockingContext(ConsensusManagerHelper.GetMockingServices(this.network, chainIndexer: ctx => chain.Object)
+                .AddSingleton<IBlockNotification>(ctx => ctx.GetService<Mock<BlockNotification>>().Object));
 
             // Act
-            var notificationController = new NotificationsController(blockNotification.Object, chain.Object);
+            var notificationController = mockingContext.GetService<NotificationsController>();
             IActionResult result = notificationController.SyncFrom(heightLocation.ToString());
 
             // Assert
             chain.Verify(c => c.GetHeader(heightLocation), Times.Once);
-            blockNotification.Verify(b => b.SyncFrom(hash), Times.Once);
+            mockingContext.GetService<Mock<BlockNotification>>().Verify(b => b.SyncFrom(hash), Times.Once);
         }
 
         [Fact]
@@ -90,21 +78,17 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
             var chainedHeader = new ChainedHeader(this.network.Consensus.ConsensusFactory.CreateBlockHeader(), hash, null);
             var chain = new Mock<ChainIndexer>();
             chain.Setup(c => c.GetHeader(uint256.Parse(hashLocation))).Returns(chainedHeader);
-            ConsensusManager consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network);
 
-            var loggerFactory = new Mock<LoggerFactory>();
-            var signals = new Signals.Signals(loggerFactory.Object, null);
-            var nodeLifetime = new NodeLifetime();
-            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals);
-            var blockNotification = new Mock<BlockNotification>(this.LoggerFactory.Object, chain.Object, consensusManager, signals, asyncProvider, nodeLifetime);
+            var mockingContext = new MockingContext(ConsensusManagerHelper.GetMockingServices(this.network, chainIndexer: ctx => chain.Object)
+                .AddSingleton<IBlockNotification>(ctx => ctx.GetService<Mock<BlockNotification>>().Object));
 
             // Act
-            var notificationController = new NotificationsController(blockNotification.Object, chain.Object);
+            var notificationController = mockingContext.GetService<NotificationsController>();
             IActionResult result = notificationController.SyncFrom(hashLocation);
 
             // Assert
             chain.Verify(c => c.GetHeader(heightLocation), Times.Never);
-            blockNotification.Verify(b => b.SyncFrom(hash), Times.Once);
+            mockingContext.GetService<Mock<BlockNotification>>().Verify(b => b.SyncFrom(hash), Times.Once);
         }
 
         [Fact]
@@ -115,16 +99,12 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
 
             var chain = new Mock<ChainIndexer>();
             chain.Setup(c => c.GetHeader(uint256.Parse(hashLocation))).Returns((ChainedHeader)null);
-            ConsensusManager consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network);
 
-            var loggerFactory = new Mock<LoggerFactory>();
-            var signals = new Signals.Signals(loggerFactory.Object, null);
-            var nodeLifetime = new NodeLifetime();
-            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals);
-            var blockNotification = new Mock<BlockNotification>(this.LoggerFactory.Object, chain.Object, consensusManager, signals, asyncProvider, nodeLifetime);
+            var mockingContext = new MockingContext(ConsensusManagerHelper.GetMockingServices(this.network, chainIndexer: ctx => chain.Object)
+                .AddSingleton<IBlockNotification>(ctx => ctx.GetService<Mock<BlockNotification>>().Object));
 
             // Act
-            var notificationController = new NotificationsController(blockNotification.Object, chain.Object);
+            var notificationController = mockingContext.GetService<NotificationsController>();
 
             // Assert
             IActionResult result = notificationController.SyncFrom(hashLocation);
@@ -142,17 +122,12 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
         {
             // Set up
             string hashLocation = "notAValidHash";
-            var chain = new Mock<ChainIndexer>();
-            ConsensusManager consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network);
 
-            var loggerFactory = new Mock<LoggerFactory>();
-            var signals = new Signals.Signals(loggerFactory.Object, null);
-            var nodeLifetime = new NodeLifetime();
-            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals);
-            var blockNotification = new Mock<BlockNotification>(this.LoggerFactory.Object, chain.Object, consensusManager, signals, asyncProvider, nodeLifetime);
+            var mockingContext = new MockingContext(ConsensusManagerHelper.GetMockingServices(this.network)
+                .AddSingleton<IBlockNotification>(ctx => ctx.GetService<Mock<BlockNotification>>().Object));
 
             // Act
-            var notificationController = new NotificationsController(blockNotification.Object, chain.Object);
+            var notificationController = mockingContext.GetService<NotificationsController>();
 
             // Assert
             Assert.Throws<FormatException>(() => notificationController.SyncFrom(hashLocation));
@@ -164,16 +139,12 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
             // Set up
             var chain = new Mock<ChainIndexer>();
             chain.Setup(c => c.GetHeader(15)).Returns((ChainedHeader)null);
-            ConsensusManager consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network);
 
-            var loggerFactory = new Mock<LoggerFactory>();
-            var signals = new Signals.Signals(loggerFactory.Object, null);
-            var nodeLifetime = new NodeLifetime();
-            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals);
-            var blockNotification = new Mock<BlockNotification>(this.LoggerFactory.Object, chain.Object, consensusManager, signals, asyncProvider, nodeLifetime);
+            var mockingContext = new MockingContext(ConsensusManagerHelper.GetMockingServices(this.network, chainIndexer: ctx => chain.Object)
+                .AddSingleton<IBlockNotification>(ctx => ctx.GetService<Mock<BlockNotification>>().Object));
 
             // Act
-            var notificationController = new NotificationsController(blockNotification.Object, chain.Object);
+            var notificationController = mockingContext.GetService<NotificationsController>();
 
             // Assert
             IActionResult result = notificationController.SyncFrom("15");

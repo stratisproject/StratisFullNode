@@ -52,7 +52,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA.Rules
         {
             base.Initialize();
 
-            this.logic = new SmartContractCoinViewRuleLogic(this.stateRepositoryRoot, this.executorFactory, this.callDataSerializer, this.senderRetriever, this.receiptRepository, this.coinView, this.executionCache, this.loggerFactory);
+            this.logic = new SmartContractCoinViewRuleLogic(this.stateRepositoryRoot, this.executorFactory, this.callDataSerializer, this.senderRetriever, this.receiptRepository, this.coinView, this.executionCache, this.loggerFactory, this.network);
         }
 
         /// <inheritdoc />

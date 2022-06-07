@@ -13,16 +13,28 @@ namespace Stratis.SmartContracts.Core.State
     {
         private DBreezeEngine engine;
         private string table;
+        private string folder;
 
-        public DBreezeByteStore(DBreezeEngine engine, string table)
+        public DBreezeByteStore(string folder, string table)
         {
-            this.engine = engine;
+            this.folder = folder;
             this.table = table;
+        }
+
+        private DBreezeEngine Engine
+        {
+            get
+            {
+                if (this.engine == null)
+                    this.engine = new DBreezeEngine(this.folder);
+
+                return this.engine;
+            }
         }
 
         public byte[] Get(byte[] key)
         {
-            using (DBreeze.Transactions.Transaction t = this.engine.GetTransaction())
+            using (DBreeze.Transactions.Transaction t = this.Engine.GetTransaction())
             {
                 Row<byte[], byte[]> row = t.Select<byte[], byte[]>(this.table, key);
 
@@ -35,7 +47,7 @@ namespace Stratis.SmartContracts.Core.State
 
         public void Put(byte[] key, byte[] val)
         {
-            using (DBreeze.Transactions.Transaction t = this.engine.GetTransaction())
+            using (DBreeze.Transactions.Transaction t = this.Engine.GetTransaction())
             {
                 t.Insert(this.table, key, val);
                 t.Commit();
@@ -44,7 +56,7 @@ namespace Stratis.SmartContracts.Core.State
 
         public void Delete(byte[] key)
         {
-            using (DBreeze.Transactions.Transaction t = this.engine.GetTransaction())
+            using (DBreeze.Transactions.Transaction t = this.Engine.GetTransaction())
             {
                 t.RemoveKey(this.table, key);
                 t.Commit();
@@ -61,7 +73,7 @@ namespace Stratis.SmartContracts.Core.State
         /// </summary>
         public void Empty()
         {
-            using (DBreeze.Transactions.Transaction t = this.engine.GetTransaction())
+            using (DBreeze.Transactions.Transaction t = this.Engine.GetTransaction())
             {
                 t.RemoveAllKeys(this.table, false);
                 t.Commit();
@@ -74,6 +86,6 @@ namespace Stratis.SmartContracts.Core.State
     /// </summary>
     public class DBreezeContractStateStore : DBreezeByteStore
     {
-        public DBreezeContractStateStore(DataFolder dataFolder) : base(new DBreezeEngine(dataFolder.SmartContractStatePath), "state") { }
+        public DBreezeContractStateStore(DataFolder dataFolder) : base(dataFolder.SmartContractStatePath, "state") { }
     }
 }
