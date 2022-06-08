@@ -14,7 +14,7 @@ namespace Stratis.Bitcoin.Features.Interop
     public interface IMultiSigFeeService
     {
         Task<ReprocessFeeResult> ReprocessFeeAsync(string requestId);
-        List<MultisigFeeReportItem> GenerateReport();
+        List<MultisigFeeReportItem> GenerateReport(bool onlyUnprocessed);
     }
 
     public sealed class MultiSigFeeService : IMultiSigFeeService
@@ -41,7 +41,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.network = network;
         }
 
-        public List<MultisigFeeReportItem> GenerateReport()
+        public List<MultisigFeeReportItem> GenerateReport(bool onlyUnprocessed)
         {
             // Find all processed burn requests.
             List<ConversionRequest> burns = this.conversionRequestRepository.GetAllBurn(false);
@@ -66,7 +66,11 @@ namespace Stratis.Bitcoin.Features.Interop
                     item.FeeDepositState = deposit.Status.ToString();
                 }
 
-                reportItems.Add(item);
+                if (onlyUnprocessed && deposit == null)
+                    reportItems.Add(item);
+
+                if (!onlyUnprocessed)
+                    reportItems.Add(item);
             }
 
             return reportItems;

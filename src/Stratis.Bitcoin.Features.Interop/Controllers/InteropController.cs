@@ -808,16 +808,17 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         /// <summary>
         /// Endpoint that allows the multisig operator to generate a list of all burn requests and whether or not a fee was processed by the CCTS.
         /// </summary>
+        /// <param name="onlyUnprocessed">Only return unprocessed transfer fees not paid out to the multisig.</param>
         [Route("multisigfeereport")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult GenerateMultisigFeeReport()
+        public IActionResult GenerateMultisigFeeReport(bool onlyUnprocessed = true)
         {
             try
             {
-                List<MultisigFeeReportItem> result = this.multiSigFeeService.GenerateReport();
+                List<MultisigFeeReportItem> result = this.multiSigFeeService.GenerateReport(onlyUnprocessed);
 
                 return Json(result);
             }
