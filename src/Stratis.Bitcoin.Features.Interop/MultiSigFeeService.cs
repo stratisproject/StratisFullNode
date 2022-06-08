@@ -132,7 +132,7 @@ namespace Stratis.Bitcoin.Features.Interop
             // Inject the fee into the MaturedBlocksSyncManager again.
             this.maturedBlocksSyncManager.AddInterOpFeeDeposit(reconstructedDeposit);
 
-            var successMessage = $"The fee associated with request '{requestId}' for {fee} will be reprocessed.";
+            var successMessage = $"The fee associated with request '{requestId}' for {fee.Amount} will be reprocessed.";
             this.logger.Info(successMessage);
 
             return ReprocessFeeResult.Success(successMessage);
