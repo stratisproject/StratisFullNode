@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using NBitcoin;
 using Newtonsoft.Json;
 using NLog;
@@ -71,7 +72,7 @@ namespace Stratis.Bitcoin.Features.Interop
             return reportItems;
         }
 
-        public ReprocessFeeResult ReprocessFee(string requestId)
+        public async Task<ReprocessFeeResult> ReprocessFeeAsync(string requestId)
         {
             // First check if the request exists and is processed.
             ConversionRequest conversionRequest = this.conversionRequestRepository.Get(requestId);
@@ -90,12 +91,20 @@ namespace Stratis.Bitcoin.Features.Interop
             }
 
             // First check if the request id exists as a suspended deposit in the cross chain transfer store
-            ICrossChainTransfer deposit = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Suspended }).FirstOrDefault(s => s.DepositTransactionId == uint256.Parse(requestId));
-            if (deposit == null)
+            ICrossChainTransfer deposit = (await this.crossChainTransferStore.GetAsync(new[] { uint256.Parse(requestId) })).FirstOrDefault();
+            if (deposit != null)
             {
-                var message = $"A request with id '{requestId}' does not exist as a suspended deposit transaction.";
-                this.logger.Info(message);
-                return ReprocessFeeResult.Fail(message);
+                if (deposit.Status == CrossChainTransferStatus.Suspended)
+                {
+                    // Delete the existing suspended transfer if it exists.
+                    this.crossChainTransferStore.DeleteSuspendedTransfer(deposit.DepositTransactionId);
+                }
+                else
+                {
+                    var message = $"A fee deposit already exists for request '{requestId}' with state '{deposit.Status}'.";
+                    this.logger.Info(message);
+                    return ReprocessFeeResult.Fail(message);
+                }
             }
 
             // Construct a new deposit object from the existing one.
@@ -109,13 +118,10 @@ namespace Stratis.Bitcoin.Features.Interop
                                 this.chainIndexer.GetHeader(conversionRequest.BlockHeight).HashBlock
                                );
 
-            // Delete the existing suspended transfer.
-            this.crossChainTransferStore.DeleteSuspendedTransfer(deposit.DepositTransactionId);
-
             // Inject the fee into the MaturedBlocksSyncManager again.
             this.maturedBlocksSyncManager.AddInterOpFeeDeposit(reconstructedDeposit);
 
-            var successMessage = $"The fee associated to request '{requestId}' will be reprocessed.";
+            var successMessage = $"The fee associated with request '{requestId}' will be reprocessed.";
             this.logger.Info(successMessage);
 
             return ReprocessFeeResult.Success(successMessage);
