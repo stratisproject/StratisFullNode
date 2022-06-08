@@ -787,11 +787,11 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult ReprocessMultisigFee([FromBody] ReprocessMultisigFeeModel model)
+        public async Task<IActionResult> ReprocessMultisigFeeAsync([FromBody] ReprocessMultisigFeeModel model)
         {
             try
             {
-                ReprocessFeeResult result = this.multiSigFeeService.ReprocessFee(model.RequestId);
+                ReprocessFeeResult result = await this.multiSigFeeService.ReprocessFeeAsync(model.RequestId);
                 if (!result.Succeeded)
                     return BadRequest(result.Message);
 
