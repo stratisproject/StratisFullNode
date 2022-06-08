@@ -13,7 +13,7 @@ namespace Stratis.Bitcoin.Features.Interop
 {
     public interface IMultiSigFeeService
     {
-        ReprocessFeeResult ReprocessFee(string requestId);
+        Task<ReprocessFeeResult> ReprocessFeeAsync(string requestId);
         List<MultisigFeeReportItem> GenerateReport();
     }
 
