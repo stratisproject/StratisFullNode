@@ -5,6 +5,7 @@ using NBitcoin;
 using Newtonsoft.Json;
 using NLog;
 using Stratis.Features.FederatedPeg.Conversion;
+using Stratis.Features.FederatedPeg.Coordination;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.SourceChain;
 using Stratis.Features.FederatedPeg.TargetChain;
@@ -20,6 +21,7 @@ namespace Stratis.Bitcoin.Features.Interop
     public sealed class MultiSigFeeService : IMultiSigFeeService
     {
         private readonly ChainIndexer chainIndexer;
+        private readonly IConversionRequestFeeKeyValueStore conversionRequestFeeKeyValueStore;
         private readonly IConversionRequestRepository conversionRequestRepository;
         private readonly ICrossChainTransferStore crossChainTransferStore;
         private readonly ILogger logger;
@@ -28,12 +30,14 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public MultiSigFeeService(
             ChainIndexer chainIndexer,
+            IConversionRequestFeeKeyValueStore conversionRequestFeeKeyValueStore,
             IConversionRequestRepository conversionRequestRepository,
             ICrossChainTransferStore crossChainTransferStore,
             IMaturedBlocksSyncManager maturedBlocksSyncManager,
             Network network)
         {
             this.chainIndexer = chainIndexer;
+            this.conversionRequestFeeKeyValueStore = conversionRequestFeeKeyValueStore;
             this.conversionRequestRepository = conversionRequestRepository;
             this.crossChainTransferStore = crossChainTransferStore;
             this.logger = LogManager.GetCurrentClassLogger();
@@ -111,11 +115,14 @@ namespace Stratis.Bitcoin.Features.Interop
                 }
             }
 
+            // Try and load the original determined by the multsig
+            InteropConversionRequestFee fee = this.conversionRequestFeeKeyValueStore.LoadValueJson<InteropConversionRequestFee>(requestId);
+
             // Construct a new deposit object from the existing one.
             var reconstructedDeposit = new Deposit(
-                                deposit.DepositTransactionId,
+                                uint256.Parse(requestId),
                                 DepositRetrievalType.Distribution,
-                                Money.Satoshis(deposit.DepositAmount),
+                                Money.Satoshis(fee.Amount),
                                 this.network.ConversionTransactionFeeDistributionDummyAddress,
                                 conversionRequest.DestinationChain,
                                 conversionRequest.BlockHeight,
@@ -125,7 +132,7 @@ namespace Stratis.Bitcoin.Features.Interop
             // Inject the fee into the MaturedBlocksSyncManager again.
             this.maturedBlocksSyncManager.AddInterOpFeeDeposit(reconstructedDeposit);
 
-            var successMessage = $"The fee associated with request '{requestId}' will be reprocessed.";
+            var successMessage = $"The fee associated with request '{requestId}' for {fee} will be reprocessed.";
             this.logger.Info(successMessage);
 
             return ReprocessFeeResult.Success(successMessage);

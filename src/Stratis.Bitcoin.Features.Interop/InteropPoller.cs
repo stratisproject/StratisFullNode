@@ -67,7 +67,6 @@ namespace Stratis.Bitcoin.Features.Interop
         private readonly ICirrusContractClient cirrusClient;
         private readonly Network counterChainNetwork;
         private readonly IConversionRequestFeeService conversionRequestFeeService;
-        private readonly IConversionRequestFeeKeyValueStore conversionRequestFeeKeyValueStore;
         private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
         private readonly IConversionRequestRepository conversionRequestRepository;
         private readonly IExternalApiPoller externalApiPoller;
@@ -107,7 +106,6 @@ namespace Stratis.Bitcoin.Features.Interop
             ChainIndexer chainIndexer,
             IConversionRequestFeeService conversionRequestFeeService,
             IConversionRequestRepository conversionRequestRepository,
-            IConversionRequestFeeKeyValueStore conversionRequestFeeKeyValueStore,
             IConversionRequestCoordinationService conversionRequestCoordinationService,
             CounterChainNetworkWrapper counterChainNetworkWrapper,
             IETHCompatibleClientProvider ethClientProvider,
@@ -133,7 +131,6 @@ namespace Stratis.Bitcoin.Features.Interop
             this.federationHistory = federationHistory;
             this.federatedPegBroadcaster = federatedPegBroadcaster;
             this.conversionRequestFeeService = conversionRequestFeeService;
-            this.conversionRequestFeeKeyValueStore = conversionRequestFeeKeyValueStore;
             this.conversionRequestRepository = conversionRequestRepository;
             this.conversionRequestCoordinationService = conversionRequestCoordinationService;
             this.counterChainNetwork = counterChainNetworkWrapper.CounterChainNetwork;
