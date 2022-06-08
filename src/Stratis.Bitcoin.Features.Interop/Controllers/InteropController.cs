@@ -19,6 +19,7 @@ using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Coordination;
+using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.SmartContracts;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Serialization;
@@ -35,6 +36,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
         private readonly IConversionRequestFeeKeyValueStore conversionRequestFeeKeyValueStore;
         private readonly IConversionRequestRepository conversionRequestRepository;
+        private readonly ICrossChainTransferStore crossChainTransferStore;
         private readonly IETHCompatibleClientProvider ethCompatibleClientProvider;
         private readonly IFederationManager federationManager;
         private readonly InteropSettings interopSettings;
@@ -42,6 +44,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         private readonly ILogger logger;
         private readonly IReplenishmentKeyValueStore replenishmentKeyValueStore;
         private readonly Network network;
+        private readonly IMultiSigFeeService multiSigFeeService;
 
         public InteropController(
             ICallDataSerializer callDataSerializer,
@@ -51,11 +54,13 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             IConversionRequestCoordinationService conversionRequestCoordinationService,
             IConversionRequestFeeKeyValueStore conversionRequestFeeKeyValueStore,
             IConversionRequestRepository conversionRequestRepository,
+            ICrossChainTransferStore crossChainTransferStore,
             IETHCompatibleClientProvider ethCompatibleClientProvider,
             IFederationManager federationManager,
             InteropSettings interopSettings,
             InteropPoller interopPoller,
-            IReplenishmentKeyValueStore replenishmentKeyValueStore)
+            IReplenishmentKeyValueStore replenishmentKeyValueStore,
+            IMultiSigFeeService multiSigFeeService)
         {
             this.callDataSerializer = callDataSerializer;
             this.chainIndexer = chainIndexer;
@@ -63,11 +68,13 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             this.conversionRequestCoordinationService = conversionRequestCoordinationService;
             this.conversionRequestFeeKeyValueStore = conversionRequestFeeKeyValueStore;
             this.conversionRequestRepository = conversionRequestRepository;
+            this.crossChainTransferStore = crossChainTransferStore;
             this.ethCompatibleClientProvider = ethCompatibleClientProvider;
             this.federationManager = federationManager;
             this.interopSettings = interopSettings;
             this.interopPoller = interopPoller;
             this.logger = LogManager.GetCurrentClassLogger();
+            this.multiSigFeeService = multiSigFeeService;
             this.network = network;
             this.replenishmentKeyValueStore = replenishmentKeyValueStore;
         }
@@ -763,6 +770,62 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             catch (Exception e)
             {
                 this.logger.LogError("Exception trying to decode interflux transaction: {0}.", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Endpoint that allows the multisig operator to reprocess a suspended MultiSig fee from a burn request.
+        /// <para>
+        /// We will use the id of the burn request to determine if a suspended transfer with the same deposit id exist. If it does,
+        /// we will delete the suspended transfer from the CrossChainTransferStore and use the detail of it to rebuild the deposit.
+        /// </para>
+        /// </summary>
+        /// <param name="model">The request id associated to the fee.</param>
+        [Route("reprocessfee")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public async Task<IActionResult> ReprocessMultisigFeeAsync([FromBody] ReprocessMultisigFeeModel model)
+        {
+            try
+            {
+                ReprocessFeeResult result = await this.multiSigFeeService.ReprocessFeeAsync(model.RequestId).ConfigureAwait(false);
+                if (!result.Succeeded)
+                    return BadRequest(result.Message);
+
+                return Ok(result.Message);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception reprocess multisig fee for request '{0}' : {1}.", model.RequestId, e.ToString());
+
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Endpoint that allows the multisig operator to generate a list of all burn requests and whether or not a fee was processed by the CCTS.
+        /// </summary>
+        /// <param name="onlyUnprocessed">Only return unprocessed transfer fees not paid out to the multisig.</param>
+        [Route("multisigfeereport")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult GenerateMultisigFeeReport(bool onlyUnprocessed = true)
+        {
+            try
+            {
+                List<MultisigFeeReportItem> result = this.multiSigFeeService.GenerateReport(onlyUnprocessed);
+
+                return Json(result);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred generating multisig fee report '{0}'.", e.ToString());
+
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
             }
         }

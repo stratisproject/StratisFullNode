@@ -115,6 +115,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     .AddSingleton<ICirrusContractClient, CirrusContractClient>()
                     .AddSingleton<InteropMonitor>()
                     .AddSingleton<InteropPoller>()
+                    .AddSingleton<IMultiSigFeeService, MultiSigFeeService>()
                     ));
 
             return fullNodeBuilder;

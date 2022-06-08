@@ -2,11 +2,8 @@
 
 namespace Stratis.Bitcoin.Features.Interop.Models
 {
-    public sealed class PushManualVoteForRequest
+    public sealed class PushManualVoteForRequest : RequestIdModel
     {
-        [JsonProperty(PropertyName = "requestId")]
-        public string RequestId { get; set; }
-
         [JsonProperty(PropertyName = "voteId")]
         public string EventId { get; set; }
     }
