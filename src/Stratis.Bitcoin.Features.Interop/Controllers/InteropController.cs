@@ -791,7 +791,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         {
             try
             {
-                ReprocessFeeResult result = await this.multiSigFeeService.ReprocessFeeAsync(model.RequestId);
+                ReprocessFeeResult result = await this.multiSigFeeService.ReprocessFeeAsync(model.RequestId).ConfigureAwait(false);
                 if (!result.Succeeded)
                     return BadRequest(result.Message);
 
