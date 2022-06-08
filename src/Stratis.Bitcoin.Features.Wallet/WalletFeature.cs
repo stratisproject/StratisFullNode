@@ -8,6 +8,7 @@ using NBitcoin.Policy;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration.Logging;
+using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.BlockStore;
@@ -82,7 +83,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <param name="network">The network to extract values from.</param>
         public static void PrintHelp(Network network)
         {
-            WalletSettings.PrintHelp(network);
+            BaseSettings.PrintHelp(typeof(WalletSettings), network);
         }
 
         /// <summary>
@@ -92,7 +93,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <param name="network">The network to base the defaults off.</param>
         public static void BuildDefaultConfigurationFile(StringBuilder builder, Network network)
         {
-            WalletSettings.BuildDefaultConfigurationFile(builder, network);
+            BaseSettings.BuildDefaultConfigurationFile(typeof(WalletSettings), builder, network);
         }
 
         private void AddInlineStats(StringBuilder log)
