@@ -8,9 +8,11 @@ namespace Stratis.Bitcoin.Features.PoA.Events
     public class MiningStatisticsEvent : EventBase
     {
         public MiningStatisticsModel MiningStatistics { get; }
-        public MiningStatisticsEvent(MiningStatisticsModel miningStatistics)
+        public readonly int FederationMemberSize;
+        public MiningStatisticsEvent(MiningStatisticsModel miningStatistics, int federationMemberSize)
         {
             this.MiningStatistics = miningStatistics;
+            this.FederationMemberSize = federationMemberSize;
         }
     }
 }

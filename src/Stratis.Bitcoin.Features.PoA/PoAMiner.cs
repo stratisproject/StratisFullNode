@@ -305,7 +305,10 @@ namespace Stratis.Bitcoin.Features.PoA
 
             this.miningStatistics.MinerHits = hitCount;
 
-            this.signals.Publish(new MiningStatisticsEvent(this.miningStatistics));
+            if (this.signals != null)
+            {
+                this.signals.Publish(new MiningStatisticsEvent(this.miningStatistics, maxDepth));
+            }
 
             log.Append("...");
             log.AppendLine();

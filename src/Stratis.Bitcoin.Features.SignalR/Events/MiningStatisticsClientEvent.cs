@@ -10,6 +10,7 @@ namespace Stratis.Bitcoin.Features.SignalR.Events
     {
         public bool IsMining { get; set; }
         public int BlockProducerHit { get; set; }
+        public int FederationMemberSize { get; set; }
         public Type NodeEventType { get; } = typeof(MiningStatisticsEvent);
 
         public void BuildFrom(EventBase @event)
@@ -18,6 +19,7 @@ namespace Stratis.Bitcoin.Features.SignalR.Events
             {                
                 this.IsMining = miningStatisticsEvent.MiningStatistics.ProducedBlockInLastRound;
                 this.BlockProducerHit = miningStatisticsEvent.MiningStatistics.MinerHits;
+                this.FederationMemberSize = miningStatisticsEvent.FederationMemberSize;
                 return;
             }
 
