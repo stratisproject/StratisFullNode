@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
+using Stratis.Bitcoin.Configuration.Settings;
 
 namespace Stratis.Bitcoin.Features.Api
 {
@@ -83,7 +84,7 @@ namespace Stratis.Bitcoin.Features.Api
         /// <param name="network">The network to extract values from.</param>
         public static void PrintHelp(Network network)
         {
-            ApiSettings.PrintHelp(network);
+            BaseSettings.PrintHelp(typeof(ApiSettings), network);
         }
 
         /// <summary>
@@ -93,7 +94,7 @@ namespace Stratis.Bitcoin.Features.Api
         /// <param name="network">The network to base the defaults off.</param>
         public static void BuildDefaultConfigurationFile(StringBuilder builder, Network network)
         {
-            ApiSettings.BuildDefaultConfigurationFile(builder, network);
+            BaseSettings.BuildDefaultConfigurationFile(typeof(ApiSettings), builder, network);
         }
 
         /// <inheritdoc />
