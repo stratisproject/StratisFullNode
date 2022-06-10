@@ -111,14 +111,15 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// <param name="transfersToDisplay">The max items to display.</param>
         /// <returns>The completed withdrawals.</returns>        
         List<WithdrawalModel> GetCompletedWithdrawals(int transfersToDisplay);
-        
+
         /// <summary>
         /// Deletes all suspended transfers from the store.
         /// <para>
         /// This should always be used with caution and will only work if all multisig nodes do this.
         /// </para>
         /// </summary>
-        /// <returns>The amount of suspended transfers that was deleted.</returns>
-        int DeleteSuspendedTransfers();
+        /// <param name="depositId">The id of suspended deposit to delete.</param>
+        /// <returns><c>true</c> or <c>false</c> if the suspended transfers was deleted and if not, an associated message.</returns>
+        (bool result, string message) DeleteSuspendedTransfer(uint256 depositId);
     }
 }

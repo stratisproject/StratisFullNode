@@ -108,13 +108,12 @@ namespace Stratis.Bitcoin.Features.Wallet
             if (!TryGetTarget(transaction, opReturnDataReader, out _, out _, out _))
             {
                 throw new FeatureException(HttpStatusCode.BadRequest, "No valid target address.",
-                    $"The cross-chain transfer transaction contains no valid target address for the target network.");
+                    $"The cross-chain transfer transaction does not contain a valid target address for the target network.");
             }
 
             return true;
         }
     }
-
 
     /// <summary>
     /// When running on Strax its difficult to get the correct Cirrus network class due to circular references.

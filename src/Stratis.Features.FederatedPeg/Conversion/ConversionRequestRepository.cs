@@ -97,6 +97,7 @@ namespace Stratis.Features.FederatedPeg.Conversion
             this.KeyValueStore.Delete(requestId);
         }
 
+        /// <inheritdoc />
         public void ReprocessBurnRequest(string requestId, int blockHeight, ConversionRequestStatus requestStatus)
         {
             ConversionRequest request = this.KeyValueStore.LoadValue<ConversionRequest>(requestId);
@@ -116,6 +117,7 @@ namespace Stratis.Features.FederatedPeg.Conversion
             this.KeyValueStore.SaveValue(request.RequestId, request, true);
         }
 
+        /// <inheritdoc />
         public void SetConversionRequestState(string requestId, ConversionRequestStatus requestStatus)
         {
             ConversionRequest request = this.KeyValueStore.LoadValue<ConversionRequest>(requestId);

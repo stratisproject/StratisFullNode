@@ -54,8 +54,13 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// and restoring recently spent outputs as UTXOs.
         /// </para>
         /// </summary>
+        /// <param name="target">The final rewind target or <c>null</c> if a single block should be rewound. See remarks.</param>
         /// <returns>Hash of the block header which is now the tip of the rewound coinview.</returns>
-        HashHeightPair Rewind();
+        /// <remarks>This method can be implemented to rewind one or more blocks. Implementations
+        /// that rewind only one block can ignore the target, while more advanced implementations
+        /// can rewind a batch of multiple blocks but not overshooting the <paramref name="target"/>.
+        /// </remarks>
+        HashHeightPair Rewind(HashHeightPair target);
 
         /// <summary>
         /// Gets the rewind data by block height.

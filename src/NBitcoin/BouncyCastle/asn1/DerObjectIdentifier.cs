@@ -123,7 +123,7 @@ namespace NBitcoin.BouncyCastle.Asn1
         }
 
         private static bool IsValidBranchID(
-            String branchID, int start)
+            string branchID, int start)
         {
             bool periodAllowed = false;
 

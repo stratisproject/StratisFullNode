@@ -469,6 +469,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                 IDeposit deposit = deposits[i];
                                 Transaction transaction = null;
                                 CrossChainTransferStatus status = CrossChainTransferStatus.Suspended;
+
+                                // Log the target address in the event that it fails.
+                                this.logger.LogDebug($"Attempting to create script pubkey from target address '{deposit.TargetAddress}'.");
                                 Script scriptPubKey = BitcoinAddress.Create(deposit.TargetAddress, this.network).ScriptPubKey;
 
                                 if (!haveSuspendedTransfers)
@@ -1503,27 +1506,31 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         }
 
         /// <inheritdoc />
-        public int DeleteSuspendedTransfers()
+        public (bool result, string message) DeleteSuspendedTransfer(uint256 depositId)
         {
             HashSet<uint256> depositIds = this.depositsIdsByStatus[CrossChainTransferStatus.Suspended];
-            ICrossChainTransfer[] transfers = this.Get(depositIds.ToArray()).Where(t => t != null).ToArray();
+            if (depositIds.Count == 0)
+                return (false, "There are no suspended transfers.");
+
+            uint256 transferDepositId = depositIds.FirstOrDefault(d => d == depositId);
+            if (transferDepositId == null)
+                return (false, $"'{depositId.ToString()}' does not exists in suspended transfers.");
+
+            ICrossChainTransfer transfer = this.Get(new uint256[] { transferDepositId }).Where(t => t != null).FirstOrDefault();
 
             using (DBreeze.Transactions.Transaction dbreezeTransaction = this.DBreeze.GetTransaction())
             {
                 dbreezeTransaction.SynchronizeTables(transferTableName, commonTableName);
                 dbreezeTransaction.ValuesLazyLoadingIsOn = false;
 
-                foreach (ICrossChainTransfer transfer in transfers)
-                {
-                    this.DeleteTransfer(dbreezeTransaction, transfer);
-                    this.depositsIdsByStatus[CrossChainTransferStatus.Suspended].Clear();
-                    this.logger.LogDebug($"Suspended transfer with deposit id '{transfer.DepositTransactionId}' deleted.");
-                }
+                this.DeleteTransfer(dbreezeTransaction, transfer);
+                this.depositsIdsByStatus[CrossChainTransferStatus.Suspended].Clear();
+                this.logger.LogDebug($"Suspended transfer with deposit id '{transfer.DepositTransactionId}' deleted.");
 
                 dbreezeTransaction.Commit();
             }
 
-            return transfers.Count();
+            return (true, null);
         }
 
         /// <inheritdoc />

@@ -78,7 +78,7 @@ namespace NBitcoin.Policy
                 {
                     if (this.ScriptVerify != null)
                     {
-                        var script = (blockHeight < 0) ? coin.TxOut.ScriptPubKey : new ScriptAtHeight(coin.TxOut.ScriptPubKey, blockHeight, blockHash);
+                        Script script = (blockHeight < 0) ? coin.TxOut.ScriptPubKey : new ScriptAtHeight(coin.TxOut.ScriptPubKey, blockHeight, blockHash);
 
                         if (!input.VerifyScript(this.Network, script, coin.TxOut.Value, this.ScriptVerify.Value, out ScriptError error))
                         {

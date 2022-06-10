@@ -61,8 +61,6 @@ namespace Stratis.Bitcoin.Features.Consensus
             this.checkpoints = checkpoints;
             this.provenBlockHeaderStore = provenBlockHeaderStore;
             this.connectionManagerSettings = connectionManagerSettings;
-
-            this.chainState.MaxReorgLength = network.Consensus.MaxReorgLength;
         }
 
         /// <summary>

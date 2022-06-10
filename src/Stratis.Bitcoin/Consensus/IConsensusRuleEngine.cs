@@ -52,8 +52,12 @@ namespace Stratis.Bitcoin.Consensus
         /// and restoring the chain to an earlier state.
         /// </para>
         /// </summary>
+        /// <param name="target">The final rewind target or <c>null</c> if a single block should be rewound. See remarks.</param>
         /// <returns>Hash of the block header which is now the tip of the chain.</returns>
-        Task<RewindState> RewindAsync();
+        /// <remarks>This method can be implemented to rewind one or more blocks. Implementations
+        /// that rewind only one block can ignore the target, while more advanced implementations
+        /// can rewind a batch of multiple blocks but not overshooting the <paramref name="target"/>.</remarks>
+        Task<RewindState> RewindAsync(HashHeightPair target);
 
         /// <summary>Execute header validation rules.</summary>
         /// <param name="header">The chained header that is going to be validated.</param>

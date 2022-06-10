@@ -36,16 +36,23 @@ namespace Stratis.Bitcoin.Base.Deployments
 
         // Cache of BIP9 deployment states keyed by block hash.
         private Dictionary<uint256, ThresholdState?[]> cache = new Dictionary<uint256, ThresholdState?[]>();
+        private ActivationHeightProvider[] activationHeightProviders;
+
+        public ActivationHeightProvider[] ActivationHeightProviders => this.activationHeightProviders;
 
         /// <summary>
         /// Constructs this object containing the BIP9 deployment states cache.
         /// </summary>
         /// <param name="consensus">Records the consensus object containing the activation parameters.</param>
-        public ThresholdConditionCache(IConsensus consensus)
+        public ThresholdConditionCache(Network network, ChainIndexer chainIndexer)
         {
-            Guard.NotNull(consensus, nameof(consensus));
+            Guard.NotNull(network, nameof(network));
+            Guard.NotNull(chainIndexer, nameof(chainIndexer));
 
-            this.consensus = consensus;
+            this.consensus = network.Consensus;
+            this.activationHeightProviders = new ActivationHeightProvider[this.consensus.BIP9Deployments.Length];
+            for (int i = 0; i < this.consensus.BIP9Deployments.Length; i++)
+                this.activationHeightProviders[i] = new ActivationHeightProvider(network, this, chainIndexer, i);
         }
 
         /// <summary>
@@ -70,38 +77,54 @@ namespace Stratis.Bitcoin.Base.Deployments
         /// </summary>
         /// <param name="indexPrev">The block at which to compute the metrics.</param>
         /// <param name="thresholdStates">The current state of each BIP9 deployment.</param>
+        /// <param name="activationHeights">The activation heights or <c>null</c> depending on whether an activation is active.</param>
         /// <returns>A <see cref="ThresholdStateModel" /> object containg the metrics.</returns>
-        public List<ThresholdStateModel> GetThresholdStateMetrics(ChainedHeader indexPrev, ThresholdState[] thresholdStates)
+        public List<ThresholdStateModel> GetThresholdStateMetrics(ChainedHeader indexPrev, ThresholdState[] thresholdStates, int[] activationHeights = null)
         {
             var thresholdStateModels = new List<ThresholdStateModel>();
-            ThresholdState[] array = new ThresholdState[this.consensus.BIP9Deployments.Length];
+            ChainedHeader referenceHeader = indexPrev;
 
-            for (int deploymentIndex = 0; deploymentIndex < array.Length; deploymentIndex++)
+            for (int deploymentIndex = 0; deploymentIndex < this.consensus.BIP9Deployments.Length; deploymentIndex++)
             {
-                if (this.consensus.BIP9Deployments[deploymentIndex] == null) continue;
+                BIP9DeploymentsParameters deployment = this.consensus.BIP9Deployments[deploymentIndex];
 
-                string deploymentName = this.consensus.BIP9Deployments[deploymentIndex]?.Name;
+                if (deployment == null) continue;
 
-                DateTime? timeStart = this.consensus.BIP9Deployments[deploymentIndex]?.StartTime.Date;
-                DateTime? timeTimeout = this.consensus.BIP9Deployments[deploymentIndex]?.Timeout.Date;
-                long threshold = this.consensus.BIP9Deployments[deploymentIndex].Threshold;
-
-                int votes = 0;
-                int currentHeight = indexPrev.Height + 1;
+                ThresholdState state = thresholdStates[deploymentIndex];
                 int period = this.consensus.MinerConfirmationWindow;
+                int sinceHeight = 0;
 
-                // First ancestor outside last confirmation window. If we haven't reached block height 2016 yet this will be the genesis block.
-                int periodStart = (indexPrev.Height - (currentHeight % period)) > 0 ? (indexPrev.Height - (currentHeight % period)) : 0;
-                ChainedHeader periodStartsHeader = indexPrev.GetAncestor(periodStart);
+                // Activation heights are passed in the use-case of reporting on locked-in deployments.
+                if (activationHeights != null)
+                {
+                    if (thresholdStates[deploymentIndex] != ThresholdState.LockedIn && thresholdStates[deploymentIndex] != ThresholdState.Active)
+                        continue;
 
-                int periodEndsHeight = periodStartsHeader.Height + period;
+                    // Choose the last header that's within the window where voting led to locked-in state.
+                    sinceHeight = activationHeights[deploymentIndex];
+                    indexPrev = referenceHeader.GetAncestor(sinceHeight - period - 1);
+                    if (indexPrev == null)
+                        continue;
+                }
+                else
+                {
+                    // Look in the cache for the hash of the first block an item was deployed.
+                    KeyValuePair<uint256, ThresholdState?[]> firstSeenHash = this.cache.FirstOrDefault(c => c.Value[deploymentIndex] == state);
 
+                    if (firstSeenHash.Key != null)
+                        sinceHeight = referenceHeader.FindAncestorOrSelf(firstSeenHash.Key).Height + 1;
+                }
+
+                // Subsequent code selects the window that includes this height.
+                int currentHeight = indexPrev.Height;
+                int periodStartHeight = currentHeight - (currentHeight % period);
+                int periodEndHeight = periodStartHeight + period - 1;
                 var hexVersions = new Dictionary<string, int>();
                 int totalBlocks = 0;
+                int votes = 0;
 
-                ChainedHeader headerTemp = indexPrev;
-
-                while (headerTemp != periodStartsHeader)
+                // Count votes backwards up to and including the period start block.
+                for (ChainedHeader headerTemp = indexPrev; headerTemp.Height >= periodStartHeight; headerTemp = headerTemp.Previous)
                 {
                     if (this.Condition(headerTemp, deploymentIndex))
                     {
@@ -116,37 +139,25 @@ namespace Stratis.Bitcoin.Base.Deployments
                         count = 0;
 
                     hexVersions[hexVersion] = count + 1;
-
-                    headerTemp = headerTemp.Previous;
-                }
-
-                // look in the cache for the hash of the first block an item was deployed
-
-                var firstSeenHash = this.cache.FirstOrDefault(c => c.Value[deploymentIndex] == ThresholdState.Started);
-                int sinceHeight = 0;
-
-                if (firstSeenHash.Key != null)
-                {
-                    sinceHeight = indexPrev.FindAncestorOrSelf(firstSeenHash.Key).Height;
                 }
 
                 thresholdStateModels.Add(new ThresholdStateModel()
                 {
-                    DeploymentName = deploymentName,
+                    DeploymentName = deployment.Name,
                     DeploymentIndex = deploymentIndex,
                     ConfirmationPeriod = period,
                     Blocks = totalBlocks,
                     Votes = votes,
                     HexVersions = hexVersions,
-                    TimeStart = timeStart,
-                    TimeTimeOut = timeTimeout,
-                    Threshold = threshold,
-                    Height = currentHeight,
+                    TimeStart = deployment.StartTime.Date,
+                    TimeTimeOut = deployment.Timeout.Date,
+                    Threshold = deployment.Threshold,
+                    Height = currentHeight + 1,
                     SinceHeight = sinceHeight,
-                    PeriodStartHeight = periodStartsHeader.Height,
-                    PeriodEndHeight = periodEndsHeight,
-                    StateValue = thresholdStates[deploymentIndex],
-                    ThresholdState = ((ThresholdState) thresholdStates[deploymentIndex]).ToString()
+                    PeriodStartHeight = periodStartHeight,
+                    PeriodEndHeight = periodEndHeight,
+                    StateValue = state,
+                    ThresholdState = state.ToString()
                 });
             }
 

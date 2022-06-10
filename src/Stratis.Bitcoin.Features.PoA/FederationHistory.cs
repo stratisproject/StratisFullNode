@@ -113,7 +113,22 @@ namespace Stratis.Bitcoin.Features.PoA
                 if (this.federationHistory.TryGetValue(chainedHeader.Height, out item))
                     return item.modifiedFederation;
 
-                return this.GetFederationsForHeightsNoCache(chainedHeader.Height, chainedHeader.Height).First().members;
+                return this.GetFederationsForHeights(chainedHeader.Height, chainedHeader.Height).First().members;
+            }
+        }
+
+        private IEnumerable<(List<IFederationMember> members, HashSet<IFederationMember> whoJoined)> GetFederationsForHeights(int startHeight, int endHeight)
+        {
+            for (int height = startHeight; height <= endHeight; height++)
+            {
+                if (this.federationHistory.TryGetValue(height, out (List<IFederationMember> modifiedFederation, HashSet<IFederationMember> whoJoined, IFederationMember miner) item))
+                {
+                    yield return (item.modifiedFederation, item.whoJoined);
+                }
+                else
+                {
+                    yield return this.GetFederationsForHeightsNoCache(height, height).First();
+                }
             }
         }
 
@@ -162,10 +177,12 @@ namespace Stratis.Bitcoin.Features.PoA
 
             int startHeight = lastHeader.Height + 1 - count;
 
-            Parallel.For(0, headers.Length, i => miners[i] = GetFederationMemberForBlock(headers[i], this.federationHistory[i + startHeight].members, (i + startHeight) >= votingManagerV2ActivationHeight));
+            List<IFederationMember>[] federations = GetFederationsForHeights(startHeight, lastHeader.Height).Select(i => i.members).ToArray();
+
+            Parallel.For(0, headers.Length, i => miners[i] = GetFederationMemberForBlock(headers[i], federations[i], (i + startHeight) >= votingManagerV2ActivationHeight));
 
             if (startHeight == 0)
-                miners[0] = this.federationHistory[0].members.Last();
+                miners[0] = (this.network.Consensus.Options as PoAConsensusOptions).GenesisFederationMembers.Last();
 
             return miners;
         }
@@ -264,27 +281,17 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private void DiscardActivityBelowTime(uint discardBelowTime)
         {
-            const int discardThreshold = 1000;
-
-            // If there is more than the threshold amount of extraneous history then discard it.
-            int firstHeight = this.federationHistory.ElementAt(0).Key;
-            int count = Math.Min(this.federationHistory.Count, this.chainIndexer.Tip.Height + 1 - firstHeight);
-            int pos2 = BinarySearch.BinaryFindFirst(x => this.chainIndexer.GetHeader(x).Header.Time > discardBelowTime, firstHeight, count) - firstHeight;
-            if (pos2 < discardThreshold)
-                return;
-
-            this.federationHistory = new SortedDictionary<int, (List<IFederationMember>, HashSet<IFederationMember>, IFederationMember)>(this.federationHistory.Skip(pos2).ToDictionary(x => x.Key, x => x.Value));
-
-            discardBelowTime = this.chainIndexer.GetHeader(this.federationHistory.ElementAt(0).Key).Header.Time;
+            while (this.chainIndexer[this.federationHistory.ElementAt(0).Key]?.Header.Time < discardBelowTime)
+                this.federationHistory.Remove(this.federationHistory.ElementAt(0).Key);
 
             var remove = new List<PubKey>();
 
             foreach ((PubKey pubKey, List<uint> activity) in this.lastActiveTimeByPubKey)
             {
-                int pos = BinarySearch.BinaryFindFirst(x => activity[x] >= discardBelowTime, 0, activity.Count);
-                if (pos >= 0)
+                int pos = BinarySearch.BinaryFindFirst(x => x == activity.Count || activity[x] >= discardBelowTime, 0, activity.Count + 1);
+                if (pos > 0)
                 {
-                    if (activity.Count <= pos)
+                    if (pos == activity.Count)
                         remove.Add(pubKey);
                     else
                         activity.RemoveRange(0, pos);

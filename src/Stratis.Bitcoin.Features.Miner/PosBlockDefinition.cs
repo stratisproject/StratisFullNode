@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Base.Deployments;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.Consensus.Interfaces;
@@ -25,7 +26,6 @@ namespace Stratis.Bitcoin.Features.Miner
         public PosBlockDefinition(
             IConsensusManager consensusManager,
             IDateTimeProvider dateTimeProvider,
-            ILoggerFactory loggerFactory,
             ITxMempool mempool,
             MempoolSchedulerLock mempoolLock,
             MinerSettings minerSettings,
@@ -33,9 +33,9 @@ namespace Stratis.Bitcoin.Features.Miner
             IStakeChain stakeChain,
             IStakeValidator stakeValidator,
             NodeDeployments nodeDeployments)
-            : base(consensusManager, dateTimeProvider, loggerFactory, mempool, mempoolLock, minerSettings, network, nodeDeployments)
+            : base(consensusManager, dateTimeProvider, mempool, mempoolLock, minerSettings, network, nodeDeployments)
         {
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
             this.stakeChain = stakeChain;
             this.stakeValidator = stakeValidator;
         }

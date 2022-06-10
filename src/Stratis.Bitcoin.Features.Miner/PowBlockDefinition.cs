@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Base.Deployments;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
@@ -17,7 +18,6 @@ namespace Stratis.Bitcoin.Features.Miner
         public PowBlockDefinition(
             IConsensusManager consensusManager,
             IDateTimeProvider dateTimeProvider,
-            ILoggerFactory loggerFactory,
             ITxMempool mempool,
             MempoolSchedulerLock mempoolLock,
             MinerSettings minerSettings,
@@ -25,10 +25,10 @@ namespace Stratis.Bitcoin.Features.Miner
             IConsensusRuleEngine consensusRules,
             NodeDeployments nodeDeployments,
             BlockDefinitionOptions options = null)
-            : base(consensusManager, dateTimeProvider, loggerFactory, mempool, mempoolLock, minerSettings, network, nodeDeployments)
+            : base(consensusManager, dateTimeProvider, mempool, mempoolLock, minerSettings, network, nodeDeployments)
         {
             this.consensusRules = consensusRules;
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
         public override void AddToBlock(TxMempoolEntry mempoolEntry)
