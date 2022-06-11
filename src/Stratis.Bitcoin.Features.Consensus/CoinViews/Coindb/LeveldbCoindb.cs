@@ -12,14 +12,13 @@ using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 {
-/// <summary>
-/// Persistent implementation of coinview using the dBreeze database engine.
-/// </summary>
-public class LevelDbCoindb : BaseCoindb, ICoindb, IStakedb, IDisposable
+    /// <summary>
+    /// Persistent implementation of coinview using the LevelDb database engine.
+    /// </summary>
+    public class LevelDbCoindb : BaseCoindb, ICoindb, IStakedb, IDisposable
     {
         /// <summary>Database key under which the block hash of the coin view's current tip is stored.</summary>
         private static readonly byte[] blockHashKey = new byte[0];
-
 
         private readonly string dataFolder;
 
@@ -31,8 +30,6 @@ public class LevelDbCoindb : BaseCoindb, ICoindb, IStakedb, IDisposable
 
         /// <summary>Performance counter to measure performance of the database insert and query operations.</summary>
         private readonly BackendPerformanceCounter performanceCounter;
-
-        private readonly IScriptAddressReader scriptAddressReader;
 
         private BackendPerformanceSnapshot latestPerformanceSnapShot;
 
