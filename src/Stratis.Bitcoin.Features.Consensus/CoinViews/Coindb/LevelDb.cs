@@ -79,7 +79,9 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                         iterator.Seek(lastKeyBytes);
 
                         // If it won't be returned, and is current/found, then move to the previous value.
-                        if (!includeLastKey && iterator.IsValid() && byteArrayComparer.Equals(iterator.Key(), lastKeyBytes))
+                        if (!iterator.IsValid())
+                            iterator.SeekToLast();
+                        else if (!(includeLastKey && byteArrayComparer.Equals(iterator.Key(), lastKeyBytes)))
                             iterator.Prev();
                     }
 

@@ -43,7 +43,11 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 balance = (row == null) ? 0 : BitConverter.ToInt64(row);
             }
 
-            foreach ((byte[] key, byte[] value) in this.leveldb.GetAll(balanceAdjustmentTable, ascending: false, lastKey: BitConverter.GetBytes(this.persistedCoinviewTip.Height + 1).Reverse().ToArray(), includeLastKey: false))
+            foreach ((byte[] key, byte[] value) in this.leveldb.GetAll(balanceAdjustmentTable, ascending: false, 
+                lastKey: txDestination.ToBytes().Concat(BitConverter.GetBytes(this.persistedCoinviewTip.Height + 1).Reverse()).ToArray(), 
+                includeLastKey: false,
+                firstKey: txDestination.ToBytes(),
+                includeFirstKey: false))
             {
                 yield return (BitConverter.ToUInt32(key.Reverse().ToArray()), balance);
                 balance -= BitConverter.ToInt64(value);
