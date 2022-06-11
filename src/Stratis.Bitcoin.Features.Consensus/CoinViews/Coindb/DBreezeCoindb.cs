@@ -97,6 +97,11 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             return tipHash;
         }
 
+        public IEnumerable<(uint height, long satoshis)> GetBalance(TxDestination txDestination)
+        {
+            throw new NotImplementedException();
+        }
+
         public FetchCoinsResponse FetchCoins(OutPoint[] utxos)
         {
             FetchCoinsResponse res = new FetchCoinsResponse();
@@ -150,7 +155,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             transaction.Insert<byte[], byte[]>("BlockHash", blockHashKey, nextBlockHash.ToBytes());
         }
 
-        public void SaveChanges(IList<UnspentOutput> unspentOutputs, HashHeightPair oldBlockHash, HashHeightPair nextBlockHash, List<RewindData> rewindDataList = null)
+        public void SaveChanges(IList<UnspentOutput> unspentOutputs, Dictionary<TxDestination, Dictionary<uint, long>> balanceUpdates, HashHeightPair oldBlockHash, HashHeightPair nextBlockHash, List<RewindData> rewindDataList = null)
         {
             int insertedEntities = 0;
 

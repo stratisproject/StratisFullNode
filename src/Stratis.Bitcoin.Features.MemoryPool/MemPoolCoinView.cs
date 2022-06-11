@@ -74,6 +74,11 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         {
             throw new NotImplementedException();
         }
+        
+        public IEnumerable<(uint, long)> GetBalance(TxDestination txDestination)
+        {
+            throw new NotImplementedException();
+        }
 
         public HashHeightPair Rewind(HashHeightPair target)
         {

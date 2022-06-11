@@ -63,6 +63,11 @@ namespace Stratis.Bitcoin.Tests.Consensus
             }
         }
 
+        public IEnumerable<(uint, long)> GetBalance(TxDestination txDestination)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <inheritdoc />
         public void SaveChanges(IList<UnspentOutput> unspentOutputs, HashHeightPair oldBlockHash, HashHeightPair nextBlockHash, List<RewindData> rewindDataList = null)
         {

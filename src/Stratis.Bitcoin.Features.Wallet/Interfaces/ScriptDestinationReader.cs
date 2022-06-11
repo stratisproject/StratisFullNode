@@ -6,11 +6,6 @@ using Stratis.Bitcoin.Interfaces;
 
 namespace Stratis.Bitcoin.Features.Wallet.Interfaces
 {
-    public interface IScriptDestinationReader : IScriptAddressReader
-    {
-        IEnumerable<TxDestination> GetDestinationFromScriptPubKey(Network network, Script script);
-    }
-
     public class ScriptDestinationReader : IScriptAddressReader
     {
         private readonly IScriptAddressReader scriptAddressReader;

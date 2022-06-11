@@ -43,6 +43,11 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             throw new NotImplementedException();
         }
 
+        public IEnumerable<(uint height, long satoshis)> GetBalance(TxDestination txDestination)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <inheritdoc />
         public FetchCoinsResponse FetchCoins(OutPoint[] txIds)
         {
@@ -93,6 +98,11 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                         this.unspents.Remove(unspent.OutPoint);
                 }
             }
+        }
+
+        public void SaveChanges(IList<UnspentOutput> unspentOutputs, Dictionary<TxDestination, Dictionary<uint, long>> balanceUpdates, HashHeightPair oldBlockHash, HashHeightPair nextBlockHash, List<RewindData> rewindDataList = null)
+        {
+            this.SaveChanges(unspentOutputs, oldBlockHash, nextBlockHash, rewindDataList);
         }
 
         public int GetMinRewindHeight()
