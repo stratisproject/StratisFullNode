@@ -11,6 +11,8 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             byte[] firstKey = null, byte[] lastKey = null, bool includeFirstKey = true, bool includeLastKey = true);
 
         IDbBatch GetWriteBatch();
+
+        void Clear();
     }
 
     public interface IDbBatch : IDisposable

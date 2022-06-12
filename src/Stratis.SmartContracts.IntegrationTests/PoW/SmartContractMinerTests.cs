@@ -257,7 +257,8 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
                         new InvalidBlockHashStore(dateTimeProvider),
                         new NodeStats(dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object),
                         asyncProvider,
-                        consensusRulesContainer)
+                        consensusRulesContainer,
+                        new Mock<IBlockStoreQueue>().Object)
                     .SetupRulesEngineParent();
 
                 var finalizedBlockInfoRepository = new FinalizedBlockInfoRepository(new HashHeightPair());

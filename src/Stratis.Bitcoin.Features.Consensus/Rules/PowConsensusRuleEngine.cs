@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -9,6 +10,8 @@ using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
+using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using TracerAttributes;
 
@@ -26,16 +29,21 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules
         public ICoinView UtxoSet { get; }
 
         private readonly CoinviewPrefetcher prefetcher;
+        private readonly IBlockStore blockStore;
+        private readonly ConsensusRulesContainer consensusRulesContainer;
 
         public PowConsensusRuleEngine(Network network, ILoggerFactory loggerFactory, IDateTimeProvider dateTimeProvider, ChainIndexer chainIndexer,
             NodeDeployments nodeDeployments, ConsensusSettings consensusSettings, ICheckpoints checkpoints, ICoinView utxoSet, IChainState chainState,
-            IInvalidBlockHashStore invalidBlockHashStore, INodeStats nodeStats, IAsyncProvider asyncProvider, ConsensusRulesContainer consensusRulesContainer)
+            IInvalidBlockHashStore invalidBlockHashStore, INodeStats nodeStats, IAsyncProvider asyncProvider, ConsensusRulesContainer consensusRulesContainer, IBlockStore blockStore)
             : base(network, loggerFactory, dateTimeProvider, chainIndexer, nodeDeployments, consensusSettings, checkpoints, chainState, invalidBlockHashStore, nodeStats, consensusRulesContainer)
         {
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
 
+            this.consensusRulesContainer = consensusRulesContainer;
+
             this.UtxoSet = utxoSet;
             this.prefetcher = new CoinviewPrefetcher(this.UtxoSet, chainIndexer, loggerFactory, asyncProvider, checkpoints);
+            this.blockStore = blockStore;
         }
 
         /// <inheritdoc />
@@ -85,6 +93,30 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules
                 // If the block store was initialized behind the coin view's tip, rewind it to on or before it's tip.
                 // The node will complete loading before connecting to peers so the chain will never know that a reorg happened.
                 coinViewTip = coinDatabase.Rewind(new HashHeightPair(chainTip));
+            }
+
+            // If the coin view is behind the block store then catch up from the block store.
+            if (coinViewTip.Height < chainTip.Height)
+            {
+                foreach ((ChainedHeader chainedHeader, Block block) in this.blockStore.BatchBlocksFrom(this.ChainIndexer[0], this.ChainIndexer))
+                {
+                    if (block == null)
+                        break;
+
+                    if ((chainedHeader.Height % 10000) == 0)
+                        this.logger.LogInformation("Rebuilding coin view from '{0}' to {1}.", chainedHeader, chainTip);
+
+                    var ruleContext = new PosRuleContext()
+                    {
+                        ValidationContext = new ValidationContext() { ChainedHeaderToValidate = chainedHeader, BlockToValidate = block },
+                        SkipValidation = true
+                    };
+
+                    foreach (var rule in this.consensusRulesContainer.FullValidationRules)
+                    {
+                        rule.RunAsync(ruleContext).ConfigureAwait(false).GetAwaiter().GetResult();
+                    }
+                }
             }
 
             this.logger.LogInformation("Coin view initialized at '{0}'.", coinDatabase.GetTipHash());

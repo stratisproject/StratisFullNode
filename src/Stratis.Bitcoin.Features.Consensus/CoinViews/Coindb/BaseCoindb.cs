@@ -20,7 +20,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         protected static readonly byte balanceAdjustmentTable = 6;
 
         /// <summary>Access to dBreeze database.</summary>
-        protected IDb leveldb;
+        protected IDb coinDb;
 
         /// <summary>Hash of the block which is currently the tip of the coinview.</summary>
         protected HashHeightPair persistedCoinviewTip;
@@ -39,11 +39,11 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         {
             long balance = 0;
             {
-                byte[] row = this.leveldb.Get(balanceTable, txDestination.ToBytes());
+                byte[] row = this.coinDb.Get(balanceTable, txDestination.ToBytes());
                 balance = (row == null) ? 0 : BitConverter.ToInt64(row);
             }
 
-            foreach ((byte[] key, byte[] value) in this.leveldb.GetAll(balanceAdjustmentTable, ascending: false, 
+            foreach ((byte[] key, byte[] value) in this.coinDb.GetAll(balanceAdjustmentTable, ascending: false, 
                 lastKey: txDestination.ToBytes().Concat(BitConverter.GetBytes(this.persistedCoinviewTip.Height + 1).Reverse()).ToArray(), 
                 includeLastKey: false,
                 firstKey: txDestination.ToBytes(),
@@ -56,7 +56,10 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             yield return (0, balance);
         }
 
-        protected void AdjustBalance(IDbBatch batch, Dictionary<TxDestination, Dictionary<uint, long>> balanceUpdates)
+        /// <summary>
+        /// The 'skipMissing' flag allows us to rewind coind db's that have incomplete balance information.
+        /// </summary>
+        protected void AdjustBalance(IDbBatch batch, Dictionary<TxDestination, Dictionary<uint, long>> balanceUpdates, bool skipMissing = false)
         {
             foreach ((TxDestination txDestination, Dictionary<uint, long> balanceAdjustments) in balanceUpdates)
             {
@@ -65,7 +68,9 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 foreach (uint height in balanceAdjustments.Keys.OrderBy(k => k))
                 {
                     var key = txDestination.ToBytes().Concat(BitConverter.GetBytes(height).Reverse()).ToArray();
-                    byte[] row = this.leveldb.Get(balanceAdjustmentTable, key);
+                    byte[] row = this.coinDb.Get(balanceAdjustmentTable, key);
+                    if (skipMissing && row == null)
+                        continue;
                     long balance = ((row == null) ? 0 : BitConverter.ToInt64(row)) + balanceAdjustments[height];
                     batch.Put(balanceAdjustmentTable, key, BitConverter.GetBytes(balance));
 
@@ -74,7 +79,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
                 {
                     var key = txDestination.ToBytes();
-                    byte[] row = this.leveldb.Get(balanceTable, key);
+                    byte[] row = this.coinDb.Get(balanceTable, key);
                     long balance = ((row == null) ? 0 : BitConverter.ToInt64(row)) + totalAdjustment;
                     batch.Put(balanceTable, key, BitConverter.GetBytes(balance));
                 }

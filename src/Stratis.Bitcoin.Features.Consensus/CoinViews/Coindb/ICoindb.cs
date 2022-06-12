@@ -83,8 +83,9 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// </summary>
         /// <param name="txDestination">The destination value derived from the address being queried.</param>
         /// <returns>A combination of (height, satoshis) values with the cumulative balance up to the corresponding height.</returns>
-        /// <remarks>Balance updates(even when nett 0) are delivered for every height at which transactions for the address had been recorded 
-        /// and as such the returned heights can be used in conjunction with the block store to discover all related transactions.</remarks>
+        /// <remarks>Balance updates (even when nett 0) are delivered for every height at which transactions for the address 
+        /// had been recorded and as such the returned heights can be used in conjunction with the block store to discover 
+        /// all related transactions.</remarks>
         IEnumerable<(uint height, long satoshis)> GetBalance(TxDestination txDestination);
     }
 

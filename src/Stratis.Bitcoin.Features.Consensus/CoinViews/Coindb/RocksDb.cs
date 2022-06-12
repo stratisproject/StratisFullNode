@@ -1,16 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using LevelDB;
+using RocksDbSharp;
 using NBitcoin;
 
 namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 {
-    public class LevelDbBatch : WriteBatch, IDbBatch
+    public class RocksDbBatch : WriteBatch, IDbBatch
     {
-        DB db;
+        RocksDbSharp.RocksDb db;
 
-        public LevelDbBatch(DB db)
+        public RocksDbBatch(RocksDbSharp.RocksDb db)
         {
             this.db = db;
         }
@@ -27,32 +27,32 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         public void Write()
         {
-            this.db.Write(this, new WriteOptions() { Sync = true });
+            this.db.Write(this);
         }
     }
 
-    public class LevelDb : IDb
+    public class RocksDb : IDb
     {
         private static ByteArrayComparer byteArrayComparer = new ByteArrayComparer();
 
         private readonly string name;
 
-        DB db;
+        RocksDbSharp.RocksDb db;
 
-        public LevelDb(string name) 
+        public RocksDb(string name)
         {
             this.name = name;
-            this.db = new DB(new Options() { CreateIfMissing = true }, name);
+            this.db = RocksDbSharp.RocksDb.Open(new DbOptions().SetCreateIfMissing(), name);
         }
 
         public void Clear()
         {
             this.db.Dispose();
             System.IO.Directory.Delete(this.name, true);
-            this.db = new DB(new Options() { CreateIfMissing = true }, this.name);
+            this.db = RocksDbSharp.RocksDb.Open(new DbOptions().SetCreateIfMissing(), this.name);
         }
 
-        public IDbBatch GetWriteBatch() => new LevelDbBatch(this.db);
+        public IDbBatch GetWriteBatch() => new RocksDbBatch(this.db);
 
         public byte[] Get(byte table, byte[] key)
         {
@@ -62,7 +62,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         public IEnumerable<(byte[], byte[])> GetAll(byte keyPrefix, bool keysOnly = false, bool ascending = true,
             byte[] firstKey = null, byte[] lastKey = null, bool includeFirstKey = true, bool includeLastKey = true)
         {
-            using (Iterator iterator = this.db.CreateIterator())
+            using (Iterator iterator = this.db.NewIterator())
             {
                 byte[] firstKeyBytes = (firstKey == null) ? null : new[] { keyPrefix }.Concat(firstKey).ToArray();
                 byte[] lastKeyBytes = (lastKey == null) ? null : new[] { keyPrefix }.Concat(lastKey).ToArray();
@@ -79,7 +79,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                         iterator.Seek(new[] { (byte)(keyPrefix + 1) });
 
                         // ...then back up to the previous value if the iterator is still valid.
-                        if (iterator.IsValid())
+                        if (iterator.Valid())
                             iterator.Prev();
                         else
                             // If the iterator is invalid then there were no records with greater prefixes.
@@ -92,7 +92,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                         iterator.Seek(lastKeyBytes);
 
                         // If it won't be returned, and is current/found, then move to the previous value.
-                        if (!iterator.IsValid())
+                        if (!iterator.Valid())
                             iterator.SeekToLast();
                         else if (!(includeLastKey && byteArrayComparer.Equals(iterator.Key(), lastKeyBytes)))
                             iterator.Prev();
@@ -130,7 +130,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                         iterator.Seek(firstKeyBytes);
 
                         // If it won't be returned, and is current/found, then move to the next value.
-                        if (!includeFirstKey && iterator.IsValid() && byteArrayComparer.Equals(iterator.Key(), firstKeyBytes))
+                        if (!includeFirstKey && iterator.Valid() && byteArrayComparer.Equals(iterator.Key(), firstKeyBytes))
                             iterator.Next();
                     }
 
@@ -154,7 +154,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     next = () => iterator.Next();
                 }
 
-                while (iterator.IsValid())
+                while (iterator.Valid())
                 {
                     byte[] keyBytes = iterator.Key();
 

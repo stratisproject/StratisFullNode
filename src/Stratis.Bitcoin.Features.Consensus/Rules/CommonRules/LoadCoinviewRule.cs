@@ -66,7 +66,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         {
             // Check that the current block has not been reorged.
             // Catching a reorg at this point will not require a rewind.
-            if (context.ValidationContext.BlockToValidate.Header.HashPrevBlock != this.Parent.ChainState.ConsensusTip.HashBlock)
+            if (context.ValidationContext.BlockToValidate.Header.HashPrevBlock != this.PowParent.UtxoSet.GetTipHash().Hash)
             {
                 this.Logger.LogDebug("Reorganization detected.");
                 ConsensusErrors.InvalidPrevTip.Throw();
