@@ -11,7 +11,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
     {
         /// <summary> Initialize the coin database.</summary>
         /// <param name="chainTip">The current chain's tip.</param>
-        void Initialize(ChainedHeader chainTip);
+        void Initialize(ChainedHeader chainTip, bool balanceIndexingEnabled);
 
         /// <summary>
         /// Retrieves the block hash of the current tip of the coinview.

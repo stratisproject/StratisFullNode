@@ -39,6 +39,10 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             throw new NotImplementedException();
         }
 
+        public void Initialize(ChainedHeader chainTip, bool balanceIndexingEnabled)
+        {
+        }
+
         /// <inheritdoc />
         public HashHeightPair GetTipHash()
         {

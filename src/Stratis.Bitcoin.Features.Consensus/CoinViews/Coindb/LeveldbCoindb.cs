@@ -58,12 +58,12 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 400);
         }
 
-        public void Initialize(ChainedHeader chainTip)
+        public void Initialize(ChainedHeader chainTip, bool addressIndexingEnabled)
         {
             // Open a connection to a new DB and create if not found
             this.coinDb = new LevelDb(this.dataFolder);
 
-            EnsureCoinDatabaseIntegrity(chainTip);
+            EnsureCoinDatabaseIntegrity(chainTip, addressIndexingEnabled);
 
             Block genesis = this.network.GetGenesis();
 
@@ -79,12 +79,12 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             this.logger.LogInformation("Coinview initialized with tip '{0}'.", this.persistedCoinviewTip);
         }
 
-        private void EnsureCoinDatabaseIntegrity(ChainedHeader chainTip)
+        private void EnsureCoinDatabaseIntegrity(ChainedHeader chainTip, bool balanceIndexingEnabled)
         {
             this.logger.LogInformation("Checking coin database integrity...");
 
             // If the balance table is empty then rebuild the coin db.
-            if (!this.coinDb.GetAll(balanceTable).Any())
+            if (balanceIndexingEnabled && !this.coinDb.GetAll(balanceTable).Any())
             {
                 this.logger.LogInformation($"Rebuilding coin database to include balance information.");
                 this.coinDb.Clear();

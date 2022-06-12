@@ -65,7 +65,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 300);
         }
 
-        public void Initialize(ChainedHeader chainTip)
+        public void Initialize(ChainedHeader chainTip, bool balanceIndexingEnabled)
         {
             Block genesis = this.network.GetGenesis();
 
