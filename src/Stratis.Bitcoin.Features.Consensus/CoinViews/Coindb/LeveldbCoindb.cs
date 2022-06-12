@@ -301,7 +301,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     res = rewindData.PreviousBlockHash;
                 }
 
-                AdjustBalance(batch, balanceAdjustments, true);
+                AdjustBalance(batch, balanceAdjustments);
 
                 this.SetBlockHash(batch, res);
                 batch.Write();

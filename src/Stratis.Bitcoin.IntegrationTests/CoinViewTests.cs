@@ -9,7 +9,6 @@ using NBitcoin.Crypto;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Settings;
-using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.IntegrationTests.Common;
@@ -46,7 +45,11 @@ namespace Stratis.Bitcoin.IntegrationTests
                 Block genesis = ctx.Network.GetGenesis();
                 var genesisChainedHeader = new ChainedHeader(genesis.Header, ctx.Network.GenesisHash, 0);
                 ChainedHeader chained = this.MakeNext(genesisChainedHeader, ctx.Network);
-                ctx.Coindb.SaveChanges(new UnspentOutput[] { new UnspentOutput(new OutPoint(genesis.Transactions[0], 0), new Coins(0, genesis.Transactions[0].Outputs.First(), true)) }, new Dictionary<TxDestination, Dictionary<uint, long>>(), new HashHeightPair(genesisChainedHeader), new HashHeightPair(chained));
+                var coins = new Coins(0, genesis.Transactions[0].Outputs.First(), true);
+                TxDestination txDestination = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(coins.TxOut.ScriptPubKey).Hash;
+                ctx.Coindb.SaveChanges(new UnspentOutput[] { new UnspentOutput(new OutPoint(genesis.Transactions[0], 0), coins) }, 
+                    new Dictionary<TxDestination, Dictionary<uint, long>>() { { txDestination, new Dictionary<uint, long> { { 0, coins.TxOut.Value } } } }, 
+                    new HashHeightPair(genesisChainedHeader), new HashHeightPair(chained));
                 Assert.NotNull(ctx.Coindb.FetchCoins(new[] { new OutPoint(genesis.Transactions[0], 0) }).UnspentOutputs.Values.FirstOrDefault().Coins);
                 Assert.Null(ctx.Coindb.FetchCoins(new[] { new OutPoint() }).UnspentOutputs.Values.FirstOrDefault().Coins);
 
@@ -72,7 +75,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 ChainedHeader chained = this.MakeNext(genesisChainedHeader, ctx.Network);
                 var dateTimeProvider = new DateTimeProvider();
 
-                var cacheCoinView = new CachedCoinView(this.network, new Checkpoints(), ctx.Coindb, dateTimeProvider, this.loggerFactory, new NodeStats(dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), new ConsensusSettings(new NodeSettings(this.network)));
+                var cacheCoinView = new CachedCoinView(this.network, ctx.Coindb, dateTimeProvider, this.loggerFactory, new NodeStats(dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), new ConsensusSettings(new NodeSettings(this.network)));
 
                 cacheCoinView.SaveChanges(new UnspentOutput[] { new UnspentOutput(new OutPoint(genesis.Transactions[0], 0), new Coins(0, genesis.Transactions[0].Outputs.First(), true)) }, new HashHeightPair(genesisChainedHeader), new HashHeightPair(chained));
                 Assert.NotNull(cacheCoinView.FetchCoins(new[] { new OutPoint(genesis.Transactions[0], 0) }).UnspentOutputs.Values.FirstOrDefault().Coins);
@@ -104,7 +107,7 @@ namespace Stratis.Bitcoin.IntegrationTests
             using (NodeContext nodeContext = NodeContext.Create(this))
             {
                 var dateTimeProvider = new DateTimeProvider();
-                var cacheCoinView = new CachedCoinView(this.network, new Checkpoints(), nodeContext.Coindb, dateTimeProvider, this.loggerFactory, new NodeStats(dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), new ConsensusSettings(new NodeSettings(this.network)));
+                var cacheCoinView = new CachedCoinView(this.network, nodeContext.Coindb, dateTimeProvider, this.loggerFactory, new NodeStats(dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), new ConsensusSettings(new NodeSettings(this.network)));
                 var tester = new CoinViewTester(cacheCoinView);
 
                 List<(Coins, OutPoint)> coinsA = tester.CreateCoins(5);

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using NBitcoin;
+using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.Consensus.CoinViews
@@ -10,6 +11,14 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
     /// </summary>
     public interface ICoinView
     {
+        /// <summary>
+        /// Initializes the coin view.
+        /// </summary>
+        /// <param name="chainTip">The chain tip.</param>
+        /// <param name="chainIndexer">The chain indexer.</param>
+        /// <param name="consensusRulesContainer">The consensus rules container.</param>
+        void Initialize(ChainedHeader chainTip, ChainIndexer chainIndexer, ConsensusRulesContainer consensusRulesContainer);
+
         /// <summary>
         /// Retrieves the block hash of the current tip of the coinview.
         /// </summary>

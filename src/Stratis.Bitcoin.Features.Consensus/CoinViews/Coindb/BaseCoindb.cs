@@ -59,7 +59,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// <summary>
         /// The 'skipMissing' flag allows us to rewind coind db's that have incomplete balance information.
         /// </summary>
-        protected void AdjustBalance(IDbBatch batch, Dictionary<TxDestination, Dictionary<uint, long>> balanceUpdates, bool skipMissing = false)
+        protected void AdjustBalance(IDbBatch batch, Dictionary<TxDestination, Dictionary<uint, long>> balanceUpdates)
         {
             foreach ((TxDestination txDestination, Dictionary<uint, long> balanceAdjustments) in balanceUpdates)
             {
@@ -69,8 +69,6 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 {
                     var key = txDestination.ToBytes().Concat(BitConverter.GetBytes(height).Reverse()).ToArray();
                     byte[] row = this.coinDb.Get(balanceAdjustmentTable, key);
-                    if (skipMissing && row == null)
-                        continue;
                     long balance = ((row == null) ? 0 : BitConverter.ToInt64(row)) + balanceAdjustments[height];
                     batch.Put(balanceAdjustmentTable, key, BitConverter.GetBytes(balance));
 

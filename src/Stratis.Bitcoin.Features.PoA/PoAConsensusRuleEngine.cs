@@ -31,7 +31,7 @@ namespace Stratis.Bitcoin.Features.PoA
             NodeDeployments nodeDeployments, ConsensusSettings consensusSettings, ICheckpoints checkpoints, ICoinView utxoSet, IChainState chainState,
             IInvalidBlockHashStore invalidBlockHashStore, INodeStats nodeStats, ISlotsManager slotsManager, PoABlockHeaderValidator poaHeaderValidator,
             VotingManager votingManager, IFederationManager federationManager, IAsyncProvider asyncProvider, ConsensusRulesContainer consensusRulesContainer,
-            IFederationHistory federationHistory, IBlockStore blockStore)
+            IFederationHistory federationHistory, IBlockStore blockStore = null)
             : base(network, loggerFactory, dateTimeProvider, chainIndexer, nodeDeployments, consensusSettings, checkpoints, utxoSet, chainState, invalidBlockHashStore, nodeStats, asyncProvider, consensusRulesContainer, blockStore)
         {
             this.SlotsManager = slotsManager;
