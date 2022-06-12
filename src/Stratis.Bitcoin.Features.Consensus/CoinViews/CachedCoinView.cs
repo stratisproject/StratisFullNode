@@ -197,7 +197,10 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                         break;
 
                     if ((chainedHeader.Height % 10000) == 0)
+                    {
+                        this.Flush(true);
                         this.logger.LogInformation("Rebuilding coin view from '{0}' to {1}.", chainedHeader, chainTip);
+                    }
 
                     var ruleContext = new PosRuleContext()
                     {
@@ -210,6 +213,8 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                         rule.RunAsync(ruleContext).ConfigureAwait(false).GetAwaiter().GetResult();
                     }
                 }
+
+                this.Flush(true);
             }
 
             this.logger.LogInformation("Coin view initialized at '{0}'.", this.coindb.GetTipHash());
