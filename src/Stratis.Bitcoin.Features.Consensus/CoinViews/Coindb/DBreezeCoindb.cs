@@ -34,6 +34,8 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         private BackendPerformanceSnapshot latestPerformanceSnapShot;
 
+        public bool BalanceIndexingEnabled => false;
+
         /// <summary>Access to dBreeze database.</summary>
         private readonly DBreezeEngine dBreeze;
 

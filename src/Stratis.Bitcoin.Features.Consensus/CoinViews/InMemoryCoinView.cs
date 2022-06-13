@@ -24,6 +24,8 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// <remarks>All access to this object has to be protected by <see cref="lockobj"/>.</remarks>
         private HashHeightPair tipHash;
 
+        public bool BalanceIndexingEnabled => false;
+
         /// <summary>
         /// Initializes an instance of the object.
         /// </summary>

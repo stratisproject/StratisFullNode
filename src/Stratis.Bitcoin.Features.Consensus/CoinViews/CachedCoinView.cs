@@ -123,8 +123,6 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// <remarks>The getter violates the lock contract on <see cref="cachedUtxoItems"/>, but the lock here is unnecessary as the <see cref="cachedUtxoItems"/> is marked as readonly.</remarks>
         private int cacheCount => this.cachedUtxoItems.Count;
 
-        public bool AddressIndexingEnabled { get; private set; }
-
         /// <summary>Number of items in the rewind data.</summary>
         /// <remarks>The getter violates the lock contract on <see cref="cachedRewindData"/>, but the lock here is unnecessary as the <see cref="cachedRewindData"/> is marked as readonly.</remarks>
         private int rewindDataCount => this.cachedRewindData.Count;
@@ -156,7 +154,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             this.stakeChainStore = stakeChainStore;
             this.rewindDataIndexCache = rewindDataIndexCache;
             this.blockStore = blockStore;
-            this.cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(nodeLifetime.ApplicationStopping);
+            this.cancellationToken = (nodeLifetime == null) ? new CancellationTokenSource(): CancellationTokenSource.CreateLinkedTokenSource(nodeLifetime.ApplicationStopping);
             this.lockobj = new object();
             this.cachedUtxoItems = new Dictionary<OutPoint, CacheItem>();
             this.cacheBalancesByDestination = new Dictionary<TxDestination, Dictionary<uint, long>>();
@@ -171,13 +169,11 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
             if (nodeStats.DisplayBenchStats)
                 nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 300);
-
-            this.AddressIndexingEnabled = this.network.Consensus.IsProofOfStake;
         }
 
         public void Initialize(ChainedHeader chainTip, ChainIndexer chainIndexer, ConsensusRulesContainer consensusRulesContainer)
         {
-            this.coindb.Initialize(chainTip, this.AddressIndexingEnabled);
+            this.coindb.Initialize(chainTip, this.network.Consensus.IsProofOfStake);
 
             HashHeightPair coinViewTip = this.coindb.GetTipHash();
 
@@ -305,10 +301,6 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// <inheritdoc />
         public FetchCoinsResponse FetchCoins(OutPoint[] utxos)
         {
-            //var address = BitcoinAddress.Create("XXEHUS8dDHtn7M8AcrgweVcozweJcGGy4i", this.network);
-            //var x = PayToPubkeyHashTemplate.Instance.ExtractScriptPubKeyParameters(address.ScriptPubKey);
-            //var b = GetBalance(x).ToList();
-
             Guard.NotNull(utxos, nameof(utxos));
 
             var result = new FetchCoinsResponse();
@@ -466,8 +458,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
                 this.logger.LogDebug("Flushing {0} items.", modify.Count);
 
-                if (modify.Count != 0 || this.cacheBalancesByDestination.Count != 0)
-                    this.coindb.SaveChanges(modify, this.cacheBalancesByDestination, this.innerBlockHash, this.blockHash, this.cachedRewindData.Select(c => c.Value).ToList());
+                this.coindb.SaveChanges(modify, this.cacheBalancesByDestination, this.innerBlockHash, this.blockHash, this.cachedRewindData.Select(c => c.Value).ToList());
 
                 // All the cached utxos are now on disk so we can clear the cached entry list.
                 this.cachedUtxoItems.Clear();
@@ -759,7 +750,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         private void RecordBalanceChange(Script scriptPubKey, long satoshis, uint height)
         {
-            if (!this.AddressIndexingEnabled || scriptPubKey.Length == 0 || satoshis == 0)
+            if (!this.coindb.BalanceIndexingEnabled || scriptPubKey.Length == 0 || satoshis == 0)
                 return;
 
             foreach (TxDestination txDestination in this.scriptAddressReader.GetDestinationFromScriptPubKey(this.network, scriptPubKey))
