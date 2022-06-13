@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
@@ -18,6 +19,17 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         protected static readonly byte stakeTable = 4;
         protected static readonly byte balanceTable = 5;
         protected static readonly byte balanceAdjustmentTable = 6;
+
+        /// <summary>Database key under which the block hash of the coin view's current tip is stored.</summary>
+        protected static readonly byte[] blockHashKey = new byte[0];
+
+        /// <summary>Database key under which the block hash of the coin view's last indexed tip is stored.</summary>
+        protected static readonly byte[] blockIndexedHashKey = new byte[1];
+
+        /// <summary>Instance logger.</summary>
+        protected ILogger logger;
+
+        public bool BalanceIndexingEnabled { get; protected set; }
 
         /// <summary>Access to dBreeze database.</summary>
         protected IDb coinDb;
@@ -104,6 +116,96 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
                 value[height] = balance;
             }
+        }
+
+        public HashHeightPair GetTipHash()
+        {
+            if (this.persistedCoinviewTip == null)
+            {
+                var row = this.coinDb.Get(blockTable, blockHashKey);
+                if (row != null)
+                {
+                    this.persistedCoinviewTip = new HashHeightPair();
+                    this.persistedCoinviewTip.FromBytes(row);
+                }
+            }
+
+            return this.persistedCoinviewTip;
+        }
+
+        protected HashHeightPair GetIndexedTipHash()
+        {
+            var row = this.coinDb.Get(blockTable, blockIndexedHashKey);
+            if (row != null)
+            {
+                var tip = new HashHeightPair();
+                tip.FromBytes(row);
+                return tip;
+            }
+
+            return null;
+        }
+
+        protected void SetBlockHash(IDbBatch batch, HashHeightPair nextBlockHash, bool forceUpdateIndexedHeight = false)
+        {
+            this.persistedCoinviewTip = nextBlockHash;
+            batch.Put(blockTable, blockHashKey, nextBlockHash.ToBytes());
+            if (this.BalanceIndexingEnabled || forceUpdateIndexedHeight)
+                batch.Put(blockTable, blockIndexedHashKey, nextBlockHash.ToBytes());
+        }
+
+        protected virtual HashHeightPair RewindInternal(int startHeight, HashHeightPair target)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected void EnsureCoinDatabaseIntegrity(ChainedHeader chainTip)
+        {
+            this.logger.LogInformation("Checking coin database integrity...");
+
+            HashHeightPair maxHeight = new HashHeightPair(chainTip);
+
+            // If the balance table is empty then rebuild the coin db.
+            if (this.BalanceIndexingEnabled)
+            {
+                HashHeightPair indexedTipHash = this.GetIndexedTipHash();
+                if (indexedTipHash == null)
+                {
+                    this.logger.LogInformation($"Rebuilding coin database to include balance information.");
+                    this.coinDb.Clear();
+                    return;
+                }
+
+                if (indexedTipHash.Height < chainTip.Height)
+                    maxHeight = indexedTipHash;
+            }
+
+            var tipHash = GetTipHash();
+
+            var heightToCheck = chainTip.Height;
+
+            if (heightToCheck > tipHash.Height)
+                heightToCheck = tipHash.Height;
+
+            // Find the height up to where rewind data is stored above chain tip.
+            do
+            {
+                heightToCheck += 1;
+
+                byte[] row = this.coinDb.Get(rewindTable, BitConverter.GetBytes(heightToCheck).Reverse().ToArray());
+                if (row == null)
+                    break;
+            } while (true);
+
+            for (int height = heightToCheck - 1; height > maxHeight.Height;)
+            {
+                this.logger.LogInformation($"Fixing coin database, deleting rewind data at height {height} above tip '{chainTip}'.");
+
+                // Do a batch of rewinding.
+                height = RewindInternal(height, maxHeight).Height;
+            }
+
+            this.logger.LogInformation("Coin database integrity good.");
         }
     }
 }
