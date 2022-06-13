@@ -204,6 +204,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     var loadCoinViewRule = consensusRulesContainer.FullValidationRules.OfType<LoadCoinviewRule>().Single();
                     var saveCoinViewRule = consensusRulesContainer.FullValidationRules.OfType<SaveCoinviewRule>().Single();
                     var coinViewRule = consensusRulesContainer.FullValidationRules.OfType<CoinViewRule>().Single();
+                    var deploymentsRule = consensusRulesContainer.FullValidationRules.OfType<SetActivationDeploymentsFullValidationRule>().Single();
 
                     foreach ((ChainedHeader chainedHeader, Block block) in this.blockStore.BatchBlocksFrom(chainIndexer[coinViewTip.Hash], chainIndexer, this.cancellationToken, batchSize: 1000))
                     {
@@ -221,6 +222,9 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                             ValidationContext = new ValidationContext() { ChainedHeaderToValidate = chainedHeader, BlockToValidate = block },
                             SkipValidation = true
                         };
+
+                        // Set context flags.
+                        deploymentsRule.RunAsync(utxoRuleContext).ConfigureAwait(false).GetAwaiter().GetResult();
 
                         // Loads the coins spent by this block into utxoRuleContext.UnspentOutputSet.
                         loadCoinViewRule.RunAsync(utxoRuleContext).ConfigureAwait(false).GetAwaiter().GetResult();

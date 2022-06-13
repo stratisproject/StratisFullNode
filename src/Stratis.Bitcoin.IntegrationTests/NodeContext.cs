@@ -29,7 +29,7 @@ namespace Stratis.Bitcoin.IntegrationTests
             var dateTimeProvider = new DateTimeProvider();
             var serializer = new DBreezeSerializer(this.Network.Consensus.ConsensusFactory);
             this.Coindb = new LevelDbCoindb(network, this.FolderName, dateTimeProvider, new NodeStats(dateTimeProvider, NodeSettings.Default(network), new Mock<IVersionProvider>().Object), serializer, new ScriptAddressReader());
-            this.Coindb.Initialize(new ChainedHeader(network.GetGenesis().Header, network.GenesisHash, 0));
+            this.Coindb.Initialize(new ChainedHeader(network.GetGenesis().Header, network.GenesisHash, 0), false);
             this.cleanList = new List<IDisposable> { (IDisposable)this.Coindb };
         }
 
@@ -68,7 +68,7 @@ namespace Stratis.Bitcoin.IntegrationTests
             var serializer = new DBreezeSerializer(this.Network.Consensus.ConsensusFactory);
             this.Coindb = new LevelDbCoindb(this.Network, this.FolderName, dateTimeProvider, new NodeStats(dateTimeProvider, NodeSettings.Default(this.Network), new Mock<IVersionProvider>().Object), serializer, new ScriptAddressReader());
 
-            this.Coindb.Initialize(chainTip);
+            this.Coindb.Initialize(chainTip, false);
             this.cleanList.Add((IDisposable)this.Coindb);
         }
     }
