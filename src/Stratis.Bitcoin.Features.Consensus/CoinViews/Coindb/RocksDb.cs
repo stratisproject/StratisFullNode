@@ -35,11 +35,15 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
     {
         private static ByteArrayComparer byteArrayComparer = new ByteArrayComparer();
 
-        private readonly string name;
+        private string name;
 
         RocksDbSharp.RocksDb db;
 
-        public RocksDb(string name)
+        public RocksDb()
+        {
+        }
+
+        public void Open(string name)
         {
             this.name = name;
             this.db = RocksDbSharp.RocksDb.Open(new DbOptions().SetCreateIfMissing(), name);

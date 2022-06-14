@@ -87,15 +87,15 @@ namespace Stratis.Bitcoin.Features.Consensus
                     break;
 
                 case DbType.Leveldb:
-                    services.AddSingleton<ICoindb, LevelDbCoindb>();
+                    services.AddSingleton<ICoindb, Coindb<LevelDb>>();
                     break;
 
                 case DbType.RocksDb:
-                    services.AddSingleton<ICoindb, RocksDbCoindb>();
+                    services.AddSingleton<ICoindb, Coindb<RocksDb>>();
                     break;
 
                 default:
-                    services.AddSingleton<ICoindb, LevelDbCoindb>();
+                    services.AddSingleton<ICoindb, Coindb<LevelDb>>();
                     break;
             }
         }

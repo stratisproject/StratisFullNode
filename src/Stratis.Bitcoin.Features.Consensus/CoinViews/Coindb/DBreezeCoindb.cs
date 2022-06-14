@@ -309,10 +309,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             return res;
         }
 
-        /// <summary>
-        /// Persists unsaved POS blocks information to the database.
-        /// </summary>
-        /// <param name="stakeEntries">List of POS block information to be examined and persists if unsaved.</param>
+        /// <inheritdoc />
         public void PutStake(IEnumerable<StakeItem> stakeEntries)
         {
             using (DBreeze.Transactions.Transaction transaction = this.CreateTransaction())

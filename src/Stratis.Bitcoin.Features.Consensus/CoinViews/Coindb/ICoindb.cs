@@ -93,8 +93,16 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
     public interface IStakedb : ICoindb
     {
+        /// <summary>
+        /// Persists unsaved POS blocks information to the database.
+        /// </summary>
+        /// <param name="stakeEntries">List of POS block information to be examined and persists if unsaved.</param>
         void PutStake(IEnumerable<StakeItem> stakeEntries);
 
+        /// <summary>
+        /// Retrieves POS blocks information from the database.
+        /// </summary>
+        /// <param name="blocklist">List of partially initialized POS block information that is to be fully initialized with the values from the database.</param>
         void GetStake(IEnumerable<StakeItem> blocklist);
     }
 }

@@ -5,6 +5,8 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 {
     public interface IDb : IDisposable
     {
+        void Open(string name);
+
         byte[] Get(byte table, byte[] key);
 
         IEnumerable<(byte[], byte[])> GetAll(byte table, bool keysOnly = false, bool ascending = true,

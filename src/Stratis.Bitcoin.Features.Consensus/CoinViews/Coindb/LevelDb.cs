@@ -35,11 +35,15 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
     {
         private static ByteArrayComparer byteArrayComparer = new ByteArrayComparer();
 
-        private readonly string name;
+        private string name;
 
         DB db;
 
-        public LevelDb(string name) 
+        public LevelDb() 
+        {
+        }
+
+        public void Open(string name)
         {
             this.name = name;
             this.db = new DB(new Options() { CreateIfMissing = true }, name);

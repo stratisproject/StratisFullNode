@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
@@ -136,13 +137,14 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         private readonly IBlockStore blockStore;
         private readonly CancellationTokenSource cancellationToken;
         private readonly ConsensusSettings consensusSettings;
+        private readonly bool addressIndexingEnabled;
         private CachePerformanceSnapshot latestPerformanceSnapShot;
         private IScriptAddressReader scriptAddressReader;
 
         private readonly Random random;
 
         public CachedCoinView(Network network, ICheckpoints checkpoints, ICoindb coindb, IDateTimeProvider dateTimeProvider, ILoggerFactory loggerFactory, INodeStats nodeStats, ConsensusSettings consensusSettings,
-            StakeChainStore stakeChainStore = null, IRewindDataIndexCache rewindDataIndexCache = null, IScriptAddressReader scriptAddressReader = null, IBlockStore blockStore = null, INodeLifetime nodeLifetime = null)
+            StakeChainStore stakeChainStore = null, IRewindDataIndexCache rewindDataIndexCache = null, IScriptAddressReader scriptAddressReader = null, IBlockStore blockStore = null, INodeLifetime nodeLifetime = null, NodeSettings nodeSettings = null)
         {
             Guard.NotNull(coindb, nameof(CachedCoinView.coindb));
 
@@ -162,6 +164,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             this.lastCacheFlushTime = this.dateTimeProvider.GetUtcNow();
             this.cachedRewindData = new Dictionary<int, RewindData>();
             this.scriptAddressReader = scriptAddressReader;
+            this.addressIndexingEnabled = nodeSettings?.ConfigReader.GetOrDefault("addressindex", false) ?? false;
             this.random = new Random();
 
             this.MaxCacheSizeBytes = consensusSettings.MaxCoindbCacheInMB * 1024 * 1024;
@@ -173,7 +176,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         public void Initialize(ChainedHeader chainTip, ChainIndexer chainIndexer, ConsensusRulesContainer consensusRulesContainer)
         {
-            this.coindb.Initialize(chainTip, this.network.Consensus.IsProofOfStake);
+            this.coindb.Initialize(chainTip, this.addressIndexingEnabled);
 
             HashHeightPair coinViewTip = this.coindb.GetTipHash();
 
