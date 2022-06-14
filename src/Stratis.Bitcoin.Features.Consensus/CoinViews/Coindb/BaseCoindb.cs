@@ -177,7 +177,10 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 }
 
                 if (indexedTipHash.Height < chainTip.Height)
+                {
+                    this.logger.LogInformation($"Rewinding the coin database to include missing balance information.");
                     maxHeight = indexedTipHash;
+                }
             }
 
             var tipHash = GetTipHash();
