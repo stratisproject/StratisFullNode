@@ -41,7 +41,13 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             throw new NotImplementedException();
         }
 
-        public void Initialize(ChainedHeader chainTip, bool balanceIndexingEnabled)
+        /// <inheritdoc />
+        public void Initialize(bool balanceIndexingEnabled)
+        {
+        }
+
+        /// <inheritdoc />
+        public void Sync(ChainIndexer chainIndexer)
         {
         }
 

@@ -43,6 +43,12 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         void SaveChanges(IList<UnspentOutput> unspentOutputs, HashHeightPair oldBlockHash, HashHeightPair nextBlockHash, List<RewindData> rewindDataList = null);
 
         /// <summary>
+        /// Brings the coinview back on-chain if a re-org occurred.
+        /// </summary>
+        /// <param name="chainIndexer">The current consensus chain.</param>
+        void Sync(ChainIndexer chainIndexer);
+
+        /// <summary>
         /// Obtains information about unspent outputs.
         /// </summary>
         /// <param name="utxos">Transaction identifiers for which to retrieve information about unspent outputs.</param>

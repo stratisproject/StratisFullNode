@@ -25,6 +25,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
             // unless the coinview threshold is reached.
             this.Logger.LogDebug("Saving coinview changes.");
             var utxoRuleContext = context as UtxoRuleContext;
+            this.PowParent.UtxoSet.Sync(this.Parent.ChainIndexer);
             this.PowParent.UtxoSet.SaveChanges(utxoRuleContext.UnspentOutputSet.GetCoins(), new HashHeightPair(oldBlock), new HashHeightPair(nextBlock));
 
             return Task.CompletedTask;

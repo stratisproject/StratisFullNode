@@ -55,6 +55,11 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             throw new NotImplementedException();
         }
 
+        /// <inheritdoc />
+        public void Sync(ChainIndexer chainIndexer)
+        {
+        }
+
         /// <summary>
         /// Gets the unspent transaction output set.
         /// </summary>

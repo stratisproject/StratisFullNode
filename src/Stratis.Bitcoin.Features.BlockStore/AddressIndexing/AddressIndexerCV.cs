@@ -7,7 +7,6 @@ using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.BlockStore.Models;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Interfaces;
-using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 {
@@ -32,21 +31,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         private ChainedHeader GetTip()
         {
-            HashHeightPair coinViewTip = this.coinView.GetTipHash();
-            if (coinViewTip.Hash == this.chainIndexer.Tip.HashBlock)
-                return this.chainIndexer.Tip;
+            this.coinView.Sync(this.chainIndexer);
 
-            ChainedHeader fork = this.chainIndexer[coinViewTip.Hash];
-            if (fork == null)
-            {
-                // Determine the last usable height.
-                int height = BinarySearch.BinaryFindFirst(h => this.coinView.GetRewindData(h).PreviousBlockHash.Hash != this.chainIndexer[h].Previous.HashBlock, 0, Math.Min(this.chainIndexer.Height, coinViewTip.Height));
-                fork = this.chainIndexer[(height < 0) ? 0 : this.coinView.GetRewindData(height).PreviousBlockHash.Hash];
-            }
-
-            this.coinView.Rewind(new HashHeightPair(fork));
-
-            return fork;
+            return this.chainIndexer[this.coinView.GetTipHash().Hash];
         }
 
         public void Initialize()
