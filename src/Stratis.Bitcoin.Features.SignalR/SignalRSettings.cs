@@ -60,7 +60,8 @@ namespace Stratis.Bitcoin.Features.SignalR
             builder.AppendLine($"-signalruri=<string>                  URI to node's SignalR interface. Defaults to '{DefaultSignalRHost}'.");
             builder.AppendLine($"-signalrport=<0-65535>                Port of node's SignalR interface. Defaults to {network.DefaultAPIPort}.");
 
-            NodeSettings.Default(network).Logger.LogInformation(builder.ToString());
+            var logger = NodeSettings.Default(network).LoggerFactory.CreateLogger(typeof(SignalRSettings).FullName);
+            logger.LogInformation(builder.ToString());
         }
 
         /// <summary>

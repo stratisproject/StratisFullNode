@@ -83,12 +83,14 @@ namespace Stratis.Bitcoin.Features.Wallet
             NodeSettings defaults = NodeSettings.Default(network);
             var builder = new StringBuilder();
 
-            builder.AppendLine("-savetrxhex=<0 or 1>            Save the hex of transactions in the wallet file. Default: 0.");
-            builder.AppendLine("-defaultwalletname=<string>     Loads the specified wallet on startup. If it doesn't exist, it will be created automatically.");
+            builder.AppendLine("-savetrxhex=<0 or 1>           Save the hex of transactions in the wallet file. Default: 0.");
+            builder.AppendLine("-defaultwalletname=<string>    Loads the specified wallet on startup. If it doesn't exist, it will be created automatically.");
             builder.AppendLine("-defaultwalletpassword=<string> Overrides the default wallet password. Default: default.");
-            builder.AppendLine("-unlockdefaultwallet=<0 or 1>   Unlocks the specified default wallet. Default: 0.");
-            builder.AppendLine("-walletaddressbuffer=<number>   Size of the buffer of unused addresses maintained in an account. Default: 20.");
-            defaults.Logger.LogInformation(builder.ToString());
+            builder.AppendLine("-unlockdefaultwallet=<0 or 1>  Unlocks the specified default wallet. Default: 0.");
+            builder.AppendLine("-walletaddressbuffer=<number>  Size of the buffer of unused addresses maintained in an account. Default: 20.");
+
+            var logger = defaults.LoggerFactory.CreateLogger(typeof(WalletSettings).FullName);
+            logger.LogInformation(builder.ToString());
         }
 
         /// <summary>

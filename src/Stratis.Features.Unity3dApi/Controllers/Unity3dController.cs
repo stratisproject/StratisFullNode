@@ -125,16 +125,16 @@ namespace Stratis.Features.Unity3dApi.Controllers
             long totalWithdrawn = addressBalances.BalanceChanges.Where(x => !x.Deposited).Sum(x => x.Satoshi);
 
             long balanceSat = totalDeposited - totalWithdrawn;
-            
+
             List<int> heights = deposits.Select(x => x.BalanceChangedHeight).Distinct().ToList();
             HashSet<uint256> blocksToRequest = new HashSet<uint256>(heights.Count);
-            
+
             foreach (int height in heights)
             {
                 uint256 blockHash = this.chainState.ConsensusTip.GetAncestor(height).Header.GetHash();
                 blocksToRequest.Add(blockHash);
             }
-            
+
             List<Block> blocks = this.blockStore.GetBlocks(blocksToRequest.ToList());
             List<OutPoint> collectedOutPoints = new List<OutPoint>(deposits.Count);
 
@@ -275,14 +275,14 @@ namespace Stratis.Features.Unity3dApi.Controllers
                 }
 
                 Transaction trx = this.blockStore?.GetTransactionById(txid);
-                
+
                 if (trx == null)
                 {
                     return null;
                 }
-                
+
                 return new RawTxModel() { Hex = trx.ToHex() };
-                
+
             }
             catch (Exception e)
             {
@@ -290,7 +290,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
                 return null;
             }
         }
-        
+
         /// <summary>
         /// Sends a transaction that has already been built.
         /// Use the /api/Wallet/build-transaction call to create transactions.
@@ -404,7 +404,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
                 Block block = chainedHeader.Block ?? this.blockStore.GetBlock(blockId);
 
                 // In rare occasions a block that is found in the
-                // indexer may not have been pushed to the store yet. 
+                // indexer may not have been pushed to the store yet.
                 if (block == null)
                     return null;
 
@@ -440,7 +440,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         }
 
         /// <summary>
-        /// Retrieves the <see cref="addressIndexer"/>'s tip. 
+        /// Retrieves the <see cref="addressIndexer"/>'s tip.
         /// </summary>
         /// <returns>An instance of <see cref="TipModel"/> containing the tip's hash and height.</returns>
         /// <response code="200">Returns the address indexer tip</response>
@@ -466,13 +466,13 @@ namespace Stratis.Features.Unity3dApi.Controllers
                 return null;
             }
         }
-        
+
         /// <summary>
         /// Gets a smart contract transaction receipt. Receipts contain information about how a smart contract transaction was executed.
-        /// This includes the value returned from a smart contract call and how much gas was used.  
-        /// </summary> 
-        /// <param name="txHash">A hash of the smart contract transaction (the transaction ID).</param> 
-        /// <returns>The receipt for the smart contract.</returns> 
+        /// This includes the value returned from a smart contract call and how much gas was used.
+        /// </summary>
+        /// <param name="txHash">A hash of the smart contract transaction (the transaction ID).</param>
+        /// <returns>The receipt for the smart contract.</returns>
         /// <response code="200">Returns transaction receipt</response>
         /// <response code="400">Transaction not found</response>
         [Route("receipt")]
@@ -501,19 +501,19 @@ namespace Stratis.Features.Unity3dApi.Controllers
 
                 receiptResponse = new ReceiptResponse(receipt, logResponses, this.network);
             }
-            
+
             return receiptResponse;
         }
-        
+
         /// <summary>
-        /// Makes a local call to a method on a smart contract that has been successfully deployed. A transaction 
-        /// is not created as the call is never propagated across the network. All persistent data held by the   
+        /// Makes a local call to a method on a smart contract that has been successfully deployed. A transaction
+        /// is not created as the call is never propagated across the network. All persistent data held by the
         /// smart contract is copied before the call is made. Only this copy is altered by the call
         /// and the actual data is unaffected. Even if an amount of funds are specified to send with the call,
         /// no funds are in fact sent.
-        /// The purpose of this function is to query and test methods. 
-        /// </summary> 
-        /// <param name="request">An object containing the necessary parameters to build the transaction.</param> 
+        /// The purpose of this function is to query and test methods.
+        /// </summary>
+        /// <param name="request">An object containing the necessary parameters to build the transaction.</param>
         /// <results>The result of the local call to the smart contract method.</results>
         /// <returns>The <see cref="IActionResult"/>.</returns>
         /// <response code="200">Returns call response</response>
@@ -558,20 +558,20 @@ namespace Stratis.Features.Unity3dApi.Controllers
 
         /// <summary>
         /// Searches a smart contract's receipts for those which match a specific event. The SmartContract.Log() function
-        /// is capable of storing C# structs, and structs are used to store information about different events occurring 
+        /// is capable of storing C# structs, and structs are used to store information about different events occurring
         /// on the smart contract. For example, a "TransferLog" struct could contain "From" and "To" fields and be used to log
         /// when a smart contract makes a transfer of funds from one wallet to another. The log entries are held inside the smart contract,
         /// indexed using the name of the struct, and are linked to individual transaction receipts.
         /// Therefore, it is possible to return a smart contract's transaction receipts
-        /// which match a specific event (as defined by the struct name).  
+        /// which match a specific event (as defined by the struct name).
         /// </summary>
-        /// 
+        ///
         /// <param name="contractAddress">The contract address from which events were raised.</param>
         /// <param name="eventName">The name of the event raised.</param>
         /// <param name="topics">The topics to search. All specified topics must be present.</param>
         /// <param name="fromBlock">The block number from which to start searching.</param>
         /// <param name="toBlock">The block number where searching finishes.</param>
-        /// 
+        ///
         /// <returns>A list of receipts for transactions relating to a specific smart contract and a specific event in that smart contract.</returns>
         [Route("receipt-search")]
         [HttpGet]
@@ -581,7 +581,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
 
             return Task.FromResult(result);
         }
-        
+
         [Route("watch-nft-contract")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
@@ -590,7 +590,41 @@ namespace Stratis.Features.Unity3dApi.Controllers
         {
             this.NFTTransferIndexer.WatchNFTContract(contractAddress);
         }
-        
+
+        [Route("watch-nft-contracts")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult WatchNFTContracts([FromBody] List<string> contractAddresses)
+        {
+            foreach (string contractAddress in contractAddresses)
+            {
+                this.NFTTransferIndexer.WatchNFTContract(contractAddress);
+            }
+
+            return Ok();
+        }
+
+        [Route("unwatch-nft-contract")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public void UnwatchNFTContract([FromQuery] string contractAddress)
+        {
+            this.NFTTransferIndexer.UnwatchNFTContract(contractAddress);
+        }
+
+        [Route("reindex-all-contracts")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult ReindexAllContracts()
+        {
+            this.NFTTransferIndexer.ReindexAllContracts();
+
+            return Ok();
+        }
+
         [Route("get-watched-nft-contracts")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
@@ -599,7 +633,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         {
             return this.NFTTransferIndexer.GetWatchedNFTContracts();
         }
-        
+
         [Route("get-owned-nfts")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
@@ -608,7 +642,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         {
             return this.NFTTransferIndexer.GetOwnedNFTs(ownerAddress);
         }
-        
+
         [Route("get-all-nft-owners-by-contract-address")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]

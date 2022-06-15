@@ -41,7 +41,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
     {
         public List<Block> Blocks { get; set; }
 
-        public ConsensusManager Consensus { get; set; }
+        public IConsensusManager Consensus { get; set; }
 
         public ConsensusRuleEngine ConsensusRules { get; set; }
 
@@ -228,7 +228,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
             TxMempool mempool, MempoolSchedulerLock mempoolLock)
         {
             PowBlockDefinition blockAssembler = new PowBlockDefinition(testChainContext.Consensus,
-                testChainContext.DateTimeProvider, testChainContext.LoggerFactory as ILoggerFactory, mempool, mempoolLock,
+                testChainContext.DateTimeProvider, mempool, mempoolLock,
                 new MinerSettings(testChainContext.NodeSettings), testChainContext.Network, testChainContext.ConsensusRules, new NodeDeployments(testChainContext.Network, testChainContext.ChainIndexer));
 
             BlockTemplate newBlock = blockAssembler.Build(testChainContext.ChainIndexer.Tip, scriptPubKey);

@@ -444,7 +444,7 @@ namespace Stratis.SmartContracts.IntegrationTests
 
             ContractCompilationResult compilationResult = ContractCompiler.CompileFile("SmartContracts/BasicParameters.cs");
             Assert.True(compilationResult.Success);
-            string[] parameters = new string[] { string.Format("{0}#{1}", (int)MethodParameterDataType.ULong, UInt64.MaxValue) };
+            string[] parameters = new string[] { string.Format("{0}#{1}", (int)MethodParameterDataType.ULong, ulong.MaxValue) };
             BuildCreateContractTransactionResponse response = this.node1.SendCreateContractTransaction(compilationResult.Compilation, amount, parameters);
             this.mockChain.WaitAllMempoolCount(1);
             this.mockChain.MineBlocks(1);

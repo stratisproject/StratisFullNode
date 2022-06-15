@@ -155,7 +155,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                             // Check if the current tip is before the poll expiry activation block,
                             // if so un-expire it.
-                            if (poll.IsExpired && !IsPollExpiredAt(poll, chainedHeaderTip, this.network))
+                            if (poll.IsExpired && !IsPollExpiredAt(poll, this.CurrentTip.Height, this.network))
                             {
                                 this.logger.LogDebug("Un-expiring poll {0}.", poll.Id);
                                 poll.IsExpired = false;
@@ -376,12 +376,22 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
-        public static bool IsPollExpiredAt(Poll poll, ChainedHeader chainedHeader, PoANetwork network)
+        private static int GetPollExpiryHeight(Poll poll, PoANetwork network)
         {
-            if (chainedHeader == null)
-                return false;
+            return Math.Max(poll.PollStartBlockData.Height + network.ConsensusOptions.PollExpiryBlocks, network.ConsensusOptions.Release1100ActivationHeight);
+        }
 
-            return Math.Max(poll.PollStartBlockData.Height + network.ConsensusOptions.PollExpiryBlocks, network.ConsensusOptions.Release1100ActivationHeight) <= chainedHeader.Height;
+        public static int GetPollExpiryOrExecutionHeight(Poll poll, PoANetwork network)
+        {
+            if (poll.IsApproved)
+                return poll.PollVotedInFavorBlockData.Height + (int)network.Consensus.MaxReorgLength;
+
+            return GetPollExpiryHeight(poll, network);
+        }
+
+        public static bool IsPollExpiredAt(Poll poll, int height, PoANetwork network)
+        {
+            return GetPollExpiryHeight(poll, network) <= height;
         }
 
         /// <inheritdoc />

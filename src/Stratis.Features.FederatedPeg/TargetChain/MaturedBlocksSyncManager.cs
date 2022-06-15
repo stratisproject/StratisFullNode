@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Base.Deployments.Models;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.PoA;
@@ -17,6 +19,7 @@ using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
 using Stratis.Features.FederatedPeg.SourceChain;
 using Stratis.Features.FederatedPeg.Wallet;
+using Stratis.Features.PoA.Collateral.CounterChain;
 
 namespace Stratis.Features.FederatedPeg.TargetChain
 {
@@ -31,26 +34,39 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <summary>Starts requesting blocks from another chain.</summary>
         /// <returns>The asynchronous task.</returns>
         Task StartAsync();
+
+        /// <summary>
+        /// Inject a deposit that that distributes a fee to all the multisig nodes for submitting a interop transfer.
+        /// </summary>
+        /// <param name="deposit">The deposit that will be injected into the <see cref="CrossChainTransferStore"/> that distributes a fee to all the multisig nodes
+        /// for submitting a interop transfer. This is currently used for SRC20 to ERC20 transfers.</param>
+        void AddInterOpFeeDeposit(IDeposit deposit);
+
+        int GetMainChainActivationHeight();
     }
 
     /// <inheritdoc cref="IMaturedBlocksSyncManager"/>
     public class MaturedBlocksSyncManager : IMaturedBlocksSyncManager
     {
+        private const string Release1300DeploymentNameLower = "release1300";
         private readonly IAsyncProvider asyncProvider;
         private readonly ICrossChainTransferStore crossChainTransferStore;
         private readonly IFederationGatewayClient federationGatewayClient;
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly IFederationWalletManager federationWalletManager;
         private readonly IInitialBlockDownloadState initialBlockDownloadState;
+        private readonly object lockObject;
         private readonly ILogger logger;
         private readonly INodeLifetime nodeLifetime;
         private readonly IConversionRequestRepository conversionRequestRepository;
+        private readonly ICounterChainSettings counterChainSettings;
+        private readonly IHttpClientFactory httpClientFactory;
         private readonly ChainIndexer chainIndexer;
         private readonly IExternalApiPoller externalApiPoller;
         private readonly IConversionRequestFeeService conversionRequestFeeService;
         private readonly Network network;
         private readonly IFederationManager federationManager;
-
+        private int mainChainActivationHeight;
         private IAsyncLoop requestDepositsTask;
 
         /// <summary>When we are fully synced we stop asking for more blocks for this amount of time.</summary>
@@ -59,6 +75,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <summary>Delay between initialization and first request to other node.</summary>
         /// <remarks>Needed to give other node some time to start before bombing it with requests.</remarks>
         private const int InitializationDelaySeconds = 10;
+
+        /// <summary>
+        /// This list of interop fee deposits that will be distributed to the multisig nodes.
+        /// </summary>
+        private readonly List<IDeposit> interOpFeeDeposits = new List<IDeposit>();
 
         public MaturedBlocksSyncManager(
             IAsyncProvider asyncProvider,
@@ -73,7 +94,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             IFederatedPegSettings federatedPegSettings,
             IFederationManager federationManager = null,
             IExternalApiPoller externalApiPoller = null,
-            IConversionRequestFeeService conversionRequestFeeService = null)
+            IConversionRequestFeeService conversionRequestFeeService = null,
+            ICounterChainSettings counterChainSettings = null,
+            IHttpClientFactory httpClientFactory = null)
         {
             this.asyncProvider = asyncProvider;
             this.chainIndexer = chainIndexer;
@@ -85,13 +108,61 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.initialBlockDownloadState = initialBlockDownloadState;
             this.nodeLifetime = nodeLifetime;
             this.conversionRequestRepository = conversionRequestRepository;
+            this.counterChainSettings = counterChainSettings;
+            this.httpClientFactory = httpClientFactory;
             this.chainIndexer = chainIndexer;
             this.externalApiPoller = externalApiPoller;
             this.conversionRequestFeeService = conversionRequestFeeService;
             this.network = network;
             this.federationManager = federationManager;
+            this.mainChainActivationHeight = int.MaxValue;
 
+            this.lockObject = new object();
             this.logger = LogManager.GetCurrentClassLogger();
+        }
+
+        public void RecordCounterChainActivations()
+        {
+            // If this is the main chain then ask the side-chain for its activation height.
+            if (!this.federatedPegSettings.IsMainChain)
+                return;
+
+            // Ensures that we only check this once on startup.
+            if (this.mainChainActivationHeight != int.MaxValue)
+                return;
+
+            CounterChainConsensusClient consensusClient = new CounterChainConsensusClient(this.counterChainSettings, this.httpClientFactory);
+            List<ThresholdActivationModel> lockedInActivations = consensusClient.GetLockedInDeployments(this.nodeLifetime.ApplicationStopping).ConfigureAwait(false).GetAwaiter().GetResult();
+            if (lockedInActivations == null || lockedInActivations.Count == 0)
+            {
+                this.logger.LogDebug("There are {0} locked-in deployments.", lockedInActivations?.Count);
+                return;
+            }
+
+            ThresholdActivationModel model = lockedInActivations.FirstOrDefault(a => a.DeploymentName.ToLowerInvariant() == Release1300DeploymentNameLower);
+            if (model == null || model.LockedInTimestamp == null)
+            {
+                this.logger.LogDebug("There are no locked-in deployments for '{0}'.", Release1300DeploymentNameLower);
+                return;
+            }
+
+            if (this.chainIndexer.Tip.Header.Time < model.LockedInTimestamp.Value)
+            {
+                this.logger.LogDebug("The chain tip time {0} is still below the locked in time {1}.", this.chainIndexer.Tip.Header.Time, model.LockedInTimestamp.Value);
+                return;
+            }
+
+            // The above condition ensures that the 'Last' below will always return a value.
+            int mainChainLockedInHeight = this.chainIndexer.Tip.EnumerateToGenesis().TakeWhile(h => h.Header.Time >= (uint)(model.LockedInTimestamp)).Last().Height;
+
+            Network counterChainNetwork = this.counterChainSettings.CounterChainNetwork;
+            this.mainChainActivationHeight = mainChainLockedInHeight + 
+                (int)((counterChainNetwork.Consensus.MinerConfirmationWindow * counterChainNetwork.Consensus.TargetSpacing.TotalSeconds) / this.network.Consensus.TargetSpacing.TotalSeconds);
+        }
+
+        public int GetMainChainActivationHeight()
+        {
+            return this.mainChainActivationHeight;
         }
 
         /// <inheritdoc />
@@ -100,8 +171,12 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             // Initialization delay; give the counter chain node some time to start it's API service.
             await Task.Delay(TimeSpan.FromSeconds(InitializationDelaySeconds), this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
 
+            RecordCounterChainActivations();
+
             this.requestDepositsTask = this.asyncProvider.CreateAndRunAsyncLoop($"{nameof(MaturedBlocksSyncManager)}.{nameof(this.requestDepositsTask)}", async token =>
             {
+                RecordCounterChainActivations();
+
                 bool delayRequired = await this.SyncDepositsAsync().ConfigureAwait(false);
                 if (delayRequired)
                 {
@@ -113,6 +188,23 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             },
             this.nodeLifetime.ApplicationStopping,
             repeatEvery: TimeSpan.FromSeconds(RefreshDelaySeconds));
+        }
+
+        /// <inheritdoc />
+        public void AddInterOpFeeDeposit(IDeposit deposit)
+        {
+            lock (this.lockObject)
+            {
+                if (this.interOpFeeDeposits.Any(d => d.Id == deposit.Id))
+                {
+                    this.logger.LogDebug($"Interop fee deposit '{deposit.Id}' is already queued to be processed.");
+                    return;
+                }
+
+                this.logger.LogDebug($"Adding deposit '{deposit.Id}' for {deposit.Amount} as a fee for the multisig.");
+
+                this.interOpFeeDeposits.Add(deposit);
+            }
         }
 
         /// <summary>Asks for blocks from another gateway node and then processes them.</summary>
@@ -295,6 +387,22 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 foreach (IDeposit deposit in maturedBlockDeposit.Deposits)
                 {
                     this.logger.LogDebug("Deposit matured: {0}", deposit.ToString());
+                }
+            }
+
+            lock (this.lockObject)
+            {
+                // Add any fee related deposits relating to the multsig nodes
+                if (this.interOpFeeDeposits.Any())
+                {
+                    this.logger.LogDebug($"Adding {this.interOpFeeDeposits.Count} interflux fee deposits.");
+
+                    MaturedBlockDepositsModel tempModelList = matureBlockDeposits.Value.OrderByDescending(d => d.BlockInfo.BlockHeight).First();
+                    List<IDeposit> tempDepositList = tempModelList.Deposits.ToList();
+                    tempDepositList.AddRange(this.interOpFeeDeposits);
+                    tempModelList.Deposits = tempDepositList.AsReadOnly().OrderBy(x => x.Id, Comparer<uint256>.Create(DeterministicCoinOrdering.CompareUint256)).ToList();
+
+                    this.interOpFeeDeposits.Clear();
                 }
             }
 
