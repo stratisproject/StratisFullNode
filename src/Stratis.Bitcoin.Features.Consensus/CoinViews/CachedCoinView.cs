@@ -195,7 +195,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     fork = chainIndexer[(height < 0) ? 0 : this.GetRewindData(height).PreviousBlockHash.Hash];
                 }
 
-                do
+                while (coinViewTip.Height != fork.Height)
                 {
                     if ((coinViewTip.Height % 100) == 0)
                         this.logger.LogInformation("Rewinding coin view from '{0}' to {1}.", coinViewTip, fork);
@@ -203,7 +203,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     // If the block store was initialized behind the coin view's tip, rewind it to on or before it's tip.
                     // The node will complete loading before connecting to peers so the chain will never know that a reorg happened.
                     coinViewTip = this.coindb.Rewind(new HashHeightPair(fork));
-                } while (coinViewTip.Height != fork.Height);
+                };
             }
         }
 

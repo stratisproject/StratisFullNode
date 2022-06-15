@@ -296,9 +296,9 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             return null;
         }
 
-        private bool TryGetCoins(byte[] key, out Coins coins)
+        private bool TryGetCoins(ReadWriteBatch readWriteBatch, byte[] key, out Coins coins)
         {
-            byte[] row2 = this.coinDb.Get(CoinsTable, key);
+            byte[] row2 = readWriteBatch.Get(CoinsTable, key);
             if (row2 == null)
             {
                 coins = null;
@@ -316,7 +316,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
             int indexedHeight = this.GetIndexedTipHash()?.Height ?? -1;
 
-            using (var batch = this.coinDb.GetWriteBatch())
+            using (var batch = this.coinDb.GetReadWriteBatch())
             {
                 var balanceAdjustments = new Dictionary<TxDestination, Dictionary<uint, long>>();
 
@@ -335,7 +335,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     foreach (OutPoint outPoint in rewindData.OutputsToRemove)
                     {
                         byte[] key = outPoint.ToBytes();
-                        if (this.TryGetCoins(key, out Coins coins))
+                        if (this.TryGetCoins(batch, key, out Coins coins))
                         {
                             this.logger.LogDebug("Outputs of outpoint '{0}' will be removed.", outPoint);
 
