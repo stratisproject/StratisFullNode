@@ -191,8 +191,8 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 if (fork == null)
                 {
                     // Determine the last usable height.
-                    int height = BinarySearch.BinaryFindFirst(h => this.GetRewindData(h).PreviousBlockHash.Hash != chainIndexer[h].Previous.HashBlock, 0, Math.Min(chainIndexer.Height, coinViewTip.Height));
-                    fork = chainIndexer[(height < 0) ? 0 : this.GetRewindData(height).PreviousBlockHash.Hash];
+                    int height = BinarySearch.BinaryFindFirst(h => (h > chainIndexer.Height) || this.GetRewindData(h).PreviousBlockHash.Hash != chainIndexer[h].Previous.HashBlock, 0, coinViewTip.Height + 1) - 1;
+                    fork = chainIndexer[(height < 0) ? coinViewTip.Height : height];
                 }
 
                 while (coinViewTip.Height != fork.Height)
