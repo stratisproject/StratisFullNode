@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.EventBus;
@@ -16,6 +17,7 @@ using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Events;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.PoA.Collateral.CounterChain;
 
 namespace Stratis.Features.Collateral
@@ -28,8 +30,9 @@ namespace Stratis.Features.Collateral
         /// <summary>Checks if given federation member fulfills the collateral requirement.</summary>
         /// <param name="federationMember">The federation member whose collateral will be checked.</param>
         /// <param name="heightToCheckAt">Counter chain height at which collateral should be checked.</param>
+        /// <param name="localChainHeight">Used for BIP 9 activation.</param>
         /// <returns><c>True</c> if the collateral requirement is fulfilled and <c>false</c> otherwise.</returns>
-        bool CheckCollateral(IFederationMember federationMember, int heightToCheckAt);
+        bool CheckCollateral(IFederationMember federationMember, int heightToCheckAt, int localChainHeight);
 
         int GetCounterChainConsensusHeight();
     }
@@ -67,12 +70,15 @@ namespace Stratis.Features.Collateral
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
         private int counterChainConsensusTipHeight;
 
+        private readonly double blockRatio;
+        private readonly NodeDeployments nodeDeployments;
+
         private Task updateCollateralContinuouslyTask;
 
         private bool collateralUpdated;
 
         public CollateralChecker(IHttpClientFactory httpClientFactory, ICounterChainSettings settings, IFederationManager federationManager,
-            ISignals signals, Network network, IAsyncProvider asyncProvider, INodeLifetime nodeLifetime)
+            ISignals signals, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, IAsyncProvider asyncProvider, INodeLifetime nodeLifetime, NodeDeployments nodeDeployments)
         {
             this.federationManager = federationManager;
             this.signals = signals;
@@ -84,6 +90,8 @@ namespace Stratis.Features.Collateral
             this.balancesDataByAddress = new Dictionary<string, AddressIndexerData>();
             this.logger = LogManager.GetCurrentClassLogger();
             this.blockStoreClient = new BlockStoreClient(httpClientFactory, $"http://{settings.CounterChainApiHost}", settings.CounterChainApiPort);
+            this.blockRatio = network.Consensus.TargetSpacing / counterChainNetworkWrapper.CounterChainNetwork.Consensus.TargetSpacing;
+            this.nodeDeployments = nodeDeployments;
         }
 
         public async Task InitializeAsync()
@@ -208,7 +216,7 @@ namespace Stratis.Features.Collateral
         }
 
         /// <inheritdoc />
-        public bool CheckCollateral(IFederationMember federationMember, int heightToCheckAt)
+        public bool CheckCollateral(IFederationMember federationMember, int heightToCheckAt, int localChainHeight)
         {
             if (!this.collateralUpdated)
             {
@@ -248,6 +256,22 @@ namespace Stratis.Features.Collateral
                     // No data. Assume collateral is 0. It's ok if there is no collateral set for that fed member.
                     this.logger.LogDebug("(-)[NO_DATA]:{0}={1}", nameof(this.balancesDataByAddress.Count), this.balancesDataByAddress.Count);
                     return 0 >= member.CollateralAmount;
+                }
+
+                int release1310ActivationHeight = 0;
+                if (this.nodeDeployments?.BIP9.ArraySize > 0  /* Not NoBIP9Deployments */)
+                    release1310ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[0 /* Release1300 */].ActivationHeight;
+
+                // Checks that the collateral remains valid for at least half a round.
+                if (localChainHeight >= release1310ActivationHeight)
+                {
+                    int roundBlocks = (int)(this.federationManager.GetFederationMembers().Count * this.blockRatio);
+                    int startHeight = heightToCheckAt - roundBlocks / 2;
+                    long minBalance = balanceData.BalanceChanges.Where(x => x.BalanceChangedHeight <= heightToCheckAt).CalculateMinBalance(startHeight);
+
+                    this.logger.LogInformation("Lowest balance for '{0}' between heights {1} and {2} is {3}, collateral requirement is {4}.", member.CollateralMainchainAddress, startHeight, heightToCheckAt, Money.Satoshis(minBalance).ToUnit(MoneyUnit.BTC), member.CollateralAmount);
+
+                    return minBalance >= member.CollateralAmount.Satoshi;
                 }
 
                 long balance = balanceData.BalanceChanges.Where(x => x.BalanceChangedHeight <= heightToCheckAt).CalculateBalance();

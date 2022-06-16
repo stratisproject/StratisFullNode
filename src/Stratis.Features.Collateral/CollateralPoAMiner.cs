@@ -87,7 +87,7 @@ namespace Stratis.Features.Collateral
             }
 
             // Check our own collateral at a given commitment height.
-            bool success = this.collateralChecker.CheckCollateral(currentMember, commitmentHeight);
+            bool success = this.collateralChecker.CheckCollateral(currentMember, commitmentHeight, this.chainIndexer[blockTemplate.Block.Header.HashPrevBlock].Height + 1);
 
             if (!success)
             {

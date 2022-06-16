@@ -9,6 +9,7 @@ namespace Stratis.Sidechains.Networks.Deployments
     {
         // The position of each deployment in the deployments array. Note that this is decoupled from the actual position of the flag bit for the deployment in the block version.
         public const int Release1300 = 0;
+        public const int Release1310 = 0;
 
         // The number of deployments.
         public const int NumberOfDeployments = 1;
