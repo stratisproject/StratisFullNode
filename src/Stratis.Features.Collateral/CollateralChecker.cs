@@ -72,13 +72,16 @@ namespace Stratis.Features.Collateral
 
         private readonly double blockRatio;
         private readonly NodeDeployments nodeDeployments;
+        private readonly IFederationHistory federationHistory;
+        private readonly ChainIndexer chainIndexer;
 
         private Task updateCollateralContinuouslyTask;
 
         private bool collateralUpdated;
 
         public CollateralChecker(IHttpClientFactory httpClientFactory, ICounterChainSettings settings, IFederationManager federationManager,
-            ISignals signals, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, IAsyncProvider asyncProvider, INodeLifetime nodeLifetime, NodeDeployments nodeDeployments)
+            ISignals signals, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, IAsyncProvider asyncProvider, INodeLifetime nodeLifetime,
+            NodeDeployments nodeDeployments, IFederationHistory federationHistory, ChainIndexer chainIndexer)
         {
             this.federationManager = federationManager;
             this.signals = signals;
@@ -92,6 +95,8 @@ namespace Stratis.Features.Collateral
             this.blockStoreClient = new BlockStoreClient(httpClientFactory, $"http://{settings.CounterChainApiHost}", settings.CounterChainApiPort);
             this.blockRatio = network.Consensus.TargetSpacing / counterChainNetworkWrapper.CounterChainNetwork.Consensus.TargetSpacing;
             this.nodeDeployments = nodeDeployments;
+            this.federationHistory = federationHistory;
+            this.chainIndexer = chainIndexer;
         }
 
         public async Task InitializeAsync()
@@ -265,8 +270,8 @@ namespace Stratis.Features.Collateral
                 // Checks that the collateral remains valid for at least half a round.
                 if (localChainHeight >= release1310ActivationHeight)
                 {
-                    int roundBlocks = (int)(this.federationManager.GetFederationMembers().Count * this.blockRatio);
-                    int startHeight = heightToCheckAt - roundBlocks / 2;
+                    int roundBlocks = (int)(this.federationHistory.GetFederationForBlock(this.chainIndexer.Tip, localChainHeight - this.chainIndexer.Tip.Height).Count * this.blockRatio);
+                    int startHeight = heightToCheckAt - roundBlocks / 2 - 1 /* For rounding */;
                     long minBalance = balanceData.BalanceChanges.Where(x => x.BalanceChangedHeight <= heightToCheckAt).CalculateMinBalance(startHeight);
 
                     this.logger.LogInformation("Lowest balance for '{0}' between heights {1} and {2} is {3}, collateral requirement is {4}.", member.CollateralMainchainAddress, startHeight, heightToCheckAt, Money.Satoshis(minBalance).ToUnit(MoneyUnit.BTC), member.CollateralAmount);
