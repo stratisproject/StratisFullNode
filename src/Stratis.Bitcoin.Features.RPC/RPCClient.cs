@@ -491,6 +491,8 @@ namespace Stratis.Bitcoin.Features.RPC
         }
 
         /// <summary>Get the a whole block.</summary>
+        /// <param name="blockId">The hash of the block to get.</param>
+        /// <returns>The asynchronous task returning a <see cref="RPCBlock"/>.</returns>
         public async Task<RPCBlock> GetRPCBlockAsync(uint256 blockId)
         {
             RPCResponse resp = await SendCommandAsync(RPCOperations.getblock, blockId.ToString(), false).ConfigureAwait(false);
@@ -499,6 +501,8 @@ namespace Stratis.Bitcoin.Features.RPC
 
         /// <summary>Send a command.</summary>
         /// <param name="commandName">https://en.bitcoin.it/wiki/Original_Bitcoin_client/API_calls_list</param>
+        /// <param name="parameters">The parameters for the call.</param>
+        /// <returns>See <see cref="RPCResponse"/>.</returns>
         public RPCResponse SendCommand(string commandName, params object[] parameters)
         {
             return SendCommand(new RPCRequest(commandName, parameters));
@@ -538,6 +542,7 @@ namespace Stratis.Bitcoin.Features.RPC
         }
 
         /// <summary>Send all commands in one batch.</summary>
+        /// <returns>The asynchronous task.</returns>
         public async Task SendBatchAsync()
         {
             ConcurrentQueue<(RPCRequest request, TaskCompletionSource<RPCResponse> task)> batches;
@@ -1066,8 +1071,8 @@ namespace Stratis.Bitcoin.Features.RPC
         /// <summary>
         /// Get the a whole block
         /// </summary>
-        /// <param name="blockId"></param>
-        /// <returns></returns>
+        /// <param name="blockId">The hash of the block to get.</param>
+        /// <returns>See <see cref="Block"/>.</returns>
         public Block GetBlock(uint256 blockId)
         {
             return GetBlockAsync(blockId).GetAwaiter().GetResult();
@@ -1174,8 +1179,8 @@ namespace Stratis.Bitcoin.Features.RPC
         /// <summary>
         /// GetTransactions only returns on txn which are not entirely spent unless you run bitcoinq with txindex=1.
         /// </summary>
-        /// <param name="blockHash"></param>
-        /// <returns></returns>
+        /// <param name="blockHash">The hash of the block containing the transactions.</param>
+        /// <returns>An enumeration of <see cref="Transaction"/> instances.</returns>
         public IEnumerable<Transaction> GetTransactions(uint256 blockHash)
         {
             if (blockHash == null)
@@ -1282,6 +1287,7 @@ namespace Stratis.Bitcoin.Features.RPC
         #endregion
 
         #region Utility functions
+
         /// <summary>
         /// Returns information about a base58 or bech32 Bitcoin address
         /// </summary>
@@ -1296,8 +1302,8 @@ namespace Stratis.Bitcoin.Features.RPC
         /// <summary>
         /// Get the estimated fee per kb for being confirmed in nblock
         /// </summary>
-        /// <param name="nblock"></param>
-        /// <returns></returns>
+        /// <param name="nblock">The time expected, in block, before getting confirmed</param>
+        /// <returns>The estimated fee rate</returns>
         [Obsolete("Use EstimateFeeRate or TryEstimateFeeRate instead")]
         public FeeRate EstimateFee(int nblock)
         {
@@ -1312,8 +1318,8 @@ namespace Stratis.Bitcoin.Features.RPC
         /// <summary>
         /// Get the estimated fee per kb for being confirmed in nblock
         /// </summary>
-        /// <param name="nblock"></param>
-        /// <returns></returns>
+        /// <param name="nblock">The time expected, in block, before getting confirmed</param>
+        /// <returns>The estimated fee rate</returns>
         [Obsolete("Use EstimateFeeRateAsync instead")]
         public async Task<Money> EstimateFeeAsync(int nblock)
         {

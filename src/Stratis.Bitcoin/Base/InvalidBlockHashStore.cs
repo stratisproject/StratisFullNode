@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using NBitcoin;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Base
@@ -15,14 +16,14 @@ namespace Stratis.Bitcoin.Base
         /// </summary>
         /// <param name="hashBlock">The block hash to check.</param>
         /// <returns><c>true</c> if the block is marked as invalid, <c>false</c> otherwise.</returns>
-        bool IsInvalid(uint256 hashBlock);
+        bool IsInvalid(uint256 hashBlock, out ConsensusError reason);
 
         /// <summary>
         /// Marks a block as invalid.
         /// </summary>
         /// <param name="hashBlock">The block hash to mark as invalid.</param>
         /// <param name="rejectedUntil">Time in UTC after which the block is no longer considered as invalid, or <c>null</c> if the block is to be considered invalid forever.</param>
-        void MarkInvalid(uint256 hashBlock, DateTime? rejectedUntil = null);
+        void MarkInvalid(uint256 hashBlock, DateTime? rejectedUntil = null, ConsensusError reason = null);
     }
 
     /// <summary>
@@ -53,7 +54,7 @@ namespace Stratis.Bitcoin.Base
         /// the entry is considered invalid only for a certain amount of time.
         /// </summary>
         /// <remarks>All access to this object has to be protected by <see cref="lockObject"/>.</remarks>
-        private readonly Dictionary<uint256, DateTime?> invalidBlockHashesExpirations;
+        private readonly Dictionary<uint256, (ConsensusError, DateTime?)> invalidBlockHashesExpirations;
 
         /// <summary>
         /// Circular array of block header hash entries to allow quick removal of the oldest entry once the capacity is reached.
@@ -71,27 +72,26 @@ namespace Stratis.Bitcoin.Base
         {
             this.dateTimeProvider = dateTimeProvider;
 
-            this.invalidBlockHashesExpirations = new Dictionary<uint256, DateTime?>(capacity);
+            this.invalidBlockHashesExpirations = new Dictionary<uint256, (ConsensusError, DateTime?)>(capacity);
             this.orderedHashList = new CircularArray<uint256>(capacity);
         }
 
         /// <inheritdoc />
-        public bool IsInvalid(uint256 hashBlock)
+        public bool IsInvalid(uint256 hashBlock, out ConsensusError reason)
         {
             bool res = false;
 
             lock (this.lockObject)
             {
                 // First check if the entry exists.
-                DateTime? expirationTime;
-                if (this.invalidBlockHashesExpirations.TryGetValue(hashBlock, out expirationTime))
+                if (this.invalidBlockHashesExpirations.TryGetValue(hashBlock, out (ConsensusError reason, DateTime? expirationTime) entry))
                 {
                     // The block is banned forever if the expiration date was not set,
                     // or it is banned temporarily if it was set.
-                    if (expirationTime != null)
+                    if (entry.expirationTime != null)
                     {
                         // The block is still invalid now if the expiration date is still in the future.
-                        res = expirationTime > this.dateTimeProvider.GetUtcNow();
+                        res = entry.expirationTime > this.dateTimeProvider.GetUtcNow();
 
                         // If the expiration date is not in the future anymore, remove the record from the list.
                         // Note that this will leave entry in the orderedHashList, but that is OK,
@@ -99,6 +99,12 @@ namespace Stratis.Bitcoin.Base
                         if (!res) this.invalidBlockHashesExpirations.Remove(hashBlock);
                     }
                     else res = true;
+
+                    reason = entry.reason;
+                }
+                else
+                {
+                    reason = null;
                 }
             }
 
@@ -106,20 +112,19 @@ namespace Stratis.Bitcoin.Base
         }
 
         /// <inheritdoc />
-        public void MarkInvalid(uint256 hashBlock, DateTime? rejectedUntil = null)
+        public void MarkInvalid(uint256 hashBlock, DateTime? rejectedUntil = null, ConsensusError reason = null)
         {
             lock (this.lockObject)
             {
-                DateTime? expirationTime;
-                bool existsAlready = this.invalidBlockHashesExpirations.TryGetValue(hashBlock, out expirationTime);
+                bool existsAlready = this.invalidBlockHashesExpirations.TryGetValue(hashBlock, out (ConsensusError reason, DateTime? expirationTime) entry);
                 if (existsAlready)
                 {
                     // Entry is existing already, only replace its value if the ban is stronger.
                     // This happens if the new ban is forever - i.e. rejectedUntil is null,
                     // or if the existing ban is not forever and the rejectedUntil value is greater
                     // than existing expiration time.
-                    bool strongerBan = (rejectedUntil == null) || ((expirationTime != null) && (rejectedUntil.Value > expirationTime.Value));
-                    if (strongerBan) this.invalidBlockHashesExpirations[hashBlock] = rejectedUntil;
+                    bool strongerBan = (rejectedUntil == null) || ((entry.expirationTime != null) && (rejectedUntil.Value > entry.expirationTime.Value));
+                    if (strongerBan) this.invalidBlockHashesExpirations[hashBlock] = (reason, rejectedUntil);
                 }
                 else
                 {
@@ -147,7 +152,7 @@ namespace Stratis.Bitcoin.Base
                         }
                     }
 
-                    this.invalidBlockHashesExpirations.Add(hashBlock, rejectedUntil);
+                    this.invalidBlockHashesExpirations.Add(hashBlock, (reason, rejectedUntil));
                 }
             }
         }

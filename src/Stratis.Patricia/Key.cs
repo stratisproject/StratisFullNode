@@ -176,5 +176,9 @@ namespace Stratis.Patricia
             return this.IsTerminal == k.IsTerminal;
         }
 
+        public override int GetHashCode()
+        {
+            return (new ByteArrayComparer()).GetHashCode(this.key);
+        }
     }
 }

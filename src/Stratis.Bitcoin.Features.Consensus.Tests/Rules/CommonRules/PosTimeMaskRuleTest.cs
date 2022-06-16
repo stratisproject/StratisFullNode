@@ -8,7 +8,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
 {
     public class PosTimeMaskRuleTest : PosConsensusRuleUnitTestBase
     {
-        private const int MaxFutureDriftBeforeHardFork = 128 * 60 * 60;
         private const int MaxFutureDriftAfterHardFork = 15;
 
         public PosTimeMaskRuleTest()
