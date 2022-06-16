@@ -260,7 +260,7 @@ namespace Stratis.Features.Collateral
 
                 int release1310ActivationHeight = 0;
                 if (this.nodeDeployments?.BIP9.ArraySize > 0  /* Not NoBIP9Deployments */)
-                    release1310ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[0 /* Release1300 */].ActivationHeight;
+                    release1310ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[1 /* Release1310 */].ActivationHeight;
 
                 // Checks that the collateral remains valid for at least half a round.
                 if (localChainHeight >= release1310ActivationHeight)
