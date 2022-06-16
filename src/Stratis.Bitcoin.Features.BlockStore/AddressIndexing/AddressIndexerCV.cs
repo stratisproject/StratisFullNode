@@ -50,10 +50,13 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         {
             return new AddressBalancesResult()
             {
-                Balances = addresses.Select(address => new AddressBalanceResult()
+                Balances = addresses
+                    .Select(address => (address, destination: AddressToDestination(address)))
+                    .Select(t => new AddressBalanceResult()
                 {
-                    Address = address,
-                    Balance = new Money(this.coinView.GetBalance(AddressToDestination(address)).First().satoshis)
+                    Address = t.address,
+                    Balance = (t.destination == null) ? 0 : new Money(this.coinView.GetBalance(t.destination).First().satoshis),
+                         
                 }).ToList()
             };
         }
@@ -83,10 +86,12 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
             return new VerboseAddressBalancesResult(this.IndexerTip.Height)
             {
-                BalancesData = addresses.Select(address => new AddressIndexerData()
+                BalancesData = addresses
+                    .Select(address => (address, destination: AddressToDestination(address)))
+                    .Select(t => new AddressIndexerData()
                 {
-                    Address = address,                    
-                    BalanceChanges = ToDiff(this.coinView.GetBalance(AddressToDestination(address)).Select(b => new AddressBalanceChange()
+                    Address = t.address,                    
+                    BalanceChanges = (t.destination == null) ? new List<AddressBalanceChange>() : ToDiff(this.coinView.GetBalance(t.destination).Select(b => new AddressBalanceChange()
                     {
                          BalanceChangedHeight = (int)b.height,
                          Deposited = b.satoshis >= 0,
