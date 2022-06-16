@@ -82,14 +82,14 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 balance = (row == null) ? 0 : BitConverter.ToInt64(row);
             }
 
-            foreach ((byte[] key, byte[] value) in this.coinDb.GetAll(BalanceAdjustmentTable, ascending: false,
+            foreach ((uint height, long adjustment) in this.coinDb.GetAll(BalanceAdjustmentTable, ascending: false,
                 lastKey: txDestination.ToBytes().Concat(BitConverter.GetBytes(this.persistedCoinviewTip.Height + 1).Reverse()).ToArray(),
                 includeLastKey: false,
                 firstKey: txDestination.ToBytes(),
-                includeFirstKey: false))
+                includeFirstKey: false).Select(x => (height: BitConverter.ToUInt32(x.Item1.Reverse().ToArray()), adjustment: BitConverter.ToInt64(x.Item2))))
             {
-                yield return (BitConverter.ToUInt32(key.Reverse().ToArray()), balance);
-                balance -= BitConverter.ToInt64(value);
+                yield return (height, balance);
+                balance -= adjustment;
             }
 
             yield return (0, balance);
@@ -148,7 +148,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         {
             int insertedEntities = 0;
 
-            using (var batch = this.coinDb.GetWriteBatch())
+            using (var batch = this.coinDb.GetReadWriteBatch())
             {
                 this.AdjustBalance(batch, balanceUpdates);
 
@@ -437,7 +437,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         }
 
 
-        private void AdjustBalance(IDbBatch batch, Dictionary<TxDestination, Dictionary<uint, long>> balanceUpdates)
+        private void AdjustBalance(ReadWriteBatch batch, Dictionary<TxDestination, Dictionary<uint, long>> balanceUpdates)
         {
             foreach ((TxDestination txDestination, Dictionary<uint, long> balanceAdjustments) in balanceUpdates)
             {
@@ -446,16 +446,17 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 foreach (uint height in balanceAdjustments.Keys.OrderBy(k => k))
                 {
                     var key = txDestination.ToBytes().Concat(BitConverter.GetBytes(height).Reverse()).ToArray();
-                    byte[] row = this.coinDb.Get(BalanceAdjustmentTable, key);
-                    long balance = ((row == null) ? 0 : BitConverter.ToInt64(row)) + balanceAdjustments[height];
+                    byte[] row = batch.Get(BalanceAdjustmentTable, key);
+                    long adjustment = balanceAdjustments[height];
+                    long balance = ((row == null) ? 0 : BitConverter.ToInt64(row)) + adjustment;
                     batch.Put(BalanceAdjustmentTable, key, BitConverter.GetBytes(balance));
 
-                    totalAdjustment += balance;
+                    totalAdjustment += adjustment;
                 }
 
                 {
                     var key = txDestination.ToBytes();
-                    byte[] row = this.coinDb.Get(BalanceTable, key);
+                    byte[] row = batch.Get(BalanceTable, key);
                     long balance = ((row == null) ? 0 : BitConverter.ToInt64(row)) + totalAdjustment;
                     batch.Put(BalanceTable, key, BitConverter.GetBytes(balance));
                 }
