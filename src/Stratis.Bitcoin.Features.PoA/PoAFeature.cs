@@ -144,18 +144,6 @@ namespace Stratis.Bitcoin.Features.PoA
 
             this.federationHistory.Initialize();
 
-            if (this.federationManager.IsFederationMember && this.federationManager.CurrentFederationKey != null)
-            {
-                foreach (Poll poll in this.votingManager.GetPendingPolls())
-                {
-                    if (poll.VotingData.Key == VoteKey.AddFederationMember 
-                        && !poll.PubKeysHexVotedInFavor.Any(v => v.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex()))
-                    {
-                        this.votingManager.ScheduleVote(poll.VotingData);
-                    }
-                }
-            }
-
             // If the node is started in devmode, its role must be of miner in order to mine.
             // If devmode is not specified, initialize mining as per normal.
             if (this.nodeSettings.DevMode == null || this.nodeSettings.DevMode == DevModeNodeRole.Miner)
