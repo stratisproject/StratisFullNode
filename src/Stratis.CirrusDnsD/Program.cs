@@ -73,27 +73,28 @@ namespace Stratis.CirrusDnsD
             DbType dbType = nodeSettings.GetDbType();
 
             IFullNodeBuilder nodeBuilder = new FullNodeBuilder()
-                .UseNodeSettings(nodeSettings, dbType)
-                .UseBlockStore(dbType)
-                .UseMempool()
-                .AddSmartContracts(options =>
-                {
-                    options.UseReflectionExecutor();
-                    options.UsePoAWhitelistedContracts();
-                })
-                .AddPoAFeature()
-                .UsePoAConsensus(dbType)
-                .CheckCollateralCommitment()
+            .UseNodeSettings(nodeSettings, dbType)
+            .UseBlockStore(dbType)
+            .UseMempool()
+            .AddSmartContracts(options =>
+            {
+                options.UseReflectionExecutor();
+                options.UsePoAWhitelistedContracts();
+            })
+            .AddPoAFeature()
+            .UsePoAConsensus(dbType)
+            .CheckCollateralCommitment()
+            .AddDynamicMemberhip()
 
-                // This needs to be set so that we can check the magic bytes during the Strat to Strax changeover.
-                // Perhaps we can introduce a block height check rather?
-                .SetCounterChainNetwork(StraxNetwork.MainChainNetworks[nodeSettings.Network.NetworkType]())
+            // This needs to be set so that we can check the magic bytes during the Strat to Strax changeover.
+            // Perhaps we can introduce a block height check rather?
+            .SetCounterChainNetwork(StraxNetwork.MainChainNetworks[nodeSettings.Network.NetworkType]())
 
-                .UseSmartContractWallet()
-                .AddSQLiteWalletRepository()
-                .UseApi()
-                .AddRPC()
-                .UseDns();
+            .UseSmartContractWallet()
+            .AddSQLiteWalletRepository()
+            .UseApi()
+            .AddRPC()
+            .UseDns();
 
             return nodeBuilder.Build();
         }
