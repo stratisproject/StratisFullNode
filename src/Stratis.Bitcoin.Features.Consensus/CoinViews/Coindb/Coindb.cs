@@ -380,9 +380,74 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 batch.Put(BlockTable, blockIndexedHashKey, nextBlockHash.ToBytes());
         }
 
+        private void EndiannessFix()
+        {
+            // The fix is still required for fixing up older LevelDb database coming from test zip files.
+            if (!(this.coinDb is LevelDb levelDb))
+                return;
+
+            LevelDB.DB leveldb = (LevelDB.DB)levelDb.GetType().GetField("db", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(levelDb);
+
+            // Check if key bytes are in the wrong endian order.
+            HashHeightPair current = this.GetTipHash();
+
+            if (current == null)
+                return;
+            
+            byte[] row = this.coinDb.Get(RewindTable, BitConverter.GetBytes(current.Height));
+            // Fix the table if required.
+            if (row != null)
+            {
+                // To be sure, check the next height too.
+                byte[] row2 = (current.Height > 1) ? this.coinDb.Get(RewindTable, BitConverter.GetBytes(current.Height - 1)) : new byte[] { };
+                if (row2 != null)
+                {
+                    this.logger.LogInformation("Fixing the coin db.");
+
+                    var rows = new Dictionary<int, byte[]>();
+                        
+                    using (var iterator = leveldb.CreateIterator())
+                    {
+                        iterator.Seek(new byte[] { RewindTable });
+
+                        while (iterator.IsValid())
+                        {
+                            byte[] key = iterator.Key();
+
+                            if (key.Length != 5 || key[0] != RewindTable)
+                                break;
+
+                            int height = BitConverter.ToInt32(key, 1);
+
+                            rows[height] = iterator.Value();
+
+                            iterator.Next();
+                        }
+                    }
+
+                    using (var batch = new LevelDB.WriteBatch())
+                    {
+                        foreach (int height in rows.Keys.OrderBy(k => k))
+                        {
+                            batch.Delete(new byte[] { RewindTable }.Concat(BitConverter.GetBytes(height)).ToArray());
+                        }
+
+                        foreach (int height in rows.Keys.OrderBy(k => k))
+                        {
+                            batch.Put(new byte[] { RewindTable }.Concat(BitConverter.GetBytes(height).Reverse()).ToArray(), rows[height]);
+                        }
+
+                        leveldb.Write(batch, new LevelDB.WriteOptions() { Sync = true });
+                    }
+                }
+            }            
+        }
+
         private void EnsureCoinDatabaseIntegrity()
         {
             this.logger.LogInformation("Checking coin database integrity...");
+
+            this.EndiannessFix();
 
             if (this.GetTipHash() == null)
             {
