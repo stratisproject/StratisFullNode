@@ -263,12 +263,12 @@ namespace Stratis.Features.Collateral
                     return 0 >= member.CollateralAmount;
                 }
 
-                int release1310ActivationHeight = 0;
+                int release1320ActivationHeight = 0;
                 if (this.nodeDeployments?.BIP9.ArraySize > 0  /* Not NoBIP9Deployments */)
-                    release1310ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[1 /* Release1310 */].ActivationHeight;
+                    release1320ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[1 /* Release1320 */].ActivationHeight;
 
                 // Checks that the collateral remains valid for at least half a round.
-                if (localChainHeight >= release1310ActivationHeight)
+                if (localChainHeight >= release1320ActivationHeight)
                 {
                     int roundBlocks = (int)(this.federationHistory.GetFederationForBlock(this.chainIndexer.Tip, localChainHeight - this.chainIndexer.Tip.Height).Count * this.blockRatio);
                     int startHeight = heightToCheckAt - roundBlocks / 2 - 1 /* For rounding */;

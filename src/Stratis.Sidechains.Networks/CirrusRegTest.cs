@@ -127,7 +127,7 @@ namespace Stratis.Sidechains.Networks
             {
                 // Deployment will go active once 75% of nodes are on 1.3.0.0 or later.
                 [CirrusBIP9Deployments.Release1300] = new BIP9DeploymentsParameters("Release1300", CirrusBIP9Deployments.FlagBitRelease1300, DateTime.Parse("2022-3-22 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Now.AddDays(50).ToUnixTimestamp(), BIP9DeploymentsParameters.DefaultRegTestThreshold),
-                [CirrusBIP9Deployments.Release1310] = new BIP9DeploymentsParameters("Release1310", CirrusBIP9Deployments.FlagBitRelease1310, DateTime.Parse("2022-6-15 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Now.AddDays(50).ToUnixTimestamp(), BIP9DeploymentsParameters.DefaultRegTestThreshold)
+                [CirrusBIP9Deployments.Release1320] = new BIP9DeploymentsParameters("Release1320", CirrusBIP9Deployments.FlagBitRelease1320, DateTime.Parse("2022-6-15 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Now.AddDays(50).ToUnixTimestamp(), BIP9DeploymentsParameters.DefaultRegTestThreshold)
             };
 
             this.Consensus = new Consensus(
