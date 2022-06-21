@@ -285,7 +285,7 @@ namespace Stratis.Features.Collateral
 
                 if (minBalance < member.CollateralAmount.Satoshi)
                 {
-                    this.logger.LogInformation("The collateral should be ready for mining on your next mining turn.");
+                    this.logger.LogInformation("The collateral should be ready for mining in the next mining turn.");
                     return false;
                 }
 
