@@ -263,27 +263,33 @@ namespace Stratis.Features.Collateral
                     return 0 >= member.CollateralAmount;
                 }
 
-                int release1320ActivationHeight = 0;
-                if (this.nodeDeployments?.BIP9.ArraySize > 0  /* Not NoBIP9Deployments */)
-                    release1320ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[1 /* Release1320 */].ActivationHeight;
-
-                // Checks that the collateral remains valid for at least half a round.
-                if (localChainHeight >= release1320ActivationHeight)
-                {
-                    int roundBlocks = (int)(this.federationHistory.GetFederationForBlock(this.chainIndexer.Tip, localChainHeight - this.chainIndexer.Tip.Height).Count * this.blockRatio);
-                    int startHeight = heightToCheckAt - roundBlocks / 2 - 1 /* For rounding */;
-                    long minBalance = balanceData.BalanceChanges.Where(x => x.BalanceChangedHeight <= heightToCheckAt).CalculateMinBalance(startHeight);
-
-                    this.logger.LogInformation("Lowest balance for '{0}' between heights {1} and {2} is {3}, collateral requirement is {4}.", member.CollateralMainchainAddress, startHeight, heightToCheckAt, Money.Satoshis(minBalance).ToUnit(MoneyUnit.BTC), member.CollateralAmount);
-
-                    return minBalance >= member.CollateralAmount.Satoshi;
-                }
-
                 long balance = balanceData.BalanceChanges.Where(x => x.BalanceChangedHeight <= heightToCheckAt).CalculateBalance();
 
                 this.logger.LogInformation("Calculated balance for '{0}' at {1} is {2}, collateral requirement is {3}.", member.CollateralMainchainAddress, heightToCheckAt, Money.Satoshis(balance).ToUnit(MoneyUnit.BTC), member.CollateralAmount);
 
-                return balance >= member.CollateralAmount.Satoshi;
+                if (balance < member.CollateralAmount.Satoshi)
+                    return false;
+
+                int release1320ActivationHeight = 0;
+                if (this.nodeDeployments?.BIP9.ArraySize > 0  /* Not NoBIP9Deployments */)
+                    release1320ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[1 /* Release1320 */].ActivationHeight;
+
+                // Legacy behavior before activation.
+                if (localChainHeight < release1320ActivationHeight)
+                    return true;
+
+                // Checks that the collateral remained valid for at least half a round.
+                int roundBlocks = (int)(this.federationHistory.GetFederationForBlock(this.chainIndexer.Tip, localChainHeight - this.chainIndexer.Tip.Height).Count * this.blockRatio);
+                int startHeight = heightToCheckAt - roundBlocks / 2 - 1 /* For rounding */;
+                long minBalance = balanceData.BalanceChanges.Where(x => x.BalanceChangedHeight <= heightToCheckAt).CalculateMinBalance(startHeight);
+
+                if (minBalance < member.CollateralAmount.Satoshi)
+                {
+                    this.logger.LogInformation("Your collateral should be ready for mining on your next mining turn.");
+                    return false;
+                }
+
+                return true;
             }
         }
 
