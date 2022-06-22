@@ -136,7 +136,7 @@ namespace Stratis.Sidechains.Networks
                 GetMiningTimestampV2ActivationHeight = 3_000_000, // 15 January 2022
                 GetMiningTimestampV2ActivationStrictHeight = 3_121_500, // 17 January 2022
                 ContractSerializerV2ActivationHeight = 2_842_681,
-                Release1300ActivationHeight = 3280032
+                Release1300ActivationHeight = 3_280_032
             };
 
             var buriedDeployments = new BuriedDeploymentsArray
