@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.EventBus;
@@ -28,14 +29,20 @@ namespace Stratis.Features.Collateral
         /// <summary>Checks if given federation member fulfills the collateral requirement.</summary>
         /// <param name="federationMember">The federation member whose collateral will be checked.</param>
         /// <param name="heightToCheckAt">Counter chain height at which collateral should be checked.</param>
+        /// <param name="localChainHeight">Used for BIP 9 activation.</param>
         /// <returns><c>True</c> if the collateral requirement is fulfilled and <c>false</c> otherwise.</returns>
-        bool CheckCollateral(IFederationMember federationMember, int heightToCheckAt);
+        bool CheckCollateral(IFederationMember federationMember, int heightToCheckAt, int localChainHeight);
 
         int GetCounterChainConsensusHeight();
     }
 
     public class CollateralChecker : ICollateralChecker
     {
+        /// <summary>
+        /// The number of Strax blocks the collateral should remain above the threshold to be suiable for mining a block.
+        /// </summary>
+        private const int collateralMaturationPeriod = 500;
+
         private readonly IBlockStoreClient blockStoreClient;
 
         private readonly IFederationManager federationManager;
@@ -67,12 +74,15 @@ namespace Stratis.Features.Collateral
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
         private int counterChainConsensusTipHeight;
 
+        private readonly double blockRatio;
+        private readonly NodeDeployments nodeDeployments;
+
         private Task updateCollateralContinuouslyTask;
 
         private bool collateralUpdated;
 
         public CollateralChecker(IHttpClientFactory httpClientFactory, ICounterChainSettings settings, IFederationManager federationManager,
-            ISignals signals, Network network, IAsyncProvider asyncProvider, INodeLifetime nodeLifetime)
+            ISignals signals, Network network, IAsyncProvider asyncProvider, INodeLifetime nodeLifetime, NodeDeployments nodeDeployments)
         {
             this.federationManager = federationManager;
             this.signals = signals;
@@ -84,6 +94,7 @@ namespace Stratis.Features.Collateral
             this.balancesDataByAddress = new Dictionary<string, AddressIndexerData>();
             this.logger = LogManager.GetCurrentClassLogger();
             this.blockStoreClient = new BlockStoreClient(httpClientFactory, $"http://{settings.CounterChainApiHost}", settings.CounterChainApiPort);
+            this.nodeDeployments = nodeDeployments;
         }
 
         public async Task InitializeAsync()
@@ -208,7 +219,7 @@ namespace Stratis.Features.Collateral
         }
 
         /// <inheritdoc />
-        public bool CheckCollateral(IFederationMember federationMember, int heightToCheckAt)
+        public bool CheckCollateral(IFederationMember federationMember, int heightToCheckAt, int localChainHeight)
         {
             if (!this.collateralUpdated)
             {
@@ -254,7 +265,29 @@ namespace Stratis.Features.Collateral
 
                 this.logger.LogInformation("Calculated balance for '{0}' at {1} is {2}, collateral requirement is {3}.", member.CollateralMainchainAddress, heightToCheckAt, Money.Satoshis(balance).ToUnit(MoneyUnit.BTC), member.CollateralAmount);
 
-                return balance >= member.CollateralAmount.Satoshi;
+                if (balance < member.CollateralAmount.Satoshi)
+                    return false;
+
+                int release1320ActivationHeight = 0;
+                if (this.nodeDeployments?.BIP9.ArraySize > 0  /* Not NoBIP9Deployments */)
+                    release1320ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[1 /* Release1320 */].ActivationHeight;
+
+                // Legacy behavior before activation.
+                if (localChainHeight < release1320ActivationHeight)
+                    return true;
+
+                // Checks that the collateral remained valid for at least half a round.
+                int startHeight = heightToCheckAt - collateralMaturationPeriod;
+                long minBalance = balanceData.BalanceChanges.Where(x => x.BalanceChangedHeight <= heightToCheckAt).CalculateMinBalance(startHeight);
+
+                if (minBalance < member.CollateralAmount.Satoshi)
+                {
+                    this.logger.LogInformation("The collateral has to remain above {0} for {1} Strax blocks before a block can be mined.", 
+                        Money.Satoshis(member.CollateralAmount.Satoshi).ToUnit(MoneyUnit.BTC), collateralMaturationPeriod);
+                    return false;
+                }
+
+                return true;
             }
         }
 
