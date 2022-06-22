@@ -184,7 +184,8 @@ namespace Stratis.Sidechains.Networks
                 PollExpiryBlocks = 50_000, // Roughly 9 days
                 GetMiningTimestampV2ActivationHeight = 3_709_000, // Monday 14 February 00:00:00 (Estimated)
                 GetMiningTimestampV2ActivationStrictHeight = 3_783_000, // Monday 28 February 07:00:00 (London Time) (Estimated)
-                ContractSerializerV2ActivationHeight = 3_386_335 // Monday 13 December 16:00:00 (Estimated)
+                ContractSerializerV2ActivationHeight = 3_386_335, // Monday 13 December 16:00:00 (Estimated)
+                Release1300ActivationHeight = 4334400
             };
 
             var buriedDeployments = new BuriedDeploymentsArray
@@ -197,7 +198,6 @@ namespace Stratis.Sidechains.Networks
             var bip9Deployments = new CirrusBIP9Deployments()
             {
                 // Deployment will go active once 75% of nodes are on 1.3.0.0 or later.
-                [CirrusBIP9Deployments.Release1300] = new BIP9DeploymentsParameters("Release1300", CirrusBIP9Deployments.FlagBitRelease1300, DateTime.Parse("2022-3-22 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-1-1 +0").ToUnixTimestamp(), 1512 /* 75% Activation Threshold */),
                 [CirrusBIP9Deployments.Release1320] = new BIP9DeploymentsParameters("Release1320", CirrusBIP9Deployments.FlagBitRelease1320, DateTime.Parse("2022-6-15 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-1-1 +0").ToUnixTimestamp(), 1512 /* 75% Activation Threshold */)
             };
 

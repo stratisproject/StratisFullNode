@@ -2,6 +2,7 @@
 using System.Linq;
 using NBitcoin;
 using Stratis.Bitcoin.Base.Deployments;
+using Stratis.Bitcoin.Features.PoA;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.TargetChain;
 using Stratis.Features.PoA.Collateral.CounterChain;
@@ -79,7 +80,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         /// <inheritdoc/>
         public int MaximumConfirmationsAtMaturityHeight(int maturityHeight)
         {
-            if (maturityHeight < this.Release1300ActivationHeight)
+            if (maturityHeight < ((PoAConsensusOptions)this.network.Consensus.Options).Release1300ActivationHeight)
                 return this.legacyRetrievalTypeConfirmations.Values.Max();
 
             return this.retrievalTypeConfirmations.Values.Max();
@@ -89,7 +90,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         public int GetDepositConfirmations(int depositHeight, DepositRetrievalType retrievalType)
         {
             // Keep everything maturity-height-centric. Otherwise the way we use MaximumConfirmationsAtMaturityHeight will have to change as well.
-            if (depositHeight + this.legacyRetrievalTypeConfirmations[retrievalType] < this.Release1300ActivationHeight)
+            if (depositHeight + this.legacyRetrievalTypeConfirmations[retrievalType] < ((PoAConsensusOptions)this.network.Consensus.Options).Release1300ActivationHeight)
                 return this.legacyRetrievalTypeConfirmations[retrievalType];
 
             return this.retrievalTypeConfirmations[retrievalType];
