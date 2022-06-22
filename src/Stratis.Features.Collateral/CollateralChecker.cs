@@ -282,7 +282,8 @@ namespace Stratis.Features.Collateral
 
                 if (minBalance < member.CollateralAmount.Satoshi)
                 {
-                    this.logger.LogInformation("The collateral should be ready for mining in the next mining turn.");
+                    this.logger.LogInformation("The collateral has to remain above {0} for {1} Strax blocks before a block can be mined.", 
+                        Money.Satoshis(member.CollateralAmount.Satoshi).ToUnit(MoneyUnit.BTC), collateralMaturationPeriod);
                     return false;
                 }
 
