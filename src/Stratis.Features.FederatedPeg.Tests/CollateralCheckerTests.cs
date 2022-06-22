@@ -78,8 +78,8 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             federationManager.Initialize();
 
-            this.collateralChecker = new CollateralChecker(clientFactory, counterChainSettings, federationManager, signals, network, new CounterChainNetworkWrapper(counterChainSettings.CounterChainNetwork), 
-                asyncMock.Object, new Mock<INodeLifetime>().Object, new NodeDeployments(network, chainIndexerMock.Object), new Mock<IFederationHistory>().Object, chainIndexerMock.Object);
+            this.collateralChecker = new CollateralChecker(clientFactory, counterChainSettings, federationManager, signals, network,
+                asyncMock.Object, new Mock<INodeLifetime>().Object, new NodeDeployments(network, chainIndexerMock.Object));
         }
 
         [Fact]

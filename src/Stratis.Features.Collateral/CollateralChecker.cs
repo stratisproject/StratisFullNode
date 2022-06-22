@@ -17,7 +17,6 @@ using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Events;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
-using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.PoA.Collateral.CounterChain;
 
 namespace Stratis.Features.Collateral
@@ -39,6 +38,11 @@ namespace Stratis.Features.Collateral
 
     public class CollateralChecker : ICollateralChecker
     {
+        /// <summary>
+        /// The number of Strax blocks the collateral should remain above the threshold to be suiable for mining a block.
+        /// </summary>
+        private const int collateralMaturationPeriod = 500;
+
         private readonly IBlockStoreClient blockStoreClient;
 
         private readonly IFederationManager federationManager;
@@ -72,16 +76,13 @@ namespace Stratis.Features.Collateral
 
         private readonly double blockRatio;
         private readonly NodeDeployments nodeDeployments;
-        private readonly IFederationHistory federationHistory;
-        private readonly ChainIndexer chainIndexer;
 
         private Task updateCollateralContinuouslyTask;
 
         private bool collateralUpdated;
 
         public CollateralChecker(IHttpClientFactory httpClientFactory, ICounterChainSettings settings, IFederationManager federationManager,
-            ISignals signals, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, IAsyncProvider asyncProvider, INodeLifetime nodeLifetime,
-            NodeDeployments nodeDeployments, IFederationHistory federationHistory, ChainIndexer chainIndexer)
+            ISignals signals, Network network, IAsyncProvider asyncProvider, INodeLifetime nodeLifetime, NodeDeployments nodeDeployments)
         {
             this.federationManager = federationManager;
             this.signals = signals;
@@ -93,10 +94,7 @@ namespace Stratis.Features.Collateral
             this.balancesDataByAddress = new Dictionary<string, AddressIndexerData>();
             this.logger = LogManager.GetCurrentClassLogger();
             this.blockStoreClient = new BlockStoreClient(httpClientFactory, $"http://{settings.CounterChainApiHost}", settings.CounterChainApiPort);
-            this.blockRatio = network.Consensus.TargetSpacing / counterChainNetworkWrapper.CounterChainNetwork.Consensus.TargetSpacing;
             this.nodeDeployments = nodeDeployments;
-            this.federationHistory = federationHistory;
-            this.chainIndexer = chainIndexer;
         }
 
         public async Task InitializeAsync()
@@ -279,8 +277,7 @@ namespace Stratis.Features.Collateral
                     return true;
 
                 // Checks that the collateral remained valid for at least half a round.
-                int roundBlocks = (int)(this.federationHistory.GetFederationForBlock(this.chainIndexer.Tip, localChainHeight - this.chainIndexer.Tip.Height).Count * this.blockRatio);
-                int startHeight = heightToCheckAt - roundBlocks / 2 - 1 /* For rounding */;
+                int startHeight = heightToCheckAt - collateralMaturationPeriod;
                 long minBalance = balanceData.BalanceChanges.Where(x => x.BalanceChangedHeight <= heightToCheckAt).CalculateMinBalance(startHeight);
 
                 if (minBalance < member.CollateralAmount.Satoshi)
