@@ -46,7 +46,7 @@ namespace Stratis.Features.Collateral
             VotingManager votingManager, PoASettings poAMinerSettings, ICollateralChecker collateralChecker, IAsyncProvider asyncProvider, ICounterChainSettings counterChainSettings, IIdleFederationMembersKicker idleFederationMembersKicker, ISignals signals,
             NodeSettings nodeSettings)
             : base(consensusManager, dateTimeProvider, network, nodeLifetime, ibdState, blockDefinition, slotsManager, connectionManager, poaHeaderValidator,
-            federationManager, federationHistory, integrityValidator, walletManager, nodeStats, votingManager, poAMinerSettings, asyncProvider, idleFederationMembersKicker, nodeSettings)
+            federationManager, federationHistory, integrityValidator, walletManager, nodeStats, votingManager, poAMinerSettings, asyncProvider, idleFederationMembersKicker, signals, nodeSettings)
         {
             this.counterChainNetwork = counterChainSettings.CounterChainNetwork;
             this.collateralChecker = collateralChecker;
