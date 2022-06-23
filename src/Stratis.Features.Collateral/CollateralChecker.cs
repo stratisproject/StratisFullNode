@@ -270,7 +270,7 @@ namespace Stratis.Features.Collateral
 
                 int release1320ActivationHeight = 0;
                 if (this.nodeDeployments?.BIP9.ArraySize > 0  /* Not NoBIP9Deployments */)
-                    release1320ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[1 /* Release1320 */].ActivationHeight;
+                    release1320ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[0 /* Release1320 */].ActivationHeight;
 
                 // Legacy behavior before activation.
                 if (localChainHeight < release1320ActivationHeight)
