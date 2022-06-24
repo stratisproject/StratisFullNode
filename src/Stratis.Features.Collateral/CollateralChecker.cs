@@ -41,7 +41,8 @@ namespace Stratis.Features.Collateral
         /// <summary>
         /// The number of Strax blocks the collateral should remain above the threshold to be suiable for mining a block.
         /// </summary>
-        private const int collateralMaturationPeriod = 500;
+        /// <remarks>This value is added to the maxReorgLength of 240 for a confirmnation period of 500 in total.</remarks>
+        private const int collateralMaturationPeriod = 260;
 
         private readonly IBlockStoreClient blockStoreClient;
 
