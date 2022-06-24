@@ -41,7 +41,8 @@ namespace Stratis.Features.Collateral
         /// <summary>
         /// The number of Strax blocks the collateral should remain above the threshold to be suiable for mining a block.
         /// </summary>
-        private const int collateralMaturationPeriod = 500;
+        /// <remarks>This value is added to the maxReorgLength of 240 for a confirmnation period of 500 in total.</remarks>
+        private const int collateralMaturationPeriod = 260;
 
         private readonly IBlockStoreClient blockStoreClient;
 
@@ -270,7 +271,7 @@ namespace Stratis.Features.Collateral
 
                 int release1320ActivationHeight = 0;
                 if (this.nodeDeployments?.BIP9.ArraySize > 0  /* Not NoBIP9Deployments */)
-                    release1320ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[1 /* Release1320 */].ActivationHeight;
+                    release1320ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[0 /* Release1320 */].ActivationHeight;
 
                 // Legacy behavior before activation.
                 if (localChainHeight < release1320ActivationHeight)

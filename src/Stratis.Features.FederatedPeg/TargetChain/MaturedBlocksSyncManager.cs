@@ -48,7 +48,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
     /// <inheritdoc cref="IMaturedBlocksSyncManager"/>
     public class MaturedBlocksSyncManager : IMaturedBlocksSyncManager
     {
-        private const string Release1300DeploymentNameLower = "release1300";
+        private const string Release1320DeploymentNameLower = "release1320";
         private readonly IAsyncProvider asyncProvider;
         private readonly ICrossChainTransferStore crossChainTransferStore;
         private readonly IFederationGatewayClient federationGatewayClient;
@@ -139,10 +139,10 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 return;
             }
 
-            ThresholdActivationModel model = lockedInActivations.FirstOrDefault(a => a.DeploymentName.ToLowerInvariant() == Release1300DeploymentNameLower);
+            ThresholdActivationModel model = lockedInActivations.FirstOrDefault(a => a.DeploymentName.ToLowerInvariant() == Release1320DeploymentNameLower);
             if (model == null || model.LockedInTimestamp == null)
             {
-                this.logger.LogDebug("There are no locked-in deployments for '{0}'.", Release1300DeploymentNameLower);
+                this.logger.LogDebug("There are no locked-in deployments for '{0}'.", Release1320DeploymentNameLower);
                 return;
             }
 
