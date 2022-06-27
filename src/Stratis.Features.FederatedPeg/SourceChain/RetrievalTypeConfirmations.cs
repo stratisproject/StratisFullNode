@@ -90,7 +90,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         public int GetDepositConfirmations(int depositHeight, DepositRetrievalType retrievalType)
         {
             // Keep everything maturity-height-centric. Otherwise the way we use MaximumConfirmationsAtMaturityHeight will have to change as well.
-            if (depositHeight + this.legacyRetrievalTypeConfirmations[retrievalType] < ((PoAConsensusOptions)this.network.Consensus.Options).Release1300ActivationHeight)
+            if (depositHeight + this.legacyRetrievalTypeConfirmations[retrievalType] < this.Release1300ActivationHeight)
                 return this.legacyRetrievalTypeConfirmations[retrievalType];
 
             return this.retrievalTypeConfirmations[retrievalType];
@@ -112,14 +112,10 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         {
             get
             {
-                if (!this.federatedPegSettings.IsMainChain)
-                    return (this.nodeDeployments?.BIP9.ArraySize > 0) ? this.nodeDeployments.BIP9.ActivationHeightProviders[0 /* Release 1300 */].ActivationHeight : 0;
+                if (this.federatedPegSettings.IsMainChain)
+                    return ((PosConsensusOptions)this.network.Consensus.Options).Release1300ActivationHeight;
 
-                // This code is running on the main chain.
-                if (this.counterChainSettings.CounterChainNetwork.Consensus.BIP9Deployments.Length == 0)
-                    return 0;
-
-                return this.maturedBlocksSyncManager.GetMainChainActivationHeight();
+                return ((PoAConsensusOptions)this.network.Consensus.Options).Release1300ActivationHeight;
             }
         }
     }
