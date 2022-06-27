@@ -80,7 +80,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         /// <inheritdoc/>
         public int MaximumConfirmationsAtMaturityHeight(int maturityHeight)
         {
-            if (maturityHeight < ((PoAConsensusOptions)this.network.Consensus.Options).Release1300ActivationHeight)
+            if (maturityHeight < this.Release1300ActivationHeight)
                 return this.legacyRetrievalTypeConfirmations.Values.Max();
 
             return this.retrievalTypeConfirmations.Values.Max();
