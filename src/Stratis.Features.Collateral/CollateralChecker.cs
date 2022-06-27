@@ -75,7 +75,6 @@ namespace Stratis.Features.Collateral
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
         private int counterChainConsensusTipHeight;
 
-        private readonly double blockRatio;
         private readonly NodeDeployments nodeDeployments;
 
         private Task updateCollateralContinuouslyTask;
@@ -264,10 +263,11 @@ namespace Stratis.Features.Collateral
 
                 long balance = balanceData.BalanceChanges.Where(x => x.BalanceChangedHeight <= heightToCheckAt).CalculateBalance();
 
-                this.logger.LogInformation("Calculated balance for '{0}' at {1} is {2}, collateral requirement is {3}.", member.CollateralMainchainAddress, heightToCheckAt, Money.Satoshis(balance).ToUnit(MoneyUnit.BTC), member.CollateralAmount);
-
                 if (balance < member.CollateralAmount.Satoshi)
+                {
+                    this.logger.LogWarning($"The balance for {member.CollateralMainchainAddress} at block {heightToCheckAt} is { Money.Satoshis(balance).ToUnit(MoneyUnit.BTC)} which is below the requirement of {member.CollateralAmount}.");
                     return false;
+                }
 
                 int release1320ActivationHeight = 0;
                 if (this.nodeDeployments?.BIP9.ArraySize > 0  /* Not NoBIP9Deployments */)
@@ -277,16 +277,18 @@ namespace Stratis.Features.Collateral
                 if (localChainHeight < release1320ActivationHeight)
                     return true;
 
-                // Checks that the collateral remained valid for at least half a round.
+                // If the balance requirement is met, ensure the minimum balance is maintained for the full validity window.
                 int startHeight = heightToCheckAt - collateralMaturationPeriod;
                 long minBalance = balanceData.BalanceChanges.Where(x => x.BalanceChangedHeight <= heightToCheckAt).CalculateMinBalance(startHeight);
 
                 if (minBalance < member.CollateralAmount.Satoshi)
                 {
-                    this.logger.LogInformation("The collateral has to remain above {0} for {1} Strax blocks before a block can be mined.", 
-                        Money.Satoshis(member.CollateralAmount.Satoshi).ToUnit(MoneyUnit.BTC), collateralMaturationPeriod);
+                    this.logger.LogWarning("The collateral has to remain above {0} for {1} Strax blocks before a block can be mined.",
+                        Money.Satoshis(member.CollateralAmount.Satoshi).ToUnit(MoneyUnit.BTC), collateralMaturationPeriod + this.maxReorgLength);
                     return false;
                 }
+
+                this.logger.LogInformation($"The balance for {member.CollateralMainchainAddress} at block {heightToCheckAt} is { Money.Satoshis(balance).ToUnit(MoneyUnit.BTC)} which meets the requirement of {member.CollateralAmount}.");
 
                 return true;
             }
