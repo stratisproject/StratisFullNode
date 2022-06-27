@@ -63,7 +63,7 @@ namespace Stratis.Bitcoin.Networks
                 witnessScaleFactor: 4
                 )
             {
-                Release1300ActivationHeight = 0
+                Release1300ActivationHeight = 972_970
             };
 
             var buriedDeployments = new BuriedDeploymentsArray
