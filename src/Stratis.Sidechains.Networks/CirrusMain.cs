@@ -182,7 +182,7 @@ namespace Stratis.Sidechains.Networks
                 getMiningTimestampV2ActivationStrictHeight: 3_783_000, // Monday 28 February 07:00:00 (London Time) (Estimated)
                 release1100ActivationHeight: 3_426_950, // Monday, 20 December 2021 10:00:00 AM (Estimated)
                 pollExpiryBlocks: 50_000, // Roughly 9 days
-                contractSerializerV2ActivationHeight: 3_386_335 // Monday 13 December 16:00:00 (Estimated)
+                contractSerializerV2ActivationHeight: 3_386_335, // Monday 13 December 16:00:00 (Estimated)
                 release1300ActivationHeight: 4_334_400
             );
 
