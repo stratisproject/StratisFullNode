@@ -2,6 +2,7 @@
 using System.Linq;
 using NBitcoin;
 using Stratis.Bitcoin.Base.Deployments;
+using Stratis.Bitcoin.Features.PoA;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.TargetChain;
 using Stratis.Features.PoA.Collateral.CounterChain;
@@ -111,14 +112,10 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         {
             get
             {
-                if (!this.federatedPegSettings.IsMainChain)
-                    return (this.nodeDeployments?.BIP9.ArraySize > 0) ? this.nodeDeployments.BIP9.ActivationHeightProviders[0 /* Release 1300 */].ActivationHeight : 0;
+                if (this.federatedPegSettings.IsMainChain)
+                    return ((PosConsensusOptions)this.network.Consensus.Options).Release1300ActivationHeight;
 
-                // This code is running on the main chain.
-                if (this.counterChainSettings.CounterChainNetwork.Consensus.BIP9Deployments.Length == 0)
-                    return 0;
-
-                return this.maturedBlocksSyncManager.GetMainChainActivationHeight();
+                return ((PoAConsensusOptions)this.network.Consensus.Options).Release1300ActivationHeight;
             }
         }
     }
