@@ -1,4 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using NBitcoin;
 
 namespace Stratis.Bitcoin.Interfaces
@@ -17,6 +21,18 @@ namespace Stratis.Bitcoin.Interfaces
         /// <returns></returns>
         string GetAddressFromScriptPubKey(ScriptTemplate scriptTemplate, Network network, Script script);
 
-        IEnumerable<TxDestination> GetDestinationFromScriptPubKey(ScriptTemplate scriptTemplate, Script redeemScript);
+        IEnumerable<TxDestination> GetDestinationFromScriptPubKey(ScriptTemplate scriptTemplate, Script script);
+    }
+
+    public static class IServiceCollectionExt
+    {
+        public static IServiceCollection Replace<I>(this IServiceCollection services, Func<IServiceProvider, I, I> factory)
+        {
+            ServiceDescriptor previous = services.LastOrDefault(s => s.ServiceType.IsAssignableFrom(typeof(I)));
+            services.Replace(new ServiceDescriptor(typeof(I), p => factory(p,
+                (I)(previous.ImplementationInstance ?? (previous.ImplementationFactory?.Invoke(p) ?? p.GetService(previous.ImplementationType)))), ServiceLifetime.Singleton));
+
+            return services;
+        }
     }
 }
