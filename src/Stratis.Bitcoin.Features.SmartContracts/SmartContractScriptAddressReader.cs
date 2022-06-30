@@ -1,4 +1,5 @@
-﻿using CSharpFunctionalExtensions;
+﻿using System.Collections.Generic;
+using CSharpFunctionalExtensions;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Interfaces;
@@ -22,7 +23,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
             this.callDataSerializer = callDataSerializer;
         }
 
-        public string GetAddressFromScriptPubKey(Network network, Script script)
+        public string GetAddressFromScriptPubKey(ScriptTemplate scriptTemplate, Network network, Script script)
         {
             if (script.IsSmartContractCreate() || script.IsSmartContractCall())
             {
@@ -31,6 +32,22 @@ namespace Stratis.Bitcoin.Features.SmartContracts
             }
 
             return this.baseAddressReader.GetAddressFromScriptPubKey(network, script);
+        }
+
+        public IEnumerable<TxDestination> GetDestinationFromScriptPubKey(ScriptTemplate scriptTemplate, Script script)
+        {
+            if (script.IsSmartContractCreate() || script.IsSmartContractCall())
+            {
+                IEnumerable<TxDestination> Destinations()
+                {
+                    Result<ContractTxData> result = this.callDataSerializer.Deserialize(script.ToBytes());
+                    yield return new KeyId(result.Value.ContractAddress);
+                }
+
+                return Destinations();
+            }
+
+            return this.baseAddressReader.GetDestinationFromScriptPubKey(scriptTemplate, script);
         }
     }
 }

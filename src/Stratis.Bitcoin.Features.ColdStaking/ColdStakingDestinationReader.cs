@@ -1,30 +1,38 @@
 ﻿using System.Collections.Generic;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
-using Stratis.Bitcoin.Features.Wallet.Interfaces;
+using Stratis.Bitcoin.Interfaces;
 
 namespace Stratis.Bitcoin.Features.ColdStaking
 {
     /// <summary>
-    /// This class and the base <see cref="ScriptDestinationReader"/> offers the ability to selectively replace <see cref="ScriptAddressReader"/>
+    /// This class offers the ability to selectively replace <see cref="ScriptAddressReader"/>
     /// which can only parse a single address from a ScriptPubKey. ColdStaking scripts contain two addresses / pub key hashes.
     /// </summary>
-    public class ColdStakingDestinationReader : ScriptDestinationReader, IScriptDestinationReader
+    public class ColdStakingDestinationReader : IScriptAddressReader
     {
-        public ColdStakingDestinationReader(ScriptAddressReader scriptAddressReader) : base(scriptAddressReader)
+        ScriptAddressReader scriptAddressReader;
+
+        public ColdStakingDestinationReader(ScriptAddressReader scriptAddressReader)
         {
+            this.scriptAddressReader = scriptAddressReader;
         }
 
-        public override IEnumerable<TxDestination> GetDestinationFromScriptPubKey(Network network, Script redeemScript)
+        public string GetAddressFromScriptPubKey(ScriptTemplate scriptTemplate, Network network, Script script)
         {
-            if (ColdStakingScriptTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript, out KeyId hotPubKeyHash, out KeyId coldPubKeyHash))
+            return this.scriptAddressReader.GetAddressFromScriptPubKey(scriptTemplate, network, script);
+        }
+
+        public IEnumerable<TxDestination> GetDestinationFromScriptPubKey(ScriptTemplate scriptTemplate, Script redeemScript)
+        {
+            if (scriptTemplate.Type == TxOutType.TX_COLDSTAKE && ((ColdStakingScriptTemplate)scriptTemplate).ExtractScriptPubKeyParameters(redeemScript, out KeyId hotPubKeyHash, out KeyId coldPubKeyHash))
             {
                 yield return hotPubKeyHash;
                 yield return coldPubKeyHash;
             }
             else
             {
-                base.GetDestinationFromScriptPubKey(network, redeemScript);
+                this.scriptAddressReader.GetDestinationFromScriptPubKey(scriptTemplate, redeemScript);
             }
         }
     }
