@@ -55,7 +55,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
                 .FeatureServices(services =>
                 {
                     // Replaces the IScriptAddressReader implementation with SmartContractScriptAddressReader, chaining to the old service implementation.
-                    services.Replace<IScriptAddressReader>((p, old) => new SmartContractScriptAddressReader(old, p.GetService<ICallDataSerializer>()));
+                    services.Replace<IScriptAddressReader>((p, old) => new SmartContractScriptAddressReader(old, p.GetService<ICallDataSerializer>()), ServiceLifetime.Singleton);
 
                     services.RemoveAll(typeof(StandardTransactionPolicy));
                     services.AddSingleton<StandardTransactionPolicy, SmartContractTransactionPolicy>();

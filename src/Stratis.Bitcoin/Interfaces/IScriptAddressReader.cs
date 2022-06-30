@@ -33,11 +33,9 @@ namespace Stratis.Bitcoin.Interfaces
         /// <param name="services">The services collection.</param>
         /// <param name="factory">The factory used to create a new instance that chains to the previous implementation.</param>
         /// <returns></returns>
-        public static IServiceCollection Replace<I>(this IServiceCollection services, Func<IServiceProvider, I, I> factory, ServiceLifetime? serviceLifetime = null)
+        public static IServiceCollection Replace<I>(this IServiceCollection services, Func<IServiceProvider, I, I> factory, ServiceLifetime serviceLifetime)
         {
             ServiceDescriptor previous = services.LastOrDefault(s => s.ServiceType.IsAssignableFrom(typeof(I)));
-
-            serviceLifetime ??= previous?.Lifetime;
 
             services.Replace(new ServiceDescriptor(typeof(I), provider =>
             {
@@ -46,7 +44,7 @@ namespace Stratis.Bitcoin.Interfaces
                 var instance = factory(provider, old);
 
                 return instance;
-            }, serviceLifetime ?? ServiceLifetime.Singleton));
+            }, serviceLifetime));
 
             return services;
         }
