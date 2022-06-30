@@ -24,6 +24,14 @@ namespace Stratis.Bitcoin.Interfaces
         IEnumerable<TxDestination> GetDestinationFromScriptPubKey(ScriptTemplate scriptTemplate, Script script);
     }
 
+    public static class ServiceDescriptorExt
+    {
+        public static T MakeConcrete<T>(this ServiceDescriptor service, IServiceProvider provider)
+        {
+            return (T)(service.ImplementationInstance ?? service.ImplementationFactory?.Invoke(provider) ?? ActivatorUtilities.CreateInstance(provider, service.ImplementationType));
+        }
+    }
+
     public static class IServiceCollectionExt
     {
         /// <summary>
@@ -37,14 +45,7 @@ namespace Stratis.Bitcoin.Interfaces
         {
             ServiceDescriptor previous = services.LastOrDefault(s => s.ServiceType.IsAssignableFrom(typeof(I)));
 
-            services.Replace(new ServiceDescriptor(typeof(I), provider =>
-            {
-                var old = (I)(previous.ImplementationInstance ?? (previous.ImplementationFactory?.Invoke(provider) ?? ActivatorUtilities.CreateInstance(provider, previous.ImplementationType)));
-
-                var instance = factory(provider, old);
-
-                return instance;
-            }, serviceLifetime));
+            services.Replace(new ServiceDescriptor(typeof(I), provider => factory(provider, previous.MakeConcrete<I>(provider)), serviceLifetime));
 
             return services;
         }
