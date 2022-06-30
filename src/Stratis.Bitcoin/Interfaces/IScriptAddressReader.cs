@@ -36,8 +36,15 @@ namespace Stratis.Bitcoin.Interfaces
         public static IServiceCollection Replace<I>(this IServiceCollection services, Func<IServiceProvider, I, I> factory)
         {
             ServiceDescriptor previous = services.LastOrDefault(s => s.ServiceType.IsAssignableFrom(typeof(I)));
-            services.Replace(new ServiceDescriptor(typeof(I), p => factory(p,
-                (I)(previous.ImplementationInstance ?? (previous.ImplementationFactory?.Invoke(p) ?? p.GetService(previous.ImplementationType)))), ServiceLifetime.Singleton));
+
+            services.Replace(new ServiceDescriptor(typeof(I), provider =>
+            {
+                var old = (I)(previous.ImplementationInstance ?? (previous.ImplementationFactory?.Invoke(provider) ?? ActivatorUtilities.CreateInstance(provider, previous.ImplementationType)));
+
+                var instance = factory(provider, old);
+
+                return instance;
+            }, ServiceLifetime.Singleton));
 
             return services;
         }
