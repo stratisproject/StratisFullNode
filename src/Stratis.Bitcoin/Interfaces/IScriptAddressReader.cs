@@ -26,6 +26,13 @@ namespace Stratis.Bitcoin.Interfaces
 
     public static class IServiceCollectionExt
     {
+        /// <summary>
+        /// Replaces a service and provides a factory for creating a new instance that chains to the previous implementation.
+        /// </summary>
+        /// <typeparam name="I">The service type.</typeparam>
+        /// <param name="services">The services collection.</param>
+        /// <param name="factory">The factory used to create a new instance that chains to the previous implementation.</param>
+        /// <returns></returns>
         public static IServiceCollection Replace<I>(this IServiceCollection services, Func<IServiceProvider, I, I> factory)
         {
             ServiceDescriptor previous = services.LastOrDefault(s => s.ServiceType.IsAssignableFrom(typeof(I)));
