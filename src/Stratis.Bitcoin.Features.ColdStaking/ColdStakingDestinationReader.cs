@@ -11,9 +11,9 @@ namespace Stratis.Bitcoin.Features.ColdStaking
     /// </summary>
     public class ColdStakingDestinationReader : IScriptAddressReader
     {
-        ScriptAddressReader scriptAddressReader;
+        IScriptAddressReader scriptAddressReader;
 
-        public ColdStakingDestinationReader(ScriptAddressReader scriptAddressReader)
+        public ColdStakingDestinationReader(IScriptAddressReader scriptAddressReader)
         {
             this.scriptAddressReader = scriptAddressReader;
         }
@@ -23,17 +23,20 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             return this.scriptAddressReader.GetAddressFromScriptPubKey(scriptTemplate, network, script);
         }
 
-        public IEnumerable<TxDestination> GetDestinationFromScriptPubKey(ScriptTemplate scriptTemplate, Script redeemScript)
+        public IEnumerable<TxDestination> GetDestinationFromScriptPubKey(ScriptTemplate scriptTemplate, Script script)
         {
-            if (scriptTemplate.Type == TxOutType.TX_COLDSTAKE && ((ColdStakingScriptTemplate)scriptTemplate).ExtractScriptPubKeyParameters(redeemScript, out KeyId hotPubKeyHash, out KeyId coldPubKeyHash))
+            if (scriptTemplate.Type == TxOutType.TX_COLDSTAKE && ((ColdStakingScriptTemplate)scriptTemplate).ExtractScriptPubKeyParameters(script, out KeyId hotPubKeyHash, out KeyId coldPubKeyHash))
             {
-                yield return hotPubKeyHash;
-                yield return coldPubKeyHash;
+                IEnumerable<TxDestination> GetDestinations()
+                {
+                    yield return hotPubKeyHash;
+                    yield return coldPubKeyHash;
+                }
+
+                return GetDestinations();
             }
-            else
-            {
-                this.scriptAddressReader.GetDestinationFromScriptPubKey(scriptTemplate, redeemScript);
-            }
+
+            return this.scriptAddressReader.GetDestinationFromScriptPubKey(scriptTemplate, script);
         }
     }
 }

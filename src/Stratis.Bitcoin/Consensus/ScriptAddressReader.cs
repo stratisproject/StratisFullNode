@@ -51,21 +51,21 @@ namespace Stratis.Bitcoin.Consensus
             return destinationAddress;
         }
 
-        public IEnumerable<TxDestination> GetDestinationFromScriptPubKey(ScriptTemplate scriptTemplate, Script redeemScript)
+        public IEnumerable<TxDestination> GetDestinationFromScriptPubKey(ScriptTemplate scriptTemplate, Script script)
         {
             switch (scriptTemplate.Type)
             {
                 case TxOutType.TX_PUBKEYHASH:
-                    yield return PayToPubkeyHashTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript);
+                    yield return PayToPubkeyHashTemplate.Instance.ExtractScriptPubKeyParameters(script);
                     break;
                 case TxOutType.TX_PUBKEY:
-                    yield return PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript).Hash;
+                    yield return PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(script).Hash;
                     break;
                 case TxOutType.TX_SCRIPTHASH:
-                    yield return PayToScriptHashTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript);
+                    yield return PayToScriptHashTemplate.Instance.ExtractScriptPubKeyParameters(script);
                     break;
                 case TxOutType.TX_SEGWIT:
-                    TxDestination txDestination = PayToWitTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript);
+                    TxDestination txDestination = PayToWitTemplate.Instance.ExtractScriptPubKeyParameters(script);
                     if (txDestination != null)
                         yield return new KeyId(txDestination.ToBytes());
                     break;
