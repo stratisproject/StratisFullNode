@@ -65,10 +65,9 @@ namespace Stratis.Bitcoin.Consensus
                     yield return PayToScriptHashTemplate.Instance.ExtractScriptPubKeyParameters(script);
                     break;
                 case TxOutType.TX_SEGWIT:
-                    yield return PayToWitTemplate.Instance.ExtractScriptPubKeyParameters(script);
-                    //TxDestination txDestination = PayToWitTemplate.Instance.ExtractScriptPubKeyParameters(script);
-                    //if (txDestination != null)
-                      //  yield return new KeyId(txDestination.ToBytes());
+                    TxDestination txDestination = PayToWitTemplate.Instance.ExtractScriptPubKeyParameters(script);
+                    if (txDestination != null)
+                        yield return new KeyId(txDestination.ToBytes());
                     break;
             }
         }
