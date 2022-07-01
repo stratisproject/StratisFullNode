@@ -43,7 +43,7 @@ namespace Stratis.Bitcoin.Interfaces
         /// <returns></returns>
         public static IServiceCollection Replace<I>(this IServiceCollection services, Func<IServiceProvider, I, I> factory, ServiceLifetime serviceLifetime)
         {
-            ServiceDescriptor previous = services.LastOrDefault(s => s.ServiceType.IsAssignableFrom(typeof(I)));
+            ServiceDescriptor previous = services.First(s => s.ServiceType == typeof(I));
 
             services.Replace(new ServiceDescriptor(typeof(I), provider => factory(provider, previous.MakeConcrete<I>(provider)), serviceLifetime));
 
