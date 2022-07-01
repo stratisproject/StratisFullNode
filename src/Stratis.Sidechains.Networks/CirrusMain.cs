@@ -198,7 +198,7 @@ namespace Stratis.Sidechains.Networks
             var bip9Deployments = new CirrusBIP9Deployments()
             {
                 // Deployment will go active once 75% of nodes are on 1.3.0.0 or later.
-                [CirrusBIP9Deployments.Release1320] = new BIP9DeploymentsParameters("Release1320", CirrusBIP9Deployments.FlagBitRelease1320, DateTime.Parse("2022-6-15 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-1-1 +0").ToUnixTimestamp(), 1512 /* 75% Activation Threshold */)
+                [CirrusBIP9Deployments.Release1320] = new BIP9DeploymentsParameters("Release1320", CirrusBIP9Deployments.FlagBitRelease1320, DateTime.Parse("2022-6-15 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-1-1 +0").ToUnixTimestamp(), 8100 /* 75% Activation Threshold */)
             };
 
             this.Consensus = new Consensus(
@@ -213,7 +213,7 @@ namespace Stratis.Sidechains.Networks
                 buriedDeployments: buriedDeployments,
                 bip9Deployments: bip9Deployments,
                 bip34Hash: new uint256("0x000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8"),
-                minerConfirmationWindow: 2016, // nPowTargetTimespan / nPowTargetSpacing
+                minerConfirmationWindow: 10800, // nPowTargetTimespan / nPowTargetSpacing
                 maxReorgLength: 240, // Heuristic. Roughly 2 * mining members
                 defaultAssumeValid: new uint256("0xbfd4a96a6c5250f18bf7c586761256fa5f8753ffa10b24160f0648a452823a95"), // 1400000
                 maxMoney: Money.Coins(100_000_000),
