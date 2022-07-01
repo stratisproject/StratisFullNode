@@ -19,7 +19,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
             IScriptAddressReader addressReader,
             ICallDataSerializer callDataSerializer)
         {
-            this.baseAddressReader = addressReader;
+            this.baseAddressReader = addressReader ?? new ScriptAddressReader();
             this.callDataSerializer = callDataSerializer;
         }
 

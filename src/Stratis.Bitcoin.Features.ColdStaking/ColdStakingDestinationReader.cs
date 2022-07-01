@@ -15,7 +15,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
 
         public ColdStakingDestinationReader(IScriptAddressReader scriptAddressReader)
         {
-            this.scriptAddressReader = scriptAddressReader;
+            this.scriptAddressReader = scriptAddressReader ?? new ScriptAddressReader();
         }
 
         public string GetAddressFromScriptPubKey(ScriptTemplate scriptTemplate, Network network, Script script)
