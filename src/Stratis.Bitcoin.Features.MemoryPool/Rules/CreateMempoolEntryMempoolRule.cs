@@ -294,7 +294,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Rules
                 }
 
                 // Check P2WSH standard limits.
-                WitProgramParameters wit = PayToWitTemplate.Instance.ExtractScriptPubKeyParameters2(this.chainIndexer.Network, prevScript);
+                WitProgramParameters wit = PayToWitTemplate.Instance.ExtractScriptPubKeyParameters2(prevScript);
                 if (wit == null)
                 {
                     this.logger.LogTrace("(-)[BAD_WITNESS_PARAMS]:false");

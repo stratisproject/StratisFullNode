@@ -52,27 +52,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
         {
         }
     }
-
-    public class ColdStakingDestinationReader : ScriptDestinationReader, IScriptDestinationReader
-    {
-        public ColdStakingDestinationReader(IScriptAddressReader scriptAddressReader) : base(scriptAddressReader)
-        {
-        }
-
-        public override IEnumerable<TxDestination> GetDestinationFromScriptPubKey(Network network, Script redeemScript)
-        {
-            if (ColdStakingScriptTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript, out KeyId hotPubKeyHash, out KeyId coldPubKeyHash))
-            {
-                yield return hotPubKeyHash;
-                yield return coldPubKeyHash;
-            }
-            else
-            {
-                base.GetDestinationFromScriptPubKey(network, redeemScript);
-            }
-        }
-    }
-
+    
     public class BlockBase
     {
         public NodeSettings NodeSettings { get; private set; }
