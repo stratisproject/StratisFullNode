@@ -463,7 +463,7 @@ namespace NBitcoin
 
             if((this.ScriptVerify & ScriptVerify.Witness) != 0)
             {
-                WitProgramParameters wit = PayToWitTemplate.Instance.ExtractScriptPubKeyParameters2(this.Network, scriptPubKey);
+                WitProgramParameters wit = PayToWitTemplate.Instance.ExtractScriptPubKeyParameters2(scriptPubKey);
                 if(wit != null)
                 {
                     hadWitness = true;
@@ -508,7 +508,7 @@ namespace NBitcoin
                 // P2SH witness program
                 if((this.ScriptVerify & ScriptVerify.Witness) != 0)
                 {
-                    WitProgramParameters wit = PayToWitTemplate.Instance.ExtractScriptPubKeyParameters2(this.Network, redeem);
+                    WitProgramParameters wit = PayToWitTemplate.Instance.ExtractScriptPubKeyParameters2(redeem);
                     if(wit != null)
                     {
                         hadWitness = true;
