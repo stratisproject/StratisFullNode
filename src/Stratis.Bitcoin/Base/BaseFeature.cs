@@ -487,7 +487,6 @@ namespace Stratis.Bitcoin.Base
                     services.AddSingleton<IAsyncProvider, AsyncProvider>();
 
                     // Consensus
-                    services.AddSingleton<IScriptAddressReader, ScriptAddressReader>();
                     services.AddSingleton<ConsensusSettings>();
                     services.AddSingleton<ICheckpoints, Checkpoints>();
                     services.AddSingleton<ConsensusRulesContainer>();

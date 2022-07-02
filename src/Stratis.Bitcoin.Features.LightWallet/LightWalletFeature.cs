@@ -14,6 +14,7 @@ using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Connection;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.BlockStore.Pruning;
 using Stratis.Bitcoin.Features.LightWallet.Broadcasting;
@@ -229,6 +230,7 @@ namespace Stratis.Bitcoin.Features.LightWallet
                         services.AddSingleton<BroadcasterBehavior>();
                         services.AddSingleton<IInitialBlockDownloadState, LightWalletInitialBlockDownloadState>();
                         services.AddSingleton<WalletSettings>();
+                        services.AddSingleton<IScriptAddressReader, ScriptAddressReader>();
                         services.AddSingleton<StandardTransactionPolicy>();
 
                         services.AddSingleton<IPruneBlockStoreService, PruneBlockStoreService>();
