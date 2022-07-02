@@ -6,6 +6,7 @@ using NBitcoin;
 using NBitcoin.DataEncoders;
 using NBitcoin.Protocol;
 using Newtonsoft.Json.Linq;
+using Stratis.Bitcoin.Features.RPC.Models;
 
 namespace Stratis.Bitcoin.Features.RPC
 {
@@ -39,8 +40,8 @@ namespace Stratis.Bitcoin.Features.RPC
         wallet             listlockunspent
         wallet             listreceivedbyaccount
         wallet             listreceivedbyaddress
-        wallet             listsinceblock
-        wallet             listtransactions
+        wallet             listsinceblock               Yes
+        wallet             listtransactions             Yes
         wallet             listunspent                  Yes
         wallet             lockunspent                  Yes
         wallet             move
@@ -459,6 +460,25 @@ namespace Stratis.Bitcoin.Features.RPC
                 foreach (ChangeAddress change in grouping.ChangeAddresses)
                     yield return DumpPrivKey(change.Address);
             }
+        }
+
+        /// <summary>
+        /// Returns an array of transactions to this wallet from a specified block.
+        /// </summary>
+        public TransactionsSinceBlockModel ListSinceBlock(string blockhash = "", int targetConfirmations = 1)
+        {
+            RPCResponse response = SendCommand(RPCOperations.listsinceblock, blockhash, targetConfirmations);
+
+            return response.Result.ToObject<TransactionsSinceBlockModel>();
+        }
+
+        /// <summary>
+        /// Returns an array of transactions to this wallet.
+        /// </summary>
+        public TransactionInfoModel[] ListTransactions(int count = 10, int skip = 0)
+        {
+            RPCResponse response = SendCommand(RPCOperations.listtransactions, "*", count, skip);
+            return response.Result.Select(i => new TransactionInfoModel((JObject)i)).ToArray();
         }
 
         // listunspent

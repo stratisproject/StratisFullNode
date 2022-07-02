@@ -12,6 +12,7 @@ using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration.Logging;
+using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.BlockStore.Pruning;
@@ -109,7 +110,7 @@ namespace Stratis.Bitcoin.Features.LightWallet
         /// <param name="network">The network to extract values from.</param>
         public static void PrintHelp(Network network)
         {
-            WalletSettings.PrintHelp(network);
+            BaseSettings.PrintHelp(typeof(WalletSettings), network);
         }
 
         /// <inheritdoc />

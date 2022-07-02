@@ -361,7 +361,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
             if (!flags.ScriptFlags.HasFlag(ScriptVerify.Witness))
                 return 0;
 
-            WitProgramParameters witParams = PayToWitTemplate.Instance.ExtractScriptPubKeyParameters2(this.Parent.Network, scriptPubKey);
+            WitProgramParameters witParams = PayToWitTemplate.Instance.ExtractScriptPubKeyParameters2(scriptPubKey);
 
             if (witParams?.Version == 0)
             {

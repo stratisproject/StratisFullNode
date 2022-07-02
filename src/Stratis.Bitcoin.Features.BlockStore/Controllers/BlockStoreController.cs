@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Base;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
 using Stratis.Bitcoin.Features.BlockStore.Models;
@@ -25,6 +26,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
         public const string GetVerboseAddressesBalances = "getverboseaddressesbalances";
         public const string GetAddressIndexerTip = "addressindexertip";
         public const string GetBlock = "block";
+        public const string GetBlocks = "blocks";
         public const string GetBlockCount = "getblockcount";
         public const string GetUtxoSet = "getutxoset";
         public const string GetUtxoSetForAddress = "getutxosetforaddress";
@@ -149,35 +151,88 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
                     return this.Json(block);
                 }
 
-                BlockModel blockModel = query.ShowTransactionDetails
-                    ? new BlockTransactionDetailsModel(block, chainedHeader, this.chainIndexer.Tip, this.network)
-                    : new BlockModel(block, chainedHeader, this.chainIndexer.Tip, this.network);
-
-                if (this.network.Consensus.IsProofOfStake)
-                {
-                    var posBlock = block as PosBlock;
-
-                    blockModel.PosBlockSignature = posBlock.BlockSignature.ToHex(this.network);
-                    blockModel.PosBlockTrust = new Target(chainedHeader.GetBlockTarget()).ToUInt256().ToString();
-                    blockModel.PosChainTrust = chainedHeader.ChainWork.ToString(); // this should be similar to ChainWork
-
-                    if (this.stakeChain != null)
-                    {
-                        BlockStake blockStake = this.stakeChain.Get(blockId);
-
-                        blockModel.PosModifierv2 = blockStake?.StakeModifierV2.ToString();
-                        blockModel.PosFlags = blockStake?.Flags == BlockFlag.BLOCK_PROOF_OF_STAKE ? "proof-of-stake" : "proof-of-work";
-                        blockModel.PosHashProof = blockStake?.HashProof?.ToString();
-                    }
-                }
-
-                return this.Json(blockModel);
+                return this.Json(GetBlockModel(block, blockId, chainedHeader, query.ShowTransactionDetails));
             }
             catch (Exception e)
             {
                 this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
+        }
+
+
+        /// <summary>
+        /// Retrieves the blocks from a given height onwards.
+        /// </summary>
+        /// <param name="query">An object containing the necessary parameters to search for a block.</param>
+        /// <returns><see cref="BlockModel"/> if block is found, <see cref="NotFoundObjectResult"/> if not found. Returns <see cref="IActionResult"/> with error information if exception thrown.</returns>
+        /// <response code="200">Returns data about the block or block not found message</response>
+        /// <response code="400">Block hash invalid, or an unexpected exception occurred</response>
+        [Route(BlockStoreRouteEndPoint.GetBlocks)]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        public IActionResult GetBlocks([FromQuery] SearchByHeightRequest query)
+        {
+            if (!this.ModelState.IsValid)
+                return ModelStateErrors.BuildErrorResponse(this.ModelState);
+
+            try
+            {
+                if (query.Height > this.chainIndexer.Tip.Height)
+                    return this.NotFound("No blocks found");
+
+                int tip = query.Height + query.NumberOfBlocks - 1;
+                if (tip > this.chainIndexer.Tip.Height)
+                {
+                    query.NumberOfBlocks -= (this.chainIndexer.Tip.Height - tip);
+                    tip = this.chainIndexer.Tip.Height;
+                }
+
+                List<ChainedHeader> chainedHeaders = this.chainIndexer[tip].EnumerateToGenesis().Take(query.NumberOfBlocks).Reverse().ToList();
+                List<uint256> blockIds = chainedHeaders.Select(h => h.HashBlock).ToList();
+                List<Block> blocks = this.blockStore.GetBlocks(blockIds);
+
+                if (!query.OutputJson)
+                {
+                    return this.Json(blocks);
+                }
+
+                return this.Json(chainedHeaders.Select((h, n) => GetBlockModel(blocks[n], blockIds[n], h, query.ShowTransactionDetails)));
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        private BlockModel GetBlockModel(Block block, uint256 blockId, ChainedHeader chainedHeader, bool showTransactionDetails)
+        {
+            BlockModel blockModel = showTransactionDetails
+                ? new BlockTransactionDetailsModel(block, chainedHeader, this.chainIndexer.Tip, this.network)
+                : new BlockModel(block, chainedHeader, this.chainIndexer.Tip, this.network);
+
+            if (this.network.Consensus.IsProofOfStake)
+            {
+                var posBlock = block as PosBlock;
+
+                blockModel.PosBlockSignature = posBlock.BlockSignature.ToHex(this.network);
+                blockModel.PosBlockTrust = new Target(chainedHeader.GetBlockTarget()).ToUInt256().ToString();
+                blockModel.PosChainTrust = chainedHeader.ChainWork.ToString(); // this should be similar to ChainWork
+
+                if (this.stakeChain != null)
+                {
+                    BlockStake blockStake = this.stakeChain.Get(blockId);
+
+                    blockModel.PosModifierv2 = blockStake?.StakeModifierV2.ToString();
+                    blockModel.PosFlags = blockStake?.Flags == BlockFlag.BLOCK_PROOF_OF_STAKE ? "proof-of-stake" : "proof-of-work";
+                    blockModel.PosHashProof = blockStake?.HashProof?.ToString();
+                }
+            }
+
+            return blockModel;
         }
 
         /// <summary>

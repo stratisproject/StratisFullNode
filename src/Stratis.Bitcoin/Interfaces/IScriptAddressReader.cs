@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using NBitcoin;
-using NBitcoin.DataEncoders;
 
 namespace Stratis.Bitcoin.Interfaces
 {
@@ -13,70 +15,42 @@ namespace Stratis.Bitcoin.Interfaces
         /// <summary>
         /// Extracts an address from a given Script, if available. Otherwise returns <see cref="string.Empty"/>
         /// </summary>
-        /// <param name="network"></param>
-        /// <param name="script"></param>
+        /// <param name="scriptTemplate">The appropriate template for this type of script.</param>
+        /// <param name="network">The network.</param>
+        /// <param name="script">The script.</param>
         /// <returns></returns>
-        string GetAddressFromScriptPubKey(Network network, Script script);
+        string GetAddressFromScriptPubKey(ScriptTemplate scriptTemplate, Network network, Script script);
+
+        IEnumerable<TxDestination> GetDestinationFromScriptPubKey(ScriptTemplate scriptTemplate, Script script);
     }
 
-    public interface IScriptDestinationReader : IScriptAddressReader
+    public static class ServiceDescriptorExt
     {
-        IEnumerable<TxDestination> GetDestinationFromScriptPubKey(Network network, Script script);
-    }
-
-    public static class IScriptAddressReaderExt
-    {
-        public static IEnumerable<TxDestination> GetDestinationFromScriptPubKey(this IScriptAddressReader scriptAddressReader, Network network, Script redeemScript)
+        public static T MakeConcrete<T>(this ServiceDescriptor service, IServiceProvider provider)
         {
-            ScriptTemplate scriptTemplate = network.StandardScriptsRegistry.GetTemplateFromScriptPubKey(redeemScript);
+            return (T)(service.ImplementationInstance ?? service.ImplementationFactory?.Invoke(provider) ?? ActivatorUtilities.CreateInstance(provider, service.ImplementationType));
+        }
+    }
 
-            if (scriptTemplate != null)
-            {
-                // We need scripts suitable for matching to HDAddress.ScriptPubKey.
-                switch (scriptTemplate.Type)
-                {
-                    case TxOutType.TX_PUBKEYHASH:
-                        yield return PayToPubkeyHashTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript);
-                        break;
-                    case TxOutType.TX_PUBKEY:
-                        yield return PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript).Hash;
-                        break;
-                    case TxOutType.TX_SCRIPTHASH:
-                        yield return PayToScriptHashTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript);
-                        break;
-                    case TxOutType.TX_SEGWIT:
-                        TxDestination txDestination = PayToWitTemplate.Instance.ExtractScriptPubKeyParameters(network, redeemScript);
-                        if (txDestination != null)
-                            yield return new KeyId(txDestination.ToBytes());
-                        break;
-                    default:
-                        if (scriptAddressReader is IScriptDestinationReader scriptDestinationReader)
-                        {
-                            foreach (TxDestination destination in scriptDestinationReader.GetDestinationFromScriptPubKey(network, redeemScript))
-                            {
-                                yield return destination;
-                            }
-                        }
-                        else
-                        {
-                            TxDestination GetDestinationForAddress(string address)
-                            {
-                                if (address == null)
-                                    return null;
+    public static class IServiceCollectionExt
+    {
+        /// <summary>
+        /// Replaces a service and provides a factory for creating a new instance that chains to the previous implementation.
+        /// </summary>
+        /// <typeparam name="I">The service type.</typeparam>
+        /// <param name="services">The services collection.</param>
+        /// <param name="factory">The factory used to create a new instance that chains to the previous implementation.</param>
+        /// <returns></returns>
+        public static IServiceCollection Replace<I>(this IServiceCollection services, Func<IServiceProvider, I, I> factory, ServiceLifetime serviceLifetime) where I : class
+        {
+            ServiceDescriptor previous = services.LastOrDefault(s => s.ServiceType == typeof(I));
 
-                                byte[] decoded = Encoders.Base58Check.DecodeData(address);
-                                return new KeyId(new uint160(decoded.Skip(network.GetVersionBytes(Base58Type.PUBKEY_ADDRESS, true).Length).ToArray()));
-                            }
+            if (previous != null)
+                services.Remove(previous);
 
-                            string address = scriptAddressReader.GetAddressFromScriptPubKey(network, redeemScript);
-                            TxDestination destination = GetDestinationForAddress(address);
-                            if (destination != null)
-                                yield return destination;
-                        }
+            services.Add(new ServiceDescriptor(typeof(I), provider => factory(provider, previous?.MakeConcrete<I>(provider)), serviceLifetime));
 
-                        break;
-                }
-            }
+            return services;
         }
     }
 }

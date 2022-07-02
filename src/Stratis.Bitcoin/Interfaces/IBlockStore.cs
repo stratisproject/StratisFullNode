@@ -39,7 +39,9 @@ namespace Stratis.Bitcoin.Interfaces
         List<Block> GetBlocks(List<uint256> blockHashes);
     }
 
-
+    /// <summary>
+    /// Provides functionality that builds upon the <see cref="IBlockStore"/> interface.
+    /// </summary>
     public static class IBlockStoreExt
     {
         public static IEnumerable<(ChainedHeader, Block)> BatchBlocksFrom(this IBlockStore blockStore, ChainedHeader previousBlock, ChainIndexer chainIndexer, CancellationTokenSource cancellationToken = null, int batchSize = 100)
@@ -66,7 +68,6 @@ namespace Stratis.Bitcoin.Interfaces
 
                 List<Block> blocks = blockStore.GetBlocks(hashes);
 
-                var buffer = new List<(ChainedHeader, Block)>();
                 for (int i = 0; i < blocks.Count && !(cancellationToken?.IsCancellationRequested ?? false); height++, i++)
                 {
                     ChainedHeader header = chainIndexer.GetHeader(height);

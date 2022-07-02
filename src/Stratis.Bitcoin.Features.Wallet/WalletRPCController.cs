@@ -15,6 +15,7 @@ using Stratis.Bitcoin.Controllers;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.RPC.Exceptions;
+using Stratis.Bitcoin.Features.RPC.Models;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Features.Wallet.Services;
@@ -800,6 +801,86 @@ namespace Stratis.Bitcoin.Features.Wallet
             }
 
             return unspentCoins.ToArray();
+        }
+
+        [ActionName("listtransactions")]
+        [ActionDescription("Returns an array of transactions belonging to this wallet.")]
+        public TransactionInfoModel[] ListTransactions(string label = "*", int count = 10, int skip = 0, bool include_watchonly = true)
+        {
+            WalletAccountReference accountReference = this.GetWalletAccountReference();
+
+            Func<HdAccount, bool> accountFilter = a =>
+            {
+                var labelMatch = label == "*" || a.Name == label;
+
+                return include_watchonly
+                    ? (a.Index == Wallet.WatchOnlyAccountIndex || a.Index < Wallet.SpecialPurposeAccountIndexesStart) && labelMatch
+                    : (a.Index < Wallet.SpecialPurposeAccountIndexesStart) && labelMatch;
+            };
+
+            var transactions = this.walletManager.GetAllTransactionsInWallet(accountReference.WalletName, accountFilter);
+
+            var filteredTransactions = transactions
+                    .Skip(skip)
+                    .Take(count)
+                    .Select(tx => new TransactionInfoModel
+                    {
+                        BlockHash = tx.BlockHash.ToString(),
+                        Amount = tx.Amount,
+                        TxId = tx.Id.ToString(),
+                        BlockHeight = tx.BlockHeight ?? 0,
+                        Generated = tx.IsCoinBase ?? false,
+                        Confirmations = tx.BlockHeight.HasValue ? (this.walletManager.LastBlockHeight() + 1) - tx.BlockHeight.Value : 0,
+                        BlockIndex = tx.BlockIndex ?? 0
+                    })
+                    .ToArray();
+
+            return filteredTransactions;
+        }
+
+        [ActionName("listsinceblock")]
+        [ActionDescription("Returns an array of transactions belonging to this wallet since specified block.")]
+        public TransactionsSinceBlockModel ListSinceBlock(string blockhash = "", int targetConfirmations = 1)
+        {
+            WalletAccountReference accountReference = this.GetWalletAccountReference();
+            var transactions = this.walletManager.GetAllTransactionsInWallet(accountReference.WalletName, Wallet.NormalAccounts);
+
+            int? targetBlockHeight = null;
+
+            if (!string.IsNullOrEmpty(blockhash))
+            {
+                var transactionWithMatchingBlock = transactions.FirstOrDefault(b => b.BlockHash.ToString().Equals(blockhash, StringComparison.OrdinalIgnoreCase));
+                
+                if (transactionWithMatchingBlock == null)
+                {
+                    return new TransactionsSinceBlockModel { Transactions = Array.Empty<TransactionInfoModel>(), LastBlock = blockhash };
+                }
+
+                targetBlockHeight = transactionWithMatchingBlock.BlockHeight ?? 0;
+            }
+
+            var filteredTransactions = transactions
+                .Where(tx => !targetBlockHeight.HasValue || tx.BlockHeight >= targetBlockHeight.Value)
+                .Select(tx => new TransactionInfoModel
+                {
+                    BlockHash = tx.BlockHash.ToString(),
+                    Amount = tx.Amount,
+                    TxId = tx.Id.ToString(),
+                    BlockHeight = tx.BlockHeight ?? 0,
+                    Generated = tx.IsCoinBase ?? false,
+                    Confirmations = tx.BlockHeight.HasValue ? (this.walletManager.LastBlockHeight() + 1) - tx.BlockHeight.Value : 0,
+                    BlockIndex = tx.BlockIndex ?? 0
+                })
+                .Where(tx => tx.Confirmations >= targetConfirmations)
+                .ToArray();
+
+            return new TransactionsSinceBlockModel
+            {
+                Transactions = filteredTransactions,
+                LastBlock = string.IsNullOrEmpty(blockhash)
+                    ? filteredTransactions.LastOrDefault()?.BlockHash
+                    : blockhash
+            };
         }
 
         [ActionName("sendmany")]
