@@ -80,6 +80,8 @@ namespace Stratis.Bitcoin.Features.Consensus
 
         public static void ConfigureCoinDatabaseImplementation(this IServiceCollection services, DbType coindbType)
         {
+            services.Replace<IScriptAddressReader>((p, old) => old ?? new ScriptAddressReader(), ServiceLifetime.Singleton);
+
             switch (coindbType)
             {
                 case DbType.Dbreeze:
