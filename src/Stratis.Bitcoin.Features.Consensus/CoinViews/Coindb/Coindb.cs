@@ -210,17 +210,6 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         }
 
         /// <inheritdoc />
-        public int GetMinRewindHeight()
-        {
-            // Find the first row with a rewind table key prefix.
-            var res = this.coinDb.GetAll(RewindTable, keysOnly: true, firstKey: new byte[] { }).FirstOrDefault();
-            if (res == default || res.Item1.Length != 5)
-                return -1;
-
-            return BitConverter.ToInt32(res.Item1.SafeSubarray(0, 4).Reverse().ToArray());
-        }
-
-        /// <inheritdoc />
         public HashHeightPair Rewind(HashHeightPair target)
         {
             HashHeightPair current = this.GetTipHash();

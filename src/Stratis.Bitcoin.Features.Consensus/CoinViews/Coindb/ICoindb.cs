@@ -72,14 +72,6 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// <returns>See <see cref="RewindData"/>.</returns>
         RewindData GetRewindData(int height);
 
-        /// <summary>Gets the minimum rewind height.</summary>
-        /// <returns>
-        /// <para>
-        /// The minimum rewind height or -1 if rewind is not possible.
-        /// </para>
-        /// </returns>
-        int GetMinRewindHeight();
-
         /// <summary>
         /// Returns a combination of (height, satoshis) values with the cumulative balance up to the corresponding height.
         /// </summary>
