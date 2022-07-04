@@ -52,9 +52,12 @@ namespace Stratis.Bitcoin.Features.Consensus
                 }
             }
 
-            foreach (IndexedTxOut output in transaction.Outputs.AsIndexedOutputs())
+            // Hash calculations are slow. Do this one outside the loop...
+            var txHash = transaction.GetHash();
+
+            foreach (IndexedTxOut output in transaction.Outputs.AsIndexedOutputs().ToList())
             {
-                var outpoint = output.ToOutPoint();
+                var outpoint = new OutPoint() { Hash = txHash, N = output.N };
                 var coinbase = transaction.IsCoinBase;
                 var coinstake = network.Consensus.IsProofOfStake ? transaction.IsCoinStake : false;
 

@@ -20,8 +20,10 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             {
                 if (enforceBIP30)
                 {
+                    // Calculate the hash outside the loop.
+                    var txId = tx.GetHash();
                     foreach (var utxo in tx.Outputs.AsIndexedOutputs())
-                        ids.Add(utxo.ToOutPoint());
+                        ids.Add(new OutPoint() { Hash = txId, N = utxo.N });
                 }
 
                 if (!tx.IsCoinBase)
