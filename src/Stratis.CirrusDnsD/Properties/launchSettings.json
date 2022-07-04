@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "Stratis.CirrusDnsD": {
-      "commandName": "Project",
-      "commandLineArgs": "-dnsfullnode -dnsnameserver=cirrusmainseeder1.stratisnetwork.com -dnshostname=cirrusmain1.stratisnetwork.com -dnsmailbox=info@stratisplatform.com"
-    }
-  }
-}
