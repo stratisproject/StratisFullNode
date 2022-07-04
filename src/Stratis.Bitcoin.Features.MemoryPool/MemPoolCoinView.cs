@@ -49,6 +49,11 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             this.Set = new UnspentOutputSet();
         }
 
+        public void Initialize(ChainedHeader chainTip, ChainIndexer chainIndexer)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Gets the unspent transaction output set.
         /// </summary>

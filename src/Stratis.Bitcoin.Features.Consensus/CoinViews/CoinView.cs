@@ -11,6 +11,13 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
     public interface ICoinView
     {
         /// <summary>
+        /// Initializes the coin view.
+        /// </summary>
+        /// <param name="chainTip">The chain tip.</param>
+        /// <param name="chainIndexer">The chain indexer.</param>
+        void Initialize(ChainedHeader chainTip, ChainIndexer chainIndexer);
+
+        /// <summary>
         /// Retrieves the block hash of the current tip of the coinview.
         /// </summary>
         /// <returns>Block hash of the current tip of the coinview.</returns>

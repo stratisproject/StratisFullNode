@@ -34,6 +34,12 @@ namespace Stratis.Bitcoin.Tests.Consensus
         }
 
         /// <inheritdoc />
+        public void Initialize(ChainedHeader chainTip, ChainIndexer chainIndexer)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <inheritdoc />
         public HashHeightPair GetTipHash()
         {
             return this.tipHash;
