@@ -26,6 +26,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules
         public ICoinView UtxoSet { get; }
 
         private readonly CoinviewPrefetcher prefetcher;
+        private readonly ConsensusRulesContainer consensusRulesContainer;
 
         public PowConsensusRuleEngine(Network network, ILoggerFactory loggerFactory, IDateTimeProvider dateTimeProvider, ChainIndexer chainIndexer,
             NodeDeployments nodeDeployments, ConsensusSettings consensusSettings, ICheckpoints checkpoints, ICoinView utxoSet, IChainState chainState,
@@ -33,6 +34,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules
             : base(network, loggerFactory, dateTimeProvider, chainIndexer, nodeDeployments, consensusSettings, checkpoints, chainState, invalidBlockHashStore, nodeStats, consensusRulesContainer)
         {
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+
+            this.consensusRulesContainer = consensusRulesContainer;
 
             this.UtxoSet = utxoSet;
             this.prefetcher = new CoinviewPrefetcher(this.UtxoSet, chainIndexer, loggerFactory, asyncProvider, checkpoints);
@@ -67,7 +70,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules
         {
             base.Initialize(chainTip);
 
-            this.UtxoSet.Initialize(chainTip, this.ChainIndexer);
+            this.UtxoSet.Initialize(chainTip, this.ChainIndexer, this.consensusRulesContainer);
         }
 
         public override async Task<ValidationContext> FullValidationAsync(ChainedHeader header, Block block)
