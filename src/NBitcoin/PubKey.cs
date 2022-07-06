@@ -174,9 +174,13 @@ namespace NBitcoin
             return Verify(hash, ECDSASignature.FromDER(sig));
         }
 
+        private string hexStr = null;
+
         public string ToHex()
         {
-            return Encoders.Hex.EncodeData(this.vch);
+            this.hexStr ??= Encoders.Hex.EncodeData(this.vch);
+
+            return this.hexStr;
         }
 
         #region IBitcoinSerializable Members
@@ -184,7 +188,12 @@ namespace NBitcoin
         public void ReadWrite(BitcoinStream stream)
         {
             stream.ReadWrite(ref this.vch);
-            if(!stream.Serializing) this._ECKey = new ECKey(this.vch, false);
+
+            if (!stream.Serializing)
+            {
+                this._ECKey = new ECKey(this.vch, false);
+                this.hexStr = null;
+            }
         }
 
         #endregion
@@ -345,18 +354,33 @@ namespace NBitcoin
 
         public override bool Equals(object obj)
         {
-            var item = obj as PubKey;
-            if(item == null)
-                return false;
-            return ToHex().Equals(item.ToHex());
+            return obj != null && Equals(obj as PubKey);
         }
+
+        public bool Equals(PubKey other)
+        {
+            if ((object)other == null)
+                return false;
+
+            if (other.vch.Length != this.vch.Length)
+                return false;
+
+            for (int i = 0; i < other.vch.Length; i++)
+                if (other.vch[i] != this.vch[i])
+                    return false;
+
+            return true;
+        }
+
         public static bool operator ==(PubKey a, PubKey b)
         {
-            if(ReferenceEquals(a, b))
+            if (ReferenceEquals(a, b))
                 return true;
-            if(((object)a == null) || ((object)b == null))
+
+            if (((object)a == null) != ((object)b == null))
                 return false;
-            return a.ToHex() == b.ToHex();
+
+            return a.Equals(b);
         }
 
         public static bool operator !=(PubKey a, PubKey b)
@@ -366,17 +390,19 @@ namespace NBitcoin
 
         public override int GetHashCode()
         {
-            return ToHex().GetHashCode();
+            return (((((this.vch[1] << 8) + this.vch[2]) << 8) + this.vch[3]) << 8) + this.vch[4];
         }
 
         public PubKey UncoverSender(Key ephem, PubKey scan)
         {
             return Uncover(ephem, scan);
         }
+
         public PubKey UncoverReceiver(Key scan, PubKey ephem)
         {
             return Uncover(scan, ephem);
         }
+
         public PubKey Uncover(Key priv, PubKey pub)
         {
             X9ECParameters curve = ECKey.Secp256k1;
