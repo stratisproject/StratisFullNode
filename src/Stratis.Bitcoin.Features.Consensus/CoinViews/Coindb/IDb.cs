@@ -11,8 +11,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         byte[] Get(byte table, byte[] key);
 
-        IEnumerable<(byte[], byte[])> GetAll(byte table, bool keysOnly = false, bool ascending = true,
-            byte[] firstKey = null, byte[] lastKey = null, bool includeFirstKey = true, bool includeLastKey = true);
+        IDbIterator GetIterator(byte table);
 
         IDbBatch GetWriteBatch();
 
@@ -77,6 +76,108 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         public static ReadWriteBatch GetReadWriteBatch(this IDb db)
         {
             return new ReadWriteBatch(db);
+        }
+    }
+
+    public interface IDbIterator : IDisposable
+    {
+        void Seek(byte[] key);
+        void SeekToLast();
+        void Next();
+        void Prev();
+        bool IsValid();
+        byte[] Key();
+        byte[] Value();
+    }
+
+    public static class IDbIteratorExt
+    {
+        private static ByteArrayComparer byteArrayComparer = new ByteArrayComparer();
+
+        public static IEnumerable<(byte[], byte[])> GetAll(this IDbIterator iterator, bool keysOnly = false, bool ascending = true,
+            byte[] firstKey = null, byte[] lastKey = null, bool includeFirstKey = true, bool includeLastKey = true)
+        {
+            bool done = false;
+            Func<byte[], bool> breakLoop;
+            Action next;
+
+            if (!ascending)
+            {
+                // Seek to the last key if it was provided.
+                if (lastKey == null)
+                    iterator.SeekToLast();
+                else
+                {
+                    iterator.Seek(lastKey);
+                    if (!(includeLastKey && iterator.IsValid() && byteArrayComparer.Equals(iterator.Key(), lastKey)))
+                        iterator.Prev();
+                }
+
+                breakLoop = (firstKey == null) ? (Func<byte[], bool>)null : (keyBytes) =>
+                {
+                    int compareResult = byteArrayComparer.Compare(keyBytes, firstKey);
+                    if (compareResult <= 0)
+                    {
+                        // If this is the first key and its not included or we've overshot the range then stop without yielding a value.
+                        if (!includeFirstKey || compareResult < 0)
+                            return true;
+
+                        // Stop after yielding the value.
+                        done = true;
+                    }
+
+                    // Keep going.
+                    return false;
+                };
+
+                next = () => iterator.Prev();
+            }
+            else /* Ascending */
+            {
+                // Seek to the first key if it was provided.
+                if (firstKey == null)
+                    iterator.Seek(new byte[0]);
+                else
+                {
+                    iterator.Seek(firstKey);
+                    if (!(includeFirstKey && iterator.IsValid() && byteArrayComparer.Equals(iterator.Key(), firstKey)))
+                        iterator.Next();
+                }
+
+                breakLoop = (lastKey == null) ? (Func<byte[], bool>)null : (keyBytes) =>
+                {
+                    int compareResult = byteArrayComparer.Compare(keyBytes, lastKey);
+                    if (compareResult >= 0)
+                    {
+                        // If this is the last key and its not included or we've overshot the range then stop without yielding a value.
+                        if (!includeLastKey || compareResult > 0)
+                            return true;
+
+                        // Stop after yielding the value.
+                        done = true;
+                    }
+
+                    // Keep going.
+                    return false;
+                };
+
+                next = () => iterator.Next();
+            }
+
+            while (iterator.IsValid())
+            {
+                byte[] keyBytes = iterator.Key();
+
+                if (breakLoop != null && breakLoop(keyBytes))
+                    break;
+
+                yield return (keyBytes, keysOnly ? null : iterator.Value());
+
+                if (done)
+                    break;
+
+                next();
+            }
         }
     }
 }

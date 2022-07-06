@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using RocksDbSharp;
 using NBitcoin;
 
@@ -31,6 +29,62 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         }
     }
 
+    public class RocksDbIterator : IDbIterator
+    {
+        byte table;
+        Iterator iterator;
+
+        public RocksDbIterator(byte table, Iterator iterator)
+        {
+            this.table = table;
+            this.iterator = iterator;
+        }
+
+        public void Seek(byte[] key)
+        {
+            this.iterator.Seek(new[] { this.table }.Concat(key).ToArray());
+        }
+
+        public void SeekToLast()
+        {
+            this.iterator.Seek(new[] { (byte)(this.table + 1) });
+            if (!this.iterator.Valid())
+                this.iterator.SeekToLast();
+            else
+                this.iterator.Prev();
+        }
+
+        public void Next()
+        {
+            this.iterator.Next();
+        }
+
+        public void Prev()
+        {
+            this.iterator.Prev();
+        }
+
+        public bool IsValid()
+        {
+            return this.iterator.Valid() && this.iterator.Value()[0] == this.table;
+        }
+
+        public byte[] Key()
+        {
+            return this.iterator.Key().Skip(1).ToArray();
+        }
+
+        public byte[] Value()
+        {
+            return this.iterator.Value();
+        }
+
+        public void Dispose()
+        {
+            this.iterator.Dispose();
+        }
+    }
+
     public class RocksDb : IDb
     {
         private static ByteArrayComparer byteArrayComparer = new ByteArrayComparer();
@@ -41,6 +95,11 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         public RocksDb()
         {
+        }
+
+        public IDbIterator GetIterator(byte table)
+        {
+            return new RocksDbIterator(table, this.db.NewIterator());
         }
 
         public void Open(string name)
@@ -61,118 +120,6 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         public byte[] Get(byte table, byte[] key)
         {
             return this.db.Get(new[] { table }.Concat(key).ToArray());
-        }
-
-        public IEnumerable<(byte[], byte[])> GetAll(byte keyPrefix, bool keysOnly = false, bool ascending = true,
-            byte[] firstKey = null, byte[] lastKey = null, bool includeFirstKey = true, bool includeLastKey = true)
-        {
-            using (Iterator iterator = this.db.NewIterator())
-            {
-                byte[] firstKeyBytes = (firstKey == null) ? null : new[] { keyPrefix }.Concat(firstKey).ToArray();
-                byte[] lastKeyBytes = (lastKey == null) ? null : new[] { keyPrefix }.Concat(lastKey).ToArray();
-                bool done = false;
-                Func<byte[], bool> breakLoop;
-                Action next;
-
-                if (!ascending)
-                {
-                    if (lastKeyBytes == null)
-                    {
-                        // If no last key was provided then seek to the last record with this prefix
-                        // by first seeking to the first record with the next prefix...
-                        iterator.Seek(new[] { (byte)(keyPrefix + 1) });
-
-                        // ...then back up to the previous value if the iterator is still valid.
-                        if (iterator.Valid())
-                            iterator.Prev();
-                        else
-                            // If the iterator is invalid then there were no records with greater prefixes.
-                            // In this case we can simply seek to the last record.
-                            iterator.SeekToLast();
-                    }
-                    else
-                    {
-                        // Seek to the last key if it was provided.
-                        iterator.Seek(lastKeyBytes);
-
-                        // If it won't be returned, and is current/found, then move to the previous value.
-                        if (!iterator.Valid())
-                            iterator.SeekToLast();
-                        else if (!(includeLastKey && byteArrayComparer.Equals(iterator.Key(), lastKeyBytes)))
-                            iterator.Prev();
-                    }
-
-                    breakLoop = (firstKeyBytes == null) ? (Func<byte[], bool>)null : (keyBytes) =>
-                    {
-                        int compareResult = byteArrayComparer.Compare(keyBytes, firstKeyBytes);
-                        if (compareResult <= 0)
-                        {
-                            // If this is the first key and its not included or we've overshot the range then stop without yielding a value.
-                            if (!includeFirstKey || compareResult < 0)
-                                return true;
-
-                            // Stop after yielding the value.
-                            done = true;
-                        }
-
-                        // Keep going.
-                        return false;
-                    };
-
-                    next = () => iterator.Prev();
-                }
-                else /* Ascending */
-                {
-                    if (firstKeyBytes == null)
-                    {
-                        // If no first key was provided then use the key prefix to find the first value.
-                        iterator.Seek(new[] { keyPrefix });
-                    }
-                    else
-                    {
-                        // Seek to the first key if it was provided.
-                        iterator.Seek(firstKeyBytes);
-
-                        // If it won't be returned, and is current/found, then move to the next value.
-                        if (!includeFirstKey && iterator.Valid() && byteArrayComparer.Equals(iterator.Key(), firstKeyBytes))
-                            iterator.Next();
-                    }
-
-                    breakLoop = (lastKeyBytes == null) ? (Func<byte[], bool>)null : (keyBytes) =>
-                    {
-                        int compareResult = byteArrayComparer.Compare(keyBytes, lastKeyBytes);
-                        if (compareResult >= 0)
-                        {
-                            // If this is the last key and its not included or we've overshot the range then stop without yielding a value.
-                            if (!includeLastKey || compareResult > 0)
-                                return true;
-
-                            // Stop after yielding the value.
-                            done = true;
-                        }
-
-                        // Keep going.
-                        return false;
-                    };
-
-                    next = () => iterator.Next();
-                }
-
-                while (iterator.Valid())
-                {
-                    byte[] keyBytes = iterator.Key();
-
-                    if (keyBytes[0] != keyPrefix || (breakLoop != null && breakLoop(keyBytes)))
-                        break;
-
-                    yield return (keyBytes.Skip(1).ToArray(), keysOnly ? null : iterator.Value());
-
-                    if (done)
-                        break;
-
-                    next();
-                }
-            }
         }
 
         public void Dispose()
