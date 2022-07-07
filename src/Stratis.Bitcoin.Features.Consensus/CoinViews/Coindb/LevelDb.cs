@@ -4,7 +4,7 @@ using NBitcoin;
 
 namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 {
-    /// <inheritdoc/>
+    /// <summary>A minimal LevelDb wrapper that makes it compliant with the <see cref="IDb"/> interface.</summary>
     public class LevelDb : IDb
     {
         private string dbPath;
@@ -42,7 +42,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         }
     }
 
-    /// <inheritdoc/>
+    /// <summary>A minimal LevelDb wrapper that makes it compliant with the <see cref="IDbBatch"/> interface.</summary>
     public class LevelDbBatch : WriteBatch, IDbBatch
     {
         DB db;
@@ -68,7 +68,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         }
     }
 
-    /// <inheritdoc/>
+    /// <summary>A minimal LevelDb wrapper that makes it compliant with the <see cref="IDbIterator"/> interface.</summary>
     public class LevelDbIterator : IDbIterator
     {
         byte table;

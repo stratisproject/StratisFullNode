@@ -4,7 +4,7 @@ using NBitcoin;
 
 namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 {
-    /// <inheritdoc/>
+    /// <summary>A minimal RocksDb wrapper that makes it compliant with the <see cref="IDb"/> interface.</summary>
     public class RocksDb : IDb
     {
         private string dbPath;
@@ -42,7 +42,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         }
     }
 
-    /// <inheritdoc/>
+    /// <summary>A minimal RocksDb wrapper that makes it compliant with the <see cref="IDbBatch"/> interface.</summary>
     public class RocksDbBatch : WriteBatch, IDbBatch
     {
         RocksDbSharp.RocksDb db;
@@ -68,7 +68,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         }
     }
 
-    /// <inheritdoc/>
+    /// <summary>A minimal RocksDb wrapper that makes it compliant with the <see cref="IDbIterator"/> interface.</summary>
     public class RocksDbIterator : IDbIterator
     {
         byte table;
