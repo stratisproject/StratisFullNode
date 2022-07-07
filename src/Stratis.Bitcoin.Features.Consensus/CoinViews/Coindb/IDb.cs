@@ -77,7 +77,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
     /// A batch that can be used to record changes that can be applied atomically.
     /// </summary>
     /// <remarks>The supplied <see cref="Get"/> method will immediately reflect any changes that have 
-    /// been made or retrieve the value from the underlying database. However the database <see cref="IDb.Get"/> method
+    /// been made or retrieve the value from the underlying database. In contrast the database <see cref="IDb.Get"/> method
     /// will only show the changes after the <see cref="Write"/> method is called.</remarks>
     public class ReadWriteBatch : IDbBatch
     {
