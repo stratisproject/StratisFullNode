@@ -110,12 +110,12 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
             EnsureCoinDatabaseIntegrity();
 
-            Block genesis = this.network.GetGenesis();
-
             if (this.GetTipHash() == null)
             {
                 using (var batch = this.coinDb.GetWriteBatch())
                 {
+                    Block genesis = this.network.GetGenesis();
+
                     this.SetBlockHash(batch, new HashHeightPair(genesis.GetHash(), 0));
                     batch.Write();
                 }

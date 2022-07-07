@@ -4,6 +4,45 @@ using NBitcoin;
 
 namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 {
+    /// <inheritdoc/>
+    public class LevelDb : IDb
+    {
+        private string dbPath;
+
+        DB db;
+
+        public IDbIterator GetIterator(byte table)
+        {
+            return new LevelDbIterator(table, this.db.CreateIterator());
+        }
+
+        public void Open(string dbPath)
+        {
+            this.dbPath = dbPath;
+            this.db = new DB(new Options() { CreateIfMissing = true }, dbPath);
+        }
+
+        public void Clear()
+        {
+            this.db.Dispose();
+            System.IO.Directory.Delete(this.dbPath, true);
+            this.db = new DB(new Options() { CreateIfMissing = true }, this.dbPath);
+        }
+
+        public IDbBatch GetWriteBatch() => new LevelDbBatch(this.db);
+
+        public byte[] Get(byte table, byte[] key)
+        {
+            return this.db.Get(new[] { table }.Concat(key).ToArray());
+        }
+
+        public void Dispose()
+        {
+            this.db.Dispose();
+        }
+    }
+
+    /// <inheritdoc/>
     public class LevelDbBatch : WriteBatch, IDbBatch
     {
         DB db;
@@ -29,6 +68,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         }
     }
 
+    /// <inheritdoc/>
     public class LevelDbIterator : IDbIterator
     {
         byte table;
@@ -82,47 +122,6 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         public void Dispose()
         {
             this.iterator.Dispose();
-        }
-    }
-
-    public class LevelDb : IDb
-    {
-        private string name;
-
-        DB db;
-
-        public LevelDb() 
-        {
-        }
-
-        public IDbIterator GetIterator(byte table)
-        {
-            return new LevelDbIterator(table, this.db.CreateIterator());
-        }
-
-        public void Open(string name)
-        {
-            this.name = name;
-            this.db = new DB(new Options() { CreateIfMissing = true }, name);
-        }
-
-        public void Clear()
-        {
-            this.db.Dispose();
-            System.IO.Directory.Delete(this.name, true);
-            this.db = new DB(new Options() { CreateIfMissing = true }, this.name);
-        }
-
-        public IDbBatch GetWriteBatch() => new LevelDbBatch(this.db);
-
-        public byte[] Get(byte table, byte[] key)
-        {
-            return this.db.Get(new[] { table }.Concat(key).ToArray());
-        }
-
-        public void Dispose()
-        {
-            this.db.Dispose();
         }
     }
 }

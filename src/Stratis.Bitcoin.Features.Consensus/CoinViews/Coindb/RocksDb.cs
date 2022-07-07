@@ -4,6 +4,45 @@ using NBitcoin;
 
 namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 {
+    /// <inheritdoc/>
+    public class RocksDb : IDb
+    {
+        private string dbPath;
+
+        RocksDbSharp.RocksDb db;
+
+        public IDbIterator GetIterator(byte table)
+        {
+            return new RocksDbIterator(table, this.db.NewIterator());
+        }
+
+        public void Open(string dbPath)
+        {
+            this.dbPath = dbPath;
+            this.db = RocksDbSharp.RocksDb.Open(new DbOptions().SetCreateIfMissing(), dbPath);
+        }
+
+        public void Clear()
+        {
+            this.db.Dispose();
+            System.IO.Directory.Delete(this.dbPath, true);
+            this.db = RocksDbSharp.RocksDb.Open(new DbOptions().SetCreateIfMissing(), this.dbPath);
+        }
+
+        public IDbBatch GetWriteBatch() => new RocksDbBatch(this.db);
+
+        public byte[] Get(byte table, byte[] key)
+        {
+            return this.db.Get(new[] { table }.Concat(key).ToArray());
+        }
+
+        public void Dispose()
+        {
+            this.db.Dispose();
+        }
+    }
+
+    /// <inheritdoc/>
     public class RocksDbBatch : WriteBatch, IDbBatch
     {
         RocksDbSharp.RocksDb db;
@@ -29,6 +68,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         }
     }
 
+    /// <inheritdoc/>
     public class RocksDbIterator : IDbIterator
     {
         byte table;
@@ -82,49 +122,6 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         public void Dispose()
         {
             this.iterator.Dispose();
-        }
-    }
-
-    public class RocksDb : IDb
-    {
-        private static ByteArrayComparer byteArrayComparer = new ByteArrayComparer();
-
-        private string name;
-
-        RocksDbSharp.RocksDb db;
-
-        public RocksDb()
-        {
-        }
-
-        public IDbIterator GetIterator(byte table)
-        {
-            return new RocksDbIterator(table, this.db.NewIterator());
-        }
-
-        public void Open(string name)
-        {
-            this.name = name;
-            this.db = RocksDbSharp.RocksDb.Open(new DbOptions().SetCreateIfMissing(), name);
-        }
-
-        public void Clear()
-        {
-            this.db.Dispose();
-            System.IO.Directory.Delete(this.name, true);
-            this.db = RocksDbSharp.RocksDb.Open(new DbOptions().SetCreateIfMissing(), this.name);
-        }
-
-        public IDbBatch GetWriteBatch() => new RocksDbBatch(this.db);
-
-        public byte[] Get(byte table, byte[] key)
-        {
-            return this.db.Get(new[] { table }.Concat(key).ToArray());
-        }
-
-        public void Dispose()
-        {
-            this.db.Dispose();
         }
     }
 }
