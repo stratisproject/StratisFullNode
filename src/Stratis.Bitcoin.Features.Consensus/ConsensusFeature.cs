@@ -40,8 +40,6 @@ namespace Stratis.Bitcoin.Features.Consensus
             this.signals = signals;
             this.consensusManager = consensusManager;
             this.nodeDeployments = nodeDeployments;
-
-            this.chainState.MaxReorgLength = network.Consensus.MaxReorgLength;
         }
 
         /// <inheritdoc />

@@ -2,9 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -126,7 +127,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             {
                 this.mempoolOrphans.RemoveForBlock(transactionsToRemove);
 
-                this.logger.Debug("Removed {0} transactions from mempool", transactionsToRemove.Count);
+                this.logger.LogDebug("Removed {0} transactions from mempool", transactionsToRemove.Count);
             }
 
             return Task.CompletedTask;

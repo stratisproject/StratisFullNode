@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Policy;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Utilities;
@@ -103,7 +104,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 if (!transactionBuilder.Verify(transaction, out TransactionPolicyError[] errors))
                 {
                     string errorsMessage = string.Join(" - ", errors.Select(s => s.ToString()));
-                    this.logger.Error($"Build transaction failed: {errorsMessage}");
+                    this.logger.LogError($"Build transaction failed: {errorsMessage}");
                     throw new WalletException($"Could not build the transaction. Details: {errorsMessage}");
                 }
             }

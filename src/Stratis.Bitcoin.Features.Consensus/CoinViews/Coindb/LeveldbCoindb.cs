@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using LevelDB;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.Consensus.CoinViews
@@ -43,6 +44,8 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         private DB leveldb;
 
         private readonly DBreezeSerializer dBreezeSerializer;
+
+        private const int MaxRewindBatchSize = 10000;
 
         public LevelDbCoindb(Network network, DataFolder dataFolder, IDateTimeProvider dateTimeProvider,
             INodeStats nodeStats, DBreezeSerializer dBreezeSerializer)
@@ -85,7 +88,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     byte[] row2 = (current.Height > 1) ? this.leveldb.Get(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(current.Height - 1)).ToArray()) : new byte[] { };
                     if (row2 != null)
                     {
-                        this.logger.Info("Fixing the coin db.");
+                        this.logger.LogInformation("Fixing the coin db.");
 
                         var rows = new Dictionary<int, byte[]>();
 
@@ -131,14 +134,20 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             Block genesis = this.network.GetGenesis();
 
             if (this.GetTipHash() == null)
-                this.SetBlockHash(new HashHeightPair(genesis.GetHash(), 0));
+            {
+                using (var batch = new WriteBatch())
+                {
+                    this.SetBlockHash(batch, new HashHeightPair(genesis.GetHash(), 0));
+                    this.leveldb.Write(batch, new WriteOptions() { Sync = true });
+                }
+            }
 
-            this.logger.Info("Coinview initialized with tip '{0}'.", this.persistedCoinviewTip);
+            this.logger.LogInformation("Coinview initialized with tip '{0}'.", this.persistedCoinviewTip);
         }
 
         private void EnsureCoinDatabaseIntegrity(ChainedHeader chainTip)
         {
-            this.logger.Info("Checking coin database integrity...");
+            this.logger.LogInformation("Checking coin database integrity...");
 
             var heightToCheck = chainTip.Height;
 
@@ -153,23 +162,21 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
             } while (true);
 
-            using (var batch = new WriteBatch())
+            for (int height = heightToCheck - 1; height > chainTip.Height;)
             {
-                for (int height = heightToCheck - 1; height > chainTip.Height; height--)
-                {
-                    this.logger.Info($"Fixing coin database, deleting rewind data at height {height} above tip '{chainTip}'.");
+                this.logger.LogInformation($"Fixing coin database, deleting rewind data at height {height} above tip '{chainTip}'.");
 
-                    RewindInternal(batch, height);
-                }
+                // Do a batch of rewinding.
+                height = RewindInternal(height, new HashHeightPair(chainTip)).Height;
             }
 
-            this.logger.Info("Coin database integrity good.");
+            this.logger.LogInformation("Coin database integrity good.");
         }
 
-        private void SetBlockHash(HashHeightPair nextBlockHash)
+        private void SetBlockHash(WriteBatch batch, HashHeightPair nextBlockHash)
         {
             this.persistedCoinviewTip = nextBlockHash;
-            this.leveldb.Put(new byte[] { blockTable }.Concat(blockHashKey).ToArray(), nextBlockHash.ToBytes());
+            batch.Put(new byte[] { blockTable }.Concat(blockHashKey).ToArray(), nextBlockHash.ToBytes());
         }
 
         public HashHeightPair GetTipHash()
@@ -200,7 +207,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     byte[] row = this.leveldb.Get(new byte[] { coinsTable }.Concat(outPoint.ToBytes()).ToArray());
                     Coins outputs = row != null ? this.dBreezeSerializer.Deserialize<Coins>(row) : null;
 
-                    this.logger.Debug("Outputs for '{0}' were {1}.", outPoint, outputs == null ? "NOT loaded" : "loaded");
+                    this.logger.LogDebug("Outputs for '{0}' were {1}.", outPoint, outputs == null ? "NOT loaded" : "loaded");
 
                     res.UnspentOutputs.Add(outPoint, new UnspentOutput(outPoint, outputs));
                 }
@@ -220,7 +227,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     HashHeightPair current = this.GetTipHash();
                     if (current != oldBlockHash)
                     {
-                        this.logger.Trace("(-)[BLOCKHASH_MISMATCH]");
+                        this.logger.LogTrace("(-)[BLOCKHASH_MISMATCH]");
                         throw new InvalidOperationException("Invalid oldBlockHash");
                     }
 
@@ -231,7 +238,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     {
                         if (coin.Coins == null)
                         {
-                            this.logger.Debug("Outputs of transaction ID '{0}' are prunable and will be removed from the database.", coin.OutPoint);
+                            this.logger.LogDebug("Outputs of transaction ID '{0}' are prunable and will be removed from the database.", coin.OutPoint);
                             batch.Delete(new byte[] { coinsTable }.Concat(coin.OutPoint.ToBytes()).ToArray());
                         }
                         else
@@ -245,7 +252,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     for (int i = 0; i < toInsert.Count; i++)
                     {
                         var coin = toInsert[i];
-                        this.logger.Debug("Outputs of transaction ID '{0}' are NOT PRUNABLE and will be inserted into the database. {1}/{2}.", coin.OutPoint, i, toInsert.Count);
+                        this.logger.LogDebug("Outputs of transaction ID '{0}' are NOT PRUNABLE and will be inserted into the database. {1}/{2}.", coin.OutPoint, i, toInsert.Count);
 
                         batch.Put(new byte[] { coinsTable }.Concat(coin.OutPoint.ToBytes()).ToArray(), this.dBreezeSerializer.Serialize(coin.Coins));
                     }
@@ -256,16 +263,15 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                         {
                             var nextRewindIndex = rewindData.PreviousBlockHash.Height + 1;
 
-                            this.logger.Debug("Rewind state #{0} created.", nextRewindIndex);
+                            this.logger.LogDebug("Rewind state #{0} created.", nextRewindIndex);
 
                             batch.Put(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(nextRewindIndex).Reverse()).ToArray(), this.dBreezeSerializer.Serialize(rewindData));
                         }
                     }
 
                     insertedEntities += unspentOutputs.Count;
+                    this.SetBlockHash(batch, nextBlockHash);
                     this.leveldb.Write(batch, new WriteOptions() { Sync = true });
-
-                    this.SetBlockHash(nextBlockHash);
                 }
             }
 
@@ -292,43 +298,49 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         }
 
         /// <inheritdoc />
-        public HashHeightPair Rewind()
+        public HashHeightPair Rewind(HashHeightPair target)
         {
-            using (var batch = new WriteBatch())
-            {
-                HashHeightPair current = this.GetTipHash();
-                return RewindInternal(batch, current.Height);
-            }
+            HashHeightPair current = this.GetTipHash();
+            return RewindInternal(current.Height, target);
         }
 
-        private HashHeightPair RewindInternal(WriteBatch batch, int height)
+        private HashHeightPair RewindInternal(int startHeight, HashHeightPair target)
         {
-            byte[] row = this.leveldb.Get(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(height).Reverse()).ToArray());
+            HashHeightPair res = null;
 
-            if (row == null)
-                throw new InvalidOperationException($"No rewind data found for block at height {height}.");
-
-            batch.Delete(BitConverter.GetBytes(height));
-
-            var rewindData = this.dBreezeSerializer.Deserialize<RewindData>(row);
-
-            foreach (OutPoint outPoint in rewindData.OutputsToRemove)
+            using (var batch = new WriteBatch())
             {
-                this.logger.Debug("Outputs of outpoint '{0}' will be removed.", outPoint);
-                batch.Delete(new byte[] { coinsTable }.Concat(outPoint.ToBytes()).ToArray());
+                for (int height = startHeight; height > (target?.Height ?? (startHeight - 1)) && height > (startHeight - MaxRewindBatchSize); height--)
+                {
+                    byte[] row = this.leveldb.Get(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(height).Reverse()).ToArray());
+
+                    if (row == null)
+                        throw new InvalidOperationException($"No rewind data found for block at height {height}.");
+
+                    batch.Delete(BitConverter.GetBytes(height));
+
+                    var rewindData = this.dBreezeSerializer.Deserialize<RewindData>(row);
+
+                    foreach (OutPoint outPoint in rewindData.OutputsToRemove)
+                    {
+                        this.logger.LogDebug("Outputs of outpoint '{0}' will be removed.", outPoint);
+                        batch.Delete(new byte[] { coinsTable }.Concat(outPoint.ToBytes()).ToArray());
+                    }
+
+                    foreach (RewindDataOutput rewindDataOutput in rewindData.OutputsToRestore)
+                    {
+                        this.logger.LogDebug("Outputs of outpoint '{0}' will be restored.", rewindDataOutput.OutPoint);
+                        batch.Put(new byte[] { coinsTable }.Concat(rewindDataOutput.OutPoint.ToBytes()).ToArray(), this.dBreezeSerializer.Serialize(rewindDataOutput.Coins));
+                    }
+
+                    res = rewindData.PreviousBlockHash;
+                }
+
+                this.SetBlockHash(batch, res);
+                this.leveldb.Write(batch, new WriteOptions() { Sync = true });
             }
 
-            foreach (RewindDataOutput rewindDataOutput in rewindData.OutputsToRestore)
-            {
-                this.logger.Debug("Outputs of outpoint '{0}' will be restored.", rewindDataOutput.OutPoint);
-                batch.Put(new byte[] { coinsTable }.Concat(rewindDataOutput.OutPoint.ToBytes()).ToArray(), this.dBreezeSerializer.Serialize(rewindDataOutput.Coins));
-            }
-
-            this.leveldb.Write(batch, new WriteOptions() { Sync = true });
-
-            this.SetBlockHash(rewindData.PreviousBlockHash);
-
-            return rewindData.PreviousBlockHash;
+            return res;
         }
 
         public RewindData GetRewindData(int height)
@@ -366,7 +378,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         {
             foreach (StakeItem blockStake in blocklist)
             {
-                this.logger.Trace("Loading POS block hash '{0}' from the database.", blockStake.BlockId);
+                this.logger.LogTrace("Loading POS block hash '{0}' from the database.", blockStake.BlockId);
                 byte[] stakeRow = this.leveldb.Get(new byte[] { stakeTable }.Concat(blockStake.BlockId.ToBytes(false)).ToArray());
 
                 if (stakeRow != null)

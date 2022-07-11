@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Numerics;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
 using Stratis.Bitcoin.Features.Interop.Payloads;
 using Stratis.Bitcoin.Features.PoA;
@@ -18,6 +19,8 @@ namespace Stratis.Bitcoin.Features.Interop
 {
     public sealed class InteropBehavior : NetworkPeerBehavior
     {
+        private readonly ChainIndexer chainIndexer;
+        private readonly ICirrusContractClient cirrusClient;
         private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
         private readonly IConversionRequestFeeService conversionRequestFeeService;
         private readonly IConversionRequestRepository conversionRequestRepository;
@@ -28,12 +31,16 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public InteropBehavior(
             Network network,
+            ChainIndexer chainIndexer,
+            ICirrusContractClient cirrusClient,
             IConversionRequestCoordinationService conversionRequestCoordinationService,
             IConversionRequestFeeService conversionRequestFeeService,
             IConversionRequestRepository conversionRequestRepository,
             IETHCompatibleClientProvider ethClientProvider,
             IFederationManager federationManager)
         {
+            this.chainIndexer = chainIndexer;
+            this.cirrusClient = cirrusClient;
             this.conversionRequestCoordinationService = conversionRequestCoordinationService;
             this.conversionRequestFeeService = conversionRequestFeeService;
             this.conversionRequestRepository = conversionRequestRepository;
@@ -48,20 +55,20 @@ namespace Stratis.Bitcoin.Features.Interop
         [NoTrace]
         public override object Clone()
         {
-            return new InteropBehavior(this.network, this.conversionRequestCoordinationService, this.conversionRequestFeeService, this.conversionRequestRepository, this.ethClientProvider, this.federationManager);
+            return new InteropBehavior(this.network, this.chainIndexer, this.cirrusClient, this.conversionRequestCoordinationService, this.conversionRequestFeeService, this.conversionRequestRepository, this.ethClientProvider, this.federationManager);
         }
 
         /// <inheritdoc/>
         protected override void AttachCore()
         {
-            this.logger.Debug("Attaching behaviour for {0}", this.AttachedPeer.PeerEndPoint.Address);
+            this.logger.LogDebug("Attaching behaviour for {0}", this.AttachedPeer.PeerEndPoint.Address);
             this.AttachedPeer.MessageReceived.Register(this.OnMessageReceivedAsync, true);
         }
 
         /// <inheritdoc/>
         protected override void DetachCore()
         {
-            this.logger.Debug("Detaching behaviour for {0}", this.AttachedPeer.PeerEndPoint.Address);
+            this.logger.LogDebug("Detaching behaviour for {0}", this.AttachedPeer.PeerEndPoint.Address);
             this.AttachedPeer.MessageReceived.Unregister(this.OnMessageReceivedAsync);
         }
 
@@ -73,12 +80,12 @@ namespace Stratis.Bitcoin.Features.Interop
             }
             catch (OperationCanceledException)
             {
-                this.logger.Trace("(-)[CANCELED_EXCEPTION]");
+                this.logger.LogTrace("(-)[CANCELED_EXCEPTION]");
                 return;
             }
             catch (Exception ex)
             {
-                this.logger.Error("Exception occurred: {0}", ex.ToString());
+                this.logger.LogError("Exception occurred: {0}", ex.ToString());
                 throw;
             }
         }
@@ -104,7 +111,7 @@ namespace Stratis.Bitcoin.Features.Interop
             }
             catch (OperationCanceledException)
             {
-                this.logger.Trace("(-)[CANCELED_EXCEPTION]");
+                this.logger.LogTrace("(-)[CANCELED_EXCEPTION]");
             }
         }
 
@@ -113,7 +120,7 @@ namespace Stratis.Bitcoin.Features.Interop
             if (!this.federationManager.IsFederationMember)
                 return;
 
-            this.logger.Debug("Conversion request payload request for id '{0}' received from '{1}':'{2}' proposing transaction ID '{4}'.", payload.RequestId, peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, payload.RequestId, payload.TransactionId);
+            this.logger.LogDebug($"Conversion request payload request for id '{payload.RequestId}' received from '{peer.PeerEndPoint.Address}':'{peer.RemoteSocketEndpoint.Address}' proposing transaction ID '{payload.TransactionId}', (IsTransfer: {payload.IsTransfer}).");
 
             if (payload.TransactionId == BigInteger.MinusOne)
                 return;
@@ -127,14 +134,14 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 if (!this.federationManager.IsMultisigMember(pubKey))
                 {
-                    this.logger.Warn("Conversion request payload for '{0}'. Computed pubkey '{1}'.", payload.RequestId, pubKey?.ToHex());
+                    this.logger.LogWarning("Conversion request payload for '{0}'. Computed pubkey '{1}'.", payload.RequestId, pubKey?.ToHex());
 
                     return;
                 }
             }
             catch (Exception)
             {
-                this.logger.Warn("Received malformed conversion request payload for '{0}'.", payload.RequestId);
+                this.logger.LogWarning("Received malformed conversion request payload for '{0}'.", payload.RequestId);
                 return;
             }
 
@@ -143,17 +150,21 @@ namespace Stratis.Bitcoin.Features.Interop
             try
             {
                 // Check that the transaction ID in the payload actually exists, and is unconfirmed.
-                confirmationCount = await this.ethClientProvider.GetClientForChain(payload.DestinationChain).GetMultisigConfirmationCountAsync(payload.TransactionId).ConfigureAwait(false);
+                if (payload.IsTransfer)
+                    confirmationCount = await this.cirrusClient.GetMultisigConfirmationCountAsync(payload.TransactionId, (ulong)this.chainIndexer.Tip.Height).ConfigureAwait(false);
+                else
+                    confirmationCount = await this.ethClientProvider.GetClientForChain(payload.DestinationChain).GetMultisigConfirmationCountAsync(payload.TransactionId).ConfigureAwait(false);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                this.logger.LogError($"An exception occurred trying to retrieve the confirmation count for multisig transaction id '{payload.TransactionId}', request id'{payload.RequestId}': {ex}");
                 return;
             }
 
             // We presume that the initial submitter of the transaction must have at least confirmed it. Otherwise just ignore this coordination attempt.
             if (confirmationCount < 1)
             {
-                this.logger.Info("Multisig wallet transaction {0} has no confirmations.", payload.TransactionId);
+                this.logger.LogInformation("Multisig wallet transaction {0} has no confirmations.", payload.TransactionId);
                 return;
             }
 
@@ -164,8 +175,11 @@ namespace Stratis.Bitcoin.Features.Interop
 
             if (payload.IsRequesting)
             {
+                // Execute a small delay to prevent network congestion.
+                await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+
                 string signature = this.federationManager.CurrentFederationKey.SignMessage(payload.RequestId + payload.TransactionId);
-                await this.AttachedPeer.SendMessageAsync(ConversionRequestPayload.Reply(payload.RequestId, payload.TransactionId, signature, payload.DestinationChain)).ConfigureAwait(false);
+                await this.AttachedPeer.SendMessageAsync(ConversionRequestPayload.Reply(payload.RequestId, payload.TransactionId, signature, payload.DestinationChain, payload.IsTransfer)).ConfigureAwait(false);
             }
         }
 
@@ -183,20 +197,25 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 if (!this.federationManager.IsMultisigMember(pubKey))
                 {
-                    this.logger.Warn("Received unverified fee proposal payload for '{0}' from pubkey '{1}'.", payload.RequestId, pubKey?.ToHex());
+                    this.logger.LogWarning("Received unverified fee proposal payload for '{0}' from pubkey '{1}'.", payload.RequestId, pubKey?.ToHex());
                     return;
                 }
             }
             catch (Exception)
             {
-                this.logger.Warn("Received malformed fee proposal payload for '{0}'.", payload.RequestId);
+                this.logger.LogWarning("Received malformed fee proposal payload for '{0}'.", payload.RequestId);
                 return;
             }
 
             // Reply back to the peer with this node's proposal.
             FeeProposalPayload replyToPayload = await this.conversionRequestFeeService.MultiSigMemberProposedInteropFeeAsync(payload.RequestId, payload.FeeAmount, pubKey).ConfigureAwait(false);
             if (payload.IsRequesting && replyToPayload != null)
+            {
+                // Execute a small delay to prevent network congestion.
+                await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+
                 await this.AttachedPeer.SendMessageAsync(replyToPayload).ConfigureAwait(false);
+            }
         }
 
         private async Task ProcessFeeAgreeAsync(FeeAgreePayload payload)
@@ -213,20 +232,25 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 if (!this.federationManager.IsMultisigMember(pubKey))
                 {
-                    this.logger.Warn("Received unverified fee vote payload for '{0}' from pubkey '{1}'.", payload.RequestId, pubKey?.ToHex());
+                    this.logger.LogWarning("Received unverified fee vote payload for '{0}' from pubkey '{1}'.", payload.RequestId, pubKey?.ToHex());
                     return;
                 }
             }
             catch (Exception)
             {
-                this.logger.Warn("Received malformed fee vote payload for '{0}'.", payload.RequestId);
+                this.logger.LogWarning("Received malformed fee vote payload for '{0}'.", payload.RequestId);
                 return;
             }
 
             // Reply back to the peer with this node's amount.
             FeeAgreePayload replyToPayload = await this.conversionRequestFeeService.MultiSigMemberAgreedOnInteropFeeAsync(payload.RequestId, payload.FeeAmount, pubKey).ConfigureAwait(false);
             if (payload.IsRequesting && replyToPayload != null)
+            {
+                // Execute a small delay to prevent network congestion.
+                await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+
                 await this.AttachedPeer.SendMessageAsync(replyToPayload).ConfigureAwait(false);
+            }
         }
     }
 }

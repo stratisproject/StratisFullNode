@@ -75,7 +75,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             throw new NotImplementedException();
         }
 
-        public HashHeightPair Rewind()
+        public HashHeightPair Rewind(HashHeightPair target)
         {
             throw new NotImplementedException();
         }

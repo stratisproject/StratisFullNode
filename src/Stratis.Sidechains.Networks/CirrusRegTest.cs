@@ -14,6 +14,8 @@ using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.PoA.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
+using Stratis.Bitcoin.Utilities.Extensions;
+using Stratis.Sidechains.Networks.Deployments;
 
 namespace Stratis.Sidechains.Networks
 {
@@ -109,6 +111,8 @@ namespace Stratis.Sidechains.Networks
                 votingEnabled: true,
                 autoKickIdleMembers: true)
             {
+                GetMiningTimestampV2ActivationHeight = 100,
+                GetMiningTimestampV2ActivationStrictHeight = 100,
                 PollExpiryBlocks = 450 // 2 hours
             };
 
@@ -119,7 +123,11 @@ namespace Stratis.Sidechains.Networks
                 [BuriedDeployments.BIP66] = 0
             };
 
-            var bip9Deployments = new NoBIP9Deployments();
+            var bip9Deployments = new CirrusBIP9Deployments()
+            {
+                // Deployment will go active once 75% of nodes are on 1.3.0.0 or later.
+                [CirrusBIP9Deployments.Release1300] = new BIP9DeploymentsParameters("Release1300", 0, new DateTime(2022, 3, 22).ToUnixTimestamp() /* Activation date lower bound */, DateTime.Now.AddDays(50).ToUnixTimestamp(), BIP9DeploymentsParameters.DefaultMainnetThreshold)
+            };
 
             this.Consensus = new Consensus(
                 consensusFactory: consensusFactory,

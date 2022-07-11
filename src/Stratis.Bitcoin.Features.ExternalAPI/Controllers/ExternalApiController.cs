@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
-using NLog;
+using Microsoft.Extensions.Logging;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 
@@ -70,7 +71,7 @@ namespace Stratis.Features.ExternalApi.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -92,7 +93,7 @@ namespace Stratis.Features.ExternalApi.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -114,7 +115,7 @@ namespace Stratis.Features.ExternalApi.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -136,7 +137,7 @@ namespace Stratis.Features.ExternalApi.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -158,7 +159,7 @@ namespace Stratis.Features.ExternalApi.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }

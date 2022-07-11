@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.PoA.Models;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Utilities;
@@ -72,7 +73,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -80,7 +81,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <summary>
         /// Retrieves a list of pending or "active" polls.
         /// </summary>
-        /// <param name="voteType">See <see cref="VoteKey"/>.</param>
+        /// <param name="voteType">See <see cref="VoteKey"/>0 = Kick Member, 1 - Add Member, 2 = Whitelist Hash, 3 = Remove Hash</param>
         /// <param name="pubKeyOfMemberBeingVotedOn">The public key of the member being voted on (in hexadecimal). If omitted or empty then all polls are returned.</param>
         /// <returns>Active polls</returns>
         /// <response code="200">Returns the active polls</response>
@@ -103,7 +104,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -111,7 +112,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <summary>
         /// Retrieves a list of finished polls.
         /// </summary>
-        /// <param name="voteType">See <see cref="VoteKey"/>.</param>
+        /// <param name="voteType">See <see cref="VoteKey"/>0 = Kick Member, 1 - Add Member, 2 = Whitelist Hash, 3 = Remove Hash</param>
         /// <param name="pubKeyOfMemberBeingVotedOn">The public key of the member being voted on (in hexadecimal). If omitted or empty then all polls are returned.</param>
         /// <returns>Finished polls</returns>
         /// <response code="200">Returns the finished polls</response>
@@ -134,7 +135,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -142,7 +143,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <summary>
         /// Retrieves a list of executed polls.
         /// </summary>
-        /// <param name="voteType">See <see cref="VoteKey"/>.</param>
+        /// <param name="voteType">See <see cref="VoteKey"/>0 = Kick Member, 1 - Add Member, 2 = Whitelist Hash, 3 = Remove Hash</param>
         /// <param name="pubKeyOfMemberBeingVotedOn">The public key of the member being voted on (in hexadecimal). If omitted or empty then all polls are returned.</param>
         /// <returns>Finished polls</returns>
         /// <response code="200">Returns the finished polls</response>
@@ -165,7 +166,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -191,7 +192,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -217,7 +218,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -242,7 +243,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -307,7 +308,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "There was a problem executing a command.", e.ToString());
             }
         }
@@ -334,7 +335,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -385,7 +386,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "There was a problem executing a vote to be scheduled.", e.ToString());
             }
         }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
@@ -112,12 +113,14 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
 
             var asyncProvider = new AsyncProvider(loggerFactory, new Mock<ISignals>().Object);
 
+            var finalizedBlockInfoRepository = new FinalizedBlockInfoRepository(new HashHeightPair());
+
             var stakeChain = new StakeChainStore(network, chain, null, loggerFactory);
             ConsensusRuleEngine consensusRules = new PosConsensusRuleEngine(network, loggerFactory, dateTimeProvider, chain, deployments, consensusSettings, new Checkpoints(),
                 inMemoryCoinView, stakeChain, new StakeValidator(network, stakeChain, chain, inMemoryCoinView, loggerFactory), chainState, new InvalidBlockHashStore(dateTimeProvider),
-                new NodeStats(dateTimeProvider, NodeSettings.Default(network), new Mock<IVersionProvider>().Object), new RewindDataIndexCache(dateTimeProvider, network, new FinalizedBlockInfoRepository(new HashHeightPair()), new Checkpoints()), asyncProvider, consensusRulesContainer).SetupRulesEngineParent();
+                new NodeStats(dateTimeProvider, NodeSettings.Default(network), new Mock<IVersionProvider>().Object), new RewindDataIndexCache(dateTimeProvider, network, finalizedBlockInfoRepository, new Checkpoints()), asyncProvider, consensusRulesContainer).SetupRulesEngineParent();
 
-            ConsensusManager consensus = ConsensusManagerHelper.CreateConsensusManager(network, dataDir, chainState, chainIndexer: chain, consensusRules: consensusRules, inMemoryCoinView: inMemoryCoinView);
+            IConsensusManager consensus = ConsensusManagerHelper.CreateConsensusManager(network, dataDir, chainState, chainIndexer: chain, consensusRules: consensusRules, inMemoryCoinView: inMemoryCoinView);
 
             var genesis = new ChainedHeader(network.GetGenesis().Header, network.GenesisHash, 0);
             chainState.BlockStoreTip = genesis;
@@ -190,6 +193,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
         /// </summary>
         /// <param name="network">Network to create the chain on.</param>
         /// <param name="scriptPubKey">Public key to create blocks/txs with.</param>
+        /// <param name="dataDir">The path of the data directory.</param>
         /// <param name="requireStandard">By default testnet and regtest networks do not require transactions to be standard. This changes that default.</param>
         /// <returns>Context object representing the test chain.</returns>
         public static async Task<ITestChainContext> CreateAsync(Network network, Script scriptPubKey, string dataDir, bool requireStandard = true)
@@ -235,7 +239,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
             ConsensusRuleEngine consensusRules = new PowConsensusRuleEngine(network, loggerFactory, dateTimeProvider, chain, deployments, consensusSettings, new Checkpoints(),
                 inMemoryCoinView, chainState, new InvalidBlockHashStore(dateTimeProvider), new NodeStats(dateTimeProvider, nodeSettings, new Mock<IVersionProvider>().Object), asyncProvider, consensusRulesContainer).SetupRulesEngineParent();
 
-            ConsensusManager consensus = ConsensusManagerHelper.CreateConsensusManager(network, dataDir, chainState, chainIndexer: chain, consensusRules: consensusRules, inMemoryCoinView: inMemoryCoinView);
+            IConsensusManager consensus = ConsensusManagerHelper.CreateConsensusManager(network, dataDir, chainState, chainIndexer: chain, consensusRules: consensusRules, inMemoryCoinView: inMemoryCoinView);
 
             var genesis = new ChainedHeader(network.GetGenesis().Header, network.GenesisHash, 0);
             chainState.BlockStoreTip = genesis;

@@ -217,13 +217,6 @@ namespace Stratis.Bitcoin.Features.ColdStaking
     /// <exception cref="InvalidOperationException">Thrown if this is not a Stratis network.</exception>
     public static class FullNodeBuilderColdStakingExtension
     {
-        // TODO: Move to IServiceCollection helper class.
-        public static bool RemoveSingleton<T>(this IServiceCollection services)
-        {
-            // Remove the service if it exists.
-            return services.Remove(services.Where(sd => sd.ServiceType == typeof(T)).FirstOrDefault());
-        }
-
         public static IFullNodeBuilder UseColdStakingWallet(this IFullNodeBuilder fullNodeBuilder)
         {
             // Ensure that this feature is only used on a Stratis network.
@@ -246,10 +239,10 @@ namespace Stratis.Bitcoin.Features.ColdStaking
                 .DependOn<RPCFeature>()
                 .FeatureServices(services =>
                 {
-                    services.RemoveSingleton<IWalletManager>();
+                    services.RemoveAll<IWalletManager>();
                     services.AddSingleton<IWalletManager, ColdStakingManager>();
 
-                    services.RemoveSingleton<IWalletService>();
+                    services.RemoveAll<IWalletService>();
                     services.AddSingleton<IWalletService, ColdStakingWalletService>();
 
                     services.AddSingleton<ScriptAddressReader>();

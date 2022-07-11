@@ -148,6 +148,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         protected abstract Money GetTransactionFee(UnspentOutputSet view, Transaction tx);
 
         /// <summary>Checks if transaction if final.</summary>
+        /// <param name="transaction">See <see cref="Transaction"/>.</param>
+        /// <param name="context">See <see cref="RuleContext"/>.</param>
+        /// <returns><c>true</c> if the transaction is final and <c>false</c> otherwise.</returns>
         protected virtual bool IsTxFinal(Transaction transaction, RuleContext context)
         {
             return transaction.IsFinal(context.ValidationContext.ChainedHeaderToValidate);
@@ -197,6 +200,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         /// Refer to <see cref="UpdateUTXOSet(RuleContext, Transaction)"/>.
         /// </para>
         /// </summary>
+        /// <param name="context">See <see cref="RuleContext"/>.</param>
+        /// <param name="transaction">See <see cref="Transaction"/>.</param>
         public abstract void UpdateCoinView(RuleContext context, Transaction transaction);
 
         /// <summary>
@@ -230,11 +235,12 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         }
 
         /// <summary>
-        /// Network specific logic that checks the maturity of UTXO sets.
-        /// <para>
-        /// Refer to <see cref="CheckMaturity(UnspentOutput, int)"/>.
-        /// </para>
+        /// Network-specific logic that checks the maturity of UTXOs.
         /// </summary>
+        /// <param name="coins">UTXOs to check the maturity of.</param>
+        /// <param name="spendHeight">Height at which coins are attempted to be spent.</param>
+        /// <exception cref="ConsensusErrors.BadTransactionPrematureCoinbaseSpending">Thrown if transaction tries to spend coinbase coins that are not mature.</exception>     
+        /// <exception cref="ConsensusErrors.BadTransactionPrematureCoinstakeSpending">Thrown if transaction tries to spend coinstake coins that are not mature.</exception>     
         public abstract void CheckMaturity(UnspentOutput coins, int spendHeight);
 
         /// <summary>
