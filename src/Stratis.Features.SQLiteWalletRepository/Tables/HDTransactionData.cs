@@ -271,14 +271,17 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                     ,       t.Address AS ReceiveAddress
                     ,       t.OutputBlockHeight as BlockHeight
                     FROM    HDTransactionData AS t
+                    -- We want to skip any rows that join up to this sub-query but only for non-staking receives.
+                    -- The idea is that any address appearing as both source and destination would otherwise be a change address that should be skipped.
                     LEFT    JOIN (
                             SELECT  DISTINCT SpendTxId, Address 
                             FROM    HDTransactionData AS t2
                             WHERE   t2.WalletId = {strWalletId} AND t2.SpendTxId is not null and t2.AccountIndex = {strAccountIndex}) t2					
                     ON      t2.SpendTxId = t.OutputTxId
                     AND     t2.Address = t.Address
+                    AND     t.OutputTxIsCoinbase = 0 -- Don't join up if staking.
                     WHERE   t.WalletId = {strWalletId} AND t.AccountIndex = {strAccountIndex}{((address == null) ? "" : $@" AND t.Address = {strAddress}")}
-                    AND     (t.OutputTxIsCoinbase != 0 OR t2.SpendTxId IS NULL){(!forCirrus ? "" : $@"
+                    AND     t2.SpendTxId IS NULL /* Not joining up */{(!forCirrus ? "" : $@"
                     AND     t.OutputTxIsCoinbase = 0")}
                     GROUP   BY t.OutputTxId
                     UNION   ALL";

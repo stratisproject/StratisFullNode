@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
 using SQLite;
@@ -164,13 +165,13 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
 
             var blockLocator = new BlockLocator()
             {
-                Blocks = this.BlockLocator.Split(',').Select(strHash => uint256.Parse(strHash)).ToList()
+                Blocks = this.BlockLocator.Split(',', System.StringSplitOptions.RemoveEmptyEntries).Select(strHash => uint256.Parse(strHash)).ToList()
             };
 
             List<int> locatorHeights = ChainedHeaderExt.GetLocatorHeights(this.LastBlockSyncedHeight);
 
             // Find a locator block at or below the chain tip.
-            for (int i = 0; i < locatorHeights.Count; i++)
+            for (int i = 0; i < Math.Min(locatorHeights.Count, blockLocator.Blocks.Count); i++)
             {
                 if (chainTip.Height < locatorHeights[i])
                     continue;
