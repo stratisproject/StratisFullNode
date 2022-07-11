@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
-using Stratis.Bitcoin.Base.Deployments.Models;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.PoA;
@@ -41,14 +40,12 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <param name="deposit">The deposit that will be injected into the <see cref="CrossChainTransferStore"/> that distributes a fee to all the multisig nodes
         /// for submitting a interop transfer. This is currently used for SRC20 to ERC20 transfers.</param>
         void AddInterOpFeeDeposit(IDeposit deposit);
-
-        int GetMainChainActivationHeight();
     }
 
     /// <inheritdoc cref="IMaturedBlocksSyncManager"/>
     public class MaturedBlocksSyncManager : IMaturedBlocksSyncManager
     {
-        private const string Release1300DeploymentNameLower = "release1300";
+        private const string Release1320DeploymentNameLower = "release1320";
         private readonly IAsyncProvider asyncProvider;
         private readonly ICrossChainTransferStore crossChainTransferStore;
         private readonly IFederationGatewayClient federationGatewayClient;
@@ -121,62 +118,14 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.logger = LogManager.GetCurrentClassLogger();
         }
 
-        public void RecordCounterChainActivations()
-        {
-            // If this is the main chain then ask the side-chain for its activation height.
-            if (!this.federatedPegSettings.IsMainChain)
-                return;
-
-            // Ensures that we only check this once on startup.
-            if (this.mainChainActivationHeight != int.MaxValue)
-                return;
-
-            CounterChainConsensusClient consensusClient = new CounterChainConsensusClient(this.counterChainSettings, this.httpClientFactory);
-            List<ThresholdActivationModel> lockedInActivations = consensusClient.GetLockedInDeployments(this.nodeLifetime.ApplicationStopping).ConfigureAwait(false).GetAwaiter().GetResult();
-            if (lockedInActivations == null || lockedInActivations.Count == 0)
-            {
-                this.logger.LogDebug("There are {0} locked-in deployments.", lockedInActivations?.Count);
-                return;
-            }
-
-            ThresholdActivationModel model = lockedInActivations.FirstOrDefault(a => a.DeploymentName.ToLowerInvariant() == Release1300DeploymentNameLower);
-            if (model == null || model.LockedInTimestamp == null)
-            {
-                this.logger.LogDebug("There are no locked-in deployments for '{0}'.", Release1300DeploymentNameLower);
-                return;
-            }
-
-            if (this.chainIndexer.Tip.Header.Time < model.LockedInTimestamp.Value)
-            {
-                this.logger.LogDebug("The chain tip time {0} is still below the locked in time {1}.", this.chainIndexer.Tip.Header.Time, model.LockedInTimestamp.Value);
-                return;
-            }
-
-            // The above condition ensures that the 'Last' below will always return a value.
-            int mainChainLockedInHeight = this.chainIndexer.Tip.EnumerateToGenesis().TakeWhile(h => h.Header.Time >= (uint)(model.LockedInTimestamp)).Last().Height;
-
-            Network counterChainNetwork = this.counterChainSettings.CounterChainNetwork;
-            this.mainChainActivationHeight = mainChainLockedInHeight + 
-                (int)((counterChainNetwork.Consensus.MinerConfirmationWindow * counterChainNetwork.Consensus.TargetSpacing.TotalSeconds) / this.network.Consensus.TargetSpacing.TotalSeconds);
-        }
-
-        public int GetMainChainActivationHeight()
-        {
-            return this.mainChainActivationHeight;
-        }
-
         /// <inheritdoc />
         public async Task StartAsync()
         {
             // Initialization delay; give the counter chain node some time to start it's API service.
             await Task.Delay(TimeSpan.FromSeconds(InitializationDelaySeconds), this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
 
-            RecordCounterChainActivations();
-
             this.requestDepositsTask = this.asyncProvider.CreateAndRunAsyncLoop($"{nameof(MaturedBlocksSyncManager)}.{nameof(this.requestDepositsTask)}", async token =>
             {
-                RecordCounterChainActivations();
-
                 bool delayRequired = await this.SyncDepositsAsync().ConfigureAwait(false);
                 if (delayRequired)
                 {

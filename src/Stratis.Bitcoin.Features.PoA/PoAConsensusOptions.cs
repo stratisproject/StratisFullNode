@@ -54,6 +54,11 @@ namespace Stratis.Bitcoin.Features.PoA
         public int InterFluxV2MainChainActivationHeight { get; set; }
 
         /// <summary>
+        /// The height at which Release 1.3.0.0 became BIP activated.
+        /// </summary>
+        public int Release1300ActivationHeight { get; set; }
+
+        /// <summary>
         /// The height at which inituitive mining slots become active.
         /// Legacy mining slots are determined by mining_slot = block_height % number_of_federation_members.
         /// Once the specified height is reached there should no longer be a shift in mining slots when new federation members are added/removed.
