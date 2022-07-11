@@ -5,8 +5,11 @@ namespace Stratis.Bitcoin.IntegrationTests.BlockStore
 {
     public partial class ReorgToLongestChainSpecification : BddSpecification
     {
+        /// <summary>
+        /// A_cut_off_miner_advanced_ahead_of_network_causes_reorg_on_reconnect
+        /// </summary>
         [Fact]
-        public void A_cut_off_miner_advanced_ahead_of_network_causes_reorg_on_reconnect()
+        public void MinerCausesReorgOnReconnect()
         {
             Given(four_miners);
             And(each_mine_a_block);

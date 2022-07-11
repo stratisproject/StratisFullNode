@@ -96,8 +96,11 @@ namespace Stratis.Bitcoin.IntegrationTests.Connectivity
             }
         }
 
+        /// <summary>
+        /// When_Connecting_WithAddnode_Connect_ToPeer_AndAnyPeers_InTheAddressManager
+        /// </summary>
         [Fact]
-        public void When_Connecting_WithAddnode_Connect_ToPeer_AndAnyPeers_InTheAddressManager()
+        public void ConnectToPeer_AndAnyPeers_InTheAddressManager()
         {
             // TS101_Connectivity_CallAddNode.
 

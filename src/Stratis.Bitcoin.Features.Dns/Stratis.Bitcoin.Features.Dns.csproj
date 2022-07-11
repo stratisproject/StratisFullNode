@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Description>Stratis Bitcoin Features Dns</Description>
     <AssemblyTitle>Stratis.Bitcoin.Features.Dns</AssemblyTitle>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <AssemblyName>Stratis.Bitcoin.Features.Dns</AssemblyName>
     <PackageId>Stratis.Features.Dns</PackageId>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
