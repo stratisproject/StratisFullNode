@@ -109,7 +109,6 @@ namespace Stratis.Bitcoin.Features.PoA
             IDateTimeProvider dateTimeProvider,
             Network network,
             INodeLifetime nodeLifetime,
-            ILoggerFactory loggerFactory,
             IInitialBlockDownloadState ibdState,
             BlockDefinition blockDefinition,
             ISlotsManager slotsManager,
@@ -144,7 +143,7 @@ namespace Stratis.Bitcoin.Features.PoA
             this.idleFederationMembersKicker = idleFederationMembersKicker;
             this.nodeLifetime = nodeLifetime;
 
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
             this.cancellation = CancellationTokenSource.CreateLinkedTokenSource(new[] { nodeLifetime.ApplicationStopping });
             this.votingDataEncoder = new VotingDataEncoder();
             this.nodeSettings = nodeSettings;

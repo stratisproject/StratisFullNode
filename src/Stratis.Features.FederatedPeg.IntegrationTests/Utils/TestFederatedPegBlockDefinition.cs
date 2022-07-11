@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using NBitcoin;
+﻿using NBitcoin;
 using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
@@ -29,7 +28,6 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
             IConsensusManager consensusManager,
             IDateTimeProvider dateTimeProvider,
             IContractExecutorFactory executorFactory,
-            ILoggerFactory loggerFactory,
             ITxMempool mempool,
             MempoolSchedulerLock mempoolLock,
             Network network,
@@ -39,7 +37,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
             ICallDataSerializer callDataSerializer,
             MinerSettings minerSettings,
             NodeDeployments nodeDeployments)
-            : base(blockBufferGenerator, coinView, consensusManager, dateTimeProvider, executorFactory, loggerFactory, mempool, mempoolLock, network, senderRetriever, stateRoot, executionCache, callDataSerializer, minerSettings, nodeDeployments)
+            : base(blockBufferGenerator, coinView, consensusManager, dateTimeProvider, executorFactory, mempool, mempoolLock, network, senderRetriever, stateRoot, executionCache, callDataSerializer, minerSettings, nodeDeployments)
         {
         }
 

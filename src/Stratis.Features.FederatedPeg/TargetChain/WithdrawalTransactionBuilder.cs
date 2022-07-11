@@ -102,7 +102,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     {
                         this.logger.LogDebug("Generating recipient list for conversion transaction fee distribution.");
 
-                        multiSigContext.Recipients = this.distributionManager.DistributeToMultisigNodes(blockHeight, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount);
+                        multiSigContext.Recipients = this.distributionManager.DistributeToMultisigNodes(depositId, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount);
                     }
                 }
 

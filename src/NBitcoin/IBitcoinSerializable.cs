@@ -172,5 +172,21 @@ namespace NBitcoin
             return ms.ToArray();
 #endif
         }
+
+        public static void ReadWriteNullIntField(this BitcoinStream stream, ref int nullField)
+        {
+            if (stream.Serializing)
+                stream.ReadWrite(ref nullField);
+            else
+            {
+                try
+                {
+                    stream.ReadWrite(ref nullField);
+                }
+                catch (Exception)
+                {
+                }
+            }
+        }
     }
 }

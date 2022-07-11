@@ -284,33 +284,36 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// </summary>
         /// <param name="voteKey">See <see cref="VoteKey"/>.</param>
         /// <param name="federationMemberBytes">The bytes to compare <see cref="VotingData.Data"/> against.</param>
+        /// <param name="checkScheduledPolls">Determines whether the scheduled polls will be checked.</param>
         /// <returns><c>True</c> if we have already voted or <c>false</c> otherwise.</returns>
-        public bool AlreadyVotingFor(VoteKey voteKey, byte[] federationMemberBytes)
+        public bool AlreadyVotingFor(VoteKey voteKey, byte[] federationMemberBytes, bool checkScheduledPolls = true)
         {
-            List<Poll> approvedPolls = this.GetApprovedPolls();
-
-            if (approvedPolls.Any(x => !x.IsExecuted &&
-                  x.VotingData.Key == voteKey && x.VotingData.Data.SequenceEqual(federationMemberBytes) &&
-                  x.PubKeysHexVotedInFavor.Any(v => v.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex())))
+            if (this.federationManager.CurrentFederationKey != null)
             {
-                // We've already voted in a finished poll that's only awaiting execution.
-                return true;
+                List<Poll> approvedPolls = this.GetApprovedPolls();
+
+                if (approvedPolls.Any(x => !x.IsExecuted &&
+                      x.VotingData.Key == voteKey && x.VotingData.Data.SequenceEqual(federationMemberBytes) &&
+                      x.PubKeysHexVotedInFavor.Any(v => v.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex())))
+                {
+                    // We've already voted in a finished poll that's only awaiting execution.
+                    return true;
+                }
+
+                List<Poll> pendingPolls = this.GetPendingPolls();
+
+                if (pendingPolls.Any(x => x.VotingData.Key == voteKey &&
+                                           x.VotingData.Data.SequenceEqual(federationMemberBytes) &&
+                                           x.PubKeysHexVotedInFavor.Any(v => v.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex())))
+                {
+                    // We've already voted in a pending poll.
+                    return true;
+                }
             }
-
-            List<Poll> pendingPolls = this.GetPendingPolls();
-
-            if (pendingPolls.Any(x => x.VotingData.Key == voteKey &&
-                                       x.VotingData.Data.SequenceEqual(federationMemberBytes) &&
-                                       x.PubKeysHexVotedInFavor.Any(v => v.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex())))
-            {
-                // We've already voted in a pending poll.
-                return true;
-            }
-
 
             List<VotingData> scheduledVotes = this.GetScheduledVotes();
 
-            if (scheduledVotes.Any(x => x.Key == voteKey && x.Data.SequenceEqual(federationMemberBytes)))
+            if (checkScheduledPolls && scheduledVotes.Any(x => x.Key == voteKey && x.Data.SequenceEqual(federationMemberBytes)))
             {
                 // We have the vote queued to be put out next time we mine a block.
                 return true;
@@ -346,7 +349,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return poll;
         }
 
-        public bool IsFederationMember(PubKey pubKey)
+        public bool IsMemberOfFederation(PubKey pubKey)
         {
             return this.federationManager.GetFederationMembers().Any(fm => fm.PubKey == pubKey);
         }
@@ -522,6 +525,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 lock (this.locker)
                 {
+                    this.signals.Publish(new VotingManagerProcessBlock(chBlock, transaction));
+
                     bool pollsRepositoryModified = false;
 
                     foreach (Poll poll in this.polls.GetPollsToExecuteOrExpire(chBlock.ChainedHeader.Height))
