@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Database;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Tests.Common;
@@ -27,7 +28,7 @@ namespace Stratis.Bitcoin.IntegrationTests
             this.FolderName = TestBase.CreateTestDir(caller, name);
             var dateTimeProvider = new DateTimeProvider();
             var serializer = new DBreezeSerializer(this.Network.Consensus.ConsensusFactory);
-            this.Coindb = new LevelDbCoindb(network, this.FolderName, dateTimeProvider, new NodeStats(dateTimeProvider, NodeSettings.Default(network), new Mock<IVersionProvider>().Object), serializer);
+            this.Coindb = new Coindb<LevelDb>(network, this.FolderName, dateTimeProvider, new NodeStats(dateTimeProvider, NodeSettings.Default(network), new Mock<IVersionProvider>().Object), serializer);
             this.Coindb.Initialize(new ChainedHeader(network.GetGenesis().Header, network.GenesisHash, 0));
             this.cleanList = new List<IDisposable> { (IDisposable)this.Coindb };
         }
@@ -65,7 +66,7 @@ namespace Stratis.Bitcoin.IntegrationTests
             this.cleanList.Remove((IDisposable)this.Coindb);
             var dateTimeProvider = new DateTimeProvider();
             var serializer = new DBreezeSerializer(this.Network.Consensus.ConsensusFactory);
-            this.Coindb = new LevelDbCoindb(this.Network, this.FolderName, dateTimeProvider, new NodeStats(dateTimeProvider, NodeSettings.Default(this.Network), new Mock<IVersionProvider>().Object), serializer);
+            this.Coindb = new Coindb<LevelDb>(this.Network, this.FolderName, dateTimeProvider, new NodeStats(dateTimeProvider, NodeSettings.Default(this.Network), new Mock<IVersionProvider>().Object), serializer);
 
             this.Coindb.Initialize(chainTip);
             this.cleanList.Add((IDisposable)this.Coindb);
