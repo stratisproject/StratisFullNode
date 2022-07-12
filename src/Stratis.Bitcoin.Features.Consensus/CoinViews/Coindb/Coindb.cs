@@ -94,7 +94,6 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             this.logger.LogInformation("Coin database initialized with tip '{0}'.", this.persistedCoinviewTip);
         }
 
-
         private void EndiannessFix()
         {
             // Check if key bytes are in the wrong endian order.
