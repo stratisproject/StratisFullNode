@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using NBitcoin;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.Consensus.CoinViews
@@ -15,7 +16,8 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// </summary>
         /// <param name="chainTip">The chain tip.</param>
         /// <param name="chainIndexer">The chain indexer.</param>
-        void Initialize(ChainedHeader chainTip, ChainIndexer chainIndexer);
+        /// <param name="consensusRuleEngine">The consensus rule engine.</param>
+        void Initialize(ChainedHeader chainTip, ChainIndexer chainIndexer, IConsensusRuleEngine consensusRuleEngine);
 
         /// <summary>
         /// Retrieves the block hash of the current tip of the coinview.
@@ -39,6 +41,12 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// <param name="nextBlockHash">Block hash of the tip of the coinview after the change is applied.</param>
         /// <param name="rewindDataList">List of rewind data items to be persisted. This should only be used when calling <see cref="DBreezeCoinView.SaveChanges" />.</param>
         void SaveChanges(IList<UnspentOutput> unspentOutputs, HashHeightPair oldBlockHash, HashHeightPair nextBlockHash, List<RewindData> rewindDataList = null);
+
+        /// <summary>
+        /// Brings the coinview back on-chain if a re-org occurred.
+        /// </summary>
+        /// <param name="chainIndexer">The current consensus chain.</param>
+        void Sync(ChainIndexer chainIndexer);
 
         /// <summary>
         /// Obtains information about unspent outputs.
