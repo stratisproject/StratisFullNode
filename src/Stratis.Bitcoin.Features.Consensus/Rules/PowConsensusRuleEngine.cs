@@ -67,7 +67,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules
         {
             base.Initialize(chainTip);
 
-            this.UtxoSet.Initialize(chainTip, this.ChainIndexer);
+            this.UtxoSet.Initialize(chainTip, this.ChainIndexer, this);
         }
 
         public override async Task<ValidationContext> FullValidationAsync(ChainedHeader header, Block block)
