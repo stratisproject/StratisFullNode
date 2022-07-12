@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using LevelDB;
+using NBitcoin;
 
 namespace Stratis.Bitcoin.Database
 {
@@ -88,8 +89,8 @@ namespace Stratis.Bitcoin.Database
         {
             if (this.table != 255)
             {
-                // First seek past the last record in the table by attempting to seek to the start of the next table (if any).
-                this.iterator.Seek(new[] { (byte)(this.table + 1) });
+            // First seek past the last record in the table by attempting to seek to the start of the next table (if any).
+            this.iterator.Seek(new[] { (byte)(this.table + 1) });
 
                 // If we managed to seek to the start of the next table then go back one record to arrive at the last record of 'table'.
                 if (this.iterator.IsValid())
@@ -99,8 +100,11 @@ namespace Stratis.Bitcoin.Database
                 }
             }
 
-            // If there is no next table then simply seek to the last record in the db as that will be the last record of 'table'.
-            this.iterator.SeekToLast();
+                // If there is no next table then simply seek to the last record in the db as that will be the last record of 'table'.
+                this.iterator.SeekToLast();
+            else
+                // If we managed to seek to the start of the next table then go back one record to arrive at the last record of 'table'.
+                this.iterator.Prev();
         }
 
         public void Next()

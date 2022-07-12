@@ -4,6 +4,7 @@ using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Database;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Consensus.Interfaces;
 using Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders;
@@ -87,15 +88,15 @@ namespace Stratis.Bitcoin.Features.Consensus
                     break;
 
                 case DbType.Leveldb:
-                    services.AddSingleton<ICoindb, LevelDbCoindb>();
+                    services.AddSingleton<ICoindb, Coindb<LevelDb>>();
                     break;
 
                 case DbType.RocksDb:
-                    services.AddSingleton<ICoindb, RocksDbCoindb>();
+                    services.AddSingleton<ICoindb, Coindb<RocksDb>>();
                     break;
 
                 default:
-                    services.AddSingleton<ICoindb, LevelDbCoindb>();
+                    services.AddSingleton<ICoindb, Coindb<LevelDb>>();
                     break;
             }
         }
