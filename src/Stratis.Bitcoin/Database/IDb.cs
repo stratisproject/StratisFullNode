@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
 
-namespace Stratis.Bitcoin.Features.Consensus.CoinViews
+namespace Stratis.Bitcoin.Database
 {
     /// <summary>
     /// This interface and its relevant implementations provides a common way to interact with <see cref="RocksDb"/> and <see cref="LevelDb"/> databases.

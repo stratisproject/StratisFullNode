@@ -207,7 +207,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             }
         }
 
-        public void Initialize(ChainedHeader chainTip, ChainIndexer chainIndexer, ConsensusRulesContainer consensusRulesContainer)
+        public void Initialize(ChainedHeader chainTip, ChainIndexer chainIndexer, IConsensusRuleEngine consensusRuleEngine)
         {
             this.coindb.Initialize(this.addressIndexingEnabled);
 
@@ -220,10 +220,10 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             {
                 try
                 {
-                    var loadCoinViewRule = consensusRulesContainer.FullValidationRules.OfType<LoadCoinviewRule>().Single();
-                    var saveCoinViewRule = consensusRulesContainer.FullValidationRules.OfType<SaveCoinviewRule>().Single();
-                    var coinViewRule = consensusRulesContainer.FullValidationRules.OfType<CoinViewRule>().Single();
-                    var deploymentsRule = consensusRulesContainer.FullValidationRules.OfType<SetActivationDeploymentsFullValidationRule>().Single();
+                    var loadCoinViewRule = consensusRuleEngine.GetRule<LoadCoinviewRule>();
+                    var saveCoinViewRule = consensusRuleEngine.GetRule<SaveCoinviewRule>();
+                    var coinViewRule = consensusRuleEngine.GetRule<CoinViewRule>();
+                    var deploymentsRule = consensusRuleEngine.GetRule<SetActivationDeploymentsFullValidationRule>();
 
                     foreach ((ChainedHeader chainedHeader, Block block) in this.blockStore.BatchBlocksFrom(chainIndexer[coinViewTip.Hash], chainIndexer, this.cancellationToken, batchSize: 1000))
                     {
@@ -236,11 +236,8 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                             this.logger.LogInformation("Rebuilding coin view from '{0}' to {1}.", chainedHeader, chainTip);
                         }
 
-                        var utxoRuleContext = new PosRuleContext()
-                        {
-                            ValidationContext = new ValidationContext() { ChainedHeaderToValidate = chainedHeader, BlockToValidate = block },
-                            SkipValidation = true
-                        };
+                        var utxoRuleContext = consensusRuleEngine.CreateRuleContext(new ValidationContext() { ChainedHeaderToValidate = chainedHeader, BlockToValidate = block });
+                        utxoRuleContext.SkipValidation = true;
 
                         // Set context flags.
                         deploymentsRule.RunAsync(utxoRuleContext).ConfigureAwait(false).GetAwaiter().GetResult();

@@ -1,15 +1,15 @@
 ﻿using System.Linq;
-using RocksDbSharp;
 using NBitcoin;
+using RocksDbSharp;
 
-namespace Stratis.Bitcoin.Features.Consensus.CoinViews
+namespace Stratis.Bitcoin.Database
 {
     /// <summary>A minimal RocksDb wrapper that makes it compliant with the <see cref="IDb"/> interface.</summary>
     public class RocksDb : IDb
     {
         private string dbPath;
 
-        RocksDbSharp.RocksDb db;
+        private RocksDbSharp.RocksDb db;
 
         public IDbIterator GetIterator(byte table)
         {
@@ -45,7 +45,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
     /// <summary>A minimal RocksDb wrapper that makes it compliant with the <see cref="IDbBatch"/> interface.</summary>
     public class RocksDbBatch : WriteBatch, IDbBatch
     {
-        RocksDbSharp.RocksDb db;
+        private RocksDbSharp.RocksDb db;
 
         public RocksDbBatch(RocksDbSharp.RocksDb db)
         {
@@ -54,12 +54,12 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         public IDbBatch Put(byte table, byte[] key, byte[] value)
         {
-            return (IDbBatch)Put(new[] { table }.Concat(key).ToArray(), value);
+            return (IDbBatch)this.Put(new[] { table }.Concat(key).ToArray(), value);
         }
 
         public IDbBatch Delete(byte table, byte[] key)
         {
-            return (IDbBatch)Delete(new[] { table }.Concat(key).ToArray());
+            return (IDbBatch)this.Delete(new[] { table }.Concat(key).ToArray());
         }
 
         public void Write()
@@ -71,8 +71,8 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
     /// <summary>A minimal RocksDb wrapper that makes it compliant with the <see cref="IDbIterator"/> interface.</summary>
     public class RocksDbIterator : IDbIterator
     {
-        byte table;
-        Iterator iterator;
+        private byte table;
+        private Iterator iterator;
 
         public RocksDbIterator(byte table, Iterator iterator)
         {
@@ -106,7 +106,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         public bool IsValid()
         {
-            return this.iterator.Valid() && this.iterator.Value()[0] == this.table;
+            return this.iterator.Valid() && this.iterator.Key()[0] == this.table;
         }
 
         public byte[] Key()

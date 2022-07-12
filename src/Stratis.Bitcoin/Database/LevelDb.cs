@@ -2,14 +2,14 @@
 using LevelDB;
 using NBitcoin;
 
-namespace Stratis.Bitcoin.Features.Consensus.CoinViews
+namespace Stratis.Bitcoin.Database
 {
     /// <summary>A minimal LevelDb wrapper that makes it compliant with the <see cref="IDb"/> interface.</summary>
     public class LevelDb : IDb
     {
         private string dbPath;
 
-        DB db;
+        private DB db;
 
         public IDbIterator GetIterator(byte table)
         {
@@ -45,7 +45,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
     /// <summary>A minimal LevelDb wrapper that makes it compliant with the <see cref="IDbBatch"/> interface.</summary>
     public class LevelDbBatch : WriteBatch, IDbBatch
     {
-        DB db;
+        private DB db;
 
         public LevelDbBatch(DB db)
         {
@@ -54,12 +54,12 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         public IDbBatch Put(byte table, byte[] key, byte[] value)
         {
-            return (IDbBatch)Put(new[] { table }.Concat(key).ToArray(), value);
+            return (IDbBatch)this.Put(new[] { table }.Concat(key).ToArray(), value);
         }
 
         public IDbBatch Delete(byte table, byte[] key)
         {
-            return (IDbBatch)Delete(new[] { table }.Concat(key).ToArray());
+            return (IDbBatch)this.Delete(new[] { table }.Concat(key).ToArray());
         }
 
         public void Write()
@@ -71,13 +71,13 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
     /// <summary>A minimal LevelDb wrapper that makes it compliant with the <see cref="IDbIterator"/> interface.</summary>
     public class LevelDbIterator : IDbIterator
     {
-        byte table;
-        Iterator iterator;
+        private byte table;
+        private Iterator iterator;
 
-        public LevelDbIterator(byte table, Iterator iterator) 
+        public LevelDbIterator(byte table, Iterator iterator)
         {
             this.table = table;
-            this.iterator = iterator; 
+            this.iterator = iterator;
         }
 
         public void Seek(byte[] key)
@@ -87,10 +87,13 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         public void SeekToLast()
         {
+            // First seek past the last record in the table by attempting to seek to the start of the next table (if any).
             this.iterator.Seek(new[] { (byte)(this.table + 1) });
             if (!this.iterator.IsValid())
+                // If there is no next table then simply seek to the last record in the db as that will be the last record of 'table'.
                 this.iterator.SeekToLast();
             else
+                // If we managed to seek to the start of the next table then go back one record to arrive at the last record of 'table'.
                 this.iterator.Prev();
         }
 
@@ -106,7 +109,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         public bool IsValid()
         {
-            return this.iterator.IsValid() && this.iterator.Value()[0] == this.table;
+            return this.iterator.IsValid() && this.iterator.Key()[0] == this.table;
         }
 
         public byte[] Key()
