@@ -122,7 +122,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             throw new NotImplementedException();
         }
 
-        public void Initialize(ChainedHeader chainTip = null)
+        public void Initialize()
         {
         }
     }

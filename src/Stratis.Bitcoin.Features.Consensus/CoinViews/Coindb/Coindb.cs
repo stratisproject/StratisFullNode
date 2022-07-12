@@ -41,7 +41,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         private BackendPerformanceSnapshot latestPerformanceSnapShot;
 
-        /// <summary>Access to dBreeze database.</summary>
+        /// <summary>Access to database.</summary>
         private IDb coinDb;
 
         private readonly DBreezeSerializer dBreezeSerializer;
@@ -70,12 +70,33 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 400);
         }
 
-        public void Initialize(ChainedHeader chainTip)
+        public void Initialize()
         {
             // Open a connection to a new DB and create if not found
             this.coinDb = new T();
             this.coinDb.Open(this.dataFolder);
 
+            EndiannessFix();
+
+            EnsureCoinDatabaseIntegrity();
+
+            Block genesis = this.network.GetGenesis();
+
+            if (this.GetTipHash() == null)
+            {
+                using (var batch = this.coinDb.GetWriteBatch())
+                {
+                    this.SetBlockHash(batch, new HashHeightPair(genesis.GetHash(), 0));
+                    batch.Write();
+                }
+            }
+
+            this.logger.LogInformation("Coin database initialized with tip '{0}'.", this.persistedCoinviewTip);
+        }
+
+
+        private void EndiannessFix()
+        {
             // Check if key bytes are in the wrong endian order.
             HashHeightPair current = this.GetTipHash();
 
@@ -129,46 +150,18 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     }
                 }
             }
-
-            EnsureCoinDatabaseIntegrity(chainTip);
-
-            Block genesis = this.network.GetGenesis();
-
-            if (this.GetTipHash() == null)
-            {
-                using (var batch = this.coinDb.GetWriteBatch())
-                {
-                    this.SetBlockHash(batch, new HashHeightPair(genesis.GetHash(), 0));
-                    batch.Write();
-                }
-            }
-
-            this.logger.LogInformation("Coinview initialized with tip '{0}'.", this.persistedCoinviewTip);
         }
 
-        private void EnsureCoinDatabaseIntegrity(ChainedHeader chainTip)
+        /// <summary>Just check the integrity. Coin view performs the sync with the chain tip.</summary>
+        private void EnsureCoinDatabaseIntegrity()
         {
             this.logger.LogInformation("Checking coin database integrity...");
 
-            var heightToCheck = chainTip.Height;
-
-            // Find the height up to where rewind data is stored above chain tip.
-            do
+            if (this.GetTipHash() == null)
             {
-                heightToCheck += 1;
-
-                byte[] row = this.coinDb.Get(rewindTable, BitConverter.GetBytes(heightToCheck).Reverse().ToArray());
-                if (row == null)
-                    break;
-
-            } while (true);
-
-            for (int height = heightToCheck - 1; height > chainTip.Height;)
-            {
-                this.logger.LogInformation($"Fixing coin database, deleting rewind data at height {height} above tip '{chainTip}'.");
-
-                // Do a batch of rewinding.
-                height = RewindInternal(height, new HashHeightPair(chainTip)).Height;
+                this.logger.LogInformation($"Rebuilding coin database that has no tip information.");
+                this.coinDb.Clear();
+                return;
             }
 
             this.logger.LogInformation("Coin database integrity good.");
