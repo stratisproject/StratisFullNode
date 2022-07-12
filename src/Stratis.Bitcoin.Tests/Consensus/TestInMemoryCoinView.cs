@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using NBitcoin;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Utilities;
 using ReaderWriterLock = NBitcoin.ReaderWriterLock;
@@ -34,9 +35,14 @@ namespace Stratis.Bitcoin.Tests.Consensus
         }
 
         /// <inheritdoc />
-        public void Initialize(ChainedHeader chainTip, ChainIndexer chainIndexer)
+        public void Initialize(ChainedHeader chainTip, ChainIndexer chainIndexer, IConsensusRuleEngine consensusRuleEngine)
         {
             throw new NotImplementedException();
+        }
+
+        /// <inheritdoc />
+        public void Sync(ChainIndexer chainIndexer)
+        {
         }
 
         /// <inheritdoc />
