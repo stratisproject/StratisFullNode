@@ -79,7 +79,7 @@ namespace Stratis.Features.Collateral
             }
 
             IFederationMember federationMember = this.federationHistory.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate);
-            if (!this.collateralChecker.CheckCollateral(federationMember, commitmentHeight.Value))
+            if (!this.collateralChecker.CheckCollateral(federationMember, commitmentHeight.Value, context.ValidationContext.ChainedHeaderToValidate.Height))
             {
                 // By setting rejectUntil we avoid banning a peer that provided a block.
                 context.ValidationContext.RejectUntil = this.dateTime.GetUtcNow() + TimeSpan.FromSeconds(this.collateralCheckBanDurationSeconds);

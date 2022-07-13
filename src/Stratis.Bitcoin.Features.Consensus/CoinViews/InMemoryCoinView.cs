@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using NBitcoin;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Utilities;
 using ReaderWriterLock = NBitcoin.ReaderWriterLock;
 
@@ -30,6 +31,17 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         public InMemoryCoinView(HashHeightPair tipHash)
         {
             this.tipHash = tipHash;
+        }
+
+        /// <inheritdoc />
+        public void Initialize(ChainedHeader chainTip, ChainIndexer chainIndexer, IConsensusRuleEngine consensusRuleEngine)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <inheritdoc />
+        public void Sync(ChainIndexer chainIndexer)
+        {
         }
 
         /// <inheritdoc />

@@ -4,7 +4,6 @@ namespace NBitcoin
 {
     /// <summary>
     /// An extension to <see cref="Consensus"/> to enable additional options to the consensus data.
-    /// TODO: Make immutable.
     /// </summary>
     public class ConsensusOptions
     {
@@ -14,16 +13,16 @@ namespace NBitcoin
         public const int SerializeTransactionNoWitness = 0x40000000;
 
         /// <summary>Maximum size for a block in bytes.</summary>
-        public uint MaxBlockBaseSize { get; set; }
+        public uint MaxBlockBaseSize { get; protected set; }
 
         /// <summary>The maximum allowed weight for a block, see BIP 141 (network rule)</summary>
-        public uint MaxBlockWeight { get; set; }
+        public uint MaxBlockWeight { get; protected set; }
 
         /// <summary>The maximum allowed size for a serialized block, in bytes (only for buffer size limits). </summary>
-        public uint MaxBlockSerializedSize { get; set; }
+        public uint MaxBlockSerializedSize { get; protected set; }
 
         /// <summary>Scale of witness vs other transaction data. e.g. if set to 4, then witnesses have 1/4 the weight per byte of other transaction data. </summary>
-        public int WitnessScaleFactor { get; set; }
+        public int WitnessScaleFactor { get; protected set; }
 
         /// <summary>
         /// Changing the default transaction version requires a two step process:
@@ -33,23 +32,23 @@ namespace NBitcoin
         /// <see cref="MaxStandardVersion"/> will be equal.</item>
         /// </list>
         /// </summary>
-        public int MaxStandardVersion { get; set; }
+        public int MaxStandardVersion { get; protected set; }
 
         /// <summary>The maximum weight for transactions we're willing to relay/mine.</summary>
-        public int MaxStandardTxWeight { get; set; }
+        public int MaxStandardTxWeight { get; protected set; }
 
         /// <summary>The maximum allowed number of signature check operations in a block (network rule).</summary>
-        public int MaxBlockSigopsCost { get; set; }
+        public int MaxBlockSigopsCost { get; protected set; }
 
         /// <summary>The maximum number of sigops we're willing to relay/mine in a single tx.</summary>
-        public int MaxStandardTxSigopsCost { get; set; }
+        public int MaxStandardTxSigopsCost { get; protected set; }
 
         /// <summary>Block Height at which the node should enforce the use of <see cref="EnforcedMinProtocolVersion"/>.
         /// Can be set to zero to indicate that the minimum supported protocol version will not change depending on the block height.</summary>
-        public int EnforceMinProtocolVersionAtBlockHeight { get; set; }
+        public int EnforceMinProtocolVersionAtBlockHeight { get; protected set; }
 
         /// <summary>The minimum protocol version which should be used from block height defined in <see cref="EnforceMinProtocolVersionAtBlockHeight"/></summary>
-        public ProtocolVersion? EnforcedMinProtocolVersion { get; set; }
+        public ProtocolVersion? EnforcedMinProtocolVersion { get; protected set; }
 
         /// <summary>
         /// Initializes the default values. Currently only used for initialising Bitcoin networks and testing.
@@ -143,6 +142,11 @@ namespace NBitcoin
         /// Maximum merkle proof serialized size in bytes.
         /// </summary>
         public const int MaxMerkleProofSerializedSize = 512;
+
+        /// <summary>
+        /// The height at which release 1.3.0.0 activated on the side chain.
+        /// </summary>
+        public int Release1300ActivationHeight { get; set; }
 
         /// <summary>
         /// Initializes the default values.

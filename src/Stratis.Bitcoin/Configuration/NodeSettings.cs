@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Networks;
 using NBitcoin.Protocol;
+using Stratis.Bitcoin.BlockPulling;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Configuration.Settings;
@@ -429,6 +430,7 @@ namespace Stratis.Bitcoin.Configuration
 
             defaults.Logger.LogInformation(builder.ToString());
 
+            BlockPuller.Settings.PrintHelp(network);
             ConnectionManagerSettings.PrintHelp(network);
         }
 
@@ -452,6 +454,7 @@ namespace Stratis.Bitcoin.Configuration
             builder.AppendLine($"#minrelaytxfee={network.MinRelayTxFee}");
             builder.AppendLine();
 
+            BlockPuller.Settings.BuildDefaultConfigurationFile(builder, network);
             ConnectionManagerSettings.BuildDefaultConfigurationFile(builder, network);
         }
 
