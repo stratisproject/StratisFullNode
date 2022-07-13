@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using LiteDB;
 using NBitcoin;
 using Newtonsoft.Json;
@@ -120,6 +121,30 @@ namespace Stratis.Bitcoin.Controllers.Models
             }
 
             return balance;
+        }
+
+        public static long CalculateMinBalance(this IEnumerable<AddressBalanceChange> balanceChanges, int startHeight)
+        {
+            long balance = 0;
+            long? minbalance = null;
+
+            // If the balance drop occurs within a block it should not count towards the minimum.
+            var balancesByHeight = balanceChanges
+                .Select(b => new AddressBalanceChange() { BalanceChangedHeight = b.BalanceChangedHeight, Satoshi = b.Deposited ? b.Satoshi : -b.Satoshi })
+                .GroupBy(b => b.BalanceChangedHeight, b => b.Satoshi, (key, g) => new AddressBalanceChange { BalanceChangedHeight = key, Satoshi = g.Sum() });
+
+            foreach (AddressBalanceChange change in balancesByHeight)
+            {
+                balance += change.Satoshi;
+ 
+                if (change.BalanceChangedHeight < startHeight)
+                    continue;
+
+                if (!minbalance.HasValue || balance < minbalance.Value)
+                    minbalance = balance;
+            }
+
+            return minbalance ?? balance;
         }
     }
 }

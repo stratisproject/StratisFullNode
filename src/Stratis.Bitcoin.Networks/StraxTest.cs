@@ -61,7 +61,10 @@ namespace Stratis.Bitcoin.Networks
                 maxBlockSigopsCost: 20_000,
                 maxStandardTxSigopsCost: 20_000 / 2,
                 witnessScaleFactor: 4
-                );
+                )
+            {
+                Release1300ActivationHeight = 972_970
+            };
 
             var buriedDeployments = new BuriedDeploymentsArray
             {
