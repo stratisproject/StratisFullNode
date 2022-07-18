@@ -113,14 +113,7 @@ namespace Stratis.Features.Collateral
                         Data = federationMemberBytes
                     };
 
-                    int release1300ActivationHeight = 0;
-                    if (this.nodeDeployments?.BIP9.ArraySize > 0 /* Not NoBIP9Deployments */)
-                    {
-                        release1300ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[0 /* Release1300 */].ActivationHeight;
-                        this.logger.LogDebug($"{nameof(release1300ActivationHeight)}:{release1300ActivationHeight}");
-                    }
-
-                    if (blockConnectedData.ConnectedBlock.ChainedHeader.Height >= release1300ActivationHeight)
+                    if (blockConnectedData.ConnectedBlock.ChainedHeader.Height >= ((PoAConsensusOptions)this.network.Consensus.Options).Release1300ActivationHeight)
                     {
                         // If we are executing this from the miner, there will be no transaction present.
                         if (blockConnectedData.PollsRepositoryTransaction == null)

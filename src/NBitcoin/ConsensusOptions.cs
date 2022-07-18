@@ -145,6 +145,11 @@ namespace NBitcoin
         public const int MaxMerkleProofSerializedSize = 512;
 
         /// <summary>
+        /// The height at which release 1.3.0.0 activated on the side chain.
+        /// </summary>
+        public int Release1300ActivationHeight { get; set; }
+
+        /// <summary>
         /// Initializes the default values.
         /// </summary>
         public PosConsensusOptions()

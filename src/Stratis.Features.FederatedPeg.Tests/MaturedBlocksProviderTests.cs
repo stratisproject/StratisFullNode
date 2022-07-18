@@ -10,6 +10,7 @@ using NSubstitute.Core;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Primitives;
@@ -51,6 +52,9 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.consensusManager = Substitute.For<IConsensusManager>();
             this.network = new CirrusRegTest();
             this.mainChainNetwork = new StraxRegTest();
+
+            // TODO: Upgrade these tests to conform with release 1.3.0.0 activation.
+            ((PoAConsensusOptions)this.network.Consensus.Options).Release1300ActivationHeight = int.MaxValue;
 
             this.opReturnDataReader = Substitute.For<IOpReturnDataReader>();
             this.opReturnDataReader.TryGetTargetAddress(null, out string address).Returns(callInfo => { callInfo[1] = null; return false; });
