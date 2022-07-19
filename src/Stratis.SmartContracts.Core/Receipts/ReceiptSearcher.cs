@@ -50,17 +50,25 @@ namespace Stratis.SmartContracts.Core.Receipts
             // Build the bytes we can use to check for this event.
             // TODO use address.ToUint160 extension when it is in .Core.
             var addressUint160 = new uint160(new BitcoinPubKeyAddress(contractAddress, this.network).Hash.ToBytes());
+            
+            // Ensure that we perform the Keccak256 hash calculations only once before entering the loop.
+            // This leads to "only" a two-fold speed improvement mostly because the db header retrieval is still slow.
+            var filterBloom = new Bloom();
 
-            var chainIndexerRangeQuery = new ChainIndexerRangeQuery(this.chainIndexer);
+            filterBloom.Add(addressUint160.ToBytes());
 
-            // WORKAROUND
-            // This is a workaround due to the BlockStore.GetBlocks returning null for genesis.
-            // We don't ever expect any receipts in the genesis block, so it's safe to ignore it.
-            if (fromBlock == 0)
-                fromBlock = 1;
+            foreach (byte[] topic in topics)
+            {
+                if (topic != null)
+                {
+                    filterBloom.Add(topic);
+                }
+            }
 
-            // Loop through all headers and check bloom.
-            IEnumerable<ChainedHeader> blockHeaders = chainIndexerRangeQuery.EnumerateRange(fromBlock, toBlock);
+            IEnumerable<ChainedHeader> blockHeaders = this.chainIndexer[toBlock ?? this.chainIndexer.Tip.Height]
+                .EnumerateToGenesis()
+                .TakeWhile(c => c.Height >= fromBlock)
+                .Reverse();
 
             // Match the blocks where the combination of all receipts passes the filter.
             var matches = new List<ChainedHeader>();
@@ -68,7 +76,7 @@ namespace Stratis.SmartContracts.Core.Receipts
             {
                 var scHeader = (ISmartContractBlockHeader)chainedHeader.Header;
 
-                if (scHeader.LogsBloom.Test(addressUint160, topics))
+                if (scHeader.LogsBloom.Test(filterBloom))
                     matches.Add(chainedHeader);
             }
 

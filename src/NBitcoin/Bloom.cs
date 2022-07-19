@@ -96,9 +96,11 @@ namespace NBitcoin
         /// <returns>Whether this data could be contained within the filter.</returns>
         public bool Test(Bloom bloom)
         {
-            var copy = new Bloom(bloom.ToBytes());
-            copy.Or(this);
-            return this.Equals(copy);
+            for (int i = 0; i < BloomLength; i++)
+                if ((this.data[i] & bloom.data[i]) != bloom.data[i])
+                    return false;
+
+            return true;
         }
 
         /// <summary>
