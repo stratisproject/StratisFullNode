@@ -13,7 +13,7 @@ using Stratis.Bitcoin.Utilities;
 namespace Stratis.Bitcoin.Features.OpenBanking
 {
     /// <summary>
-    /// Responsible for managing the DNS feature.
+    /// Responsible for managing the OpenBanking feature.
     /// </summary>
     public class OpenBankingFeature : FullNodeFeature
     {
@@ -76,7 +76,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking
 
             this.metadataTracker.Initialize();
 
-            // Create long running task for DNS service.
+            // Create long running task for minting service.
             this.mintingTask = Task.Factory.StartNew(this.RunMintingService, TaskCreationOptions.LongRunning);
 
             return Task.CompletedTask;

@@ -1,11 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>Stratis Bitcoin Features Dns</Description>
-    <AssemblyTitle>Stratis.Bitcoin.Features.Dns</AssemblyTitle>
+    <Description>Stratis Bitcoin Features OpenBanking</Description>
+    <AssemblyTitle>Stratis.Bitcoin.Features.OpenBanking</AssemblyTitle>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <AssemblyName>Stratis.Bitcoin.Features.Dns</AssemblyName>
-    <PackageId>Stratis.Features.Dns</PackageId>
+    <AssemblyName>Stratis.Bitcoin.Features.OpenBanking</AssemblyName>
+    <PackageId>Stratis.Features.OpenBanking</PackageId>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
