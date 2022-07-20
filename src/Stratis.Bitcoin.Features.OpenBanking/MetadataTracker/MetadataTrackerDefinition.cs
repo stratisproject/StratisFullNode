@@ -1,10 +1,10 @@
-﻿using System.Text.Json.Serialization;
-using NBitcoin;
+﻿using NBitcoin;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.MetadataTracker
 {
     public enum MetadataTrackerEnum
     {
+        // Don't exceed 63.
         GBPT = 0
     }
 
