@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Stratis.OpenBankingD": {
+      "commandName": "Project",
+      "commandLineArgs": "-testnet"
+    }
+  }
+}
