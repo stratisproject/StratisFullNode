@@ -4,7 +4,9 @@ using System.IO;
 using System.Net;
 using System.Net.Security;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using NBitcoin;
+using SimpleIdServer.OpenBankingApi;
 
 namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 {
@@ -18,9 +20,94 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
         private readonly string openBankingAPI = "https://api.alphabank.com/open-banking/v3.1/aisp";
         private readonly Network network;
 
-        public OpenBankingClient(OpenBankingSettings openBankingSettings, Network network)
+        public OpenBankingClient(OpenBankingSettings openBankingSettings, Network network, IServiceCollection serviceCollection)
         {
             this.network = network;
+
+            // TODO:
+            /*
+            string token = "";
+            string accountId = "";
+            string issuer = "";
+            var x = new SimpleIdServer.OpenBankingApi.Accounts.Queries.GetAccountQuery(token, accountId, issuer);
+            var y = new SimpleIdServer.OpenBankingApi.OpenBankingApiBuilder(serviceCollection);
+            //var z = new SimpleIdServer.OpenBankingApi.Api.Token.TokenBuilders.OpenBankingApiAccessTokenBuilder()
+           */
+        }
+
+        public IEnumerable<OpenBankDeposit> GetDeposits(IOpenBankAccount openBankAccount, DateTime? fromBookingDateTime)
+        {
+            // Transaction can be "Booked" or "Pending".
+            // Need to revisit "Pending" in case their booking date changes? Up/Down???
+            // https://openbanking.atlassian.net/wiki/spaces/DZ/pages/1004208451/Transactions+v3.1.1#Transactionsv3.1.1-GET%2Faccounts%2F%7BAccountId%7D%2Ftransactions
+
+            string dateFilter = (fromBookingDateTime == null) ? "" : $"fromBookingDateTime={fromBookingDateTime.Value.ToString(":yyyy-MM-ddTHH:mm:ss")}";
+            string url = $"{this.openBankingAPI}/accounts/{openBankAccount.OpenBankAccountNumber}/transactions?{dateFilter}";
+
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+            ServicePointManager.ServerCertificateValidationCallback = new RemoteCertificateValidationCallback(ServerCertificateValidation);
+
+            Uri uri = new Uri(url);
+            WebRequest webRequest = WebRequest.Create(uri);
+            WebResponse webResponse = webRequest.GetResponse();
+            var r = webResponse.GetResponseStream();
+            var sr = new StreamReader(r);
+            var jsonObject = JsonSerializer.Deserialize<dynamic>(sr.ReadToEnd());
+            var transactions = jsonObject.Data.Transaction;
+
+            return ParseTransactions(openBankAccount, transactions);
+        }
+
+        private bool ServerCertificateValidation(object sender, System.Security.Cryptography.X509Certificates.X509Certificate certificate, System.Security.Cryptography.X509Certificates.X509Chain chain, System.Net.Security.SslPolicyErrors errors)
+        {
+            // Accepts all...
+            return true;
+
+            // TODO
+            //return (errors == SslPolicyErrors.None) || certificate.GetCertHashString(HashAlgorithmName.SHA256).Equals("EB8E0B28AE064ED58CBED9DAEB46CFEB3BD7ECA677...");
+        }
+
+        private IEnumerable<OpenBankDeposit> ParseTransactions(IOpenBankAccount openBankAccount, dynamic[] transactions)
+        {
+            foreach (dynamic obj in transactions)
+            {
+                if (obj.Amount.Currency != openBankAccount.Currency)
+                    continue;
+
+                if (obj.CreditDebitIndicator != "Credit")
+                    continue;
+
+                if (obj.TransactionId.Length > 16)
+                    continue;
+
+                string externalId = obj.TransactionId.PadLeft(16, '0');
+
+                OpenBankDepositState state = OpenBankDepositState.Unknown;
+                switch (obj.Status)
+                {
+                    case "Booked":
+                        state = OpenBankDepositState.Booked;
+                        break;
+                    case "Pending":
+                        state = OpenBankDepositState.Pending;
+                        break;
+                }
+
+                var deposit = new OpenBankDeposit()
+                {
+                    BookDateTimeUTC = DateTime.Parse(obj.BookingDateTime),
+                    ValueDateTimeUTC = DateTime.Parse(obj.ValueDateTime),
+                    ExternalId = obj.TransactionId,
+                    State = state,
+                    Amount = Money.Parse(obj.Amount.Amount),
+                    Reference = obj.TransactionReference
+                };
+
+                if (deposit.State == OpenBankDepositState.Booked && deposit.ParseAddressFromReference(this.network) == null)
+                    deposit.State = OpenBankDepositState.Error;
+
+                yield return deposit;
+            }
         }
 
         /*
@@ -81,81 +168,5 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
               }
             }
         */
-
-        private BitcoinAddress ParseAddressFromReference(string reference)
-        {
-            // The "TransactionReference" must be a valid network address
-            try
-            {
-                var targetAddress = BitcoinAddress.Create(reference, this.network);
-
-                return targetAddress;
-            }
-            catch (Exception)
-            {
-            }
-
-            return null;
-        }
-
-        public IEnumerable<OpenBankDeposit> GetDeposits(IOpenBankAccount openBankAccount, DateTime? fromBookingDateTime)
-        {
-            // Transaction can be "Booked" or "Pending".
-            // Need to revisit "Pending" in case their booking date changes? Up/Down???
-            // https://openbanking.atlassian.net/wiki/spaces/DZ/pages/1004208451/Transactions+v3.1.1#Transactionsv3.1.1-GET%2Faccounts%2F%7BAccountId%7D%2Ftransactions
-
-            string dateFilter = (fromBookingDateTime == null) ? "" : $"fromBookingDateTime={fromBookingDateTime.Value.ToString(":yyyy-MM-ddTHH:mm:ss")}";
-            string url = $"{this.openBankingAPI}/accounts/{openBankAccount.OpenBankAccountNumber}/transactions?{dateFilter}";
-
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-            ServicePointManager.ServerCertificateValidationCallback = new RemoteCertificateValidationCallback(ServerCertificateValidation);
-
-            Uri uri = new Uri(url);
-            WebRequest webRequest = WebRequest.Create(uri);
-            WebResponse webResponse = webRequest.GetResponse();
-            var r = webResponse.GetResponseStream();
-            var sr = new StreamReader(r);
-            var jsonObject = JsonSerializer.Deserialize<dynamic>(sr.ReadToEnd());
-            var transactions = jsonObject.Data.Transaction;
-            foreach (dynamic obj in transactions)
-            {
-                if (obj.Status != "Booked" && obj.Status != "Pending")
-                    continue;
-
-                if (obj.Amount.Currency != "GBP")
-                    continue;
-
-                if (obj.CreditDebitIndicator != "Credit")
-                    continue;
-
-                if (obj.TransactionId.Length > 16)
-                    continue;
-
-                BitcoinAddress address = ParseAddressFromReference(obj.TransactionReference);
-                if (address == null)
-                    continue;
-
-                string externalId = obj.TransactionId.PadLeft(16, '0');
-
-                yield return new OpenBankDeposit()
-                {
-                    BookDateTimeUTC = DateTime.Parse(obj.BookingDateTime),
-                    ValueDateTimeUTC = DateTime.Parse(obj.ValueDateTime),
-                    ExternalId = obj.TransactionId,
-                    State = (obj.Status == "Booked") ? OpenBankDepositState.Booked : OpenBankDepositState.Pending,
-                    Amount = Money.Parse(obj.Amount.Amount),
-                    Reference = address.ToString()
-                };
-            }
-        }
-
-        private bool ServerCertificateValidation(object sender, System.Security.Cryptography.X509Certificates.X509Certificate certificate, System.Security.Cryptography.X509Certificates.X509Chain chain, System.Net.Security.SslPolicyErrors errors)
-        {
-            // Accepts all...
-            return true;
-
-            // TODO
-            //return (errors == SslPolicyErrors.None) || certificate.GetCertHashString(HashAlgorithmName.SHA256).Equals("EB8E0B28AE064ED58CBED9DAEB46CFEB3BD7ECA677...");
-        }
     }
 }

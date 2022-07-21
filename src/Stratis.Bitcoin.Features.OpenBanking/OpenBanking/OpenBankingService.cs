@@ -47,11 +47,11 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 
             foreach (OpenBankDepositState state in typeof(OpenBankDepositState).GetEnumValues())
             {
-                OpenBankDeposit deposit = GetOpenBankDeposits(openBankAccount, state).FirstOrDefault();
-
-                // Ignore dates associated with pending deposits as the booking date time would be an estimate.
-                if (deposit.State == OpenBankDepositState.Pending)
+                // Ignore dates associated with pending deposits as the booking date time would/may be an estimate.
+                if (state == OpenBankDepositState.Pending || state == OpenBankDepositState.Unknown)
                     continue;
+
+                OpenBankDeposit deposit = GetOpenBankDeposits(openBankAccount, state).FirstOrDefault();
 
                 if (deposit != null && (lastDeposit == null || lastDeposit.BookDateTimeUTC < deposit.BookDateTimeUTC))
                 {
@@ -77,22 +77,17 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
                         var existingDeposit = this.GetOpenBankDeposit(openBankAccount, deposit.ExternalId);
                         if (existingDeposit != null)
                         {
-                            if (existingDeposit.State != OpenBankDepositState.Pending)
+                            if (existingDeposit.State != OpenBankDepositState.Pending || 
+                                !(deposit.State == OpenBankDepositState.Booked || deposit.State == OpenBankDepositState.Error))
                             {
                                 continue;
                             }
 
-                            this.DeleteOpenBankDeposit(batch, openBankAccount, deposit);
+                            // It's a pending deposit transitioning to "Booked" or "Error".
+                            this.DeleteOpenBankDeposit(batch, openBankAccount, existingDeposit);
                         }
 
                         this.PutOpenBankDeposit(batch, openBankAccount, deposit);
-                    }
-
-                    // Update pending deposits to "Booked" as required.
-                    // This code nay not be required if pending deposits transit to booked with a booking date after the last deposit - i.e. if the date is like a "last updated" date.
-                    foreach (OpenBankDeposit deposit in GetOpenBankDeposits(openBankAccount, OpenBankDepositState.Pending))
-                    {
-                        // TODO.
                     }
 
                     batch.Write();

@@ -72,5 +72,26 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
         public byte[] KeyBytes => ASCIIEncoding.ASCII.GetBytes(this.ExternalId);
 
         public byte[] IndexKeyBytes => new[] { (byte)this.State }.Concat(ASCIIEncoding.ASCII.GetBytes(this.ExternalId)).ToArray();
+
+        public BitcoinAddress ParseAddressFromReference(Network network)
+        {
+            // The "TransactionReference" must contain a valid network address.
+            var candidates = this.Reference.Split(' ');
+
+            foreach (var candidate in candidates)
+            {
+                try
+                {
+                    var targetAddress = BitcoinAddress.Create(candidate, network);
+
+                    return targetAddress;
+                }
+                catch (Exception)
+                {
+                }
+            }
+
+            return null;
+        }
     }
 }
