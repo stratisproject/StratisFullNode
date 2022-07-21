@@ -36,6 +36,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking
                     services.AddSingleton<IOpenBankingService, OpenBankingService>();
                     services.AddSingleton<ITokenMintingTransactionBuilder, TokenMintingTransactionBuilder>();
                     services.AddSingleton<ITokenMintingService, TokenMintingService>();
+                    services.AddSingleton<IOpenBankingClient, OpenBankingClient>();
                 });
             });
 

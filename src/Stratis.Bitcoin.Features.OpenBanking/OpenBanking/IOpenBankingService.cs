@@ -6,8 +6,9 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 {
     public enum OpenBankDepositState
     {
-        Detected = 'D',    // Deposit detected in bank account.
-        Processed = 'P',   // Minting transaction present in memory-pool.
+        Pending = 'P',     // "Pending" deposit detected in bank account.
+        Booked = 'B',      // "Booked" deposit detected in bank account.
+        Minted = 'M',      // Minting transaction present in memory-pool.
         SeenInBlock = 'S'  // Minting transaction present in block.
     }
 
@@ -19,6 +20,8 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
     public interface IOpenBankAccount
     {
         IOpenBankIdentifier OpenBankIdentifier { get; }
+
+        string OpenBankAccountNumber { get; }
 
         MetadataTrackerEnum MetaDataTrackerEnum { get; }
     }

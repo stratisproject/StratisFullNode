@@ -17,7 +17,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.TokenMinter
     /// <summary>Mints tokens for deposits discovered by the OpenBankingAPI.</summary>
     public class TokenMintingService : ITokenMintingService
     {
-        private readonly IOpenBankingService openBankingAPI;
+        private readonly IOpenBankingService openBankingService;
         private readonly ITokenMintingTransactionBuilder tokenMintingTransactionBuilder;
         private readonly IBroadcasterManager broadcasterManager;
         private readonly Dictionary<MetadataTrackerEnum, IOpenBankAccount> registeredAccounts;
@@ -27,7 +27,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.TokenMinter
         {
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
 
-            this.openBankingAPI = openBankingAPI;
+            this.openBankingService = openBankingAPI;
             this.tokenMintingTransactionBuilder = tokenMintingTransactionBuilder;
             this.broadcasterManager = broadcasterManager;
             this.registeredAccounts = new Dictionary<MetadataTrackerEnum, IOpenBankAccount>();
@@ -71,18 +71,21 @@ namespace Stratis.Bitcoin.Features.OpenBanking.TokenMinter
         {
             foreach (IOpenBankAccount openBankAccount in this.registeredAccounts.Values)
             {
-                this.openBankingAPI.UpdateDeposits(openBankAccount);
-                this.openBankingAPI.UpdateDepositStatus(openBankAccount);
+                this.openBankingService.UpdateDeposits(openBankAccount);
+                this.openBankingService.UpdateDepositStatus(openBankAccount);
 
                 // Look for deposits in the OpenBankingAPI that have a status of 'D'.
-                foreach (var deposit in this.openBankingAPI.GetOpenBankDeposits(openBankAccount, OpenBankDepositState.Detected).ToArray())
+                foreach (var deposit in this.openBankingService.GetOpenBankDeposits(openBankAccount, OpenBankDepositState.Booked).ToArray())
                 {
                     if (cancellationToken.IsCancellationRequested)
                         break;
 
+                    if (deposit.ValueDateTimeUTC < DateTime.UtcNow)
+                        continue;
+
                     Transaction transaction = this.tokenMintingTransactionBuilder.BuildSignedTransaction(openBankAccount, deposit);
 
-                    this.openBankingAPI.SetTransactionId(openBankAccount, deposit, transaction.GetHash());
+                    this.openBankingService.SetTransactionId(openBankAccount, deposit, transaction.GetHash());
 
                     // Add to memory pool.
                     await this.broadcasterManager.BroadcastTransactionAsync(transaction);

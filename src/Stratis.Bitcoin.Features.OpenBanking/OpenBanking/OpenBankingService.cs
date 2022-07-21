@@ -25,17 +25,18 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
         private readonly Network network;
         private readonly ChainIndexer chainIndexer;
         private readonly IPooledTransaction pooledTransaction;
+        private readonly IOpenBankingClient openBankingClient;
 
         private readonly object lockObject = new object();
 
-        public OpenBankingService(DataFolder dataFolder, DBreezeSerializer dBreezeSerializer, Network network, ChainIndexer chainIndexer, IPooledTransaction pooledTransaction)
+        public OpenBankingService(DataFolder dataFolder, DBreezeSerializer dBreezeSerializer, Network network, ChainIndexer chainIndexer, IPooledTransaction pooledTransaction, IOpenBankingClient openBankingClient)
         {
             this.dBreezeSerializer = dBreezeSerializer;
             this.network = network;
             this.chainIndexer = chainIndexer;
             this.pooledTransaction = pooledTransaction;
+            this.openBankingClient = openBankingClient;
 
-            // TODO: table reflecting bank account with <status><date><external id> and index <external id>:<deposit>
             this.db = new LevelDb();
             this.db.Open(Path.Combine(dataFolder.RootPath, "deposits"));
         }
@@ -47,7 +48,12 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
             foreach (OpenBankDepositState state in typeof(OpenBankDepositState).GetEnumValues())
             {
                 OpenBankDeposit deposit = GetOpenBankDeposits(openBankAccount, state).FirstOrDefault();
-                if (deposit != null && (lastDeposit == null || lastDeposit.DateTimeUTC < deposit.DateTimeUTC))
+
+                // Ignore dates associated with pending deposits as the booking date time would be an estimate.
+                if (deposit.State == OpenBankDepositState.Pending)
+                    continue;
+
+                if (deposit != null && (lastDeposit == null || lastDeposit.BookDateTimeUTC < deposit.BookDateTimeUTC))
                 {
                     lastDeposit = deposit;
                 }
@@ -62,7 +68,35 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
             {
                 OpenBankDeposit lastDeposit = GetLastDeposit(openBankAccount);
 
-                // TODO: Use the OpenBank API to add any deposits following this deposit in the bank account.
+                using (var batch = this.db.GetWriteBatch())
+                {
+                    // Use the OpenBank API to add any deposits following the last deposit in the bank account.
+                    foreach (OpenBankDeposit deposit in this.openBankingClient.GetDeposits(openBankAccount, lastDeposit?.BookDateTimeUTC))
+                    {
+                        // Add it if it does not already exist.
+                        var existingDeposit = this.GetOpenBankDeposit(openBankAccount, deposit.ExternalId);
+                        if (existingDeposit != null)
+                        {
+                            if (existingDeposit.State != OpenBankDepositState.Pending)
+                            {
+                                continue;
+                            }
+
+                            this.DeleteOpenBankDeposit(batch, openBankAccount, deposit);
+                        }
+
+                        this.PutOpenBankDeposit(batch, openBankAccount, deposit);
+                    }
+
+                    // Update pending deposits to "Booked" as required.
+                    // This code nay not be required if pending deposits transit to booked with a booking date after the last deposit - i.e. if the date is like a "last updated" date.
+                    foreach (OpenBankDeposit deposit in GetOpenBankDeposits(openBankAccount, OpenBankDepositState.Pending))
+                    {
+                        // TODO.
+                    }
+
+                    batch.Write();
+                }
             }
         }
 
@@ -80,40 +114,40 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 
                     foreach (OpenBankDeposit deposit in GetOpenBankDeposits(openBankAccount, OpenBankDepositState.SeenInBlock))
                     {
-                        if (deposit.DateTimeUTC < fromDateUTC)
+                        if (deposit.BookDateTimeUTC < fromDateUTC)
                             break;
 
                         if (this.chainIndexer[deposit.Block.Hash] != null)
                             continue;
 
                         DeleteOpenBankDeposit(batch, openBankAccount, deposit);
-                        deposit.State = OpenBankDepositState.Processed;
+                        deposit.State = OpenBankDepositState.Minted;
                         PutOpenBankDeposit(batch, openBankAccount, deposit);
 
                         isDirty = true;
                     }
 
                     // Look for any minting transactions that should be in the pool but are not.
-                    foreach (OpenBankDeposit deposit in GetOpenBankDeposits(openBankAccount, OpenBankDepositState.Processed))
+                    foreach (OpenBankDeposit deposit in GetOpenBankDeposits(openBankAccount, OpenBankDepositState.Minted))
                     {
                         if (this.pooledTransaction.GetTransaction(deposit.TxId) != null)
                             continue;
 
                         DeleteOpenBankDeposit(batch, openBankAccount, deposit);
-                        deposit.State = OpenBankDepositState.Detected;
+                        deposit.State = OpenBankDepositState.Booked;
                         PutOpenBankDeposit(batch, openBankAccount, deposit);
 
                         isDirty = true;
                     }
 
                     // Look for any minting transactions that have been added to the pool.
-                    foreach (OpenBankDeposit deposit in GetOpenBankDeposits(openBankAccount, OpenBankDepositState.Detected))
+                    foreach (OpenBankDeposit deposit in GetOpenBankDeposits(openBankAccount, OpenBankDepositState.Booked))
                     {
                         if (this.pooledTransaction.GetTransaction(deposit.TxId) == null)
                             continue;
 
                         DeleteOpenBankDeposit(batch, openBankAccount, deposit);
-                        deposit.State = OpenBankDepositState.Processed;
+                        deposit.State = OpenBankDepositState.Minted;
                         PutOpenBankDeposit(batch, openBankAccount, deposit);
 
                         isDirty = true;

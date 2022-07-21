@@ -9,12 +9,13 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
     public class OpenBankDeposit : IBitcoinSerializable
     {
         /// <summary>
-        /// Date (UTC) of deposit.
+        /// Booking Date (UTC) of deposit.
         /// </summary>
-        public DateTime DateTimeUTC;
+        public DateTime BookDateTimeUTC;
 
         /// <summary>
         /// External Id of deposit such as the bank deposit id.
+        /// Prefixed by ValueDateTimeUTC;
         /// </summary>
         public string ExternalId;
 
@@ -27,6 +28,11 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
         /// The amount deposited.
         /// </summary>
         public Money Amount;
+
+        /// <summary>
+        /// When the funds will be available in the bank account.
+        /// </summary>
+        public DateTime ValueDateTimeUTC;
 
         /// <summary>
         /// The current state of the deposit.
@@ -45,14 +51,17 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 
         public void ReadWrite(BitcoinStream stream)
         {
-            long ticks = this.DateTimeUTC.Ticks;
+            long ticks = this.BookDateTimeUTC.Ticks;
             stream.ReadWrite(ref ticks);
-            this.DateTimeUTC = new DateTime(ticks);
+            this.BookDateTimeUTC = new DateTime(ticks);
             stream.ReadWrite(ref this.ExternalId);
             stream.ReadWrite(ref this.Reference);
             long amount = this.Amount.Satoshi;
             stream.ReadWrite(ref amount);
             this.Amount = new Money(amount);
+            long ticks2 = this.ValueDateTimeUTC.Ticks;
+            stream.ReadWrite(ref ticks2);
+            this.ValueDateTimeUTC = new DateTime(ticks);
             byte state = (byte)this.State;
             stream.ReadWrite(ref state);
             this.State = (OpenBankDepositState)state;
