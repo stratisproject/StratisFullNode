@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using NBitcoin;
+using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Database;
+using Stratis.Bitcoin.Features.SmartContracts.MetadataTracker;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 
@@ -16,7 +17,6 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
     /// </summary>
     public class OpenBankingService : IOpenBankingService
     {
-        private const byte commonTableOffset = 0;
         private const byte depositTableOffset = 64;
         private const byte indexTableOffset = 128;
 
@@ -26,16 +26,18 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
         private readonly ChainIndexer chainIndexer;
         private readonly IPooledTransaction pooledTransaction;
         private readonly IOpenBankingClient openBankingClient;
+        private readonly IMetadataTracker metadataTracker;
 
         private readonly object lockObject = new object();
 
-        public OpenBankingService(DataFolder dataFolder, DBreezeSerializer dBreezeSerializer, Network network, ChainIndexer chainIndexer, IPooledTransaction pooledTransaction, IOpenBankingClient openBankingClient)
+        public OpenBankingService(DataFolder dataFolder, DBreezeSerializer dBreezeSerializer, Network network, ChainIndexer chainIndexer, IPooledTransaction pooledTransaction, IOpenBankingClient openBankingClient, IMetadataTracker metadataTracker)
         {
             this.dBreezeSerializer = dBreezeSerializer;
             this.network = network;
             this.chainIndexer = chainIndexer;
             this.pooledTransaction = pooledTransaction;
             this.openBankingClient = openBankingClient;
+            this.metadataTracker = metadataTracker;
 
             this.db = new LevelDb();
             this.db.Open(Path.Combine(dataFolder.RootPath, "deposits"));
@@ -70,27 +72,34 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 
                 using (var batch = this.db.GetWriteBatch())
                 {
+                    bool dirty = false;
+
                     // Use the OpenBank API to add any deposits following the last deposit in the bank account.
                     foreach (OpenBankDeposit deposit in this.openBankingClient.GetDeposits(openBankAccount, lastDeposit?.BookDateTimeUTC))
                     {
-                        // Add it if it does not already exist.
-                        var existingDeposit = this.GetOpenBankDeposit(openBankAccount, deposit.ExternalId);
-                        if (existingDeposit != null)
+                        // See if a "Booked" or "Error" deposit is replacing a pending deposit
+                        if ((deposit.State == OpenBankDepositState.Booked || deposit.State == OpenBankDepositState.Error))
                         {
-                            if (existingDeposit.State != OpenBankDepositState.Pending || 
-                                !(deposit.State == OpenBankDepositState.Booked || deposit.State == OpenBankDepositState.Error))
-                            {
+                            var pendingDeposit = this.GetOpenBankDeposit(openBankAccount, deposit.PendingKeyBytes);
+                            if (pendingDeposit == null)
                                 continue;
-                            }
 
-                            // It's a pending deposit transitioning to "Booked" or "Error".
-                            this.DeleteOpenBankDeposit(batch, openBankAccount, existingDeposit);
+                            this.DeleteOpenBankDeposit(batch, openBankAccount, pendingDeposit);
+                        }
+                        else
+                        {
+                            // Already exists?
+                            var existingDeposit = this.GetOpenBankDeposit(openBankAccount, deposit.KeyBytes);
+                            if (existingDeposit != null)
+                                continue;
                         }
 
                         this.PutOpenBankDeposit(batch, openBankAccount, deposit);
+                        dirty = true;
                     }
 
-                    batch.Write();
+                    if (dirty)
+                        batch.Write();
                 }
             }
         }
@@ -127,6 +136,19 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
                     {
                         if (this.pooledTransaction.GetTransaction(deposit.TxId) != null)
                             continue;
+
+                        // If its seen  in a block then set the state accordingly.
+                        MetadataTrackerEntry entry = this.metadataTracker.GetEntryByMetadata(openBankAccount.MetaDataTrackerEnum, Encoders.ASCII.EncodeData(deposit.KeyBytes));
+                        if (entry != null)
+                        {
+                            DeleteOpenBankDeposit(batch, openBankAccount, deposit);
+                            deposit.Block = entry.Block;
+                            deposit.State = OpenBankDepositState.SeenInBlock;
+                            PutOpenBankDeposit(batch, openBankAccount, deposit);
+
+                            isDirty = true;
+                            continue;
+                        }
 
                         DeleteOpenBankDeposit(batch, openBankAccount, deposit);
                         deposit.State = OpenBankDepositState.Booked;
@@ -187,10 +209,10 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
             batch.Put(indexTable, deposit.IndexKeyBytes, new byte[0]);
         }
 
-        public OpenBankDeposit GetOpenBankDeposit(IOpenBankAccount openBankAccount, string externalId)
+        public OpenBankDeposit GetOpenBankDeposit(IOpenBankAccount openBankAccount, byte[] keyBytes)
         {
             var depositTable = (byte)(depositTableOffset + openBankAccount.MetaDataTrackerEnum);
-            byte[] bytes = this.db.Get(depositTable, ASCIIEncoding.ASCII.GetBytes(externalId));
+            byte[] bytes = this.db.Get(depositTable, keyBytes);
             if (bytes == null)
                 return null;
 

@@ -40,7 +40,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
         /// <returns>The bank deposits for a given state in descending order by ExternalId.</returns>
         IEnumerable<OpenBankDeposit> GetOpenBankDeposits(IOpenBankAccount bankAccountIdentifier, OpenBankDepositState state);
 
-        OpenBankDeposit GetOpenBankDeposit(IOpenBankAccount openBankAccount, string externalId);
+        OpenBankDeposit GetOpenBankDeposit(IOpenBankAccount openBankAccount, byte[] keyBytes);
 
         void UpdateDeposits(IOpenBankAccount openBankAccount);
 

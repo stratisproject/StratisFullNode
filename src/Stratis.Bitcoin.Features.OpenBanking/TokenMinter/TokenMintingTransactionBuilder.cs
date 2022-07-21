@@ -1,4 +1,7 @@
-﻿using NBitcoin;
+﻿using System;
+using System.Linq;
+using NBitcoin;
+using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Features.OpenBanking.OpenBanking;
 using Stratis.Bitcoin.Features.SmartContracts.MetadataTracker;
 using Stratis.SmartContracts;
@@ -35,7 +38,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.TokenMinter
             uint160 contractAddress = metadataTrackingDefinition.Contract.ToUint160(this.network);
             uint160 receiver = openBankDeposit.Reference.ToUint160(this.network);
             // TODO: Ensure that sorting by ExternalId will result in chronological ordering.
-            var methodParameters = new object[] { receiver.ToAddress(), (UInt256)openBankDeposit.Amount.Satoshi, openBankDeposit.ExternalId };
+            var methodParameters = new object[] { receiver.ToAddress(), (UInt256)openBankDeposit.Amount.Satoshi, Encoders.ASCII.EncodeData(openBankDeposit.KeyBytes) };
             var contractTxData = new ContractTxData(1, (ulong)gasPriceSatoshis, (Stratis.SmartContracts.RuntimeObserver.Gas)gasLimit, contractAddress, mintingMethod, methodParameters);
             var serialized = this.callDataSerializer.Serialize(contractTxData);
 

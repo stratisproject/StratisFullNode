@@ -20,7 +20,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
         private readonly string openBankingAPI = "https://api.alphabank.com/open-banking/v3.1/aisp";
         private readonly Network network;
 
-        public OpenBankingClient(OpenBankingSettings openBankingSettings, Network network, IServiceCollection serviceCollection)
+        public OpenBankingClient(OpenBankingSettings openBankingSettings, Network network /*, IServiceCollection serviceCollection */)
         {
             this.network = network;
 
@@ -80,8 +80,6 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
                 if (obj.TransactionId.Length > 16)
                     continue;
 
-                string externalId = obj.TransactionId.PadLeft(16, '0');
-
                 OpenBankDepositState state = OpenBankDepositState.Unknown;
                 switch (obj.Status)
                 {
@@ -97,7 +95,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
                 {
                     BookDateTimeUTC = DateTime.Parse(obj.BookingDateTime),
                     ValueDateTimeUTC = DateTime.Parse(obj.ValueDateTime),
-                    ExternalId = obj.TransactionId,
+                    TransactionId = obj.TransactionId,
                     State = state,
                     Amount = Money.Parse(obj.Amount.Amount),
                     Reference = obj.TransactionReference

@@ -14,10 +14,9 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
         public DateTime BookDateTimeUTC;
 
         /// <summary>
-        /// External Id of deposit such as the bank deposit id.
-        /// Prefixed by ValueDateTimeUTC;
+        /// Transaction Id of deposit.
         /// </summary>
-        public string ExternalId;
+        public string TransactionId;
 
         /// <summary>
         /// The destination address for the funds.
@@ -54,7 +53,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
             long ticks = this.BookDateTimeUTC.Ticks;
             stream.ReadWrite(ref ticks);
             this.BookDateTimeUTC = new DateTime(ticks);
-            stream.ReadWrite(ref this.ExternalId);
+            stream.ReadWrite(ref this.TransactionId);
             stream.ReadWrite(ref this.Reference);
             long amount = this.Amount.Satoshi;
             stream.ReadWrite(ref amount);
@@ -69,9 +68,12 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
             stream.ReadWrite(ref this.Block);
         }
 
-        public byte[] KeyBytes => ASCIIEncoding.ASCII.GetBytes(this.ExternalId);
+        public byte[] PendingKeyBytes => ASCIIEncoding.ASCII.GetBytes(this.TransactionId);
 
-        public byte[] IndexKeyBytes => new[] { (byte)this.State }.Concat(ASCIIEncoding.ASCII.GetBytes(this.ExternalId)).ToArray();
+        public byte[] KeyBytes => (this.State == OpenBankDepositState.Pending) ? this.PendingKeyBytes :
+            ASCIIEncoding.ASCII.GetBytes(this.BookDateTimeUTC.ToString("yyyy-MM-ddTHH:mm:ss") + " " + this.PendingKeyBytes);
+
+        public byte[] IndexKeyBytes => new[] { (byte)this.State }.Concat(this.KeyBytes).ToArray();
 
         public BitcoinAddress ParseAddressFromReference(Network network)
         {
