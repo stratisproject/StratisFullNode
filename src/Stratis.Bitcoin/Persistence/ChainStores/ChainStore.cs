@@ -1,40 +1,38 @@
 ﻿using System;
 using System.Collections.Generic;
 using NBitcoin;
-using RocksDbSharp;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Database;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Persistence.ChainStores
 {
-    /// <summary>
-    /// Rocksdb implementation of the chain storage
-    /// </summary>
-    public sealed class RocksDbChainStore : IChainStore
+    public class ChainStore<T> : IChainStore where T : IDb, new()
     {
+        private readonly Network network;
+
         internal static readonly byte ChainTableName = 1;
         internal static readonly byte HeaderTableName = 2;
 
-        private readonly string dataFolder;
-        private readonly Network network;
-
-        /// <summary> Headers that are close to the tip. </summary>
+        /// <summary>
+        /// Headers that are close to the tip
+        /// </summary>
         private readonly MemoryCountCache<uint256, BlockHeader> headers;
 
-        private readonly object locker;
-        private readonly DbOptions dbOptions;
-        private readonly RocksDb rocksDb;
+        private readonly IDb db;
 
-        public RocksDbChainStore(Network network, DataFolder dataFolder, ChainIndexer chainIndexer)
+        private readonly object locker;
+
+        public ChainStore(Network network, DataFolder dataFolder, ChainIndexer chainIndexer)
         {
-            this.dataFolder = dataFolder.ChainPath;
             this.network = network;
             this.ChainIndexer = chainIndexer;
             this.headers = new MemoryCountCache<uint256, BlockHeader>(601);
             this.locker = new object();
 
-            this.dbOptions = new DbOptions().SetCreateIfMissing(true);
-            this.rocksDb = RocksDb.Open(this.dbOptions, this.dataFolder);
+            // Open a connection to a new DB and create if not found
+            this.db = new T();
+            this.db.Open(dataFolder.ChainPath);
         }
 
         public ChainIndexer ChainIndexer { get; }
@@ -51,7 +49,7 @@ namespace Stratis.Bitcoin.Persistence.ChainStores
 
             lock (this.locker)
             {
-                bytes = this.rocksDb.Get(HeaderTableName, bytes);
+                bytes = this.db.Get(HeaderTableName, bytes);
             }
 
             if (bytes == null)
@@ -84,7 +82,11 @@ namespace Stratis.Bitcoin.Persistence.ChainStores
 
             lock (this.locker)
             {
-                this.rocksDb.Put(HeaderTableName, blockHeader.GetHash().ToBytes(), blockHeader.ToBytes(consensusFactory));
+                using (var batch = this.db.GetWriteBatch())
+                {
+                    batch.Put(HeaderTableName, blockHeader.GetHash().ToBytes(), blockHeader.ToBytes(consensusFactory));
+                    batch.Write();
+                }
             }
 
             return true;
@@ -96,7 +98,7 @@ namespace Stratis.Bitcoin.Persistence.ChainStores
 
             lock (this.locker)
             {
-                bytes = this.rocksDb.Get(ChainTableName, BitConverter.GetBytes(height));
+                bytes = this.db.Get(ChainTableName, BitConverter.GetBytes(height));
             }
 
             if (bytes == null)
@@ -112,7 +114,7 @@ namespace Stratis.Bitcoin.Persistence.ChainStores
 
         public void PutChainData(IEnumerable<ChainDataItem> items)
         {
-            using (var batch = new WriteBatch())
+            using (var batch = this.db.GetWriteBatch())
             {
                 foreach (var item in items)
                 {
@@ -121,14 +123,14 @@ namespace Stratis.Bitcoin.Persistence.ChainStores
 
                 lock (this.locker)
                 {
-                    this.rocksDb.Write(batch);
+                    batch.Write();
                 }
             }
         }
 
         public void Dispose()
         {
-            this.rocksDb?.Dispose();
+            this.db?.Dispose();
         }
     }
 }
