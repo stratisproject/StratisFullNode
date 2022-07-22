@@ -37,8 +37,13 @@ namespace Stratis.Bitcoin.Database
                 else
                 {
                     iterator.Seek(lastKey);
-                    if (iterator.IsValid() && !(includeLastKey && byteArrayComparer.Equals(iterator.Key(), lastKey)))
-                        iterator.Prev();
+                    if (iterator.IsValid())
+                    {
+                        if (!(includeLastKey && byteArrayComparer.Equals(iterator.Key(), lastKey)))
+                            iterator.Prev();
+                    }
+                    else
+                        iterator.SeekToLast();
                 }
 
                 breakLoop = (firstKey == null) ? (Func<byte[], bool>)null : (keyBytes) =>
@@ -68,8 +73,11 @@ namespace Stratis.Bitcoin.Database
                 else
                 {
                     iterator.Seek(firstKey);
-                    if (iterator.IsValid() && !(includeFirstKey && byteArrayComparer.Equals(iterator.Key(), firstKey)))
-                        iterator.Next();
+                    if (iterator.IsValid())
+                    {
+                        if (!(includeFirstKey && byteArrayComparer.Equals(iterator.Key(), firstKey)))
+                            iterator.Next();
+                    }
                 }
 
                 breakLoop = (lastKey == null) ? (Func<byte[], bool>)null : (keyBytes) =>

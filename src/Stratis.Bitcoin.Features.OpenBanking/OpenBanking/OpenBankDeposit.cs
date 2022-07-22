@@ -55,7 +55,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
             this.BookDateTimeUTC = new DateTime(ticks);
             stream.ReadWrite(ref this.TransactionId);
             stream.ReadWrite(ref this.Reference);
-            long amount = this.Amount.Satoshi;
+            long amount = stream.Serializing ? this.Amount.Satoshi : 0;
             stream.ReadWrite(ref amount);
             this.Amount = new Money(amount);
             long ticks2 = this.ValueDateTimeUTC.Ticks;

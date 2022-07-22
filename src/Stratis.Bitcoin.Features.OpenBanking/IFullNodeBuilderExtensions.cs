@@ -32,7 +32,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking
                     services.AddSingleton(fullNodeBuilder);
                     services.AddSingleton<OpenBankingSettings>();
                     services.AddSingleton<ReceiptSearcher>();
-                    services.AddSingleton<IMetadataTracker, MetaDataTracker>();
+                    services.AddSingleton<IMetadataTracker, MetadataTracker>();
                     services.AddSingleton<IOpenBankingService, OpenBankingService>();
                     services.AddSingleton<ITokenMintingTransactionBuilder, TokenMintingTransactionBuilder>();
                     services.AddSingleton<ITokenMintingService, TokenMintingService>();

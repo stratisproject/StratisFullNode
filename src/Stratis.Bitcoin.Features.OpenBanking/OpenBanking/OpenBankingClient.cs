@@ -12,7 +12,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 {
     public interface IOpenBankingClient
     {
-        IEnumerable<OpenBankDeposit> GetDeposits(IOpenBankAccount openBankAccount, DateTime? fromBookingDateTime);
+        dynamic GetDeposits(IOpenBankAccount openBankAccount, DateTime? fromBookingDateTime);
     }
 
     public class OpenBankingClient : IOpenBankingClient
@@ -35,7 +35,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
            */
         }
 
-        public IEnumerable<OpenBankDeposit> GetDeposits(IOpenBankAccount openBankAccount, DateTime? fromBookingDateTime)
+        public dynamic GetDeposits(IOpenBankAccount openBankAccount, DateTime? fromBookingDateTime)
         {
             // Transaction can be "Booked" or "Pending".
             // Need to revisit "Pending" in case their booking date changes? Up/Down???
@@ -49,13 +49,14 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 
             Uri uri = new Uri(url);
             WebRequest webRequest = WebRequest.Create(uri);
+
+            return new OpenBankDeposit[] { };
+
             WebResponse webResponse = webRequest.GetResponse();
             var r = webResponse.GetResponseStream();
             var sr = new StreamReader(r);
-            var jsonObject = JsonSerializer.Deserialize<dynamic>(sr.ReadToEnd());
-            var transactions = jsonObject.Data.Transaction;
-
-            return ParseTransactions(openBankAccount, transactions);
+            
+            return JsonSerializer.Deserialize<dynamic>(sr.ReadToEnd());
         }
 
         private bool ServerCertificateValidation(object sender, System.Security.Cryptography.X509Certificates.X509Certificate certificate, System.Security.Cryptography.X509Certificates.X509Chain chain, System.Net.Security.SslPolicyErrors errors)
@@ -67,46 +68,6 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
             //return (errors == SslPolicyErrors.None) || certificate.GetCertHashString(HashAlgorithmName.SHA256).Equals("EB8E0B28AE064ED58CBED9DAEB46CFEB3BD7ECA677...");
         }
 
-        private IEnumerable<OpenBankDeposit> ParseTransactions(IOpenBankAccount openBankAccount, dynamic[] transactions)
-        {
-            foreach (dynamic obj in transactions)
-            {
-                if (obj.Amount.Currency != openBankAccount.Currency)
-                    continue;
-
-                if (obj.CreditDebitIndicator != "Credit")
-                    continue;
-
-                if (obj.TransactionId.Length > 16)
-                    continue;
-
-                OpenBankDepositState state = OpenBankDepositState.Unknown;
-                switch (obj.Status)
-                {
-                    case "Booked":
-                        state = OpenBankDepositState.Booked;
-                        break;
-                    case "Pending":
-                        state = OpenBankDepositState.Pending;
-                        break;
-                }
-
-                var deposit = new OpenBankDeposit()
-                {
-                    BookDateTimeUTC = DateTime.Parse(obj.BookingDateTime),
-                    ValueDateTimeUTC = DateTime.Parse(obj.ValueDateTime),
-                    TransactionId = obj.TransactionId,
-                    State = state,
-                    Amount = Money.Parse(obj.Amount.Amount),
-                    Reference = obj.TransactionReference
-                };
-
-                if (deposit.State == OpenBankDepositState.Booked && deposit.ParseAddressFromReference(this.network) == null)
-                    deposit.State = OpenBankDepositState.Error;
-
-                yield return deposit;
-            }
-        }
 
         /*
          GET /accounts/22289/transactions HTTP/1.1

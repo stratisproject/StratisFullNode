@@ -116,15 +116,10 @@ namespace Stratis.Bitcoin.Tests.Common
                     ConstructorInfo constructorInfo = GetConstructor(serviceType);
                     object[] args = GetConstructorArguments(this, constructorInfo);
                     mock = Activator.CreateInstance(mockType, args);
+                    mock.SetPrivatePropertyValue("CallBase", true);
                 }
 
                 this.serviceCollection.AddSingleton(mockType, mock);
-
-                // If we're mocking an interface then there is no separate singleton for the internal object.
-                if (isMock && serviceType.IsInterface)
-                    return mock;
-
-                mock.SetPrivatePropertyValue("CallBase", true);
 
                 service = ((dynamic)mock).Object;
             }
