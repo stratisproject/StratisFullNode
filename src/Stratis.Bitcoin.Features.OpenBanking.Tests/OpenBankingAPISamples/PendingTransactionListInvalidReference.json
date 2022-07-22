@@ -1,0 +1,44 @@
+﻿{
+  "Data": {
+    "Transaction": [
+      {
+        "AccountId": "22289",
+        "TransactionId": "123",
+        "TransactionReference": "Ref 1",
+        "Amount": {
+          "Amount": "10.00",
+          "Currency": "GBP"
+        },
+        "CreditDebitIndicator": "Credit",
+        "Status": "Pending",
+        "BookingDateTime": "2017-04-05T10:43:07+00:00",
+        "ValueDateTime": "2017-04-05T10:45:22+00:00",
+        "TransactionInformation": "Cash from Aubrey",
+        "BankTransactionCode": {
+          "Code": "ReceivedCreditTransfer",
+          "SubCode": "DomesticCreditTransfer"
+        },
+        "ProprietaryBankTransactionCode": {
+          "Code": "Transfer",
+          "Issuer": "AlphaBank"
+        },
+        "Balance": {
+          "Amount": {
+            "Amount": "230.00",
+            "Currency": "GBP"
+          },
+          "CreditDebitIndicator": "Credit",
+          "Type": "InterimBooked"
+        }
+      }
+    ]
+  },
+  "Links": {
+    "Self": "https://api.alphabank.com/open-banking/v3.1/aisp/accounts/22289/transactions/"
+  },
+  "Meta": {
+    "TotalPages": 1,
+    "FirstAvailableDateTime": "2017-05-03T00:00:00+00:00",
+    "LastAvailableDateTime": "2017-12-03T00:00:00+00:00"
+  }
+}

@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NBitcoin;
@@ -23,9 +25,8 @@ namespace Stratis.Bitcoin.Features.OpenBanking.Tests
 
         public OpenBankingServicesTests()
         {
-            this.network = new CirrusMain();
-
-            var mockingServices = new ServiceCollection()
+            this.network = new CirrusTest();
+            this.mockingContext = new MockingContext(new ServiceCollection()
                 .AddSingleton(this.network)
                 .AddSingleton(NodeSettings.Default(this.network))
                 .AddSingleton(p => new StoreSettings(p.GetService<NodeSettings>())
@@ -39,9 +40,8 @@ namespace Stratis.Bitcoin.Features.OpenBanking.Tests
                 .AddSingleton<IAddressIndexer, AddressIndexer>()
                 .AddSingleton<DBreezeSerializer>()
                 .AddSingleton<IMetadataTracker, MetadataTracker>()
-                .AddSingleton<IOpenBankingService, OpenBankingService>();
-
-            this.mockingContext = new MockingContext(mockingServices);
+                .AddSingleton<IOpenBankingService, OpenBankingService>()
+            );
         }
 
         private string GetSampleResourceString(string fileName)
@@ -55,12 +55,21 @@ namespace Stratis.Bitcoin.Features.OpenBanking.Tests
             }
         }
 
-        [Fact]
-        public void OpenBankDepositWithInvalidReferenceSetToErrorState()
+        public static IEnumerable<object[]> SamplesAndExpectedStates()
+        {
+            yield return new object[] { "BookedTransactionListInvalidReference.json", OpenBankDepositState.Error };
+            yield return new object[] { "BookedTransactionListValidReference.json", OpenBankDepositState.Booked};
+            yield return new object[] { "PendingTransactionListInvalidReference.json", OpenBankDepositState.Pending };
+        }
+
+        [Theory]
+        [MemberData(nameof(SamplesAndExpectedStates))]
+        public void DepositSetToExpectedState(string sampleFile, OpenBankDepositState expectedState)
         {
             var mockOpenBankingClient = this.mockingContext.GetService<Mock<IOpenBankingClient>>();
 
-            mockOpenBankingClient.Setup(m => m.GetDeposits(It.IsAny<IOpenBankAccount>(), It.IsAny<DateTime?>())).Returns(GetSampleResourceString("TransactionList1.json"));
+            mockOpenBankingClient.Setup(m => m.GetTransactions(It.IsAny<IOpenBankAccount>(), It.IsAny<DateTime?>()))
+                .Returns(JsonSerializer.Deserialize<OBGetTransactionsResponse>(GetSampleResourceString(sampleFile)));
 
             var openBankingService = this.mockingContext.GetService<IOpenBankingService>();
 
@@ -68,7 +77,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.Tests
 
             openBankingService.UpdateDeposits(openBankAccount);
 
-            Assert.NotEmpty(openBankingService.GetOpenBankDeposits(openBankAccount, OpenBankDepositState.Error));
+            Assert.NotEmpty(openBankingService.GetOpenBankDeposits(openBankAccount, expectedState));
         }
     }
 }

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Configuration;
@@ -76,7 +75,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
                     bool dirty = false;
 
                     // Use the OpenBank API to add any deposits following the last deposit in the bank account.
-                    foreach (OpenBankDeposit deposit in this.ParseTransactions(openBankAccount, this.openBankingClient.GetDeposits(openBankAccount, lastDeposit?.BookDateTimeUTC)))
+                    foreach (OpenBankDeposit deposit in this.openBankingClient.GetTransactions(openBankAccount, lastDeposit?.BookDateTimeUTC).GetDeposits(openBankAccount.Currency, this.network))
                     {
                         // See if a "Booked" or "Error" deposit is replacing a pending deposit
                         if ((deposit.State == OpenBankDepositState.Booked || deposit.State == OpenBankDepositState.Error))
@@ -172,74 +171,6 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
                         batch.Write();
                     }
                 }
-            }
-        }
-
-        public class OBAmount
-        {
-            public string Amount { get; set; }
-            public string Currency { get; set; }
-        }
-
-        public class OBTransaction
-        {
-            public string AccountId { get; set; }
-            public string CreditDebitIndicator { get; set; }
-            public string Status { get; set; }
-            public string BookingDateTime { get; set; }
-            public string ValueDateTime { get; set; }
-            public string TransactionId { get; set; }
-            public string TransactionReference { get; set; }
-            public OBAmount Amount { get; set; }
-         }
-
-        public class OBTransactionData
-        {
-            public OBTransaction[] Transaction { get; set; }
-        }
-
-        public class OBTransactionResult
-        {
-            public OBTransactionData Data { get; set; }
-        }
-
-        private IEnumerable<OpenBankDeposit> ParseTransactions(IOpenBankAccount openBankAccount, string strJSON)
-        {
-            var obTransactionResult = JsonSerializer.Deserialize<OBTransactionResult>(strJSON);
-
-            foreach (OBTransaction obj in obTransactionResult.Data.Transaction)
-            {
-                if (obj.Amount.Currency != openBankAccount.Currency)
-                    continue;
-
-                if (obj.CreditDebitIndicator != "Credit")
-                    continue;
-
-                OpenBankDepositState state = OpenBankDepositState.Unknown;
-                switch (obj.Status)
-                {
-                    case "Booked":
-                        state = OpenBankDepositState.Booked;
-                        break;
-                    case "Pending":
-                        state = OpenBankDepositState.Pending;
-                        break;
-                }
-
-                var deposit = new OpenBankDeposit()
-                {
-                    BookDateTimeUTC = DateTime.Parse(obj.BookingDateTime),
-                    ValueDateTimeUTC = DateTime.Parse(obj.ValueDateTime),
-                    TransactionId = obj.TransactionId,
-                    State = state,
-                    Amount = Money.Parse(obj.Amount.Amount),
-                    Reference = obj.TransactionReference
-                };
-
-                if (deposit.State == OpenBankDepositState.Booked && deposit.ParseAddressFromReference(this.network) == null)
-                    deposit.State = OpenBankDepositState.Error;
-
-                yield return deposit;
             }
         }
 

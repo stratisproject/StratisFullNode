@@ -7,11 +7,14 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <None Remove="OpenBankingAPISamples\TransactionList1.json" />
+	  <None Remove="OpenBankingAPISamples\BookedTransactionListInvalidReference.json" />
+	  <None Remove="OpenBankingAPISamples\PendingTransactionListInvalidReference.json" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <EmbeddedResource Include="OpenBankingAPISamples\TransactionList1.json">
+	  <EmbeddedResource Include="OpenBankingAPISamples\PendingTransactionListInvalidReference.json" />
+	  <EmbeddedResource Include="OpenBankingAPISamples\BookedTransactionListInvalidReference.json" />
+	  <EmbeddedResource Include="OpenBankingAPISamples\BookedTransactionListValidReference.json">
 	    <CopyToOutputDirectory>Never</CopyToOutputDirectory>
 	  </EmbeddedResource>
 	</ItemGroup>

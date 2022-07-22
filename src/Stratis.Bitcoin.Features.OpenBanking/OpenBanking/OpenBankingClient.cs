@@ -1,18 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Security;
 using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection;
 using NBitcoin;
-using SimpleIdServer.OpenBankingApi;
 
 namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 {
     public interface IOpenBankingClient
     {
-        dynamic GetDeposits(IOpenBankAccount openBankAccount, DateTime? fromBookingDateTime);
+        OBGetTransactionsResponse GetTransactions(IOpenBankAccount openBankAccount, DateTime? fromBookingDateTime);
     }
 
     public class OpenBankingClient : IOpenBankingClient
@@ -23,19 +20,9 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
         public OpenBankingClient(OpenBankingSettings openBankingSettings, Network network /*, IServiceCollection serviceCollection */)
         {
             this.network = network;
-
-            // TODO:
-            /*
-            string token = "";
-            string accountId = "";
-            string issuer = "";
-            var x = new SimpleIdServer.OpenBankingApi.Accounts.Queries.GetAccountQuery(token, accountId, issuer);
-            var y = new SimpleIdServer.OpenBankingApi.OpenBankingApiBuilder(serviceCollection);
-            //var z = new SimpleIdServer.OpenBankingApi.Api.Token.TokenBuilders.OpenBankingApiAccessTokenBuilder()
-           */
         }
 
-        public dynamic GetDeposits(IOpenBankAccount openBankAccount, DateTime? fromBookingDateTime)
+        public OBGetTransactionsResponse GetTransactions(IOpenBankAccount openBankAccount, DateTime? fromBookingDateTime)
         {
             // Transaction can be "Booked" or "Pending".
             // Need to revisit "Pending" in case their booking date changes? Up/Down???
@@ -50,13 +37,26 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
             Uri uri = new Uri(url);
             WebRequest webRequest = WebRequest.Create(uri);
 
-            return new OpenBankDeposit[] { };
+            /*
+             GET /accounts/22289/transactions HTTP/1.1
+                Authorization: Bearer Az90SAOJklae
+                x-fapi-financial-id: OB/2017/001
+                x-fapi-customer-last-logged-time:  Sun, 10 Sep 2017 19:43:31 GMT
+                x-fapi-customer-ip-address: 104.25.212.99
+                x-fapi-interaction-id: 93bac548-d2de-4546-b106-880a5018460d
+                Accept: application/json
+
+             HTTP/1.1 200 OK
+                x-fapi-interaction-id: 93bac548-d2de-4546-b106-880a5018460d          
+            */
+
+            return null;
 
             WebResponse webResponse = webRequest.GetResponse();
             var r = webResponse.GetResponseStream();
             var sr = new StreamReader(r);
-            
-            return JsonSerializer.Deserialize<dynamic>(sr.ReadToEnd());
+
+            return JsonSerializer.Deserialize<OBGetTransactionsResponse>(sr.ReadToEnd());
         }
 
         private bool ServerCertificateValidation(object sender, System.Security.Cryptography.X509Certificates.X509Certificate certificate, System.Security.Cryptography.X509Certificates.X509Chain chain, System.Net.Security.SslPolicyErrors errors)
@@ -69,63 +69,6 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
         }
 
 
-        /*
-         GET /accounts/22289/transactions HTTP/1.1
-            Authorization: Bearer Az90SAOJklae
-            x-fapi-financial-id: OB/2017/001
-            x-fapi-customer-last-logged-time:  Sun, 10 Sep 2017 19:43:31 GMT
-            x-fapi-customer-ip-address: 104.25.212.99
-            x-fapi-interaction-id: 93bac548-d2de-4546-b106-880a5018460d
-            Accept: application/json
 
-         HTTP/1.1 200 OK
-            x-fapi-interaction-id: 93bac548-d2de-4546-b106-880a5018460d
-            Content-Type: application/json
- 
-            {
-              "Data": {
-                "Transaction": [
-                  {
-                    "AccountId": "22289",
-                    "TransactionId": "123",
-                    "TransactionReference": "Ref 1",
-                    "Amount": {
-                      "Amount": "10.00",
-                      "Currency": "GBP"
-                    },
-                    "CreditDebitIndicator": "Credit",
-                    "Status": "Booked",
-                    "BookingDateTime": "2017-04-05T10:43:07+00:00",
-                    "ValueDateTime": "2017-04-05T10:45:22+00:00",
-                    "TransactionInformation": "Cash from Aubrey",
-                    "BankTransactionCode": {
-                      "Code": "ReceivedCreditTransfer",
-                      "SubCode": "DomesticCreditTransfer"
-                    },
-                    "ProprietaryBankTransactionCode": {
-                      "Code": "Transfer",
-                      "Issuer": "AlphaBank"
-                    },
-                    "Balance": {
-                      "Amount": {
-                        "Amount": "230.00",
-                        "Currency": "GBP"
-                      },
-                      "CreditDebitIndicator": "Credit",
-                      "Type": "InterimBooked"
-                    }
-                  }
-                ]
-              },
-              "Links": {
-                "Self": "https://api.alphabank.com/open-banking/v3.1/aisp/accounts/22289/transactions/"
-              },
-              "Meta": {
-                "TotalPages": 1,
-                "FirstAvailableDateTime": "2017-05-03T00:00:00+00:00",
-                "LastAvailableDateTime": "2017-12-03T00:00:00+00:00"
-              }
-            }
-        */
     }
 }
