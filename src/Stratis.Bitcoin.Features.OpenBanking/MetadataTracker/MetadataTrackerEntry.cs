@@ -13,7 +13,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.MetadataTracker
 
         public void ReadWrite(BitcoinStream stream)
         {
-            this.Block.ReadWrite(stream);
+            var block = this.Block;
+            stream.ReadWrite(ref block);
+            this.Block = block;
             var txId = this.TxId;
             stream.ReadWrite(ref txId);
             this.TxId = txId;

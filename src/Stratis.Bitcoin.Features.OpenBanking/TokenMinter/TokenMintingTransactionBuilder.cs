@@ -1,4 +1,5 @@
 ﻿using NBitcoin;
+using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Features.OpenBanking.OpenBanking;
 using Stratis.Bitcoin.Features.SmartContracts.MetadataTracker;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
@@ -56,10 +57,10 @@ namespace Stratis.Bitcoin.Features.OpenBanking.TokenMinter
                 Parameters = new string[] {
                     // The address that will receive the funds.
                     serializer.Serialize(Base58ToAddress(openBankDeposit.ParseAddressFromReference(this.network))),
-                    // MethodName
-                    serializer.Serialize(mintingMethod),
                     // Amount
-                    serializer.Serialize((UInt256)openBankDeposit.Amount.Satoshi)
+                    serializer.Serialize((UInt256)openBankDeposit.Amount.Satoshi), // TODO: Minus the fees.
+                    // Metadata
+                    Encoders.ASCII.EncodeData(openBankDeposit.KeyBytes)
                 }
             };
 
