@@ -6,7 +6,6 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 {
     public enum OpenBankDepositState
     {
-        Unknown = 'U',     // Deposit has an unknown status.
         Error = 'E',       // Deposit is 'Booked' but has an invalid reference.
         Pending = 'P',     // "Pending" deposit detected in bank account.
         Booked = 'B',      // "Booked" deposit detected in bank account.

@@ -10,6 +10,7 @@ using NBitcoin;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.OpenBanking.OpenBanking;
 using Stratis.Bitcoin.Features.SmartContracts.MetadataTracker;
+using Stratis.Bitcoin.Features.SmartContracts.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 
 namespace Stratis.Bitcoin.Features.OpenBanking.TokenMinter

@@ -50,7 +50,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
             foreach (OpenBankDepositState state in typeof(OpenBankDepositState).GetEnumValues())
             {
                 // Ignore dates associated with pending deposits as the booking date time would/may be an estimate.
-                if (state == OpenBankDepositState.Pending || state == OpenBankDepositState.Unknown)
+                if (state == OpenBankDepositState.Pending)
                     continue;
 
                 OpenBankDeposit deposit = GetOpenBankDeposits(openBankAccount, state).FirstOrDefault();
@@ -64,6 +64,46 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
             return lastDeposit;
         }
 
+        private IEnumerable<OpenBankDeposit> GetDeposits(OBGetTransactionsResponse oBGetTransactionsResponse, string currency, Network network)
+        {
+            foreach (OBTransaction transaction in oBGetTransactionsResponse.Data.Transaction)
+            {
+                if (transaction.Amount.Currency != currency)
+                    continue;
+
+                if (transaction.CreditDebitIndicator != "Credit")
+                    continue;
+
+                OpenBankDepositState state;
+                switch (transaction.Status)
+                {
+                    case "Booked":
+                        state = OpenBankDepositState.Booked;
+                        break;
+                    case "Pending":
+                        state = OpenBankDepositState.Pending;
+                        break;
+                    default:
+                        continue;
+                }
+
+                var deposit = new OpenBankDeposit()
+                {
+                    BookDateTimeUTC = DateTime.Parse(transaction.BookingDateTime),
+                    ValueDateTimeUTC = DateTime.Parse(transaction.ValueDateTime),
+                    TransactionId = transaction.TransactionId,
+                    State = state,
+                    Amount = Money.Parse(transaction.Amount.Amount),
+                    Reference = transaction.TransactionReference
+                };
+
+                if (deposit.State == OpenBankDepositState.Booked && deposit.ParseAddressFromReference(network) == null)
+                    deposit.State = OpenBankDepositState.Error;
+
+                yield return deposit;
+            }
+        }
+
         public void UpdateDeposits(IOpenBankAccount openBankAccount)
         {
             lock (this.lockObject)
@@ -74,8 +114,10 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
                 {
                     bool dirty = false;
 
+                    OBGetTransactionsResponse response = this.openBankingClient.GetTransactions(openBankAccount, lastDeposit?.BookDateTimeUTC);
+
                     // Use the OpenBank API to add any deposits following the last deposit in the bank account.
-                    foreach (OpenBankDeposit deposit in this.openBankingClient.GetTransactions(openBankAccount, lastDeposit?.BookDateTimeUTC).GetDeposits(openBankAccount.Currency, this.network))
+                    foreach (OpenBankDeposit deposit in this.GetDeposits(response, openBankAccount.Currency, this.network))
                     {
                         // See if a "Booked" or "Error" deposit is replacing a pending deposit
                         if ((deposit.State == OpenBankDepositState.Booked || deposit.State == OpenBankDepositState.Error))

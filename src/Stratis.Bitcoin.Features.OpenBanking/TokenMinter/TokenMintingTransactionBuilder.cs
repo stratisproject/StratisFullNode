@@ -1,11 +1,12 @@
-﻿using System;
-using System.Linq;
-using NBitcoin;
-using NBitcoin.DataEncoders;
+﻿using NBitcoin;
 using Stratis.Bitcoin.Features.OpenBanking.OpenBanking;
 using Stratis.Bitcoin.Features.SmartContracts.MetadataTracker;
+using Stratis.Bitcoin.Features.SmartContracts.Models;
+using Stratis.Bitcoin.Features.SmartContracts.Wallet;
+using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.SmartContracts;
 using Stratis.SmartContracts.CLR;
+using Stratis.SmartContracts.CLR.Serialization;
 
 namespace Stratis.Bitcoin.Features.OpenBanking.TokenMinter
 {
@@ -13,49 +14,65 @@ namespace Stratis.Bitcoin.Features.OpenBanking.TokenMinter
     {
         private const string mintingMethod = "BurnWithMetadata"; // "MintWithMetadata"
         private readonly Network network;
-        private readonly ICallDataSerializer callDataSerializer;
+        private readonly IWalletTransactionHandler walletTransactionHandler;
         private readonly IMetadataTracker metadataTracker;
+        private readonly ICallDataSerializer callDataSerializer;
         private readonly OpenBankingSettings openBankingSettings;
+        private readonly ISmartContractTransactionService smartContractTransactionService;
 
-        public TokenMintingTransactionBuilder(Network network, ICallDataSerializer callDataSerializer, IMetadataTracker metadataTracker, OpenBankingSettings openBankingSettings)
+        public TokenMintingTransactionBuilder(Network network, IWalletTransactionHandler walletTransactionHandler, ICallDataSerializer callDataSerializer, IMetadataTracker metadataTracker, OpenBankingSettings openBankingSettings, ISmartContractTransactionService smartContractTransactionService)
         {
             this.network = network;
-            this.callDataSerializer = callDataSerializer;
+            this.walletTransactionHandler = walletTransactionHandler;
             this.metadataTracker = metadataTracker;
+            this.callDataSerializer = callDataSerializer;
             this.openBankingSettings = openBankingSettings;
+            this.smartContractTransactionService = smartContractTransactionService;
+        }
+
+        private Address Base58ToAddress(BitcoinAddress bitcoinAddress)
+        {
+            return new uint160(PayToPubkeyHashTemplate.Instance.ExtractScriptPubKeyParameters(bitcoinAddress.ScriptPubKey).ToBytes()).ToAddress();
         }
 
         public Transaction BuildSignedTransaction(IOpenBankAccount openBankAccount, OpenBankDeposit openBankDeposit)
         {
-            var gasPriceSatoshis = 20;
-            var gasLimit = 4_000_000;
-            var gasBudgetSatoshis = gasPriceSatoshis * gasLimit;
-            var relayFeeSatoshis = 10000;
-            var totalSuppliedSatoshis = gasBudgetSatoshis + relayFeeSatoshis;
-
             MetadataTrackerDefinition metadataTrackingDefinition = this.metadataTracker.GetTracker(openBankAccount.MetaDataTrackerEnum);
 
-            uint160 contractAddress = metadataTrackingDefinition.Contract.ToUint160(this.network);
-            uint160 receiver = openBankDeposit.Reference.ToUint160(this.network);
-            // TODO: Ensure that sorting by ExternalId will result in chronological ordering.
-            var methodParameters = new object[] { receiver.ToAddress(), (UInt256)openBankDeposit.Amount.Satoshi, Encoders.ASCII.EncodeData(openBankDeposit.KeyBytes) };
-            var contractTxData = new ContractTxData(1, (ulong)gasPriceSatoshis, (Stratis.SmartContracts.RuntimeObserver.Gas)gasLimit, contractAddress, mintingMethod, methodParameters);
-            var serialized = this.callDataSerializer.Serialize(contractTxData);
+            var serializer = new MethodParameterStringSerializer(this.network);
 
-            Transaction funding = new Transaction
+            var request = new BuildCallContractTransactionRequest()
             {
-                Outputs =
-                {
-                    new TxOut(totalSuppliedSatoshis, new Script())
+                AccountName = this.openBankingSettings.WalletAccount,
+                WalletName = this.openBankingSettings.WalletName,
+                MethodName = mintingMethod,
+                Amount = "0",
+                FeeAmount = "0.04",
+                Password = this.openBankingSettings.WalletPassword,
+                GasPrice = 100,
+                GasLimit = 250_000,
+                Sender = this.openBankingSettings.WalletAddress,
+                ContractAddress = metadataTrackingDefinition.Contract,
+                Parameters = new string[] {
+                    // The address that will receive the funds.
+                    serializer.Serialize(Base58ToAddress(openBankDeposit.ParseAddressFromReference(this.network))),
+                    // MethodName
+                    serializer.Serialize(mintingMethod),
+                    // Amount
+                    serializer.Serialize((UInt256)openBankDeposit.Amount.Satoshi)
                 }
             };
 
-            var transactionBuilder = new TransactionBuilder(this.network);
-            //transactionBuilder.AddCoins(funding); // To cover gas price.
-            transactionBuilder.SendFees(relayFeeSatoshis + gasBudgetSatoshis);
-            transactionBuilder.Send(new Script(serialized), 0);
+            BuildCallContractTransactionResponse response = this.smartContractTransactionService.BuildCallTx(request);
 
-            return transactionBuilder.BuildTransaction(true);
+            if (!response.Success)
+            {
+                return null;
+            }
+
+            Transaction transaction = this.network.CreateTransaction(response.Hex);
+
+            return transaction;
         }
     }
 }
