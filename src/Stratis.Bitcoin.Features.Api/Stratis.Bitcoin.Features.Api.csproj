@@ -11,6 +11,7 @@
     <ApplicationIcon />
     <OutputTypeEx>library</OutputTypeEx>
     <StartupObject />
+	<ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
     <!-- Force packing of a web project https://github.com/aspnet/websdk/issues/228 -->
     <IsPackable>true</IsPackable>
     <Authors>Stratis Group Ltd.</Authors>
