@@ -553,7 +553,7 @@ public class Test {
             var mscorlib = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);
             var smartContracts = MetadataReference.CreateFromFile(typeof(Address).Assembly.Location);
 
-            var assembly = Assembly.Load("System.Runtime, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a");
+            var assembly = Assembly.Load("System.Runtime");
             var runtime = MetadataReference.CreateFromFile(assembly.Location);
 
             SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(source);
