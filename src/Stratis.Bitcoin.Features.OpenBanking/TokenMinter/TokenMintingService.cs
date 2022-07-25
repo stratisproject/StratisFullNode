@@ -10,8 +10,8 @@ using NBitcoin;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.OpenBanking.OpenBanking;
 using Stratis.Bitcoin.Features.SmartContracts.MetadataTracker;
-using Stratis.Bitcoin.Features.SmartContracts.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
+using Stratis.Bitcoin.Interfaces;
 
 namespace Stratis.Bitcoin.Features.OpenBanking.TokenMinter
 {
@@ -21,16 +21,19 @@ namespace Stratis.Bitcoin.Features.OpenBanking.TokenMinter
         private readonly IOpenBankingService openBankingService;
         private readonly ITokenMintingTransactionBuilder tokenMintingTransactionBuilder;
         private readonly IBroadcasterManager broadcasterManager;
+        private readonly IInitialBlockDownloadState initialBlockDownloadState;
+
         private readonly Dictionary<MetadataTrackerEnum, IOpenBankAccount> registeredAccounts;
         private readonly ILogger logger;
 
-        public TokenMintingService(ITokenMintingTransactionBuilder tokenMintingTransactionBuilder, IOpenBankingService openBankingAPI, IBroadcasterManager broadcasterManager, DataFolder dataFolder, ILoggerFactory loggerFactory)
+        public TokenMintingService(ITokenMintingTransactionBuilder tokenMintingTransactionBuilder, IOpenBankingService openBankingAPI, IBroadcasterManager broadcasterManager, DataFolder dataFolder, ILoggerFactory loggerFactory, IInitialBlockDownloadState initialBlockDownloadState)
         {
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
-
             this.openBankingService = openBankingAPI;
             this.tokenMintingTransactionBuilder = tokenMintingTransactionBuilder;
             this.broadcasterManager = broadcasterManager;
+            this.initialBlockDownloadState = initialBlockDownloadState;
+
             this.registeredAccounts = new Dictionary<MetadataTrackerEnum, IOpenBankAccount>();
             this.ReadConfig(dataFolder.RootPath);
         }
@@ -70,6 +73,9 @@ namespace Stratis.Bitcoin.Features.OpenBanking.TokenMinter
 
         public async Task RunAsync(CancellationToken cancellationToken)
         {
+            if (this.initialBlockDownloadState.IsInitialBlockDownload())
+                return;
+
             foreach (IOpenBankAccount openBankAccount in this.registeredAccounts.Values)
             {
                 this.openBankingService.UpdateDeposits(openBankAccount);

@@ -144,28 +144,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.MetadataTracker
             }
         }
 
-        /// <inheritdoc />
-        public MetadataTrackerEntry GetLastEntry(MetadataTrackerEnum tracker)
-        {
-            lock (this.lockObj)
-            {
-                MetadataTrackerDefinition trackingDefinition = this.trackingDefinitions[tracker];
-                var metadataTable = (byte)(MetadataTableOffset + trackingDefinition.TableNumber);
-                using (var iterator = this.db.GetIterator(metadataTable))
-                {
-                    iterator.SeekToLast();
-                    if (!iterator.IsValid())
-                        return null;
-
-                    byte[] bytes = iterator.Value();
-                    if (bytes == null)
-                        return null;
-
-                    return this.dBreezeSerializer.Deserialize<MetadataTrackerEntry>(bytes);
-                }
-            }
-        }
-
         private void BlockConnected(BlockConnected blockConnected)
         {
             Sync();
