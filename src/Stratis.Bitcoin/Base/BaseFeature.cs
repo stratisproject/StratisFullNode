@@ -18,6 +18,7 @@ using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Consensus.Validators;
+using Stratis.Bitcoin.Database;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.P2P;
@@ -459,13 +460,13 @@ namespace Stratis.Bitcoin.Base
 
                     if (dbType == DbType.Leveldb)
                     {
-                        chainStore = new LevelDbChainStore(fullNodeBuilder.Network, fullNodeBuilder.NodeSettings.DataFolder, chainIndexer);
+                        chainStore = new ChainStore<LevelDb>(fullNodeBuilder.Network, fullNodeBuilder.NodeSettings.DataFolder, chainIndexer);
                         services.AddSingleton<IKeyValueRepository, LevelDbKeyValueRepository>();
                     }
 
                     if (dbType == DbType.RocksDb)
                     {
-                        chainStore = new RocksDbChainStore(fullNodeBuilder.Network, fullNodeBuilder.NodeSettings.DataFolder, chainIndexer);
+                        chainStore = new ChainStore<RocksDb>(fullNodeBuilder.Network, fullNodeBuilder.NodeSettings.DataFolder, chainIndexer);
                         services.AddSingleton<IKeyValueRepository, RocksDbKeyValueRepository>();
                     }
 
