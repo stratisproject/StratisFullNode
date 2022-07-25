@@ -87,11 +87,21 @@ namespace Stratis.Bitcoin.Database
 
         public void SeekToLast()
         {
-            this.iterator.Seek(new[] { (byte)(this.table + 1) });
-            if (!this.iterator.Valid())
-                this.iterator.SeekToLast();
-            else
-                this.iterator.Prev();
+            if (this.table != 255)
+            {
+                // First seek past the last record in the table by attempting to seek to the start of the next table (if any).
+                this.iterator.Seek(new[] { (byte)(this.table + 1) });
+
+                // If we managed to seek to the start of the next table then go back one record to arrive at the last record of 'table'.
+                if (this.iterator.Valid())
+                {
+                    this.iterator.Prev();
+                    return;
+                }
+            }
+
+            // If there is no next table then simply seek to the last record in the db as that will be the last record of 'table'.
+            this.iterator.SeekToLast();
         }
 
         public void Next()
