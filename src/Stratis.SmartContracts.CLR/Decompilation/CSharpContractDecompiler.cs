@@ -1,9 +1,10 @@
 ﻿using System;
 using System.IO;
+using System.Reflection.PortableExecutable;
 using CSharpFunctionalExtensions;
 using ICSharpCode.Decompiler;
 using ICSharpCode.Decompiler.CSharp;
-using Mono.Cecil;
+using ICSharpCode.Decompiler.Metadata;
 
 namespace Stratis.SmartContracts.CLR.Decompilation
 {
@@ -18,8 +19,9 @@ namespace Stratis.SmartContracts.CLR.Decompilation
             {
                 try
                 {
-                    ModuleDefinition modDefinition = ModuleDefinition.ReadModule(memStream);
-                    var decompiler = new CSharpDecompiler(modDefinition, new DecompilerSettings { });
+                    var peFile = new PEFile("placeholder", memStream);
+                    var resolver = new UniversalAssemblyResolver(null, false, null, null, PEStreamOptions.Default);
+                    var decompiler = new CSharpDecompiler(peFile, resolver, new DecompilerSettings());
                     string cSharp = decompiler.DecompileWholeModuleAsString();
                     return Result.Ok(cSharp);
                 }
