@@ -60,7 +60,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.TokenMinter
                     // Amount
                     serializer.Serialize((UInt256)openBankDeposit.Amount.Satoshi), // TODO: Minus the fees.
                     // Metadata
-                    Encoders.ASCII.EncodeData(openBankDeposit.KeyBytes)
+                    serializer.Serialize(Encoders.ASCII.EncodeData(openBankDeposit.KeyBytes))
                 }
             };
 

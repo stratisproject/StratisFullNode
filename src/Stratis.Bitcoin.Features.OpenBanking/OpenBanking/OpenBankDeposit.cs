@@ -71,7 +71,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
         public byte[] PendingKeyBytes => ASCIIEncoding.ASCII.GetBytes(this.TransactionId);
 
         public byte[] KeyBytes => (this.State == OpenBankDepositState.Pending) ? this.PendingKeyBytes :
-            ASCIIEncoding.ASCII.GetBytes(this.BookDateTimeUTC.ToString("yyyy-MM-ddTHH:mm:ss") + " " + this.PendingKeyBytes);
+            ASCIIEncoding.ASCII.GetBytes(this.BookDateTimeUTC.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss") + " " + this.TransactionId);
 
         public byte[] IndexKeyBytes => new[] { (byte)this.State }.Concat(this.KeyBytes).ToArray();
 
