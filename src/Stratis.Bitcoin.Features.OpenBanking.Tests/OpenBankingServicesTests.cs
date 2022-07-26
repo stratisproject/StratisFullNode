@@ -44,7 +44,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.Tests
             );
         }
 
-        private string GetSampleResourceString(string fileName)
+        public static string GetSampleResourceString(string fileName)
         {
             using (Stream fileStream = Assembly.GetExecutingAssembly().GetManifestResourceStream($"Stratis.Bitcoin.Features.OpenBanking.Tests.OpenBankingAPISamples.{fileName}"))
             {

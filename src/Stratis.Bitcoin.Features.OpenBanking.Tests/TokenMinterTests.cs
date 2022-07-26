@@ -1,5 +1,6 @@
 ﻿using System;
-using System.Linq;
+using System.Text.Json;
+using System.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NBitcoin;
@@ -12,6 +13,7 @@ using Stratis.Bitcoin.Features.OpenBanking.TokenMinter;
 using Stratis.Bitcoin.Features.SmartContracts.MetadataTracker;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
+using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Sidechains.Networks;
@@ -22,12 +24,13 @@ namespace Stratis.Bitcoin.Features.OpenBanking.Tests
     public class TokenMinterTests
     {
         private readonly Network network;
+        private readonly IServiceCollection serviceCollection;
         private readonly MockingContext mockingContext;
 
         public TokenMinterTests()
         {
             this.network = new CirrusTest();
-            this.mockingContext = new MockingContext(new ServiceCollection()
+            this.serviceCollection = new ServiceCollection()
                 .AddSingleton(this.network)
                 .AddSingleton(NodeSettings.Default(this.network))
                 .AddSingleton(p => new StoreSettings(p.GetService<NodeSettings>())
@@ -39,9 +42,8 @@ namespace Stratis.Bitcoin.Features.OpenBanking.Tests
                 .AddSingleton(new ChainIndexer(this.network))
                 .AddSingleton<IDateTimeProvider, DateTimeProvider>()
                 .AddSingleton<IAddressIndexer, AddressIndexer>()
-                .AddSingleton<DBreezeSerializer>()
-                .AddSingleton<ITokenMintingTransactionBuilder, TokenMintingTransactionBuilder>()
-            );
+                .AddSingleton<DBreezeSerializer>();
+            this.mockingContext = new MockingContext(this.serviceCollection);
         }
 
         [Fact]
@@ -58,7 +60,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.Tests
                 Contract = contractAddress
             });
 
-            var builder = this.mockingContext.GetService<TokenMintingTransactionBuilder>();
+            this.serviceCollection.AddSingleton<ITokenMintingTransactionBuilder, TokenMintingTransactionBuilder>();
 
             var service = this.mockingContext.GetService<Mock<ISmartContractTransactionService>>();
             service.Setup(x => x.BuildCallTx(It.IsAny<BuildCallContractTransactionRequest>())).Returns(BuildCallContractTransactionResponse.Succeeded("methodName", new Transaction(), 10));
@@ -73,11 +75,49 @@ namespace Stratis.Bitcoin.Features.OpenBanking.Tests
                 BookDateTimeUTC = DateTime.Parse("2001-2-3 4:5:6 +0")
             };
 
+            var builder = this.mockingContext.GetService<ITokenMintingTransactionBuilder>();
             Transaction transaction = builder.BuildSignedTransaction(new OpenBankAccount(null, "123", MetadataTrackerEnum.GBPT, "GBP"), deposit) ;
 
             service.Verify(x => x.BuildCallTx(It.Is<BuildCallContractTransactionRequest>(y => y.AccountName == settings.WalletAccount && y.WalletName == settings.WalletName && y.Amount == "0" && y.Sender == settings.WalletAddress &&
                 y.GasPrice == 100 && y.GasLimit == 250_000 && y.ContractAddress == contractAddress && y.FeeAmount == "0.04" && y.Password == settings.WalletPassword && 
                 y.Parameters[0] == "9#" + recipient && y.Parameters[1] == "12#" + deposit.Amount.Satoshi.ToString() && y.Parameters[2] == "4#" + Encoders.ASCII.EncodeData(deposit.KeyBytes))));
+        }
+
+        [Fact]
+        public async void TokenMintingServiceMintsBookedTransactionsAsync()
+        {
+            var settings = this.mockingContext.GetService<OpenBankingSettings>();
+            settings.WalletName = "default";
+            settings.WalletAccount = "account 0";
+            settings.WalletAddress = "tSk1UMHKSLPsjsRsTZ8D5GEkaULMTh8uRp";
+            settings.WalletPassword = "password";
+
+            string contractAddress = "tBHv3YgiSGZiohpEdTcsNbXivrCzxVReeP";
+            this.mockingContext.GetService<Mock<IMetadataTracker>>().Setup(t => t.GetTracker(It.IsAny<MetadataTrackerEnum>())).Returns(new MetadataTrackerDefinition()
+            {
+                Contract = contractAddress
+            });
+
+            this.serviceCollection
+                .AddSingleton<IOpenBankingService, OpenBankingService>()
+                .AddSingleton<ITokenMintingService, TokenMintingService>()
+                .AddSingleton<ITokenMintingTransactionBuilder, TokenMintingTransactionBuilder>();
+
+            this.mockingContext.GetService<Mock<ISmartContractTransactionService>>()
+                .Setup(x => x.BuildCallTx(It.IsAny<BuildCallContractTransactionRequest>()))
+                .Returns(BuildCallContractTransactionResponse.Succeeded("methodName", new Transaction(), 10));
+
+            this.mockingContext.GetService<Mock<IOpenBankingClient>>()
+                .Setup(c => c.GetTransactions(It.IsAny<IOpenBankAccount>(), It.IsAny<DateTime?>()))
+                .Returns(JsonSerializer.Deserialize<OBGetTransactionsResponse>(OpenBankingServicesTests.GetSampleResourceString("BookedTransactionListValidReference.json")));
+
+            var service = this.mockingContext.GetService<ITokenMintingService>();
+
+            service.Register(new OpenBankAccount(null, "123", MetadataTrackerEnum.GBPT, "GBP"));
+
+            await service.RunAsync(CancellationToken.None);
+
+            this.mockingContext.GetService<Mock<IBroadcasterManager>>().Verify(x => x.BroadcastTransactionAsync(It.IsAny<Transaction>()));
         }
     }
 }

@@ -198,7 +198,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
                     // Look for any minting transactions that have been added to the pool.
                     foreach (OpenBankDeposit deposit in GetOpenBankDeposits(openBankAccount, OpenBankDepositState.Booked))
                     {
-                        if (this.pooledTransaction.GetTransaction(deposit.TxId) == null)
+                        if (this.pooledTransaction.GetTransaction(deposit.TxId).GetAwaiter().GetResult() == null)
                             continue;
 
                         DeleteOpenBankDeposit(batch, openBankAccount, deposit);

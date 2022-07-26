@@ -81,13 +81,13 @@ namespace Stratis.Bitcoin.Features.OpenBanking.TokenMinter
                 this.openBankingService.UpdateDeposits(openBankAccount);
                 this.openBankingService.UpdateDepositStatus(openBankAccount);
 
-                // Look for deposits in the OpenBankingAPI that have a status of 'D'.
+                // Look for deposits in the OpenBankingAPI that have a status of booked.
                 foreach (var deposit in this.openBankingService.GetOpenBankDeposits(openBankAccount, OpenBankDepositState.Booked).ToArray())
                 {
                     if (cancellationToken.IsCancellationRequested)
                         break;
 
-                    if (deposit.ValueDateTimeUTC < DateTime.UtcNow)
+                    if (deposit.ValueDateTimeUTC > DateTime.UtcNow)
                         continue;
 
                     Transaction transaction = this.tokenMintingTransactionBuilder.BuildSignedTransaction(openBankAccount, deposit);
