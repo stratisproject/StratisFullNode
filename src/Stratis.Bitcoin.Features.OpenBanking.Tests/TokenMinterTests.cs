@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using Microsoft.Extensions.DependencyInjection;
@@ -113,11 +114,24 @@ namespace Stratis.Bitcoin.Features.OpenBanking.Tests
 
             var service = this.mockingContext.GetService<ITokenMintingService>();
 
-            service.Register(new OpenBankAccount(null, "123", MetadataTrackerEnum.GBPT, "GBP"));
+            var account = new OpenBankAccount(null, "22289", MetadataTrackerEnum.GBPT, "GBP");
+
+            service.Register(account);
 
             await service.RunAsync(CancellationToken.None);
 
-            this.mockingContext.GetService<Mock<IBroadcasterManager>>().Verify(x => x.BroadcastTransactionAsync(It.IsAny<Transaction>()));
+            // Get the deposit.
+            OpenBankDeposit[] deposits = this.mockingContext.GetService<IOpenBankingService>().GetOpenBankDeposits(account, OpenBankDepositState.Booked).ToArray();
+
+            Assert.Single(deposits);
+            Assert.Null(deposits[0].Block);
+            Assert.Equal("123", deposits[0].TransactionId);
+            Assert.Equal(new Money(10, MoneyUnit.BTC), deposits[0].Amount);
+            Assert.Equal(DateTime.Parse("2017-04-05T10:43:07+00:00").ToUniversalTime().Ticks, deposits[0].BookDateTimeUTC.ToUniversalTime().Ticks);
+            Assert.Equal(DateTime.Parse("2017-04-05T10:45:22+00:00").ToUniversalTime().Ticks, deposits[0].ValueDateTimeUTC.ToUniversalTime().Ticks);
+            Assert.Equal("tSk1UMHKSLPsjsRsTZ8D5GEkaULMTh8uRp", deposits[0].Reference);
+
+            this.mockingContext.GetService<Mock<IBroadcasterManager>>().Verify(x => x.BroadcastTransactionAsync(It.Is<Transaction>(t => t.GetHash() == deposits[0].TxId)));
         }
     }
 }

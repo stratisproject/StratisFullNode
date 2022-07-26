@@ -50,22 +50,26 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 
         public void ReadWrite(BitcoinStream stream)
         {
-            long ticks = this.BookDateTimeUTC.Ticks;
+            long ticks = this.BookDateTimeUTC.ToUniversalTime().Ticks;
             stream.ReadWrite(ref ticks);
-            this.BookDateTimeUTC = new DateTime(ticks);
+            if (!stream.Serializing)
+                this.BookDateTimeUTC = new DateTime(ticks, DateTimeKind.Utc).ToLocalTime();
             stream.ReadWrite(ref this.TransactionId);
             stream.ReadWrite(ref this.Reference);
             long amount = stream.Serializing ? this.Amount.Satoshi : 0;
             stream.ReadWrite(ref amount);
             this.Amount = new Money(amount);
-            long ticks2 = this.ValueDateTimeUTC.Ticks;
+            long ticks2 = this.ValueDateTimeUTC.ToUniversalTime().Ticks;
             stream.ReadWrite(ref ticks2);
-            this.ValueDateTimeUTC = new DateTime(ticks);
+            if (!stream.Serializing)
+                this.ValueDateTimeUTC = new DateTime(ticks2, DateTimeKind.Utc).ToLocalTime();
             byte state = (byte)this.State;
             stream.ReadWrite(ref state);
             this.State = (OpenBankDepositState)state;
             stream.ReadWrite(ref this.TxId);
             stream.ReadWrite(ref this.Block);
+            if (!stream.Serializing && this.Block.Hash == 0)
+                this.Block = null;
         }
 
         public byte[] PendingKeyBytes => ASCIIEncoding.ASCII.GetBytes(this.TransactionId);
