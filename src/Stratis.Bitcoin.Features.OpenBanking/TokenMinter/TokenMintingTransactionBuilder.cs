@@ -38,7 +38,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.TokenMinter
 
         public Transaction BuildSignedTransaction(IOpenBankAccount openBankAccount, OpenBankDeposit openBankDeposit)
         {
-            MetadataTrackerDefinition metadataTrackingDefinition = this.metadataTracker.GetTracker(openBankAccount.MetaDataTableNumber);
+            MetadataTrackerDefinition metadataTrackingDefinition = this.metadataTracker.GetTracker(openBankAccount.MetaDataTable);
 
             var serializer = new MethodParameterStringSerializer(this.network);
 

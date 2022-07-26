@@ -24,9 +24,13 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 
         string OpenBankAccountNumber { get; }
 
-        MetadataTableNumber MetaDataTableNumber { get; }
+        MetadataTableNumber MetaDataTable { get; }
 
         string Currency { get; }
+
+        string Contract { get; }
+
+        int FirstBlock { get; }
     }
 
     public interface IOpenBankingService

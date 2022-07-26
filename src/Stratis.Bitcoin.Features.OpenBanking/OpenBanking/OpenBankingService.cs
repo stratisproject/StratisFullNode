@@ -176,7 +176,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
                             continue;
 
                         // If its seen  in a block then set the state accordingly.
-                        MetadataTrackerEntry entry = this.metadataTracker.GetEntryByMetadata(openBankAccount.MetaDataTableNumber, Encoders.ASCII.EncodeData(deposit.KeyBytes));
+                        MetadataTrackerEntry entry = this.metadataTracker.GetEntryByMetadata(openBankAccount.MetaDataTable, Encoders.ASCII.EncodeData(deposit.KeyBytes));
                         if (entry != null)
                         {
                             DeleteOpenBankDeposit(batch, openBankAccount, deposit);
@@ -231,8 +231,8 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 
         private void DeleteOpenBankDeposit(IDbBatch batch, IOpenBankAccount openBankAccount, OpenBankDeposit deposit)
         {
-            var depositTable = (byte)(depositTableOffset + openBankAccount.MetaDataTableNumber);
-            var indexTable = (byte)(indexTableOffset + openBankAccount.MetaDataTableNumber);
+            var depositTable = (byte)(depositTableOffset + openBankAccount.MetaDataTable);
+            var indexTable = (byte)(indexTableOffset + openBankAccount.MetaDataTable);
 
             batch.Delete(depositTable, deposit.KeyBytes);
             batch.Delete(indexTable, deposit.IndexKeyBytes);
@@ -240,8 +240,8 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 
         private void PutOpenBankDeposit(IDbBatch batch, IOpenBankAccount openBankAccount, OpenBankDeposit deposit)
         {
-            var depositTable = (byte)(depositTableOffset + openBankAccount.MetaDataTableNumber);
-            var indexTable = (byte)(indexTableOffset + openBankAccount.MetaDataTableNumber);
+            var depositTable = (byte)(depositTableOffset + openBankAccount.MetaDataTable);
+            var indexTable = (byte)(indexTableOffset + openBankAccount.MetaDataTable);
 
             batch.Put(depositTable, deposit.KeyBytes, this.dBreezeSerializer.Serialize(deposit));
             batch.Put(indexTable, deposit.IndexKeyBytes, new byte[0]);
@@ -249,7 +249,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 
         public OpenBankDeposit GetOpenBankDeposit(IOpenBankAccount openBankAccount, byte[] keyBytes)
         {
-            var depositTable = (byte)(depositTableOffset + openBankAccount.MetaDataTableNumber);
+            var depositTable = (byte)(depositTableOffset + openBankAccount.MetaDataTable);
             byte[] bytes = this.db.Get(depositTable, keyBytes);
             if (bytes == null)
                 return null;
@@ -259,8 +259,8 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 
         public IEnumerable<OpenBankDeposit> GetOpenBankDeposits(IOpenBankAccount openBankAccount, OpenBankDepositState state)
         {
-            var depositTable = (byte)(depositTableOffset + openBankAccount.MetaDataTableNumber);
-            var indexTable = (byte)(indexTableOffset + openBankAccount.MetaDataTableNumber);
+            var depositTable = (byte)(depositTableOffset + openBankAccount.MetaDataTable);
+            var indexTable = (byte)(indexTableOffset + openBankAccount.MetaDataTable);
 
             // Iterate in reverse by External Id while the deposit's date >= fromDateUTC.
             using (var iterator = this.db.GetIterator(indexTable))

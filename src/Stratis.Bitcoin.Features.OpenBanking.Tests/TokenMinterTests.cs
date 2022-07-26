@@ -77,7 +77,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.Tests
             };
 
             var builder = this.mockingContext.GetService<ITokenMintingTransactionBuilder>();
-            Transaction transaction = builder.BuildSignedTransaction(new OpenBankAccount(null, "123", MetadataTableNumber.GBPT, "GBP"), deposit) ;
+            Transaction transaction = builder.BuildSignedTransaction(new OpenBankAccount(null, "123", MetadataTableNumber.GBPT, "GBP", contractAddress, 0), deposit) ;
 
             service.Verify(x => x.BuildCallTx(It.Is<BuildCallContractTransactionRequest>(y => y.AccountName == settings.WalletAccount && y.WalletName == settings.WalletName && y.Amount == "0" && y.Sender == settings.WalletAddress &&
                 y.GasPrice == 100 && y.GasLimit == 250_000 && y.ContractAddress == contractAddress && y.FeeAmount == "0.04" && y.Password == settings.WalletPassword && 
@@ -114,7 +114,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.Tests
 
             var service = this.mockingContext.GetService<ITokenMintingService>();
 
-            var account = new OpenBankAccount(null, "22289", MetadataTableNumber.GBPT, "GBP");
+            var account = new OpenBankAccount(null, "22289", MetadataTableNumber.GBPT, "GBP", contractAddress, 0);
 
             service.Register(account);
 

@@ -50,7 +50,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.MetadataTracker
             this.dBreezeSerializer = dBreezeSerializer;
             this.signals = signals;
             this.trackingDefinitions = new Dictionary<MetadataTableNumber, MetadataTrackerDefinition>();
-            this.ReadConfig(dataFolder.RootPath);
         }
 
         public void Register(MetadataTrackerDefinition trackingDefinition)
@@ -65,52 +64,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.MetadataTracker
             this.trackingDefinitions.TryGetValue(metaDataTrackerEnum, out MetadataTrackerDefinition metadataTrackingDefinition);
 
             return metadataTrackingDefinition;
-        }
-
-        private void ReadConfig(string rootPath)
-        {
-            try
-            {
-                this.trackingDefinitions.Clear();
-
-                string fileName = Path.Combine(rootPath, "metadata.conf");
-
-                if (!File.Exists(fileName))
-                {
-                    string exampleFile = Path.Combine(rootPath, "metadata (example).conf");
-                    if (!File.Exists(exampleFile))
-                    {
-                        var json2 = JsonSerializer.Serialize(new[] { new MetadataTrackerDefinition() {
-                             TableNumber = 0,
-                             Contract = "tBHv3YgiSGZiohpEdTcsNbXivrCzxVReeP",
-                             LogType = "BurnMetadata",
-                             MetadataTopic = 2,
-                             FirstBlock = 3200000
-                        } }, new JsonSerializerOptions() { WriteIndented = true });
-
-                        json2 = json2.Replace("0,", $"0, // A constant from the {nameof(MetadataTableNumber)} enumeration.");
-                        json2 = json2.Replace("P\",", $"P\", // The coin contract address.");
-                        json2 = json2.Replace("a\",", $"a\", // The log struct name containing the topic to index.");
-                        json2 = json2.Replace("2,", $"2, // The topic position in the log to index.");
-                        json2 = json2.Replace("00,", $"00, // The first block to index.");
-
-                        File.WriteAllText(exampleFile, json2);
-                    }
-
-                    return;
-                }
-
-                string json = File.ReadAllText(fileName);
-
-                foreach (var definition in JsonSerializer.Deserialize<MetadataTrackerDefinition[]>(json))
-                {
-                    this.Register(definition);
-                }
-            }
-            catch (Exception err)
-            {
-                this.logger.LogError(err.Message);
-            }
         }
 
         public void Initialize()

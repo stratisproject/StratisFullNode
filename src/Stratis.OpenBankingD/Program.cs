@@ -34,9 +34,24 @@ namespace Stratis.OpenBankingD
 
         public static async Task MainAsync(string[] args)
         {
+            /* Requires a "minter.conf" in the root of the data directory:
+             [
+                {
+                  "OpenBankConfiguration": {
+                    "API": "https://api.alphabank.com/open-banking/v3.1/aisp"
+                  },
+                  "OpenBankAccountNumber": "22289",
+                  "Currency": "GBP",
+                  "MetaDataTable": 0,
+                  "Contract": "tBHv3YgiSGZiohpEdTcsNbXivrCzxVReeP",
+                  "FirstBlock": 3200000
+                }
+            ]
+             */
             try
             {
-                // set the console window title to identify this as a Cirrus full node (for clarity when running Strax and Cirrus on the same machine)
+                // Set the console window title to identify this as a Cirrus full node (for clarity when running Strax and Cirrus on the same machine).
+                // See "OpenBankingSettings" for arguments required in addition to the "minter.conf" (above).
                 var nodeSettings = new NodeSettings(networksSelector: CirrusNetwork.NetworksSelector, protocolVersion: ProtocolVersion.CIRRUS_VERSION, args: args)
                 {
                     MinProtocolVersion = ProtocolVersion.ALT_PROTOCOL_VERSION

@@ -22,17 +22,20 @@ namespace Stratis.Bitcoin.Features.OpenBanking.TokenMinter
         private readonly ITokenMintingTransactionBuilder tokenMintingTransactionBuilder;
         private readonly IBroadcasterManager broadcasterManager;
         private readonly IInitialBlockDownloadState initialBlockDownloadState;
+        private readonly IMetadataTracker metadataTracker;
 
         private readonly Dictionary<MetadataTableNumber, IOpenBankAccount> registeredAccounts;
         private readonly ILogger logger;
 
-        public TokenMintingService(ITokenMintingTransactionBuilder tokenMintingTransactionBuilder, IOpenBankingService openBankingAPI, IBroadcasterManager broadcasterManager, DataFolder dataFolder, ILoggerFactory loggerFactory, IInitialBlockDownloadState initialBlockDownloadState)
+        public TokenMintingService(ITokenMintingTransactionBuilder tokenMintingTransactionBuilder, IOpenBankingService openBankingAPI, IBroadcasterManager broadcasterManager, DataFolder dataFolder, 
+            ILoggerFactory loggerFactory, IInitialBlockDownloadState initialBlockDownloadState, IMetadataTracker metadataTracker)
         {
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.openBankingService = openBankingAPI;
             this.tokenMintingTransactionBuilder = tokenMintingTransactionBuilder;
             this.broadcasterManager = broadcasterManager;
             this.initialBlockDownloadState = initialBlockDownloadState;
+            this.metadataTracker = metadataTracker;
 
             this.registeredAccounts = new Dictionary<MetadataTableNumber, IOpenBankAccount>();
             this.ReadConfig(dataFolder.RootPath);
@@ -68,7 +71,8 @@ namespace Stratis.Bitcoin.Features.OpenBanking.TokenMinter
 
         public void Register(IOpenBankAccount openBankAccount)
         {
-            this.registeredAccounts[openBankAccount.MetaDataTableNumber] = openBankAccount;
+            this.registeredAccounts[openBankAccount.MetaDataTable] = openBankAccount;
+            this.metadataTracker.Register(new MetadataTrackerDefinition() { Contract = openBankAccount.Contract, LogType = "MintMetadata", MetadataTopic = 2, TableNumber = openBankAccount.MetaDataTable, FirstBlock = openBankAccount.FirstBlock });
         }
 
         public async Task RunAsync(CancellationToken cancellationToken)
