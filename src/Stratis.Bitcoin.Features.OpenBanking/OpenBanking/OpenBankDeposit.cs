@@ -81,8 +81,8 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 
         public BitcoinAddress ParseAddressFromReference(Network network)
         {
-            // The "TransactionReference" must contain a valid network address.
-            var candidates = this.Reference.Split(' ');
+            // Strip out any "adjacent" characters that may have been included to delimit the address.
+            var candidates = this.Reference.Split(new char[] { ' ', ',', '.', ':', '"', '\'', '`', '(', ')', '{', '}', '[', ']', '<', '>', '=' }, StringSplitOptions.RemoveEmptyEntries);
 
             foreach (var candidate in candidates)
             {
