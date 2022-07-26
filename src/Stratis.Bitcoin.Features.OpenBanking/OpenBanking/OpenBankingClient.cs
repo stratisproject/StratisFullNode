@@ -13,8 +13,6 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 
     public class OpenBankingClient : IOpenBankingClient
     {
-        private readonly string openBankingAPI = "https://api.alphabank.com/open-banking/v3.1/aisp";
-
         public OpenBankingClient()
         {
         }
@@ -27,8 +25,8 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
             // Need to revisit "Pending" in case their booking date changes? Up/Down???
             // https://openbanking.atlassian.net/wiki/spaces/DZ/pages/1004208451/Transactions+v3.1.1#Transactionsv3.1.1-GET%2Faccounts%2F%7BAccountId%7D%2Ftransactions
 
-            string dateFilter = (fromBookingDateTime == null) ? "" : $"fromBookingDateTime={fromBookingDateTime.Value.ToString(":yyyy-MM-ddTHH:mm:ss")}";
-            string url = $"{this.openBankingAPI}/accounts/{openBankAccount.OpenBankAccountNumber}/transactions?{dateFilter}";
+            string dateFilter = (fromBookingDateTime == null) ? "" : $"fromBookingDateTime={fromBookingDateTime.Value.ToUniversalTime().ToString(":yyyy-MM-ddTHH:mm:ss")}";
+            string url = $"{openBankAccount.OpenBankConfiguration.API}/accounts/{openBankAccount.OpenBankAccountNumber}/transactions?{dateFilter}";
 
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
             ServicePointManager.ServerCertificateValidationCallback = new RemoteCertificateValidationCallback(ServerCertificateValidation);

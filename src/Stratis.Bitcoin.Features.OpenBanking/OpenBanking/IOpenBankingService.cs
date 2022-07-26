@@ -13,14 +13,14 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
         SeenInBlock = 'S'  // Minting transaction present in block.
     }
 
-    public interface IOpenBankIdentifier
+    public class OpenBankConfiguration
     {
-        // TODO
+        public string API { get; set; }
     }
 
     public interface IOpenBankAccount
     {
-        IOpenBankIdentifier OpenBankIdentifier { get; }
+        OpenBankConfiguration OpenBankConfiguration { get; }
 
         string OpenBankAccountNumber { get; }
 
