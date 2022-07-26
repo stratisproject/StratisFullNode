@@ -25,7 +25,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.MetadataTracker
 
         private static readonly byte[] BlockLocatorKey = new byte[1] { 0 };
 
-        private Dictionary<MetadataTrackerEnum, MetadataTrackerDefinition> trackingDefinitions;
+        private Dictionary<MetadataTableNumber, MetadataTrackerDefinition> trackingDefinitions;
 
         private readonly IDb db;
         private readonly ChainIndexer chainIndexer;
@@ -49,7 +49,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.MetadataTracker
             this.receiptSearcher = receiptSearcher;
             this.dBreezeSerializer = dBreezeSerializer;
             this.signals = signals;
-            this.trackingDefinitions = new Dictionary<MetadataTrackerEnum, MetadataTrackerDefinition>();
+            this.trackingDefinitions = new Dictionary<MetadataTableNumber, MetadataTrackerDefinition>();
             this.ReadConfig(dataFolder.RootPath);
         }
 
@@ -60,7 +60,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.MetadataTracker
             this.trackingDefinitions[trackingDefinition.TableNumber] = trackingDefinition;
         }
 
-        public MetadataTrackerDefinition GetTracker(MetadataTrackerEnum metaDataTrackerEnum)
+        public MetadataTrackerDefinition GetTracker(MetadataTableNumber metaDataTrackerEnum)
         {
             this.trackingDefinitions.TryGetValue(metaDataTrackerEnum, out MetadataTrackerDefinition metadataTrackingDefinition);
 
@@ -88,7 +88,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.MetadataTracker
                              FirstBlock = 3200000
                         } }, new JsonSerializerOptions() { WriteIndented = true });
 
-                        json2 = json2.Replace("0,", $"0, // A constant from the {nameof(MetadataTrackerEnum)} enumeration.");
+                        json2 = json2.Replace("0,", $"0, // A constant from the {nameof(MetadataTableNumber)} enumeration.");
                         json2 = json2.Replace("P\",", $"P\", // The coin contract address.");
                         json2 = json2.Replace("a\",", $"a\", // The log struct name containing the topic to index.");
                         json2 = json2.Replace("2,", $"2, // The topic position in the log to index.");
@@ -128,7 +128,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.MetadataTracker
             this.signals.Subscribe<BlockConnected>(this.BlockConnected);
         }
 
-        public MetadataTrackerEntry GetEntryByMetadata(MetadataTrackerEnum tracker, string metadata)
+        public MetadataTrackerEntry GetEntryByMetadata(MetadataTableNumber tracker, string metadata)
         {
             lock (this.lockObj)
             {

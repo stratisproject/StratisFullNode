@@ -73,7 +73,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.Tests
 
             var openBankingService = this.mockingContext.GetService<IOpenBankingService>();
 
-            OpenBankAccount openBankAccount = new OpenBankAccount(null, "123", MetadataTrackerEnum.GBPT, "GBP");
+            OpenBankAccount openBankAccount = new OpenBankAccount(null, "123", MetadataTableNumber.GBPT, "GBP");
 
             openBankingService.UpdateDeposits(openBankAccount);
 

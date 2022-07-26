@@ -4,10 +4,10 @@
     {
         void Register(MetadataTrackerDefinition trackingDefinition);
 
-        MetadataTrackerDefinition GetTracker(MetadataTrackerEnum metaDataTrackerEnum);
+        MetadataTrackerDefinition GetTracker(MetadataTableNumber metaDataTrackerEnum);
 
         void Initialize();
 
-        MetadataTrackerEntry GetEntryByMetadata(MetadataTrackerEnum tracker, string metadata);
+        MetadataTrackerEntry GetEntryByMetadata(MetadataTableNumber tracker, string metadata);
     }
 }

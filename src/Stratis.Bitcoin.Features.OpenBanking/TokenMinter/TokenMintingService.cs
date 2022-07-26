@@ -23,7 +23,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.TokenMinter
         private readonly IBroadcasterManager broadcasterManager;
         private readonly IInitialBlockDownloadState initialBlockDownloadState;
 
-        private readonly Dictionary<MetadataTrackerEnum, IOpenBankAccount> registeredAccounts;
+        private readonly Dictionary<MetadataTableNumber, IOpenBankAccount> registeredAccounts;
         private readonly ILogger logger;
 
         public TokenMintingService(ITokenMintingTransactionBuilder tokenMintingTransactionBuilder, IOpenBankingService openBankingAPI, IBroadcasterManager broadcasterManager, DataFolder dataFolder, ILoggerFactory loggerFactory, IInitialBlockDownloadState initialBlockDownloadState)
@@ -34,7 +34,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.TokenMinter
             this.broadcasterManager = broadcasterManager;
             this.initialBlockDownloadState = initialBlockDownloadState;
 
-            this.registeredAccounts = new Dictionary<MetadataTrackerEnum, IOpenBankAccount>();
+            this.registeredAccounts = new Dictionary<MetadataTableNumber, IOpenBankAccount>();
             this.ReadConfig(dataFolder.RootPath);
         }
 
@@ -68,7 +68,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.TokenMinter
 
         public void Register(IOpenBankAccount openBankAccount)
         {
-            this.registeredAccounts[openBankAccount.MetaDataTrackerEnum] = openBankAccount;
+            this.registeredAccounts[openBankAccount.MetaDataTableNumber] = openBankAccount;
         }
 
         public async Task RunAsync(CancellationToken cancellationToken)

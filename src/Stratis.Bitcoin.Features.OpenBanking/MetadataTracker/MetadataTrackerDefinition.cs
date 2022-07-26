@@ -2,7 +2,7 @@
 
 namespace Stratis.Bitcoin.Features.SmartContracts.MetadataTracker
 {
-    public enum MetadataTrackerEnum
+    public enum MetadataTableNumber
     {
         // Don't exceed 63.
         GBPT = 0
@@ -10,7 +10,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.MetadataTracker
 
     public class MetadataTrackerDefinition
     {
-        public MetadataTrackerEnum TableNumber { get; set; }
+        public MetadataTableNumber TableNumber { get; set; }
 
         public string Contract { get; set; }
 

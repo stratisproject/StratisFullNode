@@ -24,7 +24,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 
         string OpenBankAccountNumber { get; }
 
-        MetadataTrackerEnum MetaDataTrackerEnum { get; }
+        MetadataTableNumber MetaDataTableNumber { get; }
 
         string Currency { get; }
     }

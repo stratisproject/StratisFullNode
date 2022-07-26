@@ -10,17 +10,17 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 
         public string Currency { get; set; }
 
-        public MetadataTrackerEnum MetaDataTrackerEnum { get; set; }
+        public MetadataTableNumber MetaDataTableNumber { get; set; }
 
         public OpenBankAccount()
         {
         }
 
-        public OpenBankAccount(OpenBankConfiguration openBankConfiguration, string openBankAccountNumber, MetadataTrackerEnum metaDataTrackerEnum, string currency)
+        public OpenBankAccount(OpenBankConfiguration openBankConfiguration, string openBankAccountNumber, MetadataTableNumber metaDataTrackerEnum, string currency)
         {
             this.OpenBankConfiguration = openBankConfiguration;
             this.OpenBankAccountNumber = openBankAccountNumber;
-            this.MetaDataTrackerEnum = metaDataTrackerEnum;
+            this.MetaDataTableNumber = metaDataTrackerEnum;
             this.Currency = currency;
         }
     }
