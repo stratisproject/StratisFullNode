@@ -229,14 +229,18 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             // If there are deposits to the multsig (i.e. cross chain transfers), try and extract and validate the address by the specified destination chain.
 
             // However, we need to check for distribution transactions first, as these should be processed regardless of whether the op return address is invalid.
-            foreach (TxIn input in transaction.Inputs)
+            // These transactions will only appear on the STRAX chain.
+            if (this.federatedPegSettings.IsMainChain)
             {
-                Transaction previousTransaction = this.blockStore.GetTransactionById(input.PrevOut.Hash);
-                TxOut utxo = previousTransaction.Outputs[input.PrevOut.N];
-
-                if (utxo.ScriptPubKey == StraxCoinstakeRule.CirrusRewardScript)
+                foreach (TxIn input in transaction.Inputs)
                 {
-                    return Task.FromResult((IDeposit)new Deposit(transaction.GetHash(), DepositRetrievalType.Distribution, amount, this.network.CirrusRewardDummyAddress, DestinationChain.STRAX, blockHeight, blockHash));
+                    Transaction previousTransaction = this.blockStore.GetTransactionById(input.PrevOut.Hash);
+                    TxOut utxo = previousTransaction.Outputs[input.PrevOut.N];
+
+                    if (utxo.ScriptPubKey == StraxCoinstakeRule.CirrusRewardScript)
+                    {
+                        return Task.FromResult((IDeposit)new Deposit(transaction.GetHash(), DepositRetrievalType.Distribution, amount, this.network.CirrusRewardDummyAddress, DestinationChain.STRAX, blockHeight, blockHash));
+                    }
                 }
             }
 
