@@ -50,7 +50,10 @@ namespace Stratis.Bitcoin.Features.OpenBanking.TokenMinter
                 string fileName = Path.Combine(rootPath, "minter.conf");
 
                 if (!File.Exists(fileName))
+                {
+                    this.logger.LogWarning("No minter configuration file ('minter.conf') found in root data folder.");
                     return;
+                }
 
                 string json = File.ReadAllText(fileName);
 
@@ -65,16 +68,21 @@ namespace Stratis.Bitcoin.Features.OpenBanking.TokenMinter
             }
         }
 
+        /// <inheritdoc/>
         public void Initialize()
         {
         }
 
+        /// <inheritdoc/>
         public void Register(IOpenBankAccount openBankAccount)
         {
+            this.logger.LogInformation("Registering bank account: '{0}'", JsonSerializer.Serialize(openBankAccount));
+
             this.registeredAccounts[openBankAccount.MetaDataTable] = openBankAccount;
             this.metadataTracker.Register(new MetadataTrackerDefinition() { Contract = openBankAccount.Contract, LogType = "MintMetadata", MetadataTopic = 2, TableNumber = openBankAccount.MetaDataTable, FirstBlock = openBankAccount.FirstBlock });
         }
 
+        /// <inheritdoc/>
         public async Task RunAsync(CancellationToken cancellationToken)
         {
             if (this.initialBlockDownloadState.IsInitialBlockDownload())

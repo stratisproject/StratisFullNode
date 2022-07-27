@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
@@ -52,6 +51,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.MetadataTracker
             this.trackingDefinitions = new Dictionary<MetadataTableNumber, MetadataTrackerDefinition>();
         }
 
+        /// <inheritdoc/>
         public void Register(MetadataTrackerDefinition trackingDefinition)
         {
             Guard.Assert(!this.trackingDefinitions.ContainsKey(trackingDefinition.TableNumber));
@@ -59,6 +59,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.MetadataTracker
             this.trackingDefinitions[trackingDefinition.TableNumber] = trackingDefinition;
         }
 
+        /// <inheritdoc/>
         public MetadataTrackerDefinition GetTracker(MetadataTableNumber metaDataTrackerEnum)
         {
             this.trackingDefinitions.TryGetValue(metaDataTrackerEnum, out MetadataTrackerDefinition metadataTrackingDefinition);
@@ -66,6 +67,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.MetadataTracker
             return metadataTrackingDefinition;
         }
 
+        /// <inheritdoc/>
         public void Initialize()
         {
             foreach (MetadataTrackerDefinition trackingDefinition in this.trackingDefinitions.Values)
@@ -81,6 +83,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.MetadataTracker
             this.signals.Subscribe<BlockConnected>(this.BlockConnected);
         }
 
+        /// <inheritdoc/>
         public MetadataTrackerEntry GetEntryByMetadata(MetadataTableNumber tracker, string metadata)
         {
             lock (this.lockObj)

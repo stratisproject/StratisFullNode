@@ -3,10 +3,12 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
 using Stratis.Bitcoin.Features.OpenBanking.OpenBanking;
@@ -43,7 +45,8 @@ namespace Stratis.Bitcoin.Features.OpenBanking.Tests
                 .AddSingleton(new ChainIndexer(this.network))
                 .AddSingleton<IDateTimeProvider, DateTimeProvider>()
                 .AddSingleton<IAddressIndexer, AddressIndexer>()
-                .AddSingleton<DBreezeSerializer>();
+                .AddSingleton<DBreezeSerializer>()
+                .AddSingleton<ILoggerFactory, CustomLoggerFactory>();
             this.mockingContext = new MockingContext(this.serviceCollection);
         }
 
@@ -73,7 +76,8 @@ namespace Stratis.Bitcoin.Features.OpenBanking.Tests
                 Amount = new Money(100, MoneyUnit.BTC),
                 Reference = recipient,
                 TransactionId = "123",
-                BookDateTimeUTC = DateTime.Parse("2001-2-3 4:5:6 +0")
+                BookDateTimeUTC = DateTime.Parse("2001-2-3 4:5:6 +0"),
+                ValueDateTimeUTC = DateTime.Parse("2001-2-3 4:7:6 +0")
             };
 
             var builder = this.mockingContext.GetService<ITokenMintingTransactionBuilder>();

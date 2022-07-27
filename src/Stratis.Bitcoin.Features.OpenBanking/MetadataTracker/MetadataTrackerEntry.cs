@@ -3,6 +3,9 @@ using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.MetadataTracker
 {
+    /// <summary>
+    /// Holds the information about metadata occurrences in the chain.
+    /// </summary>
     public class MetadataTrackerEntry : IBitcoinSerializable
     {
         public HashHeightPair Block { get; set; }

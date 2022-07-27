@@ -16,9 +16,9 @@ namespace Stratis.Bitcoin.Tests.Common
             return serviceCollection;
         }
     }
-
+    
     /// <summary>
-    /// Implements a <c>GetService</c> that concretizes services on-demand and also mocks services that can't be otherwise concretized.
+    /// Implements a <c>GetService</c> that concretizes services on-demand and also mocks services that can't otherwise be concretized.
     /// </summary>
     public class MockingContext : IServiceProvider
     {
@@ -35,7 +35,7 @@ namespace Stratis.Bitcoin.Tests.Common
         /// </summary>
         /// <param name="serviceType">The service type.</param>
         /// <returns>The service instance.</returns>
-        /// <remarks><para>A mocked type can be passed in which case the mock object is returned for setup purposes.</para>
+        /// <remarks><para>A mocked type can be passed in which case the mock base class is returned for setup purposes.</para>
         /// <para>An enumerable type can be passed in which case multiple service instances are returned.</para></remarks>
         public object GetService(Type serviceType)
         {
@@ -109,13 +109,19 @@ namespace Stratis.Bitcoin.Tests.Common
                 
                 if (serviceType.IsInterface)
                 {
+                    // Mock<Interface>
                     mock = Activator.CreateInstance(mockType);
                 }
                 else
                 {
+                    // Mock<Class>
+                    // If mocking a class (instead of an interface) then the constructor arguments need to be provided as well.
                     ConstructorInfo constructorInfo = GetConstructor(serviceType);
                     object[] args = GetConstructorArguments(this, constructorInfo);
+
                     mock = Activator.CreateInstance(mockType, args);
+                    
+                    // Enables use of existing class methods by default.
                     mock.SetPrivatePropertyValue("CallBase", true);
                 }
 

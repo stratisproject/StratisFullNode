@@ -72,13 +72,23 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
                 this.Block = null;
         }
 
+        /// <summary>The database key used to store deposits when in pending state.</summary>
+        /// <remarks>The booking date/time is tentative when in pending state and as such is not used as part of the key when in that state.</remarks>
         public byte[] PendingKeyBytes => ASCIIEncoding.ASCII.GetBytes(this.TransactionId);
 
+        /// <summary>The database key used to store deposits.</summary>
+        /// <remarks>The booking date/time is tentative when in pending state and as such is not used as part of the key when in that state.</remarks>
         public byte[] KeyBytes => (this.State == OpenBankDepositState.Pending) ? this.PendingKeyBytes :
             ASCIIEncoding.ASCII.GetBytes(this.BookDateTimeUTC.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss") + " " + this.TransactionId);
 
+        /// <summary>The database key used to index deposits by state.</summary>
         public byte[] IndexKeyBytes => new[] { (byte)this.State }.Concat(this.KeyBytes).ToArray();
 
+        /// <summary>
+        /// Parses the target address of the deposit from the banking deposit reference.
+        /// </summary>
+        /// <param name="network">The network.</param>
+        /// <returns>The target address reference if found. Otherwise returns <c>null</c>.</returns>
         public BitcoinAddress ParseAddressFromReference(Network network)
         {
             // Strip out any "adjacent" characters that may have been included to delimit the address.

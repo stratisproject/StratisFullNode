@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Configuration;
@@ -13,7 +14,7 @@ using Stratis.Bitcoin.Utilities;
 namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 {
     /// <summary>
-    /// Buffered access to the Open Bank API.
+    /// Implements a database to provide buffered access to deposits obtained via the Open Bank API.
     /// </summary>
     public class OpenBankingService : IOpenBankingService
     {
@@ -27,11 +28,14 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
         private readonly IPooledTransaction pooledTransaction;
         private readonly IOpenBankingClient openBankingClient;
         private readonly IMetadataTracker metadataTracker;
+        private readonly ILogger logger;
 
         private readonly object lockObject = new object();
 
-        public OpenBankingService(DataFolder dataFolder, DBreezeSerializer dBreezeSerializer, Network network, ChainIndexer chainIndexer, IPooledTransaction pooledTransaction, IOpenBankingClient openBankingClient, IMetadataTracker metadataTracker)
+        public OpenBankingService(DataFolder dataFolder, DBreezeSerializer dBreezeSerializer, Network network, ChainIndexer chainIndexer, IPooledTransaction pooledTransaction, IOpenBankingClient openBankingClient, IMetadataTracker metadataTracker, ILoggerFactory loggerFactory)
         {
+            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+
             this.dBreezeSerializer = dBreezeSerializer;
             this.network = network;
             this.chainIndexer = chainIndexer;
@@ -104,6 +108,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
             }
         }
 
+        /// <inheritdoc/>
         public void UpdateDeposits(IOpenBankAccount openBankAccount)
         {
             lock (this.lockObject)
@@ -142,6 +147,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
             }
         }
 
+        /// <inheritdoc/>
         public void UpdateDepositStatus(IOpenBankAccount openBankAccount)
         {
             lock (this.lockObject)
@@ -156,12 +162,15 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 
                     foreach (OpenBankDeposit deposit in GetOpenBankDeposits(openBankAccount, OpenBankDepositState.SeenInBlock))
                     {
+                        // Since we are retrieving the deposits in descending order we want to break out of the loop when we go below fromDateUTC.
                         if (deposit.BookDateTimeUTC < fromDateUTC)
                             break;
 
+                        // If the block containing the mint call is still on-chain then we have nothing to do.
                         if (this.chainIndexer[deposit.Block.Hash] != null)
                             continue;
 
+                        // Otherwise, handle the fork scenario by rewinding the status.
                         DeleteOpenBankDeposit(batch, openBankAccount, deposit);
                         deposit.State = OpenBankDepositState.Minted;
                         PutOpenBankDeposit(batch, openBankAccount, deposit);
@@ -216,6 +225,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
             }
         }
 
+        /// <inheritdoc/>
         public void SetTransactionId(IOpenBankAccount openBankAccount, OpenBankDeposit deposit, uint256 txId)
         {
             lock (this.lockObject)
@@ -247,6 +257,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
             batch.Put(indexTable, deposit.IndexKeyBytes, new byte[0]);
         }
 
+        /// <inheritdoc/>
         public OpenBankDeposit GetOpenBankDeposit(IOpenBankAccount openBankAccount, byte[] keyBytes)
         {
             var depositTable = (byte)(depositTableOffset + openBankAccount.MetaDataTable);
@@ -257,6 +268,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
             return this.dBreezeSerializer.Deserialize<OpenBankDeposit>(bytes);
         }
 
+        /// <inheritdoc/>
         public IEnumerable<OpenBankDeposit> GetOpenBankDeposits(IOpenBankAccount openBankAccount, OpenBankDepositState state)
         {
             var depositTable = (byte)(depositTableOffset + openBankAccount.MetaDataTable);

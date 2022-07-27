@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Security;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 {
@@ -13,8 +14,11 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 
     public class OpenBankingClient : IOpenBankingClient
     {
-        public OpenBankingClient()
+        private readonly ILogger logger;
+
+        public OpenBankingClient(ILoggerFactory loggerFactory)
         {
+            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
         }
 
         public OBGetTransactionsResponse GetTransactions(IOpenBankAccount openBankAccount, DateTime? fromBookingDateTime)
