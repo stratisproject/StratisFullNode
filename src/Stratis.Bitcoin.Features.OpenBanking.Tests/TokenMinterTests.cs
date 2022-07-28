@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -113,12 +114,12 @@ namespace Stratis.Bitcoin.Features.OpenBanking.Tests
                 .Returns(BuildCallContractTransactionResponse.Succeeded("methodName", new Transaction(), 10));
 
             this.mockingContext.GetService<Mock<IOpenBankingClient>>()
-                .Setup(c => c.GetTransactions(It.IsAny<IOpenBankAccount>(), It.IsAny<DateTime?>()))
-                .Returns(JsonSerializer.Deserialize<OBGetTransactionsResponse>(OpenBankingServicesTests.GetSampleResourceString("BookedTransactionListValidReference.json")));
+                .Setup(c => c.GetTransactionsAsync(It.IsAny<IOpenBankAccount>(), It.IsAny<DateTime?>()))
+                .Returns(Task.FromResult(JsonSerializer.Deserialize<OBGetTransactionsResponse>(OpenBankingServicesTests.GetSampleResourceString("BookedTransactionListValidReference.json"))));
 
             var service = this.mockingContext.GetService<ITokenMintingService>();
 
-            var account = new OpenBankAccount(null, "22289", MetadataTableNumber.GBPT, "GBP", contractAddress, 0);
+            var account = new OpenBankAccount(new OpenBankConfiguration() { }, "22289", MetadataTableNumber.GBPT, "GBP", contractAddress, 0);
 
             service.Register(account);
 

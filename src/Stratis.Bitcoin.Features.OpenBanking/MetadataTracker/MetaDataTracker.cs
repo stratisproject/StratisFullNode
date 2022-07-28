@@ -15,7 +15,7 @@ using Stratis.SmartContracts.Core.Receipts;
 namespace Stratis.Bitcoin.Features.SmartContracts.MetadataTracker
 {
     /// <summary>Maintains a table that uses as primary key a specified topic found in a specified contract and log type. The rest of the fields identify the block and transaction id.</summary>
-    /// <remarks><para>The class can return table rows by primary key (topic) and can also return the row with the greatest topic value.</para><para>The class deals with re-orgs transparently.</para></remarks>
+    /// <remarks><para>The class can return table rows by primary key (topic).</para><para>The class deals with re-orgs transparently.</para></remarks>
     public class MetadataTracker : IMetadataTracker
     {
         private const byte CommonTableOffset = 0;
@@ -80,7 +80,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.MetadataTracker
 
             Sync();
 
-            this.signals.Subscribe<BlockConnected>(this.BlockConnected);
+            this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
         }
 
         /// <inheritdoc/>
@@ -100,7 +100,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.MetadataTracker
             }
         }
 
-        private void BlockConnected(BlockConnected blockConnected)
+        private void OnBlockConnected(BlockConnected blockConnected)
         {
             Sync();
         }

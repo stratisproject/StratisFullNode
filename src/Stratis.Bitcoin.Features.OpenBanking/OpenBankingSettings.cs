@@ -21,6 +21,12 @@ namespace Stratis.Bitcoin.Features.OpenBanking
         [CommandLineOption("minteraddress", "The minter's wallet address.")]
         public string WalletAddress { get; set; } = null;
 
+        [CommandLineOption("clientid", "The open banking client id.")]
+        public string OpenBankingClientId { get; set; } = null;
+
+        [CommandLineOption("clientsecret", "The open banking client secret.", false)]
+        public string OpenBankingClientSecret { get; set; } = null;
+
         /// <summary>
         /// Initializes an instance of the object from the node configuration.
         /// </summary>

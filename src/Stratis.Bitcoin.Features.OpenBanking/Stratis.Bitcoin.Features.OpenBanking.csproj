@@ -20,6 +20,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="DotNetOpenAuth.OpenId.Core" Version="5.0.0-alpha3" />
+    <PackageReference Include="IdentityServer4" Version="4.1.2" />
+    <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="6.22.0" />
   </ItemGroup>
 
   <ItemGroup>

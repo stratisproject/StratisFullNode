@@ -1,43 +1,29 @@
-﻿using System;
+﻿using System.Text.Json;
+using System.Threading.Tasks;
+using System.Net.Http;
+using System.Collections.Generic;
 using System.IO;
-using System.Net;
-using System.Net.Security;
-using System.Text.Json;
-using Microsoft.Extensions.Logging;
+using System;
 
 namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
 {
     public interface IOpenBankingClient
     {
-        OBGetTransactionsResponse GetTransactions(IOpenBankAccount openBankAccount, DateTime? fromBookingDateTime);
+        Task<OBGetTransactionsResponse> GetTransactionsAsync(IOpenBankAccount account, DateTime? fromDateTime);
     }
 
     public class OpenBankingClient : IOpenBankingClient
     {
-        private readonly ILogger logger;
+        private readonly OpenBankingSettings settings;
+        private Token accessToken;
 
-        public OpenBankingClient(ILoggerFactory loggerFactory)
+        public OpenBankingClient(OpenBankingSettings settings)
         {
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.settings = settings;
         }
 
-        public OBGetTransactionsResponse GetTransactions(IOpenBankAccount openBankAccount, DateTime? fromBookingDateTime)
+        private async Task<StreamReader> GetResponseAsStreamAsync(string endpoint)
         {
-            return new OBGetTransactionsResponse() { Data = new OBTransactionData() { Transaction = new OBTransaction[] { } } };
-
-            // Transaction can be "Booked" or "Pending".
-            // Need to revisit "Pending" in case their booking date changes? Up/Down???
-            // https://openbanking.atlassian.net/wiki/spaces/DZ/pages/1004208451/Transactions+v3.1.1#Transactionsv3.1.1-GET%2Faccounts%2F%7BAccountId%7D%2Ftransactions
-
-            string dateFilter = (fromBookingDateTime == null) ? "" : $"fromBookingDateTime={fromBookingDateTime.Value.ToUniversalTime().ToString(":yyyy-MM-ddTHH:mm:ss")}";
-            string url = $"{openBankAccount.OpenBankConfiguration.API}/accounts/{openBankAccount.OpenBankAccountNumber}/transactions?{dateFilter}";
-
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-            ServicePointManager.ServerCertificateValidationCallback = new RemoteCertificateValidationCallback(ServerCertificateValidation);
-
-            Uri uri = new Uri(url);
-            WebRequest webRequest = WebRequest.Create(uri);
-
             /*
              GET /accounts/22289/transactions HTTP/1.1
                 Authorization: Bearer Az90SAOJklae
@@ -50,25 +36,56 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
              HTTP/1.1 200 OK
                 x-fapi-interaction-id: 93bac548-d2de-4546-b106-880a5018460d          
             */
-
-            WebResponse webResponse = webRequest.GetResponse();
-
-            using (var r = webResponse.GetResponseStream())
+            using (var httpClient = new HttpClient())
             {
-                using (var sr = new StreamReader(r))
-                {
-                    return JsonSerializer.Deserialize<OBGetTransactionsResponse>(sr.ReadToEnd());
-                }
+                httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
+                var tokenRequest = new HttpRequestMessage(HttpMethod.Get, endpoint);
+                tokenRequest.Headers.Add("Authorization", $"Bearer {this.accessToken}");
+                var tokenResponse = await httpClient.SendAsync(tokenRequest);
+                var tokenResponseContent = await tokenResponse.Content.ReadAsStreamAsync();
+                return new StreamReader(tokenResponseContent);
             }
         }
 
-        private bool ServerCertificateValidation(object sender, System.Security.Cryptography.X509Certificates.X509Certificate certificate, System.Security.Cryptography.X509Certificates.X509Chain chain, System.Net.Security.SslPolicyErrors errors)
+        public async Task<OBGetTransactionsResponse> GetTransactionsAsync(IOpenBankAccount account, DateTime? fromDateTime)
         {
-            // Accepts all...
-            return true;
+            if (this.accessToken == null)
+                this.accessToken = await GetAccessTokenAsync(account.OpenBankConfiguration, this.settings, new[] { "transactions" });
 
-            // TODO
-            //return (errors == SslPolicyErrors.None) || certificate.GetCertHashString(HashAlgorithmName.SHA256).Equals("EB8E0B28AE064ED58CBED9DAEB46CFEB3BD7ECA677...");
+            var sr = await GetResponseAsStreamAsync(account.TransactionsEndpoint(fromDateTime));
+
+            return JsonSerializer.Deserialize<OBGetTransactionsResponse>(sr.ReadToEnd());
+        }
+
+        public async Task<Token> GetAccessTokenAsync(OpenBankConfiguration configuration, OpenBankingSettings settings, string[] openBankingScopes)
+        {
+            using (var httpClient = new HttpClient())
+            {
+                httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
+                var tokenRequest = new HttpRequestMessage(HttpMethod.Post, configuration.TokenURL);
+                tokenRequest.Content = new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                  { "client_id", settings.OpenBankingClientId },
+                  { "client_secret", settings.OpenBankingClientSecret },
+                  { "redirect_uri", configuration.RedirectURL },
+                  //{ "code", this.GetCode(configuration, settings, openBankingScopes) },
+                  { "grant_type", "authorization_code" },
+                  { "scope", string.Join(" ", openBankingScopes) }
+                });
+                var tokenResponse = await httpClient.SendAsync(tokenRequest);
+                var responseContent = await tokenResponse.Content.ReadAsStringAsync();
+
+                return JsonSerializer.Deserialize<Token>(responseContent);
+            }
         }
     }
+
+    public class Token
+    {
+        public string access_token { get; set; }
+        public string refresh_token { get; set; }
+        public int expires_in { get; set; }
+        public string token_type { get; set; }
+    }
 }
+

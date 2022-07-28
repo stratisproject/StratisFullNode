@@ -119,7 +119,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
                 {
                     bool dirty = false;
 
-                    OBGetTransactionsResponse response = this.openBankingClient.GetTransactions(openBankAccount, lastDeposit?.BookDateTimeUTC);
+                    OBGetTransactionsResponse response = this.openBankingClient.GetTransactionsAsync(openBankAccount, lastDeposit?.BookDateTimeUTC).GetAwaiter().GetResult();
 
                     // Use the OpenBank API to add any deposits following the last deposit in the bank account.
                     foreach (OpenBankDeposit deposit in this.GetDeposits(response, openBankAccount.Currency, this.network))

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using NBitcoin;
 using Stratis.Bitcoin.Features.SmartContracts.MetadataTracker;
 
@@ -21,7 +22,25 @@ namespace Stratis.Bitcoin.Features.OpenBanking.OpenBanking
     /// </summary>
     public class OpenBankConfiguration
     {
-        public string API { get; set; }
+        // E.g. "https://localhost:44315/"
+        public string RedirectURL { get; set; }
+
+        // E.g. "https://ob-mtls-resource-server.azurewebsites.net/token"
+        public string TokenURL { get; set; }
+
+        // E.g. "https://ob-mtls-resource-server.azurewebsites.net/auth/code"
+        public string AuthCodeURL { get; set; }
+
+        // E.g. "https://ob-mtls-resource-server.azurewebsites.net/open-banking/v3.1/aisp"
+        public string AISPURL { get; set; }
+    }
+
+    public static class IOpenBankAccountExt
+    {
+        public static string TransactionsEndpoint(this IOpenBankAccount openBankAccount, DateTime? fromDateTime)
+        {
+            return $"{openBankAccount.OpenBankConfiguration.AISPURL}/accounts/{openBankAccount.OpenBankAccountNumber}/transactions";
+        }
     }
 
     /// <summary>
