@@ -8,6 +8,11 @@ using Xunit;
 
 namespace Stratis.Bitcoin.Features.OpenBanking.Tests
 {
+    /// <summary>
+    /// Financial-grade API (FAPI) is a technical specification that Financial-grade API Working Group of OpenID Foundation has developed. 
+    /// It uses OAuth 2.0 and OpenID Connect (OIDC) as its base and defines additional technical requirements for the financial industry 
+    /// and other industries that require higher security.
+    /// </summary>
     public class OpenBankingClientTests
     {
         private readonly OpenBankingSettings settings;
@@ -57,11 +62,7 @@ namespace Stratis.Bitcoin.Features.OpenBanking.Tests
         }
 
         /// <summary>
-        /// Financial-grade API (FAPI) is a technical specification that Financial-grade API Working Group of OpenID Foundation has developed. 
-        /// It uses OAuth 2.0 and OpenID Connect (OIDC) as its base and defines additional technical requirements for the financial industry 
-        /// and other industries that require higher security.
-        /// 
-        /// This method proves that we can retrieve an authorization token and use that to obtain a list of transactions.
+        /// This method proves that we can retrieve a list of transactions.
         /// </summary>
         [Fact]
         public void CanGetTransactions()
@@ -76,6 +77,9 @@ namespace Stratis.Bitcoin.Features.OpenBanking.Tests
             Assert.Equal(3, openBankingTransactions.Data.Transaction.Length);
         }
 
+        /// <summary>
+        /// This method proves that we can retrieve an access code.
+        /// </summary>
         [Fact]
         public void CanGetAccessCode()
         {
@@ -88,6 +92,9 @@ namespace Stratis.Bitcoin.Features.OpenBanking.Tests
             Assert.NotNull(code);
         }
 
+        /// <summary>
+        /// This method proves that we can retrieve an authorization token.
+        /// </summary>
         [Fact]
         public void CanGetAccessToken()
         {
