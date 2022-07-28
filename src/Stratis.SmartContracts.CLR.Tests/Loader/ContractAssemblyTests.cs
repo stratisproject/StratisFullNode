@@ -135,15 +135,15 @@ namespace Stratis.SmartContracts.CLR.Tests.Loader
             var code = @"
 using Stratis.SmartContracts;
 
-public class TypeOne : SmartContract
+public class BaseType : SmartContract
 {
-    public TypeOne(ISmartContractState state) : base(state) {}
+    public BaseType(ISmartContractState state) : base(state) {}
 }
 
 [Deploy]
-public class TypeTwo : TypeOne
+public class InheritedType : BaseType
 {
-    public TypeTwo(ISmartContractState state) : base(state) {}
+    public InheritedType(ISmartContractState state) : base(state) {}
 }
 ";
             var compilation = ContractCompiler.Compile(code);
@@ -155,7 +155,7 @@ public class TypeTwo : TypeOne
             var type = contractAssembly.DeployedType;
 
             Assert.NotNull(type);
-            Assert.Equal("TypeTwo", type.Name);
+            Assert.Equal("InheritedType", type.Name);
         }
     }
 }

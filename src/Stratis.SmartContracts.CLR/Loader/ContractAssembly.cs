@@ -53,12 +53,7 @@ namespace Stratis.SmartContracts.CLR.Loader
         {
             return typeDefinition.IsClass &&
                    !typeDefinition.IsAbstract &&
-                   InheritsFromType(typeDefinition, typeof(SmartContract));
-        }
-
-        private static bool InheritsFromType(Type subject, Type predicate)
-        {
-            return subject != null && (subject.BaseType == predicate || InheritsFromType(subject.BaseType, predicate));
+                   typeDefinition.IsSubclassOf(typeof(SmartContract));
         }
 
         private Type GetObserverType()
