@@ -1,4 +1,5 @@
 ﻿using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Database;
 using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Persistence.KeyValueStores;
 using Stratis.Bitcoin.Utilities;
@@ -12,7 +13,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
     {
     }
 
-    public sealed class ConversionRequestFeeKeyValueStore : LevelDbKeyValueRepository, IConversionRequestFeeKeyValueStore
+    public sealed class ConversionRequestFeeKeyValueStore : KeyValueRepository<LevelDb>, IConversionRequestFeeKeyValueStore
     {
         public ConversionRequestFeeKeyValueStore(DataFolder dataFolder, DBreezeSerializer dBreezeSerializer) : this(dataFolder.InteropFeeRepositoryPath, dBreezeSerializer)
         {
