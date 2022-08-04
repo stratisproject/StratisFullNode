@@ -149,7 +149,7 @@ namespace Stratis.Bitcoin.Database
 
         public bool IsValid()
         {
-            return this.iterator.Valid() && (!this.table.HasValue || this.iterator.Value()[0] == this.table);
+            return this.iterator.Valid() && (!this.table.HasValue || this.iterator.Key()[0] == this.table);
         }
 
         public byte[] Key()
