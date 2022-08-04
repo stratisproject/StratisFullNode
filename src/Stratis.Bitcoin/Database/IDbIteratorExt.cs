@@ -12,9 +12,18 @@ namespace Stratis.Bitcoin.Database
         private static ByteArrayComparer byteArrayComparer = new ByteArrayComparer();
 
         /// <summary>
+        /// Seeks to the first key "globally" or within a particular table depending on the iterator used.
+        /// </summary>
+        /// <param name="iterator">The "global" or table-restricted iterator to use.</param>
+        public static void SeekFirst(this IDbIterator iterator)
+        {
+            iterator.Seek(new byte[0]);
+        }
+
+        /// <summary>
         /// Gets all the keys in the relevant table subject to any supplied constraints.
         /// </summary>
-        /// <param name="iterator">The iterator that also identifies the table being iterated.</param>
+        /// <param name="iterator">The "global" or table-restricted iterator to use.</param>
         /// <param name="keysOnly">Defaults to <c>false</c>. Set to <c>true</c> if values should be ommitted - i.e. set to <c>null</c>.</param>
         /// <param name="ascending">Defaults to <c>true</c>. Set to <c>false</c> to return keys in ascending order.</param>
         /// <param name="firstKey">Can be set optionally to specify the lower bound of keys to return.</param>
@@ -69,7 +78,7 @@ namespace Stratis.Bitcoin.Database
             {
                 // Seek to the first key if it was provided.
                 if (firstKey == null)
-                    iterator.Seek(new byte[0]);
+                    iterator.SeekFirst();
                 else
                 {
                     iterator.Seek(firstKey);

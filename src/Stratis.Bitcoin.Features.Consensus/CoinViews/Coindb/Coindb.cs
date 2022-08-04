@@ -95,7 +95,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
                         using (var iterator = this.coinDb.GetIterator(rewindTable))
                         {
-                            iterator.Seek(new byte[0]);
+                            iterator.SeekFirst();
 
                             while (iterator.IsValid())
                             {
@@ -285,7 +285,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             // Find the first row with a rewind table key prefix.
             using (var iterator = this.coinDb.GetIterator(rewindTable))
             {
-                iterator.Seek(new byte[0]);
+                iterator.SeekFirst();
                 if (!iterator.IsValid())
                     return -1;
 
