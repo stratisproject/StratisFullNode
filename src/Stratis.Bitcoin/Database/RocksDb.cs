@@ -11,6 +11,11 @@ namespace Stratis.Bitcoin.Database
 
         private RocksDbSharp.RocksDb db;
 
+        public IDbIterator GetIterator()
+        {
+            return new RocksDbIterator(this.db.NewIterator());
+        }
+
         public IDbIterator GetIterator(byte table)
         {
             return new RocksDbIterator(table, this.db.NewIterator());
@@ -36,6 +41,11 @@ namespace Stratis.Bitcoin.Database
             return this.db.Get(new[] { table }.Concat(key).ToArray());
         }
 
+        public byte[] Get(byte[] key)
+        {
+            return this.db.Get(key);
+        }
+
         public void Dispose()
         {
             this.db.Dispose();
@@ -54,12 +64,24 @@ namespace Stratis.Bitcoin.Database
 
         public IDbBatch Put(byte table, byte[] key, byte[] value)
         {
-            return (IDbBatch)this.Put(new[] { table }.Concat(key).ToArray(), value);
+            return this.Put(new[] { table }.Concat(key).ToArray(), value);
         }
 
         public IDbBatch Delete(byte table, byte[] key)
         {
-            return (IDbBatch)this.Delete(new[] { table }.Concat(key).ToArray());
+            return this.Delete(new[] { table }.Concat(key).ToArray());
+        }
+
+        public IDbBatch Put(byte[] key, byte[] value)
+        {
+            base.Put(key, value);
+            return this;
+        }
+
+        public IDbBatch Delete(byte[] key)
+        {
+            base.Delete(key);
+            return this;
         }
 
         public void Write()
@@ -71,8 +93,13 @@ namespace Stratis.Bitcoin.Database
     /// <summary>A minimal RocksDb wrapper that makes it compliant with the <see cref="IDbIterator"/> interface.</summary>
     public class RocksDbIterator : IDbIterator
     {
-        private byte table;
+        private byte? table;
         private Iterator iterator;
+
+        public RocksDbIterator(Iterator iterator)
+        {
+            this.iterator = iterator;
+        }
 
         public RocksDbIterator(byte table, Iterator iterator)
         {
@@ -82,11 +109,17 @@ namespace Stratis.Bitcoin.Database
 
         public void Seek(byte[] key)
         {
-            this.iterator.Seek(new[] { this.table }.Concat(key).ToArray());
+            this.iterator.Seek(this.table.HasValue ? new[] { this.table.Value }.Concat(key).ToArray() : key);
         }
 
         public void SeekToLast()
         {
+            if (!this.table.HasValue)
+            {
+                this.iterator.SeekToLast();
+                return;
+            }
+
             if (this.table != 255)
             {
                 // First seek past the last record in the table by attempting to seek to the start of the next table (if any).
@@ -116,12 +149,12 @@ namespace Stratis.Bitcoin.Database
 
         public bool IsValid()
         {
-            return this.iterator.Valid() && this.iterator.Value()[0] == this.table;
+            return this.iterator.Valid() && (!this.table.HasValue || this.iterator.Value()[0] == this.table);
         }
 
         public byte[] Key()
         {
-            return this.iterator.Key().Skip(1).ToArray();
+            return this.table.HasValue ? this.iterator.Key().Skip(1).ToArray() : this.iterator.Key();
         }
 
         public byte[] Value()

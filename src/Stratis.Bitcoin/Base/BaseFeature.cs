@@ -461,13 +461,13 @@ namespace Stratis.Bitcoin.Base
                     if (dbType == DbType.Leveldb)
                     {
                         chainStore = new ChainStore<LevelDb>(fullNodeBuilder.Network, fullNodeBuilder.NodeSettings.DataFolder, chainIndexer);
-                        services.AddSingleton<IKeyValueRepository, LevelDbKeyValueRepository>();
+                        services.AddSingleton<IKeyValueRepository, KeyValueRepository<LevelDb>>();
                     }
 
                     if (dbType == DbType.RocksDb)
                     {
                         chainStore = new ChainStore<RocksDb>(fullNodeBuilder.Network, fullNodeBuilder.NodeSettings.DataFolder, chainIndexer);
-                        services.AddSingleton<IKeyValueRepository, RocksDbKeyValueRepository>();
+                        services.AddSingleton<IKeyValueRepository, KeyValueRepository<RocksDb>>();
                     }
 
                     chainIndexer[0].SetChainStore(chainStore);

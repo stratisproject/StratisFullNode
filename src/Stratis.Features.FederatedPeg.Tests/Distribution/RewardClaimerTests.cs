@@ -6,6 +6,7 @@ using NSubstitute;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Database;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Networks;
@@ -87,7 +88,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Distribution
         public async Task RewardClaimer_RetrieveSingleDepositsAsync()
         {
             DataFolder dataFolder = TestBase.CreateDataFolder(this);
-            var keyValueRepository = new LevelDbKeyValueRepository(dataFolder, this.dbreezeSerializer);
+            var keyValueRepository = new KeyValueRepository<LevelDb>(dataFolder, this.dbreezeSerializer);
 
             // Create a "chain" of 30 blocks.
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, true, network: this.network, chainIndexer: this.chainIndexer, withCoinbaseAndCoinStake: true, createCirrusReward: true);
@@ -115,7 +116,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Distribution
         public async Task RewardClaimer_RetrieveBatchedDepositsAsync()
         {
             DataFolder dataFolder = TestBase.CreateDataFolder(this);
-            var keyValueRepository = new LevelDbKeyValueRepository(dataFolder, this.dbreezeSerializer);
+            var keyValueRepository = new KeyValueRepository<LevelDb>(dataFolder, this.dbreezeSerializer);
 
             // Create a "chain" of 30 blocks.
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, true, network: this.network, chainIndexer: this.chainIndexer, withCoinbaseAndCoinStake: true, createCirrusReward: true);
