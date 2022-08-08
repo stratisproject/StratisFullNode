@@ -5,6 +5,7 @@ using LevelDB;
 using NBitcoin;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Database;
 using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Persistence.ChainStores;
 using Stratis.Bitcoin.Tests.Common;
@@ -25,7 +26,7 @@ namespace Stratis.Bitcoin.Tests.Base
             var chain = new ChainIndexer(KnownNetworks.StraxRegTest);
             this.AppendBlock(chain);
 
-            using (var repo = new ChainRepository(new LevelDbChainStore(chain.Network, new DataFolder(dir), chain)))
+            using (var repo = new ChainRepository(new ChainStore<LevelDb>(chain.Network, new DataFolder(dir), chain)))
             {
                 repo.SaveAsync(chain).GetAwaiter().GetResult();
             }
@@ -85,7 +86,7 @@ namespace Stratis.Bitcoin.Tests.Base
                 }
             }
 
-            var chainStore = new LevelDbChainStore(chain.Network, new DataFolder(dir), chain);
+            var chainStore = new ChainStore<LevelDb>(chain.Network, new DataFolder(dir), chain);
             using (var repo = new ChainRepository(chainStore))
             {
                 var testChain = new ChainIndexer(KnownNetworks.StraxRegTest);

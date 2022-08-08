@@ -10,6 +10,7 @@ using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Database;
 using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.IntegrationTests.Common;
@@ -282,7 +283,7 @@ namespace Stratis.Bitcoin.IntegrationTests
             var chain = new ChainIndexer(this.regTest);
             var data = new DataFolder(TestBase.CreateTestDir(this));
 
-            var chainStore = new LevelDbChainStore(this.network, data, chain);
+            var chainStore = new ChainStore<LevelDb>(this.network, data, chain);
             chain[0].SetChainStore(chainStore);
 
             using (var repo = new ChainRepository(chainStore))
