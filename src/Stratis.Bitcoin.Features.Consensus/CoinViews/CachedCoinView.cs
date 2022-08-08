@@ -200,7 +200,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         public void Initialize(ChainedHeader chainTip, ChainIndexer chainIndexer, IConsensusRuleEngine consensusRuleEngine)
         {
-            this.coindb.Initialize(chainTip);
+            this.coindb.Initialize();
 
             Sync(chainIndexer);
 
