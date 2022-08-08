@@ -457,17 +457,6 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
             return res;
         }
 
-        protected virtual void OnDeleteTransactions(List<(Transaction, Block)> transactions)
-        {
-            using (var batch = this.db.GetWriteBatch())
-            {
-                foreach ((Transaction transaction, _) in transactions)
-                    batch.Delete(BlockRepositoryConstants.TransactionTableName, transaction.GetHash().ToBytes());
-
-                batch.Write();
-            }
-        }
-
         protected virtual void OnDeleteBlocks(List<Block> blocks)
         {
             using (var batch = this.db.GetWriteBatch())
