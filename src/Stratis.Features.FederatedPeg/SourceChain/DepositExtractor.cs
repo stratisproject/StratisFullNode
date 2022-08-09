@@ -6,9 +6,13 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Configuration.Logging;
+using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.Wallet;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
+using Stratis.SmartContracts;
+using Block = NBitcoin.Block;
 
 namespace Stratis.Features.FederatedPeg.SourceChain
 {
@@ -18,16 +22,18 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly Network network;
         private readonly IOpReturnDataReader opReturnDataReader;
+        private readonly IBlockStore blockStore;
         private readonly ILogger logger;
 
         private readonly List<uint256> depositsBeingProcessedWithinMaturingWindow;
 
-        public DepositExtractor(IConversionRequestRepository conversionRequestRepository, IFederatedPegSettings federatedPegSettings, Network network, IOpReturnDataReader opReturnDataReader)
+        public DepositExtractor(IConversionRequestRepository conversionRequestRepository, IFederatedPegSettings federatedPegSettings, Network network, IOpReturnDataReader opReturnDataReader, IBlockStore blockStore)
         {
             this.conversionRequestRepository = conversionRequestRepository;
             this.federatedPegSettings = federatedPegSettings;
             this.network = network;
             this.opReturnDataReader = opReturnDataReader;
+            this.blockStore = blockStore;
 
             this.depositsBeingProcessedWithinMaturingWindow = new List<uint256>();
             this.logger = LogManager.GetCurrentClassLogger();
@@ -218,11 +224,28 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             if (!DepositValidationHelper.TryGetDepositsToMultisig(this.network, transaction, FederatedPegSettings.CrossChainTransferMinimum, out List<TxOut> depositsToMultisig))
                 return Task.FromResult((IDeposit)null);
 
-            // If there are deposits to the multsig (i.e. cross chain transfers), try and extract and validate the address by the specfied destination chain.
+            Money amount = depositsToMultisig.Sum(o => o.Value);
+
+            // If there are deposits to the multsig (i.e. cross chain transfers), try and extract and validate the address by the specified destination chain.
+
+            // However, we need to check for distribution transactions first, as these should be processed regardless of whether the op return address is invalid.
+            // These transactions will only appear on the STRAX chain.
+            if (this.federatedPegSettings.IsMainChain)
+            {
+                foreach (TxIn input in transaction.Inputs)
+                {
+                    Transaction previousTransaction = this.blockStore.GetTransactionById(input.PrevOut.Hash);
+                    TxOut utxo = previousTransaction.Outputs[input.PrevOut.N];
+
+                    if (utxo.ScriptPubKey == StraxCoinstakeRule.CirrusRewardScript)
+                    {
+                        return Task.FromResult((IDeposit)new Deposit(transaction.GetHash(), DepositRetrievalType.Distribution, amount, this.network.CirrusRewardDummyAddress, DestinationChain.STRAX, blockHeight, blockHash));
+                    }
+                }
+            }
+
             if (!DepositValidationHelper.TryGetTarget(transaction, this.opReturnDataReader, out bool conversionTransaction, out string targetAddress, out int targetChain))
                 return Task.FromResult((IDeposit)null);
-
-            Money amount = depositsToMultisig.Sum(o => o.Value);
 
             DepositRetrievalType depositRetrievalType;
 
