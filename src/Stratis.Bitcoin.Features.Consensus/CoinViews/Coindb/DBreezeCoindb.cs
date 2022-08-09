@@ -34,6 +34,8 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         private BackendPerformanceSnapshot latestPerformanceSnapShot;
 
+        public bool BalanceIndexingEnabled => false;
+
         /// <summary>Access to dBreeze database.</summary>
         private readonly DBreezeEngine dBreeze;
 
@@ -65,7 +67,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 300);
         }
 
-        public void Initialize()
+        public void Initialize(bool balanceIndexingEnabled)
         {
             Block genesis = this.network.GetGenesis();
 
@@ -95,6 +97,11 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             }
 
             return tipHash;
+        }
+
+        public IEnumerable<(uint height, long satoshis)> GetBalance(TxDestination txDestination)
+        {
+            throw new NotImplementedException();
         }
 
         public FetchCoinsResponse FetchCoins(OutPoint[] utxos)
@@ -150,7 +157,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             transaction.Insert<byte[], byte[]>("BlockHash", blockHashKey, nextBlockHash.ToBytes());
         }
 
-        public void SaveChanges(IList<UnspentOutput> unspentOutputs, HashHeightPair oldBlockHash, HashHeightPair nextBlockHash, List<RewindData> rewindDataList = null)
+        public void SaveChanges(IList<UnspentOutput> unspentOutputs, Dictionary<TxDestination, Dictionary<uint, long>> balanceUpdates, HashHeightPair oldBlockHash, HashHeightPair nextBlockHash, List<RewindData> rewindDataList = null)
         {
             int insertedEntities = 0;
 
@@ -302,10 +309,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             return res;
         }
 
-        /// <summary>
-        /// Persists unsaved POS blocks information to the database.
-        /// </summary>
-        /// <param name="stakeEntries">List of POS block information to be examined and persists if unsaved.</param>
+        /// <inheritdoc/>
         public void PutStake(IEnumerable<StakeItem> stakeEntries)
         {
             using (DBreeze.Transactions.Transaction transaction = this.CreateTransaction())

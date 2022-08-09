@@ -24,6 +24,8 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// <remarks>All access to this object has to be protected by <see cref="lockobj"/>.</remarks>
         private HashHeightPair tipHash;
 
+        public bool BalanceIndexingEnabled => false;
+
         /// <summary>
         /// Initializes an instance of the object.
         /// </summary>
@@ -40,6 +42,11 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         }
 
         /// <inheritdoc />
+        public void Initialize(bool balanceIndexingEnabled)
+        {
+        }
+
+        /// <inheritdoc />
         public void Sync(ChainIndexer chainIndexer)
         {
         }
@@ -51,6 +58,11 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         }
 
         public void CacheCoins(OutPoint[] utxos)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IEnumerable<(uint height, long satoshis)> GetBalance(TxDestination txDestination)
         {
             throw new NotImplementedException();
         }
@@ -105,6 +117,11 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                         this.unspents.Remove(unspent.OutPoint);
                 }
             }
+        }
+
+        public void SaveChanges(IList<UnspentOutput> unspentOutputs, Dictionary<TxDestination, Dictionary<uint, long>> balanceUpdates, HashHeightPair oldBlockHash, HashHeightPair nextBlockHash, List<RewindData> rewindDataList = null)
+        {
+            this.SaveChanges(unspentOutputs, oldBlockHash, nextBlockHash, rewindDataList);
         }
 
         public int GetMinRewindHeight()

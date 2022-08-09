@@ -200,7 +200,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
                         services.AddSingleton<StoreSettings>();
                         services.AddSingleton<IBlockStoreQueueFlushCondition, BlockStoreQueueFlushCondition>();
-                        services.AddSingleton<IAddressIndexer, AddressIndexer>();
+                        services.AddSingleton<IAddressIndexer, AddressIndexerCV>();
                         services.AddSingleton<IUtxoIndexer, UtxoIndexer>();
                     });
             });

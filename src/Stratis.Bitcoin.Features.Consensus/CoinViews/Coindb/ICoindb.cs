@@ -10,7 +10,10 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
     public interface ICoindb
     {
         /// <summary> Initialize the coin database.</summary>
-        void Initialize();
+        /// <param name="balanceIndexingEnabled">Indicates whether to enable balance indexing.</param>
+        void Initialize(bool balanceIndexingEnabled);
+
+        bool BalanceIndexingEnabled { get; }
 
         /// <summary>
         /// Retrieves the block hash of the current tip of the coinview.
@@ -30,10 +33,11 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// </summary>
         /// <param name="unspentOutputs">Information about the changes between the old block and the new block. An item in this list represents a list of all outputs
         /// for a specific transaction. If a specific output was spent, the output is <c>null</c>.</param>
+        /// <param name="balanceUpdates">Non-cumulative balance updates at each height.</param>
         /// <param name="oldBlockHash">Block hash of the current tip of the coinview.</param>
         /// <param name="nextBlockHash">Block hash of the tip of the coinview after the change is applied.</param>
         /// <param name="rewindDataList">List of rewind data items to be persisted.</param>
-        void SaveChanges(IList<UnspentOutput> unspentOutputs, HashHeightPair oldBlockHash, HashHeightPair nextBlockHash, List<RewindData> rewindDataList = null);
+        void SaveChanges(IList<UnspentOutput> unspentOutputs, Dictionary<TxDestination, Dictionary<uint, long>> balanceUpdates, HashHeightPair oldBlockHash, HashHeightPair nextBlockHash, List<RewindData> rewindDataList = null);
 
         /// <summary>
         /// Obtains information about unspent outputs.
@@ -68,13 +72,15 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// <returns>See <see cref="RewindData"/>.</returns>
         RewindData GetRewindData(int height);
 
-        /// <summary>Gets the minimum rewind height.</summary>
-        /// <returns>
-        /// <para>
-        /// The minimum rewind height or -1 if rewind is not possible.
-        /// </para>
-        /// </returns>
-        int GetMinRewindHeight();
+        /// <summary>
+        /// Returns a combination of (height, satoshis) values with the cumulative balance up to the corresponding height.
+        /// </summary>
+        /// <param name="txDestination">The destination value derived from the address being queried.</param>
+        /// <returns>A combination of (height, satoshis) values with the cumulative balance up to the corresponding height.</returns>
+        /// <remarks>Balance updates (even when nett 0) are delivered for every height at which transactions for the address 
+        /// had been recorded and as such the returned heights can be used in conjunction with the block store to discover 
+        /// all related transactions.</remarks>
+        IEnumerable<(uint height, long satoshis)> GetBalance(TxDestination txDestination);
     }
 
     public interface IStakedb : ICoindb
