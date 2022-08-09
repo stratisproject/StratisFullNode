@@ -1142,7 +1142,7 @@ namespace NBitcoin
             return version == 0 || ((byte)OpcodeType.OP_1 <= version && version <= (byte)OpcodeType.OP_16);
         }
 
-        public TxDestination ExtractScriptPubKeyParameters(Network network, Script scriptPubKey)
+        public TxDestination ExtractScriptPubKeyParameters(Script scriptPubKey)
         {
             if(!CheckScriptPubKey(scriptPubKey))
                 return null;
@@ -1158,7 +1158,7 @@ namespace NBitcoin
             }
             return null;
         }
-        public WitProgramParameters ExtractScriptPubKeyParameters2(Network network, Script scriptPubKey)
+        public WitProgramParameters ExtractScriptPubKeyParameters2(Script scriptPubKey)
         {
             if(!CheckScriptPubKey(scriptPubKey))
                 return null;

@@ -1,47 +1,51 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using LevelDB;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Database;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonConverters;
 
 namespace Stratis.Bitcoin.Persistence.KeyValueStores
 {
-    public class LevelDbKeyValueRepository : IKeyValueRepository
+    public class KeyValueRepository<T> : IKeyValueRepository where T : IDb, new()
     {
         /// <summary>Access to database.</summary>
-        private readonly DB leveldb;
+        private readonly IDb db;
 
         private readonly DBreezeSerializer dBreezeSerializer;
 
-        public LevelDbKeyValueRepository(DataFolder dataFolder, DBreezeSerializer dBreezeSerializer) : this(dataFolder.KeyValueRepositoryPath, dBreezeSerializer)
+        public KeyValueRepository(DataFolder dataFolder, DBreezeSerializer dBreezeSerializer) : this(dataFolder.KeyValueRepositoryPath, dBreezeSerializer)
         {
         }
 
-        public LevelDbKeyValueRepository(string folder, DBreezeSerializer dBreezeSerializer)
+        public KeyValueRepository(string folder, DBreezeSerializer dBreezeSerializer)
         {
             Directory.CreateDirectory(folder);
             this.dBreezeSerializer = dBreezeSerializer;
 
             // Open a connection to a new DB and create if not found
-            var options = new Options { CreateIfMissing = true };
-            this.leveldb = new DB(options, folder);
+            this.db = new T();
+            this.db.Open(folder);
         }
 
         /// <inheritdoc />
         public void SaveBytes(string key, byte[] bytes, bool overWrite = false)
         {
-            byte[] keyBytes = Encoding.ASCII.GetBytes(key);
-
-            if (overWrite)
+            using (var batch = this.db.GetWriteBatch())
             {
-                byte[] row = this.leveldb.Get(keyBytes);
-                if (row != null)
-                    this.leveldb.Delete(keyBytes);
-            }
+                byte[] keyBytes = Encoding.ASCII.GetBytes(key);
 
-            this.leveldb.Put(keyBytes, bytes);
+                if (overWrite)
+                {
+                    byte[] row = this.db.Get(keyBytes);
+                    if (row != null)
+                        batch.Delete(keyBytes);
+                }
+
+                batch.Put(keyBytes, bytes);
+                batch.Write();
+            }
         }
 
         /// <inheritdoc />
@@ -64,7 +68,7 @@ namespace Stratis.Bitcoin.Persistence.KeyValueStores
         {
             byte[] keyBytes = Encoding.ASCII.GetBytes(key);
 
-            byte[] row = this.leveldb.Get(keyBytes);
+            byte[] row = this.db.Get(keyBytes);
 
             if (row == null)
                 return null;
@@ -103,17 +107,17 @@ namespace Stratis.Bitcoin.Persistence.KeyValueStores
         public List<T> GetAllAsJson<T>()
         {
             var values = new List<T>();
-            IEnumerator<KeyValuePair<byte[], byte[]>> enumerator = this.leveldb.GetEnumerator();
 
-            while (enumerator.MoveNext())
+            using (var iterator = this.db.GetIterator())
             {
-                (byte[] key, byte[] value) = enumerator.Current;
+                foreach ((byte[] key, byte[] value) in iterator.GetAll())
+                {
+                    if (value == null)
+                        continue;
 
-                if (value == null)
-                    continue;
-
-                string json = Encoding.ASCII.GetString(value);
-                values.Add(Serializer.ToObject<T>(json));
+                    string json = Encoding.ASCII.GetString(value);
+                    values.Add(Serializer.ToObject<T>(json));
+                }
             }
 
             return values;
@@ -124,15 +128,21 @@ namespace Stratis.Bitcoin.Persistence.KeyValueStores
         {
             byte[] keyBytes = Encoding.ASCII.GetBytes(key);
 
-            byte[] row = this.leveldb.Get(keyBytes);
+            byte[] row = this.db.Get(keyBytes);
             if (row != null)
-                this.leveldb.Delete(keyBytes);
+            {
+                using (var batch = this.db.GetWriteBatch())
+                {
+                    batch.Delete(keyBytes);
+                    batch.Write();
+                }
+            }
         }
 
         /// <inheritdoc />
         public void Dispose()
         {
-            this.leveldb.Dispose();
+            this.db.Dispose();
         }
     }
 }

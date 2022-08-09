@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
@@ -47,6 +48,16 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             this.mempoolLock = mempoolLock;
             this.mempoolValidator = mempoolValidator;
             this.Set = new UnspentOutputSet();
+        }
+
+        public void Initialize(ChainedHeader chainTip, ChainIndexer chainIndexer, IConsensusRuleEngine consensusRuleEngine)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <inheritdoc />
+        public void Sync(ChainIndexer chainIndexer)
+        {
         }
 
         /// <summary>

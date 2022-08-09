@@ -55,6 +55,11 @@ namespace Stratis.Bitcoin.Features.PoA
         public int InterFluxV2MainChainActivationHeight { get; protected set; }
 
         /// <summary>
+        /// The height at which Release 1.3.0.0 became BIP activated.
+        /// </summary>
+        public int Release1300ActivationHeight { get; set; }
+
+        /// <summary>
         /// The height at which inituitive mining slots become active.
         /// Legacy mining slots are determined by mining_slot = block_height % number_of_federation_members.
         /// Once the specified height is reached there should no longer be a shift in mining slots when new federation members are added/removed.
@@ -125,7 +130,8 @@ namespace Stratis.Bitcoin.Features.PoA
             int? getMiningTimestampV2ActivationStrictHeight = null,
             int? release1100ActivationHeight = null,
             int? pollExpiryBlocks = null,
-            int? contractSerializerV2ActivationHeight = null)
+            int? contractSerializerV2ActivationHeight = null,
+            int? release1300ActivationHeight = null)
                 : base(maxBlockBaseSize, maxStandardVersion, maxStandardTxWeight, maxBlockSigopsCost, maxStandardTxSigopsCost, witnessScaleFactor: 1)
         {
             this.GenesisFederationMembers = genesisFederationMembers;
@@ -153,6 +159,8 @@ namespace Stratis.Bitcoin.Features.PoA
                 this.Release1100ActivationHeight = release1100ActivationHeight.Value;
             if (contractSerializerV2ActivationHeight.HasValue)
                 this.ContractSerializerV2ActivationHeight = contractSerializerV2ActivationHeight.Value;
+            if (release1300ActivationHeight.HasValue)
+                this.Release1300ActivationHeight = release1300ActivationHeight.Value;
 
             if (this.AutoKickIdleMembers && !this.VotingEnabled)
                 throw new ArgumentException("Voting should be enabled for automatic kicking to work.");

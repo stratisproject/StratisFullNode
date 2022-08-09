@@ -48,8 +48,8 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
             IIdleFederationMembersKicker idleFederationMembersKicker,
             ISignals signals,
             NodeSettings nodeSettings)
-            : base(consensusManager, dateTimeProvider, network, nodeLifetime, loggerFactory, ibdState, blockDefinition, slotsManager,
-                connectionManager, poaHeaderValidator, federationManager, federationHistory, integrityValidator, walletManager, nodeStats, votingManager, poAMinerSettings, asyncProvider, idleFederationMembersKicker, signals, nodeSettings)
+            : base(consensusManager, dateTimeProvider, network, nodeLifetime, ibdState, blockDefinition, slotsManager, connectionManager,
+                poaHeaderValidator, federationManager, federationHistory, integrityValidator, walletManager, nodeStats, votingManager, poAMinerSettings, asyncProvider, idleFederationMembersKicker, signals, nodeSettings)
         {
             this.timeProvider = dateTimeProvider as EditableTimeProvider;
 

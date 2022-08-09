@@ -10,6 +10,7 @@ using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Database;
 using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
 using Stratis.Bitcoin.Features.BlockStore.Pruning;
 using Stratis.Bitcoin.Features.BlockStore.Repositories;
@@ -185,10 +186,10 @@ namespace Stratis.Bitcoin.Features.BlockStore
                         services.AddSingleton<IBlockStoreQueue, BlockStoreQueue>().AddSingleton<IBlockStore>(provider => provider.GetService<IBlockStoreQueue>());
 
                         if (dbType == DbType.Leveldb)
-                            services.AddSingleton<IBlockRepository, LevelDbBlockRepository>();
+                            services.AddSingleton<IBlockRepository, BlockRepository<LevelDb>>();
 
                         if (dbType == DbType.RocksDb)
-                            services.AddSingleton<IBlockRepository, RocksDbBlockRepository>();
+                            services.AddSingleton<IBlockRepository, BlockRepository<RocksDb>>();
 
                         services.AddSingleton<IPrunedBlockRepository, PrunedBlockRepository>();
 

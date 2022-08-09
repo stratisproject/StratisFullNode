@@ -3,6 +3,7 @@ using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Base.Deployments;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.MemoryPool;
@@ -115,7 +116,6 @@ namespace Stratis.Bitcoin.Features.Miner
         protected BlockDefinition(
             IConsensusManager consensusManager,
             IDateTimeProvider dateTimeProvider,
-            ILoggerFactory loggerFactory,
             ITxMempool mempool,
             MempoolSchedulerLock mempoolLock,
             MinerSettings minerSettings,
@@ -124,7 +124,7 @@ namespace Stratis.Bitcoin.Features.Miner
         {
             this.ConsensusManager = consensusManager;
             this.DateTimeProvider = dateTimeProvider;
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
             this.Mempool = mempool;
             this.MempoolLock = mempoolLock;
             this.Network = network;
@@ -146,7 +146,7 @@ namespace Stratis.Bitcoin.Features.Miner
         {
             this.height = this.ChainTip.Height + 1;
             var headerVersionRule = this.ConsensusManager.ConsensusRules.GetRule<HeaderVersionRule>();
-            this.block.Header.Version = headerVersionRule.ComputeBlockVersion(this.ChainTip);
+            this.block.Header.Version = headerVersionRule.ComputeBlockVersion(this.nodeDeployments, this.ChainTip);
         }
 
         protected virtual bool IsWitnessEnabled(ChainedHeader chainedHeader)

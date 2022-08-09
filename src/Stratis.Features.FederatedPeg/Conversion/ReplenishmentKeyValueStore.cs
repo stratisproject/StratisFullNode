@@ -2,6 +2,7 @@
 using System.Numerics;
 using Newtonsoft.Json;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Database;
 using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Persistence.KeyValueStores;
 using Stratis.Bitcoin.Utilities;
@@ -19,7 +20,7 @@ namespace Stratis.Features.FederatedPeg.Conversion
     /// <summary>
     /// Stores wSTRAX replenishment transactions on disk.
     /// </summary>
-    public sealed class ReplenishmentKeyValueStore : LevelDbKeyValueRepository, IReplenishmentKeyValueStore
+    public sealed class ReplenishmentKeyValueStore : KeyValueRepository<LevelDb>, IReplenishmentKeyValueStore
     {
         public ReplenishmentKeyValueStore(DataFolder dataFolder, DBreezeSerializer dBreezeSerializer) : this(dataFolder.InteropReplenishmentRepositoryPath, dBreezeSerializer)
         {

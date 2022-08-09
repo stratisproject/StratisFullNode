@@ -1021,7 +1021,7 @@ namespace NBitcoin
             ScriptId scriptHashParams = PayToScriptHashTemplate.Instance.ExtractScriptPubKeyParameters(this);
             if (scriptHashParams != null)
                 return scriptHashParams;
-            TxDestination wit = PayToWitTemplate.Instance.ExtractScriptPubKeyParameters(network, this);
+            TxDestination wit = PayToWitTemplate.Instance.ExtractScriptPubKeyParameters(this);
             return wit;
         }
 
