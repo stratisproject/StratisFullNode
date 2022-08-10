@@ -84,7 +84,7 @@ namespace Stratis.Bitcoin.Features.Consensus
             switch (coindbType)
             {
                 case DbType.Dbreeze:
-                    services.AddSingleton<ICoindb, DBreezeCoindb>();
+                    services.AddSingleton<ICoindb, Coindb<DBreezeDbWithCoinDbNames>>();
                     break;
 
                 case DbType.Leveldb:
