@@ -34,7 +34,7 @@ namespace Stratis.Bitcoin.Database
             this.db = RocksDbSharp.RocksDb.Open(new DbOptions().SetCreateIfMissing(), this.dbPath);
         }
 
-        public IDbBatch GetWriteBatch() => new RocksDbBatch(this.db);
+        public IDbBatch GetWriteBatch(params byte[] tables) => new RocksDbBatch(this.db);
 
         public byte[] Get(byte table, byte[] key)
         {

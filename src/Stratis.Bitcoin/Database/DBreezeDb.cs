@@ -65,7 +65,7 @@ namespace Stratis.Bitcoin.Database
             this.db = new DBreezeEngine(this.dbPath);
         }
 
-        public IDbBatch GetWriteBatch() => new DBreezeBatch(this);
+        public IDbBatch GetWriteBatch(params byte[] tables) => new DBreezeBatch(this, tables);
 
         private (Transaction transaction, bool canDispose) GetTransaction()
         {
@@ -88,9 +88,12 @@ namespace Stratis.Bitcoin.Database
             return (transaction, true);
         }
 
-        public BatchContext GetBatchContext()
+        public BatchContext GetBatchContext(params byte[] tables)
         {
             (Transaction transaction, bool canDispose) = this.GetTransaction();
+
+            if (tables.Length != 0)
+                transaction.SynchronizeTables(tables.Select(t => this.tableNames[t]).ToArray());
 
             return new BatchContext(transaction, canDispose);
         }
@@ -123,10 +126,10 @@ namespace Stratis.Bitcoin.Database
         private DBreezeDb db;
         private BatchContext context;
 
-        public DBreezeBatch(DBreezeDb db) : base()
+        public DBreezeBatch(DBreezeDb db, params byte[] tables) : base()
         {
             this.db = db;
-            this.context = db.GetBatchContext();
+            this.context = db.GetBatchContext(tables);
         }
 
         // Methods when using tables.
