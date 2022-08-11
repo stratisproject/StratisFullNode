@@ -1508,6 +1508,11 @@ namespace Stratis.Bitcoin.Consensus
                 log.AppendLine("Tip Age".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": { TimeSpan.FromSeconds(tipAge):dd\\.hh\\:mm\\:ss} (maximum is { TimeSpan.FromSeconds(maxTipAge):dd\\.hh\\:mm\\:ss})");
                 log.AppendLine("Synced with Network".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": { (this.isIbd ? "No" : "Yes") }");
 
+                if (this.signals != null)
+                {
+                    this.signals.Publish(new ConsensusManagerStatusEvent(this.isIbd));
+                }
+
                 string unconsumedBlocks = this.FormatBigNumber(this.chainedHeaderTree.UnconsumedBlocksCount);
 
                 double filledPercentage = Math.Round((this.chainedHeaderTree.UnconsumedBlocksDataBytes / (double)this.maxUnconsumedBlocksDataBytes) * 100, 2);
