@@ -26,7 +26,7 @@ namespace Stratis.Bitcoin.Database
         }
     }
 
-    /// <summary>A minimal LevelDb wrapper that makes it compliant with the <see cref="IDb"/> interface.</summary>
+    /// <summary>A minimal DBreeze wrapper that makes it compliant with the <see cref="IDb"/> interface.</summary>
     public class DBreezeDb : IDb
     {
         private Dictionary<int, Transaction> transactions = new Dictionary<int, Transaction>();
@@ -35,7 +35,12 @@ namespace Stratis.Bitcoin.Database
 
         private DBreezeEngine db;
 
-        protected Dictionary<byte, string> tableNames;
+        private Dictionary<byte, string> tableNames;
+
+        public DBreezeDb(Dictionary<byte, string> tableNames)
+        {
+            this.tableNames = tableNames;
+        }
 
         public IDbIterator GetIterator(byte table)
         {
