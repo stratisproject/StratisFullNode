@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration.Logging;
+using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol;
@@ -119,6 +120,17 @@ namespace Stratis.Features.FederatedPeg.Monitoring
                 reply.SuspendedPartialTransactions = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Suspended }).Length;
 
                 await this.AttachedPeer.SendMessageAsync(payload).ConfigureAwait(false);
+            }
+            else
+            {
+                // Publish the results
+                this.signals.Publish(new MultiSigMemberStateRequestEvent()
+                {
+                    CrossChainStoreHeight = payload.CrossChainStoreHeight,
+                    CrossChainStoreNextDepositHeight = payload.CrossChainStoreNextDepositHeight,
+                    PartialTransactions = payload.PartialTransactions,
+                    SuspendedPartialTransactions = payload.SuspendedPartialTransactions,
+                });
             }
         }
 
