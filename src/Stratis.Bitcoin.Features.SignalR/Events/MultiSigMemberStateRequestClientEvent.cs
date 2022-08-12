@@ -11,17 +11,20 @@ namespace Stratis.Bitcoin.Features.SignalR.Events
         public int PartialTransactions { get; set; }
         public int SuspendedPartialTransactions { get; set; }
 
+        public string PubKey { get; set; }
+
         public Type NodeEventType { get; } = typeof(MultiSigMemberStateRequestEvent);
 
         public void BuildFrom(EventBase @event)
         {
             if (@event is MultiSigMemberStateRequestEvent multiSigState)
             {
+                this.PubKey = multiSigState.PubKey;
+
                 this.CrossChainStoreHeight = multiSigState.CrossChainStoreHeight;
                 this.CrossChainStoreNextDepositHeight = multiSigState.CrossChainStoreNextDepositHeight;
                 this.PartialTransactions = multiSigState.PartialTransactions;
                 this.SuspendedPartialTransactions = multiSigState.SuspendedPartialTransactions;
-
                 return;
             }
 

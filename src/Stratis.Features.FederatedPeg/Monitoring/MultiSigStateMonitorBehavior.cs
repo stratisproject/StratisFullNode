@@ -126,6 +126,8 @@ namespace Stratis.Features.FederatedPeg.Monitoring
                 // Publish the results
                 this.signals.Publish(new MultiSigMemberStateRequestEvent()
                 {
+                    PubKey = this.federationManager.CurrentFederationKey.PubKey.ToHex(),
+
                     CrossChainStoreHeight = payload.CrossChainStoreHeight,
                     CrossChainStoreNextDepositHeight = payload.CrossChainStoreNextDepositHeight,
                     PartialTransactions = payload.PartialTransactions,

@@ -17,6 +17,7 @@ using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.Notifications;
 using Stratis.Bitcoin.Features.RPC;
+using Stratis.Bitcoin.Features.SignalR;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
@@ -141,6 +142,10 @@ namespace Stratis.CirrusPegD
                 .AddInteroperability()
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()
+                .AddSignalR(options =>
+                {
+                    DaemonConfiguration.ConfigureSignalRForCirrus(options);
+                })
                 .Build();
 
             return node;
