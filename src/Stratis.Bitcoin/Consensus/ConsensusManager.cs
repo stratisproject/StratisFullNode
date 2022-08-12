@@ -1510,7 +1510,7 @@ namespace Stratis.Bitcoin.Consensus
 
                 if (this.signals != null)
                 {
-                    this.signals.Publish(new ConsensusManagerStatusEvent(this.isIbd));
+                   this.signals.Publish(new ConsensusManagerStatusEvent(this.isIbd, this.HeaderTip));
                 }
 
                 string unconsumedBlocks = this.FormatBigNumber(this.chainedHeaderTree.UnconsumedBlocksCount);
