@@ -3,7 +3,7 @@ using Stratis.Bitcoin.P2P.Protocol.Payloads;
 
 namespace Stratis.Features.FederatedPeg.Monitoring
 {
-    [Payload("convrqst")]
+    [Payload("msstatereqst")]
     public sealed class MultiSigMemberStateRequestPayload : Payload
     {
         private int crossChainStoreHeight;

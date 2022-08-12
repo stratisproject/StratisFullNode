@@ -104,6 +104,10 @@ namespace Stratis.CirrusPegD
                 .UseWallet()
                 .AddSQLiteWalletRepository()
                 .AddPowPosMining(true)
+                .AddSignalR(options =>
+                {
+                    DaemonConfiguration.ConfigureSignalRForStrax(options);
+                })
                 .Build();
 
             return node;

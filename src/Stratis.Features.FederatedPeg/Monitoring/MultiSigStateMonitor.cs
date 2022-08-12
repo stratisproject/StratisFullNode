@@ -89,7 +89,7 @@ namespace Stratis.Features.FederatedPeg.Monitoring
                 }
             },
             this.nodeLifetime.ApplicationStopping,
-            repeatEvery: TimeSpans.Minute,
+            repeatEvery: TimeSpans.TenSeconds,
             startAfter: TimeSpans.Minute);
         }
 

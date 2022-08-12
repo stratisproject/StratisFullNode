@@ -26,6 +26,7 @@ using Stratis.Features.FederatedPeg.Coordination;
 using Stratis.Features.FederatedPeg.Distribution;
 using Stratis.Features.FederatedPeg.InputConsolidation;
 using Stratis.Features.FederatedPeg.Interfaces;
+using Stratis.Features.FederatedPeg.Monitoring;
 using Stratis.Features.FederatedPeg.Notifications;
 using Stratis.Features.FederatedPeg.Payloads;
 using Stratis.Features.FederatedPeg.SourceChain;
@@ -68,6 +69,8 @@ namespace Stratis.Features.FederatedPeg
 
         private readonly ILogger logger;
 
+        private readonly MultiSigStateMonitor multiSigStateMonitor;
+
         public FederatedPegFeature(
             IConnectionManager connectionManager,
             IFederatedPegSettings federatedPegSettings,
@@ -81,7 +84,8 @@ namespace Stratis.Features.FederatedPeg
             MempoolCleaner mempoolCleaner,
             ISignedMultisigTransactionBroadcaster signedBroadcaster,
             IMaturedBlocksSyncManager maturedBlocksSyncManager,
-            IInputConsolidator inputConsolidator)
+            IInputConsolidator inputConsolidator,
+            MultiSigStateMonitor multiSigStateMonitor = null)
         {
             this.connectionManager = connectionManager;
             this.federatedPegSettings = federatedPegSettings;
@@ -95,12 +99,14 @@ namespace Stratis.Features.FederatedPeg
             this.maturedBlocksSyncManager = maturedBlocksSyncManager;
             this.signedBroadcaster = signedBroadcaster;
             this.inputConsolidator = inputConsolidator;
+            this.multiSigStateMonitor = multiSigStateMonitor;
 
             this.logger = LogManager.GetCurrentClassLogger();
 
             // add our payload
             var payloadProvider = (PayloadProvider)this.fullNode.Services.ServiceProvider.GetService(typeof(PayloadProvider));
             payloadProvider.AddPayload(typeof(RequestPartialTransactionPayload));
+            payloadProvider.AddPayload(typeof(MultiSigMemberStateRequestPayload));
 
             nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
         }
@@ -142,6 +148,8 @@ namespace Stratis.Features.FederatedPeg
             NetworkPeerConnectionParameters networkPeerConnectionParameters = this.connectionManager.Parameters;
             networkPeerConnectionParameters.TemplateBehaviors.Add(new PartialTransactionsBehavior(this.federationWalletManager, this.network,
                 this.federatedPegSettings, this.crossChainTransferStore, this.inputConsolidator));
+
+            this.multiSigStateMonitor?.Initialize();
         }
 
         /// <summary>
@@ -303,6 +311,7 @@ namespace Stratis.Features.FederatedPeg
                             services.AddSingleton<IRewardDistributionManager, RewardDistributionManager>();
                             services.AddSingleton<ICoinbaseSplitter, PremineCoinbaseSplitter>();
                             services.AddSingleton<IBlockBufferGenerator, BlockBufferGenerator>();
+                            services.AddSingleton<MultiSigStateMonitor>();
                         }
 
                         // The reward claimer only runs on the main chain.
