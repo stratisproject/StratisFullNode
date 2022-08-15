@@ -15,9 +15,11 @@ using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.Notifications;
+using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
+using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Controllers;
@@ -67,9 +69,13 @@ namespace Stratis.Features.FederatedPeg
 
         private readonly IInputConsolidator inputConsolidator;
 
+        private readonly IFederationManager federationManager;
+
         private readonly ILogger logger;
 
         private readonly MultiSigStateMonitor multiSigStateMonitor;
+
+        private readonly ISignals signals;
 
         public FederatedPegFeature(
             IConnectionManager connectionManager,
@@ -85,6 +91,8 @@ namespace Stratis.Features.FederatedPeg
             ISignedMultisigTransactionBroadcaster signedBroadcaster,
             IMaturedBlocksSyncManager maturedBlocksSyncManager,
             IInputConsolidator inputConsolidator,
+            ISignals signals,
+            IFederationManager federationManager = null,
             MultiSigStateMonitor multiSigStateMonitor = null)
         {
             this.connectionManager = connectionManager;
@@ -99,7 +107,9 @@ namespace Stratis.Features.FederatedPeg
             this.maturedBlocksSyncManager = maturedBlocksSyncManager;
             this.signedBroadcaster = signedBroadcaster;
             this.inputConsolidator = inputConsolidator;
+            this.federationManager = federationManager;
             this.multiSigStateMonitor = multiSigStateMonitor;
+            this.signals = signals;
 
             this.logger = LogManager.GetCurrentClassLogger();
 
@@ -146,10 +156,13 @@ namespace Stratis.Features.FederatedPeg
 
             // Respond to requests to sign transactions from other nodes.
             NetworkPeerConnectionParameters networkPeerConnectionParameters = this.connectionManager.Parameters;
-            networkPeerConnectionParameters.TemplateBehaviors.Add(new PartialTransactionsBehavior(this.federationWalletManager, this.network,
-                this.federatedPegSettings, this.crossChainTransferStore, this.inputConsolidator));
+            networkPeerConnectionParameters.TemplateBehaviors.Add(new PartialTransactionsBehavior(this.federationWalletManager, this.network, this.federatedPegSettings, this.crossChainTransferStore, this.inputConsolidator));
 
-            this.multiSigStateMonitor?.Initialize();
+            if (!this.federatedPegSettings.IsMainChain)
+            {
+                this.multiSigStateMonitor.Initialize();
+                networkPeerConnectionParameters.TemplateBehaviors.Add(new MultiSigStateMonitorBehavior(this.network, this.crossChainTransferStore, this.federationManager, this.signals));
+            }
         }
 
         /// <summary>
@@ -312,6 +325,8 @@ namespace Stratis.Features.FederatedPeg
                             services.AddSingleton<ICoinbaseSplitter, PremineCoinbaseSplitter>();
                             services.AddSingleton<IBlockBufferGenerator, BlockBufferGenerator>();
                             services.AddSingleton<MultiSigStateMonitor>();
+                            services.AddSingleton<IFederationManager, FederationManager>();
+                            services.AddSingleton<ISignals, Signals>();
                         }
 
                         // The reward claimer only runs on the main chain.

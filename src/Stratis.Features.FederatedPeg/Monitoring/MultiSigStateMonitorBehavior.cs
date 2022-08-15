@@ -16,21 +16,18 @@ namespace Stratis.Features.FederatedPeg.Monitoring
 {
     public sealed class MultiSigStateMonitorBehavior : NetworkPeerBehavior
     {
-        private readonly ChainIndexer chainIndexer;
         private readonly ICrossChainTransferStore crossChainTransferStore;
         private readonly IFederationManager federationManager;
         private readonly ILogger logger;
         private readonly Network network;
-        private readonly Signals signals;
+        private readonly ISignals signals;
 
         public MultiSigStateMonitorBehavior(
             Network network,
-            ChainIndexer chainIndexer,
             ICrossChainTransferStore crossChainTransferStore,
             IFederationManager federationManager,
-            Signals signals)
+            ISignals signals)
         {
-            this.chainIndexer = chainIndexer;
             this.crossChainTransferStore = crossChainTransferStore;
             this.federationManager = federationManager;
             this.network = network;
@@ -43,7 +40,7 @@ namespace Stratis.Features.FederatedPeg.Monitoring
         [NoTrace]
         public override object Clone()
         {
-            return new MultiSigStateMonitorBehavior(this.network, this.chainIndexer, this.crossChainTransferStore, this.federationManager, this.signals);
+            return new MultiSigStateMonitorBehavior(this.network, this.crossChainTransferStore, this.federationManager, this.signals);
         }
 
         /// <inheritdoc/>
@@ -113,7 +110,7 @@ namespace Stratis.Features.FederatedPeg.Monitoring
                 await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
 
                 string signature = this.federationManager.CurrentFederationKey.SignMessage(this.federationManager.CurrentFederationKey.PubKey.ToHex());
-                var reply = MultiSigMemberStateRequestPayload.Reply(signature);
+                var reply = MultiSigMemberStateRequestPayload.Reply(this.federationManager.CurrentFederationKey.PubKey.ToHex(), signature);
                 reply.CrossChainStoreHeight = this.crossChainTransferStore.TipHashAndHeight.Height;
                 reply.CrossChainStoreNextDepositHeight = this.crossChainTransferStore.NextMatureDepositHeight;
                 reply.PartialTransactions = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Partial }).Length;

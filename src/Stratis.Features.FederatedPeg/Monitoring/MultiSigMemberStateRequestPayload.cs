@@ -21,7 +21,7 @@ namespace Stratis.Features.FederatedPeg.Monitoring
         /// </summary>
         public bool IsRequesting { get { return this.isRequesting; } }
 
-        public string MemberToCheck { get { return this.memberToCheck; } }
+        public string MemberToCheck { get { return this.memberToCheck; } set { this.memberToCheck = value; } }
 
         public string Signature { get { return this.signature; } }
 
@@ -35,22 +35,18 @@ namespace Stratis.Features.FederatedPeg.Monitoring
         {
         }
 
-        private MultiSigMemberStateRequestPayload(string signature, bool isRequesting)
-        {
-            this.isRequesting = isRequesting;
-            this.signature = signature;
-        }
-
-        private MultiSigMemberStateRequestPayload(string memberToCheck, string signature, bool isRequesting) : this(signature, isRequesting)
+        private MultiSigMemberStateRequestPayload(string memberToCheck, bool isRequesting, string signature)
         {
             this.memberToCheck = memberToCheck;
+            this.isRequesting = isRequesting;
+            this.signature = signature;
         }
 
         /// <inheritdoc/>
         public override void ReadWriteCore(BitcoinStream stream)
         {
-            stream.ReadWrite(ref this.isRequesting);
             stream.ReadWrite(ref this.memberToCheck);
+            stream.ReadWrite(ref this.isRequesting);
             stream.ReadWrite(ref this.signature);
             stream.ReadWriteNullIntField(ref this.crossChainStoreHeight);
             stream.ReadWriteNullIntField(ref this.crossChainStoreNextDepositHeight);
@@ -60,18 +56,18 @@ namespace Stratis.Features.FederatedPeg.Monitoring
 
         public static MultiSigMemberStateRequestPayload Request(string memberToCheck, string signature)
         {
-            return new MultiSigMemberStateRequestPayload(memberToCheck, signature, true);
+            return new MultiSigMemberStateRequestPayload(memberToCheck, true, signature);
         }
 
-        public static MultiSigMemberStateRequestPayload Reply(string signature)
+        public static MultiSigMemberStateRequestPayload Reply(string memberToCheck, string signature)
         {
-            return new MultiSigMemberStateRequestPayload(signature, false);
+            return new MultiSigMemberStateRequestPayload(memberToCheck, false, signature);
         }
 
         /// <inheritdoc/>
         public override string ToString()
         {
-            return $"{nameof(this.Command)}:'{this.Command}'";
+            return $"{nameof(this.Command)}:'{this.Command}',{nameof(this.MemberToCheck)}:'{this.MemberToCheck}'";
         }
     }
 }
