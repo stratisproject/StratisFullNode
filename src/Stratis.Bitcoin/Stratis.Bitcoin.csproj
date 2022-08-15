@@ -21,12 +21,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Wallet\**" />
-    <EmbeddedResource Remove="Wallet\**" />
-    <None Remove="Wallet\**" />
-  </ItemGroup>
-
-  <ItemGroup>
     <AdditionalFiles Include="..\stylecop.json" />
   </ItemGroup>
 
