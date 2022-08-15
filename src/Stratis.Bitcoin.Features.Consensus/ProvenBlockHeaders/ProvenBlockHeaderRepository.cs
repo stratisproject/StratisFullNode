@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using LevelDB;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
@@ -84,7 +83,6 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
             Task task = Task.Run(() =>
             {
                 // Open a connection to a new DB and create if not found
-                var options = new Options { CreateIfMissing = true };
                 this.db = new T();
                 this.db.Open(this.databaseFolder);
 
