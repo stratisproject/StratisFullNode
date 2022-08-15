@@ -503,6 +503,101 @@ namespace Stratis.Bitcoin.Features.Api
             return Task.FromResult<IActionResult>(this.Json(result));
         }
 
+        [HttpPost]
+        [Route("gettransactionsigners")]
+        public async Task<IActionResult> GetTransactionSignersAsync([FromBody] string trxid, int input)
+        {
+            try
+            {
+                Guard.NotEmpty(trxid, nameof(trxid));
+
+                uint256 txid;
+                if (!uint256.TryParse(trxid, out txid))
+                {
+                    throw new ArgumentException(nameof(trxid));
+                }
+                
+                Transaction trx = this.pooledTransaction != null ? await this.pooledTransaction.GetTransaction(txid).ConfigureAwait(false) : null;
+
+                if (trx == null)
+                {
+                    trx = this.blockStore?.GetTransactionById(txid);
+                }
+
+                if (trx == null)
+                {
+                    return this.Json(null);
+                }
+
+                uint256 prevOutHash = trx.Inputs[input].PrevOut.Hash;
+                uint prevOutIndex = trx.Inputs[input].PrevOut.N;
+
+                Transaction prevTrx = this.pooledTransaction != null ? await this.pooledTransaction.GetTransaction(prevOutHash).ConfigureAwait(false) : null;
+
+                if (prevTrx == null)
+                {
+                    prevTrx = this.blockStore?.GetTransactionById(prevOutHash);
+                }
+
+                // Shouldn't be possible under normal circumstances.
+                if (prevTrx == null)
+                {
+                    return this.Json(null);
+                }
+
+                TxOut txout = prevTrx.Outputs[prevOutIndex];
+
+                var txData = new PrecomputedTransactionData(trx);
+                var checker = new TransactionChecker(trx, input, txout.Value, txData);
+                
+                var ctx = new ScriptEvaluationContext(this.network)
+                {
+                    ScriptVerify = ScriptVerify.Mandatory
+                };
+
+                bool verifyScriptResult = ctx.VerifyScript(trx.Inputs[input].ScriptSig, txout.ScriptPubKey, checker);
+
+                if (!verifyScriptResult)
+                {
+                    return this.Json(null);
+                }
+
+                var signers = new List<string>();
+
+                (PubKey[] transactionSigningKeys, int signaturesRequired) federation = this.network.Federations.GetOnlyFederation().GetFederationDetails();
+                
+                foreach (SignedHash signedHash in ctx.SignedHashes)
+                {
+                    for (int i = 0; i < 3; i++)
+                    {
+                        PubKey pubKey = PubKey.RecoverFromSignature(i, signedHash.Signature.Signature, signedHash.Hash, true);
+
+                        if (pubKey == null)
+                            continue;
+
+                        // We assume P2PKH here - strictly speaking we would need to enumerate every script type.
+                        if (pubKey.ScriptPubKey == txout.ScriptPubKey)
+                        {
+                            signers.Add(pubKey.GetAddress(this.network).ToString());
+                        }
+
+                        // Special case for federation members.
+                        if (federation.transactionSigningKeys != null && federation.transactionSigningKeys.Contains(pubKey))
+                        {
+                            signers.Add(pubKey.GetAddress(this.network).ToString());
+                        }
+                    }
+                }
+
+                return this.Json(signers);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
         /// <summary>
         /// Triggers a shutdown of this node.
         /// </summary>
