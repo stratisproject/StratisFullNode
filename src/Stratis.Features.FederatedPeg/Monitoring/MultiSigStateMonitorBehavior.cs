@@ -116,7 +116,7 @@ namespace Stratis.Features.FederatedPeg.Monitoring
                 reply.PartialTransactions = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Partial }).Length;
                 reply.SuspendedPartialTransactions = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Suspended }).Length;
 
-                await this.AttachedPeer.SendMessageAsync(payload).ConfigureAwait(false);
+                await this.AttachedPeer.SendMessageAsync(reply).ConfigureAwait(false);
             }
             else
             {
