@@ -505,7 +505,7 @@ namespace Stratis.Bitcoin.Features.Api
 
         [HttpPost]
         [Route("gettransactionsigners")]
-        public async Task<IActionResult> GetTransactionSignersAsync([FromBody] string trxid, int input)
+        public async Task<IActionResult> GetTransactionSignersAsync([FromBody] string trxid, [FromBody] int input)
         {
             try
             {
