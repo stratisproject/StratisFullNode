@@ -606,11 +606,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                                 // Hence, if the poll does not exist then this is not a valid vote.
                                 if (data.Key == VoteKey.AddFederationMember)
                                 {
-                                    int release1300ActivationHeight = 0;
-                                    if (this.nodeDeployments?.BIP9.ArraySize > 0  /* Not NoBIP9Deployments */)
-                                        release1300ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[0 /* Release1300 */].ActivationHeight;
-
-                                    if (chBlock.ChainedHeader.Height >= release1300ActivationHeight)
+                                    if (chBlock.ChainedHeader.Height >= this.poaConsensusOptions.Release1300ActivationHeight)
                                         continue;
                                 }
 

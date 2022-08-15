@@ -87,7 +87,7 @@ namespace Stratis.Features.Collateral
             }
 
             // Check our own collateral at a given commitment height.
-            bool success = this.collateralChecker.CheckCollateral(currentMember, commitmentHeight);
+            bool success = this.collateralChecker.CheckCollateral(currentMember, commitmentHeight, this.chainIndexer[blockTemplate.Block.Header.HashPrevBlock].Height + 1);
 
             if (!success)
             {
@@ -123,7 +123,10 @@ namespace Stratis.Features.Collateral
                 List<Poll> pendingAddFederationMemberPolls = this.votingManager.GetPendingPolls().Where(p => p.VotingData.Key == VoteKey.AddFederationMember).ToList();
 
                 // Filter all polls where this federation number has not voted on.
-                pendingAddFederationMemberPolls = pendingAddFederationMemberPolls.Where(p => !p.PubKeysHexVotedInFavor.Any(v => v.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToString())).ToList();
+                pendingAddFederationMemberPolls = pendingAddFederationMemberPolls
+                    .Where(p => !p.PubKeysHexVotedInFavor.Any(v => v.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToString()))
+                    .Where(p => !this.votingManager.GetScheduledVotes().Any(v => v == p.VotingData))
+                    .ToList();
 
                 if (!pendingAddFederationMemberPolls.Any())
                 {
@@ -135,12 +138,7 @@ namespace Stratis.Features.Collateral
                 {
                     this.logger.LogDebug($"Attempting to cast outstanding vote on poll '{poll.Id}'.");
 
-                    ChainedHeader pollStartHeader = this.chainIndexer.GetHeader(poll.PollStartBlockData.Hash);
-                    ChainedHeader votingRequestHeader = pollStartHeader.Previous;
-
-                    ChainedHeaderBlock blockData = this.consensusManager.GetBlockData(votingRequestHeader.HashBlock);
-
-                    this.joinFederationRequestMonitor.OnBlockConnected(new VotingManagerProcessBlock(new ChainedHeaderBlock(blockData.Block, votingRequestHeader)));
+                    this.votingManager.ScheduleVote(poll.VotingData);
                 }
 
                 return;

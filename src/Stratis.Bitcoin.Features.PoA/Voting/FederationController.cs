@@ -93,6 +93,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     PubKey = this.federationManager.CurrentFederationKey.PubKey.ToHex()
                 };
 
+                if (this.federationManager.GetCurrentFederationMember() is CollateralFederationMember collateralFederationMember)
+                {
+                    federationMemberModel.CollateralAddress = collateralFederationMember.CollateralMainchainAddress;
+                    federationMemberModel.CollateralAmount = collateralFederationMember.CollateralAmount.ToUnit(MoneyUnit.BTC);
+                    federationMemberModel.IsMultiSig = collateralFederationMember.IsMultisigMember;
+                }
+
                 ChainedHeader chainTip = this.chainIndexer.Tip;
                 federationMemberModel.FederationSize = this.federationHistory.GetFederationForBlock(chainTip).Count;
 
@@ -167,13 +174,21 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 ConcurrentDictionary<IFederationMember, uint> activeTimes = this.federationHistory.GetFederationMembersByLastActiveTime();
                 foreach (IFederationMember federationMember in federationMembers)
                 {
-                    federationMemberModels.Add(new FederationMemberModel()
+                    var model = new FederationMemberModel()
                     {
                         PubKey = federationMember.PubKey.ToHex(),
-                        CollateralAmount = (federationMember as CollateralFederationMember).CollateralAmount.ToUnit(MoneyUnit.BTC),
                         LastActiveTime = new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(activeTimes.FirstOrDefault(a => a.Key.PubKey == federationMember.PubKey).Value),
                         PeriodOfInActivity = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(activeTimes.FirstOrDefault(a => a.Key.PubKey == federationMember.PubKey).Value)
-                    });
+                    };
+
+                    if (federationMember is CollateralFederationMember collateralFederationMember)
+                    {
+                        model.CollateralAddress = collateralFederationMember.CollateralMainchainAddress;
+                        model.CollateralAmount = (federationMember as CollateralFederationMember).CollateralAmount.ToUnit(MoneyUnit.BTC);
+                        model.IsMultiSig = collateralFederationMember.IsMultisigMember;
+                    }
+
+                    federationMemberModels.Add(model);
                 }
 
                 return Json(federationMemberModels);
