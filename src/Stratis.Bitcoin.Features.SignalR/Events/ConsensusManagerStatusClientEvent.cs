@@ -9,6 +9,7 @@ namespace Stratis.Bitcoin.Features.SignalR.Events
     public class ConsensusManagerStatusClientEvent : IClientEvent
     {
         public bool IsIbd { get; set; }
+        public int? HeaderHeight { get; set; }
         public Type NodeEventType { get; } = typeof(ConsensusManagerStatusEvent);
 
         public void BuildFrom(EventBase @event)
@@ -16,6 +17,7 @@ namespace Stratis.Bitcoin.Features.SignalR.Events
             if (@event is ConsensusManagerStatusEvent consensusManagerStatusEvent)
             {
                 this.IsIbd = consensusManagerStatusEvent.IsIbd;
+                this.HeaderHeight = consensusManagerStatusEvent.HeaderHeight;
                 return;
             }
             throw new NotImplementedException();
