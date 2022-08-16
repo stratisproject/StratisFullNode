@@ -20,7 +20,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
         /// This is the current set of multisig members that are participating in the multisig contract.
         /// </summary>
         /// <remarks>TODO: Refactor to make this list dynamic.</remarks>
-        private static readonly List<PubKey> InteropMultisigContractPubKeysMainNet = new List<PubKey>()
+        public static readonly List<PubKey> InteropMultisigContractPubKeysMainNet = new List<PubKey>()
         {
             new PubKey("027e793fbf4f6d07de15b0aa8355f88759b8bdf92a9ffb8a65a87fa8ee03baeccd"),//
             new PubKey("03e8809be396745434ee8c875089e518a3eef40e31ade81869ce9cbef63484996d"),//
@@ -41,7 +41,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
         /// This is the current set of multisig members that are participating in the multisig contract.
         /// </summary>
         /// <remarks>TODO: Refactor to make this list dynamic.</remarks>
-        private static readonly List<PubKey> InteropMultisigContractPubKeysTestNet = new List<PubKey>()
+        public static readonly List<PubKey> InteropMultisigContractPubKeysTestNet = new List<PubKey>()
         {
             new PubKey("03cfc06ef56352038e1169deb3b4fa228356e2a54255cf77c271556d2e2607c28c"), // Cirrus 1
             new PubKey("02fc828e06041ae803ab5378b5ec4e0def3d4e331977a69e1b6ef694d67f5c9c13"), // Cirrus 3
