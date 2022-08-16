@@ -26,9 +26,9 @@ namespace Stratis.Features.FederatedPeg.Monitoring
     {
         private IAsyncLoop periodicStateRequest;
         private readonly IAsyncProvider asyncProvider;
-        private readonly ChainIndexer chainIndexer;
         private readonly IFederationManager federationManager;
         private readonly IFederatedPegBroadcaster federatedPegBroadcaster;
+        private readonly IFederatedPegSettings federatedPegSettings;
         private readonly IInitialBlockDownloadState initialBlockDownloadState;
         private readonly ILogger logger;
         private readonly Network network;
@@ -36,17 +36,17 @@ namespace Stratis.Features.FederatedPeg.Monitoring
 
         public MultiSigStateMonitor(
             IAsyncProvider asyncProvider,
-            ChainIndexer chainIndexer,
             IFederationManager federationManager,
             IFederatedPegBroadcaster federatedPegBroadcaster,
+            IFederatedPegSettings federatedPegSettings,
             IInitialBlockDownloadState initialBlockDownloadState,
             Network network,
             INodeLifetime nodeLifetime)
         {
             this.asyncProvider = asyncProvider;
-            this.chainIndexer = chainIndexer;
             this.federationManager = federationManager;
             this.federatedPegBroadcaster = federatedPegBroadcaster;
+            this.federatedPegSettings = federatedPegSettings;
             this.initialBlockDownloadState = initialBlockDownloadState;
             this.network = network;
             this.nodeLifetime = nodeLifetime;
@@ -61,6 +61,12 @@ namespace Stratis.Features.FederatedPeg.Monitoring
             if (!this.federationManager.IsFederationMember)
             {
                 this.logger.Warn("This node is not a federation member.");
+                return;
+            }
+
+            if(!this.federatedPegSettings.EnableMultisigMonitoring)
+            {
+                this.logger.Info("Multisig monitoring is disabled.");
                 return;
             }
 
@@ -89,7 +95,7 @@ namespace Stratis.Features.FederatedPeg.Monitoring
                 }
             },
             this.nodeLifetime.ApplicationStopping,
-            repeatEvery: TimeSpans.TenSeconds,
+            repeatEvery: TimeSpan.FromMinutes(1),
             startAfter: TimeSpans.Minute);
         }
 

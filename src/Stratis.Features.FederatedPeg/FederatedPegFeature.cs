@@ -161,7 +161,7 @@ namespace Stratis.Features.FederatedPeg
             if (!this.federatedPegSettings.IsMainChain)
             {
                 this.multiSigStateMonitor.Initialize();
-                networkPeerConnectionParameters.TemplateBehaviors.Add(new MultiSigStateMonitorBehavior(this.network, this.crossChainTransferStore, this.federationManager, this.signals));
+                networkPeerConnectionParameters.TemplateBehaviors.Add(new MultiSigStateMonitorBehavior(this.network, this.crossChainTransferStore, this.federationManager, this.federatedPegSettings, this.signals));
             }
         }
 
