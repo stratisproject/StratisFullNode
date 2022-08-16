@@ -109,7 +109,7 @@ namespace Stratis.Features.FederatedPeg.Monitoring
 
             if (payload.IsRequesting)
             {
-                // Execute a small delay to prevent network congestion (this should be less 1 minute)
+                // Execute a small delay to prevent network congestion (this should be less than 1 minute)
                 await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
 
                 string signature = this.federationManager.CurrentFederationKey.SignMessage(this.federationManager.CurrentFederationKey.PubKey.ToHex());
