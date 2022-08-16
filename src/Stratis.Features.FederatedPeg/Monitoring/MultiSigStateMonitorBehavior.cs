@@ -18,6 +18,7 @@ namespace Stratis.Features.FederatedPeg.Monitoring
     {
         private readonly ICrossChainTransferStore crossChainTransferStore;
         private readonly IFederationManager federationManager;
+        private readonly IFederatedPegSettings federatedPegSettings;
         private readonly ILogger logger;
         private readonly Network network;
         private readonly ISignals signals;
@@ -26,10 +27,12 @@ namespace Stratis.Features.FederatedPeg.Monitoring
             Network network,
             ICrossChainTransferStore crossChainTransferStore,
             IFederationManager federationManager,
+            IFederatedPegSettings federatedPegSettings,
             ISignals signals)
         {
             this.crossChainTransferStore = crossChainTransferStore;
             this.federationManager = federationManager;
+            this.federatedPegSettings = federatedPegSettings;
             this.network = network;
             this.signals = signals;
 
@@ -40,20 +43,20 @@ namespace Stratis.Features.FederatedPeg.Monitoring
         [NoTrace]
         public override object Clone()
         {
-            return new MultiSigStateMonitorBehavior(this.network, this.crossChainTransferStore, this.federationManager, this.signals);
+            return new MultiSigStateMonitorBehavior(this.network, this.crossChainTransferStore, this.federationManager, this.federatedPegSettings, this.signals);
         }
 
         /// <inheritdoc/>
         protected override void AttachCore()
         {
-            this.logger.LogDebug("Attaching behaviour for {0}", this.AttachedPeer.PeerEndPoint.Address);
+            this.logger.LogDebug($"Attaching behaviour for {this.AttachedPeer.PeerEndPoint.Address}");
             this.AttachedPeer.MessageReceived.Register(this.OnMessageReceivedAsync, true);
         }
 
         /// <inheritdoc/>
         protected override void DetachCore()
         {
-            this.logger.LogDebug("Detaching behaviour for {0}", this.AttachedPeer.PeerEndPoint.Address);
+            this.logger.LogDebug($"Detaching behaviour for {this.AttachedPeer.PeerEndPoint.Address}");
             this.AttachedPeer.MessageReceived.Unregister(this.OnMessageReceivedAsync);
         }
 
@@ -106,8 +109,8 @@ namespace Stratis.Features.FederatedPeg.Monitoring
 
             if (payload.IsRequesting)
             {
-                // Execute a small delay to prevent network congestion.
-                await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+                // Execute a small delay to prevent network congestion (this should be less than 1 minute)
+                await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
 
                 string signature = this.federationManager.CurrentFederationKey.SignMessage(this.federationManager.CurrentFederationKey.PubKey.ToHex());
                 var reply = MultiSigMemberStateRequestPayload.Reply(this.federationManager.CurrentFederationKey.PubKey.ToHex(), signature);
@@ -120,6 +123,10 @@ namespace Stratis.Features.FederatedPeg.Monitoring
             }
             else
             {
+                // Only raise SignalR events if multisig monitoring is enabled.
+                if (!this.federatedPegSettings.EnableMultisigMonitoring)
+                    return;
+
                 // Publish the results
                 this.signals.Publish(new MultiSigMemberStateRequestEvent()
                 {
