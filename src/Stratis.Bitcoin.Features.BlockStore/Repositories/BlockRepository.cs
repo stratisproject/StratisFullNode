@@ -297,20 +297,21 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
                     this.logger.LogInformation(warningMessage.ToString());
                     using (var batch = this.db.GetWriteBatch())
                     {
-                        var enumerator = this.db.GetIterator(BlockRepositoryConstants.BlockTableName);
-
-                        foreach ((byte[] key, byte[] value) in enumerator.GetAll())
+                        using (var iterator = this.db.GetIterator(BlockRepositoryConstants.BlockTableName))
                         {
-                            var block = this.dBreezeSerializer.Deserialize<Block>(value);
-                            foreach (Transaction transaction in block.Transactions)
+                            foreach ((byte[] key, byte[] value) in iterator.GetAll())
                             {
-                                batch.Put(BlockRepositoryConstants.TransactionTableName, transaction.GetHash().ToBytes(), block.GetHash().ToBytes());
-                            }
+                                var block = this.dBreezeSerializer.Deserialize<Block>(value);
+                                foreach (Transaction transaction in block.Transactions)
+                                {
+                                    batch.Put(BlockRepositoryConstants.TransactionTableName, transaction.GetHash().ToBytes(), block.GetHash().ToBytes());
+                                }
 
-                            // inform the user about the ongoing operation
-                            if (++rowCount % 1000 == 0)
-                            {
-                                this.logger.LogInformation("Reindex in process... {0}/{1} blocks processed.", rowCount, totalBlocksCount);
+                                // inform the user about the ongoing operation
+                                if (++rowCount % 1000 == 0)
+                                {
+                                    this.logger.LogInformation("Reindex in process... {0}/{1} blocks processed.", rowCount, totalBlocksCount);
+                                }
                             }
                         }
 
@@ -323,11 +324,13 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
                 {
                     using (var batch = this.db.GetWriteBatch())
                     {
-                        var enumerator = this.db.GetIterator(BlockRepositoryConstants.TransactionTableName);
-                        foreach ((byte[] key, _) in enumerator.GetAll(keysOnly: true))
+                        using (var iterator = this.db.GetIterator(BlockRepositoryConstants.TransactionTableName))
                         {
-                            // Clear tx from database.
-                            batch.Delete(BlockRepositoryConstants.TransactionTableName, key);
+                            foreach ((byte[] key, _) in iterator.GetAll(keysOnly: true))
+                            {
+                                // Clear tx from database.
+                                batch.Delete(BlockRepositoryConstants.TransactionTableName, key);
+                            }
                         }
 
                         batch.Write();
