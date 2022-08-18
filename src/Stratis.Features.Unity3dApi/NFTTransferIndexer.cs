@@ -41,6 +41,9 @@ namespace Stratis.Features.Unity3dApi
 
         /// <summary>Reindexes all tracked contracts.</summary>
         void ReindexAllContracts();
+
+        /// <summary>Retrieves all indexed data.</summary>
+        public List<NFTContractModel> GetEntireState();
     }
 
     /// <summary>This component maps addresses to NFT Ids they own.</summary>
@@ -196,6 +199,14 @@ namespace Stratis.Features.Unity3dApi
             this.logger.LogTrace("ReindexAllContracts(-)");
         }
 
+        /// <inheritdoc />
+        public List<NFTContractModel> GetEntireState()
+        {
+            List<NFTContractModel> state = this.NFTContractCollection.FindAll().ToList();
+
+            return state;
+        }
+
         private async Task IndexNFTsContinuouslyAsync()
         {
             await Task.Delay(1);
@@ -206,6 +217,12 @@ namespace Stratis.Features.Unity3dApi
             {
                 while (!this.cancellation.Token.IsCancellationRequested)
                 {
+                    if (this.chainIndexer.Tip.Height < GetWatchFromHeight())
+                    {
+                        await Task.Delay(5000);
+                        continue;
+                    }
+
                     List<string> contracts = this.NFTContractCollection.FindAll().Select(x => x.ContractAddress).ToList();
 
                     foreach (string contractAddr in contracts)
@@ -226,7 +243,7 @@ namespace Stratis.Features.Unity3dApi
                         }
 
                         List<ReceiptResponse> receipts = this.smartContractTransactionService.ReceiptSearch(
-                            contractAddr, "TransferLog", null, currentContract.LastUpdatedBlock + 1, null);
+                            contractAddr, "TransferLog", null, currentContract.LastUpdatedBlock + 1, chainTip.Height);
 
                         if ((receipts == null) || (receipts.Count == 0))
                         {

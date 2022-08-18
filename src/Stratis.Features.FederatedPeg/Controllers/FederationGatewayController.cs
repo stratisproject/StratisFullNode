@@ -6,12 +6,14 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Nethereum.BlockchainProcessing.BlockStorage.Repositories;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.PoA;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.Extensions;
@@ -20,6 +22,7 @@ using Stratis.Bitcoin.Utilities.ModelStateErrors;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
 using Stratis.Features.FederatedPeg.SourceChain;
+using Stratis.SmartContracts;
 
 namespace Stratis.Features.FederatedPeg.Controllers
 {
@@ -37,6 +40,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         public const string GetTransfersFullySignedEndpoint = "transfers/fullysigned";
         public const string GetTransfersSuspendedEndpoint = "transfers/suspended";
         public const string VerifyPartialTransactionEndpoint = "transfer/verify";
+        public const string GetPartialTransactionSignersEndpoint = "transfer/signers";
     }
 
     /// <summary>
@@ -58,6 +62,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         private readonly IMaturedBlocksProvider maturedBlocksProvider;
         private readonly Network network;
         private readonly IPeerBanning peerBanning;
+        private readonly IBlockStore blockStore;
 
         public FederationGatewayController(
             IAsyncProvider asyncProvider,
@@ -70,6 +75,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             IFederationWalletManager federationWalletManager,
             IFullNode fullNode,
             IPeerBanning peerBanning,
+            IBlockStore blockStore,
             IFederationManager federationManager = null)
         {
             this.asyncProvider = asyncProvider;
@@ -84,6 +90,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             this.maturedBlocksProvider = maturedBlocksProvider;
             this.network = network;
             this.peerBanning = peerBanning;
+            this.blockStore = blockStore;
         }
 
         /// <summary>
@@ -440,6 +447,82 @@ namespace Stratis.Features.FederatedPeg.Controllers
                 return this.Json(this.federationWalletManager.ValidateTransaction(transfers[0].PartialTransaction, true));
 
             return this.Json($"{depositIdTransactionId} does not exist.");
+        }
+
+        [Route(FederationGatewayRouteEndPoint.GetPartialTransactionSignersEndpoint)]
+        [HttpPost]
+        public async Task<IActionResult> GetPartialTransactionSignersAsync([FromBody] string trxid, [FromBody] int input)
+        {
+            try
+            {
+                Guard.NotEmpty(trxid, nameof(trxid));
+
+                uint256 txid;
+                if (!uint256.TryParse(trxid, out txid))
+                {
+                    throw new ArgumentException(nameof(trxid));
+                }
+                
+                ICrossChainTransfer[] cctx = await this.crossChainTransferStore.GetAsync(new[]{ txid }).ConfigureAwait(false);
+
+                Transaction trx = cctx.FirstOrDefault()?.PartialTransaction;
+
+                if (trx == null)
+                {
+                    return this.Json(null);
+                }
+
+                uint256 prevOutHash = trx.Inputs[input].PrevOut.Hash;
+                uint prevOutIndex = trx.Inputs[input].PrevOut.N;
+
+                Transaction prevTrx = this.blockStore.GetTransactionById(prevOutHash);
+                
+                // Shouldn't be possible under normal circumstances.
+                if (prevTrx == null)
+                {
+                    return this.Json(null);
+                }
+
+                TxOut txout = prevTrx.Outputs[prevOutIndex];
+
+                var txData = new PrecomputedTransactionData(trx);
+                var checker = new TransactionChecker(trx, input, txout.Value, txData);
+
+                var ctx = new ScriptEvaluationContext(this.network)
+                {
+                    ScriptVerify = ScriptVerify.Mandatory
+                };
+
+                // Run the verification to populate the context, but don't actually check the result as this is only a partially signed transaction.
+                ctx.VerifyScript(trx.Inputs[input].ScriptSig, txout.ScriptPubKey, checker);
+
+                var signers = new HashSet<string>();
+
+                (PubKey[] transactionSigningKeys, int signaturesRequired) federation = this.network.Federations.GetOnlyFederation().GetFederationDetails();
+
+                foreach (SignedHash signedHash in ctx.SignedHashes)
+                {
+                    for (int i = 0; i < 3; i++)
+                    {
+                        PubKey pubKey = PubKey.RecoverFromSignature(i, signedHash.Signature.Signature, signedHash.Hash, true);
+
+                        if (pubKey == null)
+                            continue;
+
+                        if (federation.transactionSigningKeys != null && federation.transactionSigningKeys.Contains(pubKey))
+                        {
+                            signers.Add(pubKey.GetAddress(this.network).ToString());
+                        }
+                    }
+                }
+
+                return this.Json(signers);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
         }
 
         [Route(FederationGatewayRouteEndPoint.DeleteSuspended)]

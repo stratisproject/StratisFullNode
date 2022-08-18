@@ -625,6 +625,17 @@ namespace Stratis.Features.Unity3dApi.Controllers
             return Ok();
         }
 
+        [Route("get-entire-state")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult GetEntireState()
+        {
+            List<NFTContractModel> state = this.NFTTransferIndexer.GetEntireState();
+
+            return Ok(state);
+        }
+
         [Route("get-watched-nft-contracts")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
