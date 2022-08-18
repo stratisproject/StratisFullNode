@@ -69,10 +69,10 @@ namespace Stratis.Bitcoin.Features.Consensus
                         services.AddSingleton<IProvenBlockHeaderStore, ProvenBlockHeaderStore>();
 
                         if (coindbType == DbType.Leveldb)
-                            services.AddSingleton<IProvenBlockHeaderRepository, LevelDbProvenBlockHeaderRepository>();
+                            services.AddSingleton<IProvenBlockHeaderRepository, ProvenBlockHeaderRepository<LevelDb>>();
 
                         if (coindbType == DbType.RocksDb)
-                            services.AddSingleton<IProvenBlockHeaderRepository, RocksDbProvenBlockHeaderRepository>();
+                            services.AddSingleton<IProvenBlockHeaderRepository, ProvenBlockHeaderRepository<RocksDb>>();
                     });
             });
 
