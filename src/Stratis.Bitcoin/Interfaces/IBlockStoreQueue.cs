@@ -14,6 +14,12 @@ namespace Stratis.Bitcoin.Interfaces
         void AddToPending(ChainedHeaderBlock chainedHeaderBlock);
 
         /// <summary>The highest stored block in the block store cache or <c>null</c> if block store feature is not enabled.</summary>
-        ChainedHeader BlockStoreCacheTip { get; }
+        ChainedHeader StoreTip { get; }
+
+        /// <summary>
+        /// Used by the <see cref="ConsensusManager"/> constructor to make itself known to ite dependency.
+        /// </summary>
+        /// <param name="consensusManager">The <see cref="IConsensusManager"/> of which this is a dependency.</param>
+        void SetConsensusManager(IConsensusManager consensusManager);
     }
 }

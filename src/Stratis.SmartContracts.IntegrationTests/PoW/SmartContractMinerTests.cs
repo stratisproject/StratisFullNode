@@ -216,10 +216,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
 
                 var genesis = this.network.GetGenesis();
 
-                var chainState = new ChainState()
-                {
-                    BlockStoreTip = new ChainedHeader(genesis.Header, genesis.GetHash(), 0)
-                };
+                var chainState = new ChainState();
 
                 this.InitializeSmartContractComponents(callingMethod);
 
@@ -262,9 +259,12 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
 
                 var finalizedBlockInfoRepository = new FinalizedBlockInfoRepository(new HashHeightPair());
 
-                this.consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network, chainState: chainState, inMemoryCoinView: inMemoryCoinView, chainIndexer: this.ChainIndexer, consensusRules: this.consensusRules, finalizedBlockInfoRepository: finalizedBlockInfoRepository);
+                var blockStoreQueue = new Mock<IBlockStoreQueue>();
+                blockStoreQueue.Setup(q => q.StoreTip).Returns(new ChainedHeader(genesis.Header, genesis.GetHash(), 0));
 
-                await this.consensusManager.InitializeAsync(chainState.BlockStoreTip);
+                this.consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network, chainState: chainState, inMemoryCoinView: inMemoryCoinView, chainIndexer: this.ChainIndexer, consensusRules: this.consensusRules, finalizedBlockInfoRepository: finalizedBlockInfoRepository, blockStore: blockStoreQueue.Object).consensusManager;
+
+                await this.consensusManager.InitializeAsync(new ChainedHeader(genesis.Header, genesis.GetHash(), 0));
 
                 this.entry.Fee(11);
                 this.entry.Height(11);

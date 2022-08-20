@@ -7,6 +7,7 @@ using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Connection;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Interfaces;
@@ -47,6 +48,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
         private readonly ISignals signals;
         private readonly IAsyncProvider asyncProvider;
+        private readonly IConsensusManager consensusManager;
         private SubscriptionToken blockConnectedSubscription;
 
         public BlockStoreSignaled(
@@ -58,7 +60,8 @@ namespace Stratis.Bitcoin.Features.BlockStore
             ILoggerFactory loggerFactory,
             IInitialBlockDownloadState initialBlockDownloadState,
             ISignals signals,
-            IAsyncProvider asyncProvider)
+            IAsyncProvider asyncProvider,
+            IConsensusManager consensusManager)
         {
             this.blockStoreQueue = blockStoreQueue;
             this.chainState = chainState;
@@ -69,6 +72,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
             this.initialBlockDownloadState = initialBlockDownloadState;
             this.signals = signals;
             this.asyncProvider = asyncProvider;
+            this.consensusManager = consensusManager;
 
             this.blocksToAnnounce = asyncProvider.CreateAsyncQueue<ChainedHeader>();
             this.dequeueLoopTask = this.DequeueContinuouslyAsync();
@@ -158,7 +162,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
                         dequeueTask = null;
                         batch.Add(item);
 
-                        if (this.chainState.IsAtBestChainTip)
+                        if (this.consensusManager.IsAtBestChainTip(out _))
                             sendBatch = true;
                     }
                     else sendBatch = true;

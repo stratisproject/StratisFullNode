@@ -42,7 +42,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
         private readonly INodeStats nodeStats;
         private readonly Mock<IInitialBlockDownloadState> ibd;
         public readonly Mock<IBlockPuller> BlockPuller;
-        public readonly Mock<IBlockStore> BlockStore;
+        public readonly Mock<IBlockStoreQueue> BlockStore;
         private readonly Mock<ICheckpoints> checkpoints = new Mock<ICheckpoints>();
         public TestConsensusManager TestConsensusManager;
         public Mock<IFinalizedBlockInfoRepository> FinalizedBlockMock = new Mock<IFinalizedBlockInfoRepository>();
@@ -91,7 +91,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
 
             this.BlockPuller.Setup(b => b.Initialize(It.IsAny<BlockPuller.OnBlockDownloadedCallback>()))
                 .Callback<BlockPuller.OnBlockDownloadedCallback>((d) => { this.blockPullerBlockDownloadCallback = d; });
-            this.BlockStore = new Mock<IBlockStore>();
+            this.BlockStore = new Mock<IBlockStoreQueue>();
             this.checkpoints = new Mock<ICheckpoints>();
             this.ChainState = new Mock<IChainState>();
 
@@ -168,6 +168,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
                 this.FinalizedBlockMock.Object, this.signals, this.peerBanning, this.ibd.Object, this.chainIndexer,
                 this.BlockPuller.Object, this.BlockStore.Object, this.connectionManager, this.nodeStats, this.nodeLifetime, this.ConsensusSettings, this.dateTimeProvider);
 
+            this.BlockStore.Setup(q => q.StoreTip).Returns(() => this.chainIndexer.Tip); 
             this.TestConsensusManager = new TestConsensusManager(consensusManager);
         }
 

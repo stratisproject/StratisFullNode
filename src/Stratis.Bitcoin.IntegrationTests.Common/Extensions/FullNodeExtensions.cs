@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Reflection;
 using NBitcoin;
-using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.MemoryPool;
@@ -46,7 +45,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common
 
         public static ChainedHeader GetBlockStoreTip(this FullNode fullNode)
         {
-            return fullNode.NodeService<IChainState>().BlockStoreTip;
+            return fullNode.NodeService<IBlockStoreQueue>().StoreTip;
         }
 
         public static HdAddress GetUnusedAddress(this WalletManager walletManager)

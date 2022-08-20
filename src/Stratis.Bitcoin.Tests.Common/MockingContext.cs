@@ -31,7 +31,7 @@ namespace Stratis.Bitcoin.Tests.Common
 
         /// <summary>
         /// Returns a concrete instance of the provided <paramref name="serviceType"/>.
-        /// If the service type had no associated <c>AddService</c> then a mocked instance is returned.
+        /// If the service type had no associated <c>AddSingleton</c> then a mocked instance is returned.
         /// </summary>
         /// <param name="serviceType">The service type.</param>
         /// <returns>The service instance.</returns>

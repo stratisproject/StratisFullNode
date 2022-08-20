@@ -3,6 +3,7 @@ using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Connection;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
@@ -31,8 +32,9 @@ namespace Stratis.Bitcoin.Features.BlockStore
             IInitialBlockDownloadState initialBlockDownloadState,
             IProvenBlockHeaderStore provenBlockHeaderStore,
             ISignals signals,
-            IAsyncProvider asyncProvider)
-            : base(blockStoreQueue, storeSettings, chainState, connection, nodeLifetime, loggerFactory, initialBlockDownloadState, signals, asyncProvider)
+            IAsyncProvider asyncProvider,
+            IConsensusManager consensusManager)
+            : base(blockStoreQueue, storeSettings, chainState, connection, nodeLifetime, loggerFactory, initialBlockDownloadState, signals, asyncProvider, consensusManager)
         {
             this.network = Guard.NotNull(network, nameof(network));
             this.provenBlockHeaderStore = Guard.NotNull(provenBlockHeaderStore, nameof(provenBlockHeaderStore));

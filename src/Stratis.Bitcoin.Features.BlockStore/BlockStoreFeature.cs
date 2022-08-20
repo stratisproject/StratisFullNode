@@ -89,7 +89,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
         [NoTrace]
         private void AddInlineStats(StringBuilder log)
         {
-            ChainedHeader highestBlock = this.chainState.BlockStoreTip;
+            ChainedHeader highestBlock = this.blockStoreQueue.StoreTip;
 
             if (highestBlock != null)
                 log.AppendLine("BlockStore Height".PadRight(LoggingConfiguration.ColumnLength) + $": {highestBlock.Height}".PadRight(10) + $"(Hash: {highestBlock.HashBlock})");
@@ -127,7 +127,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
                     throw new BlockStoreException($"The amount of blocks to prune [{this.storeSettings.AmountOfBlocksToKeep}] (blocks to keep) cannot be less than the node's max reorg length of {this.network.Consensus.MaxReorgLength}.");
 
                 this.logger.LogInformation("Pruning BlockStore...");
-                this.prunedBlockRepository.PruneAndCompactDatabase(this.chainState.BlockStoreTip, this.network, true);
+                this.prunedBlockRepository.PruneAndCompactDatabase(this.blockStoreQueue.StoreTip, this.network, true);
             }
 
             // Use ProvenHeadersBlockStoreBehavior for PoS Networks
@@ -157,7 +157,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
             if (this.storeSettings.PruningEnabled)
             {
                 this.logger.LogInformation("Pruning BlockStore...");
-                this.prunedBlockRepository.PruneAndCompactDatabase(this.chainState.BlockStoreTip, this.network, false);
+                this.prunedBlockRepository.PruneAndCompactDatabase(this.blockStoreQueue.StoreTip, this.network, false);
             }
 
             this.logger.LogInformation("Stopping BlockStoreSignaled.");
