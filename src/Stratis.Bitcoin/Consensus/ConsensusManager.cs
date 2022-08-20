@@ -220,6 +220,9 @@ namespace Stratis.Bitcoin.Consensus
 
             if (nodeStats.DisplayBenchStats)
                 nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 1000);
+
+            if (blockStore is IBlockStoreQueue blockStoreQueue)
+                blockStoreQueue.SetConsensusManager(this);
         }
 
         /// <inheritdoc />
@@ -302,9 +305,6 @@ namespace Stratis.Bitcoin.Consensus
                     this.logger.LogTrace("(-)[NOTHING_CONSUMED]");
                     return connectNewHeadersResult;
                 }
-
-                this.chainState.IsAtBestChainTip = this.IsConsensusConsideredToBeSyncedLocked(out ChainedHeader bestPeerTip);
-                this.chainState.BestPeerTip = bestPeerTip;
 
                 this.blockPuller.NewPeerTipClaimed(peer, connectNewHeadersResult.Consumed);
             }
@@ -939,9 +939,6 @@ namespace Stratis.Bitcoin.Consensus
             lock (this.peerLock)
             {
                 this.chainedHeaderTree.FullValidationSucceeded(blockToConnect.ChainedHeader);
-
-                this.chainState.IsAtBestChainTip = this.IsConsensusConsideredToBeSyncedLocked(out ChainedHeader bestPeerTip);
-                this.chainState.BestPeerTip = bestPeerTip;
             }
 
             var result = new ConnectBlocksResult(true) { ConsensusTipChanged = true };
@@ -1443,24 +1440,28 @@ namespace Stratis.Bitcoin.Consensus
             }
         }
 
-        /// <summary>
+        /// <inheritdoc/>
+        /// <remarks><para>
         /// Returns <c>true</c> if consensus' height is within <see cref="ConsensusIsConsideredToBeSyncedMargin"/>
         /// blocks from the best tip's height.
-        /// </summary>
-        /// <remarks>Should be locked by <see cref="peerLock"/>.</remarks>
-        private bool IsConsensusConsideredToBeSyncedLocked(out ChainedHeader bestTip)
+        /// </para>
+        /// <para>Should be locked by <see cref="peerLock"/>.</para></remarks>
+        public bool IsAtBestChainTip(out ChainedHeader bestTip)
         {
-            bestTip = this.chainedHeaderTree.GetBestPeerTip();
-
-            if (bestTip == null)
+            lock (this.peerLock)
             {
-                this.logger.LogTrace("(-)[NO_PEERS]:false");
-                return false;
+                bestTip = this.chainedHeaderTree.GetBestPeerTip();
+
+                if (bestTip == null)
+                {
+                    this.logger.LogTrace("(-)[NO_PEERS]:false");
+                    return false;
+                }
+
+                bool isConsideredSynced = this.Tip.Height + ConsensusIsConsideredToBeSyncedMargin > bestTip.Height;
+
+                return isConsideredSynced;
             }
-
-            bool isConsideredSynced = this.Tip.Height + ConsensusIsConsideredToBeSyncedMargin > bestTip.Height;
-
-            return isConsideredSynced;
         }
 
         [NoTrace]

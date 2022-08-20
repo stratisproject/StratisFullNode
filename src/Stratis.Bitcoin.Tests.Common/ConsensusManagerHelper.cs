@@ -28,6 +28,7 @@ namespace Stratis.Bitcoin.Tests.Common
             InMemoryCoinView inMemoryCoinView = null,
             ChainIndexer chainIndexer = null,
             IConsensusRuleEngine consensusRules = null,
+            IBlockStore blockStore = null,
             IFinalizedBlockInfoRepository finalizedBlockInfoRepository = null)
         {
             IServiceCollection mockingServices = GetMockingServices(network,
@@ -37,6 +38,9 @@ namespace Stratis.Bitcoin.Tests.Common
 
             if (consensusRules != null)
                 mockingServices.AddSingleton(consensusRules);
+
+            if (blockStore != null)
+                mockingServices.AddSingleton(blockStore);
 
             if (inMemoryCoinView != null)
             {

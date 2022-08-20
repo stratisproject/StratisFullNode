@@ -161,9 +161,10 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
             var blockStore = new BlockStoreQueue(testChainContext.ChainIndexer, testChainContext.ChainState, blockStoreFlushCondition, new Mock<StoreSettings>().Object,
                 blockRepository, testChainContext.LoggerFactory, new Mock<INodeStats>().Object, testChainContext.AsyncProvider, testChainContext.InitialBlockDownloadState);
 
-            blockStore.Initialize();
+            // This ConsensusManager constructor will set a reference to itself on the BlockStoreQueue, so do this before the latter's initialize.
+            testChainContext.Consensus = ConsensusManagerHelper.CreateConsensusManager(network, dataDir, blockStore: blockStore);
 
-            testChainContext.Consensus = ConsensusManagerHelper.CreateConsensusManager(network, dataDir);
+            blockStore.Initialize();
 
             await testChainContext.Consensus.InitializeAsync(testChainContext.ChainIndexer.Tip);
 
