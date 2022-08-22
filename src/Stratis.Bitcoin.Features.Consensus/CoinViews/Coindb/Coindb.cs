@@ -275,7 +275,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         {
             int insertedEntities = 0;
 
-            using (var batch = this.coinDb.GetReadWriteBatch())
+            using (var batch = this.coinDb.GetReadWriteBatch(coinsTable, rewindTable, blockTable))
             {
                 this.AdjustBalance(batch, balanceUpdates);
 
@@ -380,7 +380,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
             int indexedHeight = this.GetIndexedTipHash()?.Height ?? -1;
 
-            using (var batch = this.coinDb.GetReadWriteBatch())
+            using (var batch = this.coinDb.GetReadWriteBatch(coinsTable, rewindTable, blockTable))
             {
                 var balanceAdjustments = new Dictionary<TxDestination, Dictionary<uint, long>>();
 

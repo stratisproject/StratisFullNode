@@ -51,7 +51,7 @@ namespace Stratis.Bitcoin.Database
         /// <remarks>The <see cref="IDb.Get"/> method will not reflect these changes until they are committed. Use
         /// the <see cref="ReadWriteBatch"/> class if uncommitted changes need to be accessed.</remarks>
         /// <returns>See <see cref="IDbBatch"/>.</returns>
-        IDbBatch GetWriteBatch();
+        IDbBatch GetWriteBatch(params byte[] tables);
 
         /// <summary>
         /// Removes all tables and their contents.

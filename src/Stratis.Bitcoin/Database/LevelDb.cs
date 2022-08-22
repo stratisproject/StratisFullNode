@@ -33,7 +33,7 @@ namespace Stratis.Bitcoin.Database
             this.db = new DB(new Options() { CreateIfMissing = true }, this.dbPath);
         }
 
-        public IDbBatch GetWriteBatch() => new LevelDbBatch(this.db);
+        public IDbBatch GetWriteBatch(params byte[] tables) => new LevelDbBatch(this.db);
 
         public byte[] Get(byte table, byte[] key)
         {

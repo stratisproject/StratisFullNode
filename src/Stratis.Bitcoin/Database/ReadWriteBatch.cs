@@ -16,10 +16,10 @@ namespace Stratis.Bitcoin.Database
         private readonly IDbBatch batch;
         private Dictionary<byte[], byte[]> cache;
 
-        public ReadWriteBatch(IDb db)
+        public ReadWriteBatch(IDb db, params byte[] tables)
         {
             this.db = db;
-            this.batch = db.GetWriteBatch();
+            this.batch = db.GetWriteBatch(tables);
             this.cache = new Dictionary<byte[], byte[]>(new ByteArrayComparer());
         }
 
@@ -122,9 +122,9 @@ namespace Stratis.Bitcoin.Database
         /// </summary>
         /// <param name="db">The database to get the batch for.</param>
         /// <returns>The <see cref="ReadWriteBatch"/>.</returns>
-        public static ReadWriteBatch GetReadWriteBatch(this IDb db)
+        public static ReadWriteBatch GetReadWriteBatch(this IDb db, params byte[] tables)
         {
-            return new ReadWriteBatch(db);
+            return new ReadWriteBatch(db, tables);
         }
     }
 }
