@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Linq;
 using System.IO;
+using System.Reflection;
 using System.Reflection.PortableExecutable;
 using CSharpFunctionalExtensions;
 using ICSharpCode.Decompiler;
@@ -21,6 +23,8 @@ namespace Stratis.SmartContracts.CLR.Decompilation
                 {
                     var peFile = new PEFile("placeholder", memStream);
                     var resolver = new UniversalAssemblyResolver(null, false, null, null, PEStreamOptions.Default);
+                    var folder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                    resolver.AddSearchDirectory(folder);
                     var decompiler = new CSharpDecompiler(peFile, resolver, new DecompilerSettings());
                     string cSharp = decompiler.DecompileWholeModuleAsString();
                     return Result.Ok(cSharp);
