@@ -211,6 +211,8 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// <param name="tokenId">The identifier of the token to be transferred.</param>
         /// <returns>The hex data of the encoded parameters.</returns>
         string EncodeNftTransferParams(string from, string to, BigInteger tokenId);
+
+        string EncodeNftMintParams(string recipient, BigInteger tokenId, string tokenUri);
     }
 
     public class ETHClient : IETHClient
@@ -349,7 +351,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
                     foreach (FilterLogVO log in logs)
                     {
-                        // By looking for the emitted event instead of looking for actual function calls we cater for a much wider variety of ERC20 implementations.
+                        // By looking for the emitted event instead of looking for actual function calls we cater for a much wider variety of ERC20/721 implementations.
                         EventLog<TransferEventDTO> eventLog = log?.Log?.DecodeEvent<TransferEventDTO>();
 
                         // TODO: We could probably optimise this even further by only trying to decode the event as the expected type, not both when the first attempt fails.
@@ -405,7 +407,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
                                 continue;
                             }
 
-                            string uri = await this.GetErc721TokenUriAsync("", nftEventLog.Event.TokenId).ConfigureAwait(false);
+                            string uri = await this.GetErc721TokenUriAsync(tx.To, nftEventLog.Event.TokenId).ConfigureAwait(false);
 
                             if (uri == null)
                             {
@@ -630,6 +632,17 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
             var abiEncode = new ABIEncode();
             string result = SafeTransferFromMethod + abiEncode.GetABIEncoded(new ABIValue("address", from), new ABIValue("address", to), new ABIValue("uint256", tokenId)).ToHex();
+
+            return result;
+        }
+
+        /// <inheritdoc />
+        public string EncodeNftMintParams(string recipient, BigInteger tokenId, string tokenUri)
+        {
+            const string NftMintMethod = "d3fc9864";
+
+            var abiEncode = new ABIEncode();
+            string result = NftMintMethod + abiEncode.GetABIEncoded(new ABIValue("address", recipient), new ABIValue("uint256", tokenId), new ABIValue("string", tokenUri)).ToHex();
 
             return result;
         }

@@ -103,11 +103,13 @@ namespace Stratis.Features.FederatedPeg.Conversion
         public bool Processed { get { return this.processed; } set { this.processed = value; } }
 
         /// <summary>
-        /// Should the request failed, this field can be used for any error messages.
+        /// Should the request fail, this field can be used for any error messages.
         /// </summary>
         public string StatusMessage { get { return this.statusMessage; } set { this.statusMessage = value; } }
 
         public string TokenContract { get { return this.tokenContract; } set { this.tokenContract = value; } }
+
+        public string TokenUri { get { return this.tokenUri; } set { this.tokenUri = value; } }
 
         private uint256 amount;
 
@@ -137,6 +139,8 @@ namespace Stratis.Features.FederatedPeg.Conversion
 
         private string tokenContract;
 
+        private string tokenUri;
+
         public void ReadWrite(BitcoinStream stream)
         {
             stream.ReadWrite(ref this.requestId);
@@ -165,6 +169,8 @@ namespace Stratis.Features.FederatedPeg.Conversion
             {
                 this.amount = this.dummyAmount;
             }
+
+            ReadWriteNullStringField(stream, ref this.tokenUri);
         }
 
         private void ReadWriteNullIntField(BitcoinStream stream, ref int nullField)
