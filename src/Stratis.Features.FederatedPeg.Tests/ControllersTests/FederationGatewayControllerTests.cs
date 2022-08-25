@@ -20,6 +20,7 @@ using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
@@ -87,6 +88,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 this.federationWalletManager,
                 Substitute.For<IFullNode>(),
                 Substitute.For<IPeerBanning>(),
+                Substitute.For<IBlockStore>(),
                 this.federationManager);
 
             return controller;
@@ -223,6 +225,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 this.federationWalletManager,
                 Substitute.For<IFullNode>(),
                 Substitute.For<IPeerBanning>(),
+                Substitute.For<IBlockStore>(),
                 this.federationManager);
 
             IActionResult result = controller.GetInfo();
@@ -317,6 +320,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 this.federationWalletManager,
                 Substitute.For<IFullNode>(),
                 Substitute.For<IPeerBanning>(),
+                Substitute.For<IBlockStore>(),
                 this.federationManager);
 
             IActionResult result = controller.GetInfo();

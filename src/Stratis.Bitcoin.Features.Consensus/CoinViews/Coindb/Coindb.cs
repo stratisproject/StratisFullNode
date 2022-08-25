@@ -213,7 +213,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         {
             int insertedEntities = 0;
 
-            using (var batch = this.coinDb.GetWriteBatch())
+            using (var batch = this.coinDb.GetWriteBatch(coinsTable, rewindTable, blockTable))
             {
                 using (new StopwatchDisposable(o => this.performanceCounter.AddInsertTime(o)))
                 {
@@ -300,7 +300,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         {
             HashHeightPair res = null;
 
-            using (var batch = this.coinDb.GetWriteBatch())
+            using (var batch = this.coinDb.GetWriteBatch(coinsTable, rewindTable, blockTable))
             {
                 for (int height = startHeight; height > (target?.Height ?? (startHeight - 1)) && height > (startHeight - MaxRewindBatchSize); height--)
                 {

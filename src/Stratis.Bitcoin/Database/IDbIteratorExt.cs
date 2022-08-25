@@ -31,7 +31,7 @@ namespace Stratis.Bitcoin.Database
         /// <param name="includeFirstKey">Defaults to <c>true</c>. Set to <c>false</c> to omit the key specified in <paramref name="firstKey"/>.</param>
         /// <param name="includeLastKey">Defaults to <c>true</c>. Set to <c>false</c> to omit the key specified in <paramref name="lastKey"/>.</param>
         /// <returns>An enumeration containing all the keys and values according to the specified constraints.</returns>
-        public static IEnumerable<(byte[], byte[])> GetAll(this IDbIterator iterator, bool keysOnly = false, bool ascending = true,
+        public static IEnumerable<(byte[] key, byte[] value)> GetAll(this IDbIterator iterator, bool keysOnly = false, bool ascending = true,
             byte[] firstKey = null, byte[] lastKey = null, bool includeFirstKey = true, bool includeLastKey = true)
         {
             bool done = false;

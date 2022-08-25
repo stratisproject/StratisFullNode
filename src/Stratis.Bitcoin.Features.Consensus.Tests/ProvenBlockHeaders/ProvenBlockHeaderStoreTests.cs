@@ -8,6 +8,7 @@ using FluentAssertions;
 using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Database;
 using Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Networks;
@@ -37,7 +38,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
             var ibdMock = new Mock<IInitialBlockDownloadState>();
             ibdMock.Setup(s => s.IsInitialBlockDownload()).Returns(false);
 
-            this.provenBlockHeaderRepository = new LevelDbProvenBlockHeaderRepository(this.Network, CreateTestDir(this), this.LoggerFactory.Object, dBreezeSerializer);
+            this.provenBlockHeaderRepository = new ProvenBlockHeaderRepository<LevelDb>(this.Network, CreateTestDir(this), this.LoggerFactory.Object, dBreezeSerializer);
             this.provenBlockHeaderStore = new ProvenBlockHeaderStore(DateTimeProvider.Default, this.LoggerFactory.Object, this.provenBlockHeaderRepository, nodeStats, ibdMock.Object);
         }
 
