@@ -602,6 +602,69 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             }
         }
 
+        /// <summary>
+        /// Retrieves the current owner of a given tokenId on a given ERC721 contract.
+        /// </summary>
+        /// <param name="destinationChain">The chain the ERC721 contract is deployed to.</param>
+        /// <param name="contractAddress">The address of the contract on the given chain.</param>
+        /// <param name="tokenId">The tokenId to retrieve the owner for.</param>
+        /// <returns>The URI string.</returns>
+        [Route("erc721owner")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public async Task<IActionResult> Erc721OwnerAsync(DestinationChain destinationChain, string contractAddress, int tokenId)
+        {
+            try
+            {
+                if (!this.ethCompatibleClientProvider.IsChainSupportedAndEnabled(destinationChain))
+                    return BadRequest($"{destinationChain} not enabled or supported!");
+
+                IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
+
+                return Ok((await client.GetErc721TokenOwnerAsync(contractAddress, tokenId).ConfigureAwait(false)).ToString());
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Retrieves the current URI of a given tokenId on a given ERC721 contract.
+        /// </summary>
+        /// <remarks>This may not match the value of the corresponding token on the Cirrus chain (if any).</remarks>
+        /// <param name="destinationChain">The chain the ERC721 contract is deployed to.</param>
+        /// <param name="contractAddress">The address of the contract on the given chain.</param>
+        /// <param name="tokenId">The tokenId to retrieve the URI for.</param>
+        /// <returns>The URI string.</returns>
+        [Route("erc721uri")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public async Task<IActionResult> Erc721UriAsync(DestinationChain destinationChain, string contractAddress, int tokenId)
+        {
+            try
+            {
+                if (!this.ethCompatibleClientProvider.IsChainSupportedAndEnabled(destinationChain))
+                    return BadRequest($"{destinationChain} not enabled or supported!");
+
+                IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
+
+                return Ok((await client.GetErc721TokenUriAsync(contractAddress, tokenId).ConfigureAwait(false)).ToString());
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
         [Route("requests/delete")]
         [HttpDelete]
         [ProducesResponseType((int)HttpStatusCode.OK)]
