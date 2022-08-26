@@ -42,7 +42,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
         public static PowBlockDefinition AssemblerForTest(TestContext testContext)
         {
-            return new PowBlockDefinition(testContext.consensus, testContext.DateTimeProvider, new LoggerFactory(), testContext.mempool, testContext.mempoolLock, new MinerSettings(NodeSettings.Default(testContext.network)), testContext.network, testContext.ConsensusRules, new NodeDeployments(testContext.network, testContext.ChainIndexer));
+            return new PowBlockDefinition(testContext.consensus, testContext.DateTimeProvider, testContext.mempool, testContext.mempoolLock, new MinerSettings(NodeSettings.Default(testContext.network)), testContext.network, testContext.ConsensusRules, new NodeDeployments(testContext.network, testContext.ChainIndexer));
         }
 
         public class Blockinfo
@@ -146,7 +146,8 @@ namespace Stratis.Bitcoin.IntegrationTests
                     .AddSingleton<ICoinView, InMemoryCoinView>()
                     .AddSingleton<ICoindb, InMemoryCoinView>()
                     .AddSingleton<IConsensusRuleEngine>(ctx => ctx.GetService<PowConsensusRuleEngine>().SetupRulesEngineParent())
-                    .AddSingleton(ctx => {
+                    .AddSingleton(ctx =>
+                    {
                         var consensusRulesContainer = new ConsensusRulesContainer();
 
                         foreach (var ruleType in this.network.Consensus.ConsensusRules.HeaderValidationRules)

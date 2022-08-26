@@ -5,7 +5,6 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Configuration.Logging;
-using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.PoA.Features.Voting;
@@ -17,6 +16,7 @@ namespace Stratis.Features.Collateral
 {
     public class JoinFederationRequestMonitor
     {
+        private readonly IFederationManager federationManager;
         private readonly ILogger logger;
         private readonly ISignals signals;
         private readonly VotingManager votingManager;
@@ -24,7 +24,7 @@ namespace Stratis.Features.Collateral
         private readonly Network counterChainNetwork;
         private readonly NodeDeployments nodeDeployments;
 
-        public JoinFederationRequestMonitor(VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, ISignals signals, NodeDeployments nodeDeployments)
+        public JoinFederationRequestMonitor(VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, ISignals signals, NodeDeployments nodeDeployments, IFederationManager federationManager)
         {
             this.signals = signals;
             this.logger = LogManager.GetCurrentClassLogger();
@@ -32,16 +32,17 @@ namespace Stratis.Features.Collateral
             this.network = network;
             this.counterChainNetwork = counterChainNetworkWrapper.CounterChainNetwork;
             this.nodeDeployments = nodeDeployments;
+            this.federationManager = federationManager;
+
+            this.signals.Subscribe<VotingManagerProcessBlock>(this.OnBlockConnected);
         }
 
         public Task InitializeAsync()
         {
-            this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
-
             return Task.CompletedTask;
         }
 
-        public void OnBlockConnected(BlockConnected blockConnectedData)
+        public void OnBlockConnected(VotingManagerProcessBlock blockConnectedData)
         {
             if (!(this.network.Consensus.ConsensusFactory is CollateralPoAConsensusFactory consensusFactory))
                 return;
@@ -61,9 +62,15 @@ namespace Stratis.Features.Collateral
                     if (request == null)
                         continue;
 
+                    this.logger.LogDebug("Found federation join request at block {0}, transaction '{1}' for member '{2}'.", 
+                        blockConnectedData.ConnectedBlock.ChainedHeader.Height, tx.GetHash(), request.PubKey.ToHex());
+
                     // Skip if the member already exists.
-                    if (this.votingManager.IsFederationMember(request.PubKey))
+                    if (this.votingManager.IsMemberOfFederation(request.PubKey))
+                    {
+                        this.logger.LogDebug("Ignoring request because the member is already a member of the federation.");
                         continue;
+                    }
 
                     // Check if the collateral amount is valid.
                     decimal collateralAmount = request.CollateralAmount.ToDecimal(MoneyUnit.BTC);
@@ -79,8 +86,8 @@ namespace Stratis.Features.Collateral
                     // Fill in the request.removalEventId (if any).
                     byte[] federationMemberBytes = JoinFederationRequestService.GetFederationMemberBytes(request, this.network, this.counterChainNetwork);
 
-                    // Nothing to do if already voted.
-                    if (this.votingManager.AlreadyVotingFor(VoteKey.AddFederationMember, federationMemberBytes))
+                    // Nothing to do if already voted. Ignore scheduled polls as we could be in IBD.
+                    if (this.votingManager.AlreadyVotingFor(VoteKey.AddFederationMember, federationMemberBytes, false))
                     {
                         this.logger.LogDebug("Skipping because already voted for adding '{0}'.", request.PubKey.ToHex());
                         continue;
@@ -106,24 +113,27 @@ namespace Stratis.Features.Collateral
                         Data = federationMemberBytes
                     };
 
-                    int release1300ActivationHeight = 0;
-                    if (this.nodeDeployments?.BIP9.ArraySize > 0 /* Not NoBIP9Deployments */)
+                    if (blockConnectedData.ConnectedBlock.ChainedHeader.Height >= ((PoAConsensusOptions)this.network.Consensus.Options).Release1300ActivationHeight)
                     {
-                        release1300ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[0 /* Release1300 */].ActivationHeight;
-                        this.logger.LogDebug($"{nameof(release1300ActivationHeight)}:{release1300ActivationHeight}");
-                    }
-
-                    if (blockConnectedData.ConnectedBlock.ChainedHeader.Height >= release1300ActivationHeight)
-                    {
-                        // Create a pending poll so that the scheduled vote is not "sanitized" away.
-                        this.votingManager.PollsRepository.WithTransaction(transaction =>
+                        // If we are executing this from the miner, there will be no transaction present.
+                        if (blockConnectedData.PollsRepositoryTransaction == null)
                         {
-                            this.votingManager.CreatePendingPoll(transaction, votingData, blockConnectedData.ConnectedBlock.ChainedHeader);
-                            transaction.Commit();
-                        });
+                            // Create a pending poll so that the scheduled vote is not "sanitized" away.
+                            this.votingManager.PollsRepository.WithTransaction(transaction =>
+                            {
+                                this.votingManager.CreatePendingPoll(transaction, votingData, blockConnectedData.ConnectedBlock.ChainedHeader);
+                                transaction.Commit();
+                            });
+                        }
+                        else
+                        {
+                            this.votingManager.CreatePendingPoll(blockConnectedData.PollsRepositoryTransaction, votingData, blockConnectedData.ConnectedBlock.ChainedHeader);
+                        }
                     }
 
-                    this.votingManager.ScheduleVote(votingData);
+                    // If this node is a federation member then schedule a vote.
+                    if (this.federationManager.IsFederationMember)
+                        this.votingManager.ScheduleVote(votingData);
                 }
                 catch (Exception err)
                 {

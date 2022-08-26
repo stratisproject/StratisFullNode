@@ -19,7 +19,7 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// <param name="blockHeight">The height of the block containing the transactions.</param>
         /// <param name="depositRetrievalTypes">The types of retrieval to perform. The type will determine the value of the deposit to be processed.</param>
         /// <returns>The extracted deposit (if any), otherwise returns an empty list.</returns>
-        Task<IReadOnlyList<IDeposit>> ExtractDepositsFromBlock(Block block, int blockHeight, Dictionary<DepositRetrievalType, int> depositRetrievalTypes);
+        Task<IReadOnlyList<IDeposit>> ExtractDepositsFromBlock(Block block, int blockHeight, IRetrievalTypeConfirmations depositRetrievalTypes);
 
         /// <summary>
         /// Extracts a deposit from a transaction (if any).

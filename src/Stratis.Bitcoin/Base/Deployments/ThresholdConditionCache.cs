@@ -103,6 +103,8 @@ namespace Stratis.Bitcoin.Base.Deployments
                     // Choose the last header that's within the window where voting led to locked-in state.
                     sinceHeight = activationHeights[deploymentIndex];
                     indexPrev = referenceHeader.GetAncestor(sinceHeight - period - 1);
+                    if (indexPrev == null)
+                        continue;
                 }
                 else
                 {

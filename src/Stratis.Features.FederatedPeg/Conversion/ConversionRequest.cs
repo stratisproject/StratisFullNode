@@ -155,12 +155,12 @@ namespace Stratis.Features.FederatedPeg.Conversion
             stream.ReadWrite(ref this.processed);
 
             // All new fields MUST be added to the back.
-            ReadWriteNullIntField(stream, ref this.destinationChain);
+            stream.ReadWriteNullIntField(ref this.destinationChain);
             ReadWriteNullStringField(stream, ref this.externalChainTxHash);
             ReadWriteNullStringField(stream, ref this.externalChainTxEventId);
             ReadWriteNullStringField(stream, ref this.tokenContract);
             ReadWriteNullStringField(stream, ref this.statusMessage);
-            ReadWriteNullIntField(stream, ref this.externalChainBlockHeight);
+            stream.ReadWriteNullIntField(ref this.externalChainBlockHeight);
             ReadWriteNullUInt256Field(stream, ref this.amount);
 
             // There will be a quantity of conversions that were performed before the introduction of the larger amount field.
@@ -171,22 +171,6 @@ namespace Stratis.Features.FederatedPeg.Conversion
             }
 
             ReadWriteNullStringField(stream, ref this.tokenUri);
-        }
-
-        private void ReadWriteNullIntField(BitcoinStream stream, ref int nullField)
-        {
-            if (stream.Serializing)
-                stream.ReadWrite(ref nullField);
-            else
-            {
-                try
-                {
-                    stream.ReadWrite(ref nullField);
-                }
-                catch (Exception)
-                {
-                }
-            }
         }
 
         private void ReadWriteNullStringField(BitcoinStream stream, ref string nullField)

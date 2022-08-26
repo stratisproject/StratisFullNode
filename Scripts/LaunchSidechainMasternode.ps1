@@ -358,6 +358,13 @@ if ( $NodeType -eq "50K" )
     ""
     Start-Sleep 10
 
+if ($ethAddress -notmatch '^0x[a-fA-F0-9]{40}$')
+{
+    Write-Host (Get-TimeStamp) "ERROR: Invalid ETH Address Loaded.. Is GETH already running?" -ForegroundColor Red
+    Start-Sleep 30
+    Exit
+}
+
     #Launching GETH
     $API = $gethAPIPort
     Write-Host (Get-TimeStamp) "Starting GETH Masternode" -ForegroundColor Cyan
@@ -433,11 +440,11 @@ $API = $mainChainAPIPort
 Write-Host (Get-TimeStamp) "Starting Mainchain Masternode" -ForegroundColor Cyan
 if ( $NodeType -eq "50K" ) 
 {
-    $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -mainchain -addressindex=1 -apiport=$mainChainAPIPort -counterchainapiport=$sideChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs" -PassThru
+    $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -mainchain -addressindex=1 -compactionthreshold=150 -apiport=$mainChainAPIPort -counterchainapiport=$sideChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs" -PassThru
 }
     Else
     {
-        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -mainchain -addressindex=1 -apiport=$mainChainAPIPort" -PassThru
+        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -mainchain -addressindex=1 -compactionthreshold=150 -apiport=$mainChainAPIPort" -PassThru
     }
 
 #Wait for API

@@ -13,6 +13,7 @@ namespace Stratis.Bitcoin.Features.Interop.Payloads
         private int destinationChain;
         private bool isRequesting;
         private bool isTransfer;
+        private bool isReplenishment;
         private bool isKeyValue;
 
         public string RequestId { get { return this.requestId; } }
@@ -36,6 +37,12 @@ namespace Stratis.Bitcoin.Features.Interop.Payloads
         public bool IsTransfer { get { return this.isTransfer; } }
 
         /// <summary>
+        /// <c>True</c> if the request in question is for a wStrax replenishment transaction.
+        /// <c>False</c> if not.
+        /// </summary>
+        public bool IsReplenishment { get { return this.isReplenishment; } }
+
+        /// <summary>
         /// <c>True</c> if the request in question is negotiating a multisig key value store transactionId.
         /// <c>False</c> if not.
         /// </summary>
@@ -46,7 +53,7 @@ namespace Stratis.Bitcoin.Features.Interop.Payloads
         {
         }
 
-        private ConversionRequestPayload(string requestId, int transactionId, string signature, DestinationChain destinationChain, bool isRequesting, bool isTransfer, bool isKeyValue)
+        private ConversionRequestPayload(string requestId, int transactionId, string signature, DestinationChain destinationChain, bool isRequesting, bool isTransfer, bool isReplenishment, bool isKeyValue)
         {
             this.requestId = requestId;
             this.transactionId = transactionId;
@@ -54,6 +61,7 @@ namespace Stratis.Bitcoin.Features.Interop.Payloads
             this.destinationChain = (int)destinationChain;
             this.isRequesting = isRequesting;
             this.isTransfer = isTransfer;
+            this.isReplenishment = isReplenishment;
             this.isKeyValue = isKeyValue;
         }
 
@@ -66,17 +74,18 @@ namespace Stratis.Bitcoin.Features.Interop.Payloads
             stream.ReadWrite(ref this.destinationChain);
             stream.ReadWrite(ref this.isRequesting);
             stream.ReadWrite(ref this.isTransfer);
+            stream.ReadWrite(ref this.isReplenishment);
             stream.ReadWrite(ref this.isKeyValue);
         }
 
-        public static ConversionRequestPayload Request(string requestId, int transactionId, string signature, DestinationChain destinationChain, bool isTransfer, bool isKeyValue)
+        public static ConversionRequestPayload Request(string requestId, int transactionId, string signature, DestinationChain destinationChain, bool isTransfer, bool isReplenishment, bool isKeyValue)
         {
-            return new ConversionRequestPayload(requestId, transactionId, signature, destinationChain, true, isTransfer, isKeyValue);
+            return new ConversionRequestPayload(requestId, transactionId, signature, destinationChain, true, isTransfer, isReplenishment, isKeyValue);
         }
 
-        public static ConversionRequestPayload Reply(string requestId, int transactionId, string signature, DestinationChain destinationChain, bool isTransfer, bool isKeyValue)
+        public static ConversionRequestPayload Reply(string requestId, int transactionId, string signature, DestinationChain destinationChain, bool isTransfer, bool isReplenishment, bool isKeyValue)
         {
-            return new ConversionRequestPayload(requestId, transactionId, signature, destinationChain, false, isTransfer, isKeyValue);
+            return new ConversionRequestPayload(requestId, transactionId, signature, destinationChain, false, isTransfer, isReplenishment, isKeyValue);
         }
 
         /// <inheritdoc/>

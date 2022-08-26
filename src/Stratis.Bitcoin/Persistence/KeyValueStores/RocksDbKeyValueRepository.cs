@@ -99,6 +99,12 @@ namespace Stratis.Bitcoin.Persistence.KeyValueStores
         }
 
         /// <inheritdoc />
+        public void Delete(string key)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <inheritdoc />
         public void Dispose()
         {
             this.rocksdb.Dispose();

@@ -43,14 +43,34 @@ namespace Stratis.Bitcoin.Configuration
         /// <summary>The version of the protocol supported by the current implementation of the Full Node.</summary>
         public const ProtocolVersion SupportedProtocolVersion = ProtocolVersion.SENDHEADERS_VERSION;
 
+        private static ILoggerFactory loggerFactory;
+
         /// <summary>A factory responsible for creating a Full Node logger instance.</summary>
-        public ILoggerFactory LoggerFactory { get; private set; }
+        public ILoggerFactory LoggerFactory
+        { 
+            get
+            {
+                if (loggerFactory == null)
+                {
+                    logSettings = new LogSettings();
+                    logSettings.Load(this.ConfigReader);
+                    loggerFactory = ExtendedLoggerFactory.Create(logSettings, this.DataFolder);
+
+                    // Create the custom logger factory.
+                    loggerFactory.AddFilters(logSettings, this.DataFolder);
+                }
+
+                return loggerFactory;
+            }
+        }
 
         /// <summary>An instance of the Full Node logger, which reports on the Full Node's activity.</summary>
         public ILogger Logger { get; private set; }
 
+        private static LogSettings logSettings;
+
         /// <summary>The settings of the Full Node's logger.</summary>
-        public LogSettings LogSettings { get; private set; }
+        public LogSettings LogSettings => logSettings;
 
         /// <summary>A list of paths to folders which Full Node components use to store data. These folders are found
         /// in the <see cref="DataDir"/>.
@@ -227,12 +247,6 @@ namespace Stratis.Bitcoin.Configuration
             else
                 this.DataFolder = new DataFolder(this.DataDir, this.GetDbType());
 
-            // Attempt to load NLog configuration from the DataFolder.
-            this.LogSettings = new LogSettings();
-            this.LogSettings.Load(this.ConfigReader);
-            this.LoggerFactory = ExtendedLoggerFactory.Create(this.LogSettings, this.DataFolder);
-            this.Logger = this.LoggerFactory.CreateLogger(typeof(NodeSettings).FullName);
-
             // Get the configuration file name for the network if it was not specified on the command line.
             if (this.ConfigurationFile == null)
             {
@@ -242,9 +256,6 @@ namespace Stratis.Bitcoin.Configuration
                 if (File.Exists(this.ConfigurationFile))
                     this.ReadConfigurationFile();
             }
-
-            // Create the custom logger factory.
-            this.LoggerFactory.AddFilters(this.LogSettings, this.DataFolder);
 
             // Load the configuration.
             this.LoadConfiguration();
@@ -401,20 +412,20 @@ namespace Stratis.Bitcoin.Configuration
             builder.AppendLine();
             builder.AppendLine("Command line arguments:");
             builder.AppendLine();
-            builder.AppendLine($"-help/--help              Show this help.");
-            builder.AppendLine($"-conf=<Path>              Path to the configuration file. Defaults to {defaults.ConfigurationFile}.");
-            builder.AppendLine($"-datadir=<Path>           Path to the data directory. Defaults to {defaults.DataDir}.");
-            builder.AppendLine($"-datadirroot=<Path>       The path to the root data directory, which holds all node data on the machine. Defaults to 'StratisNode'.");
-            builder.AppendLine($"-debug[=<string>]         Set 'Debug' logging level. Specify what to log via e.g. '-debug=Stratis.Bitcoin.Miner,Stratis.Bitcoin.Wallet'.");
-            builder.AppendLine($"-loglevel=<string>        Direct control over the logging level: '-loglevel=trace/debug/info/warn/error/fatal'.");
+            builder.AppendLine($"-help/--help                   Show this help.");
+            builder.AppendLine($"-conf=<Path>                   Path to the configuration file. Defaults to {defaults.ConfigurationFile}.");
+            builder.AppendLine($"-datadir=<Path>                Path to the data directory. Defaults to {defaults.DataDir}.");
+            builder.AppendLine($"-datadirroot=<Path>            The path to the root data directory, which holds all node data on the machine. Defaults to 'StratisNode'.");
+            builder.AppendLine($"-debug[=<string>]              Set 'Debug' logging level. Specify what to log via e.g. '-debug=Stratis.Bitcoin.Miner,Stratis.Bitcoin.Wallet'.");
+            builder.AppendLine($"-loglevel=<string>             Direct control over the logging level: '-loglevel=trace/debug/info/warn/error/fatal'.");
 
             // Can be overridden in configuration file.
-            builder.AppendLine($"-testnet                  Use the testnet chain.");
-            builder.AppendLine($"-regtest                  Use the regtestnet chain.");
-            builder.AppendLine($"-mintxfee=<number>        Minimum fee rate. Defaults to {network.MinTxFee}.");
-            builder.AppendLine($"-fallbackfee=<number>     Fallback fee rate. Defaults to {network.FallbackFee}.");
-            builder.AppendLine($"-minrelaytxfee=<number>   Minimum relay fee rate. Defaults to {network.MinRelayTxFee}.");
-            builder.AppendLine($"-displaybenchstats=<bool> Logs benchmark statistics to the console window (true/false).");
+            builder.AppendLine($"-testnet                       Use the testnet chain.");
+            builder.AppendLine($"-regtest                       Use the regtestnet chain.");
+            builder.AppendLine($"-mintxfee=<number>             Minimum fee rate. Defaults to {network.MinTxFee}.");
+            builder.AppendLine($"-fallbackfee=<number>          Fallback fee rate. Defaults to {network.FallbackFee}.");
+            builder.AppendLine($"-minrelaytxfee=<number>        Minimum relay fee rate. Defaults to {network.MinRelayTxFee}.");
+            builder.AppendLine($"-displaybenchstats=<bool>      Logs benchmark statistics to the console window (true/false).");
 
             defaults.Logger.LogInformation(builder.ToString());
 
@@ -447,7 +458,6 @@ namespace Stratis.Bitcoin.Configuration
         /// <inheritdoc />
         public void Dispose()
         {
-            this.LoggerFactory.Dispose();
         }
     }
 

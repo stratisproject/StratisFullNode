@@ -605,6 +605,15 @@ namespace Stratis.Features.Unity3dApi.Controllers
             return Ok();
         }
 
+        [Route("unwatch-nft-contract")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public void UnwatchNFTContract([FromQuery] string contractAddress)
+        {
+            this.NFTTransferIndexer.UnwatchNFTContract(contractAddress);
+        }
+
         [Route("reindex-all-contracts")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
