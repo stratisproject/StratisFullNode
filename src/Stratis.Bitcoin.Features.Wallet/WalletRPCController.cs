@@ -772,7 +772,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                     continue;
 
                 WalletAccountReference accountReference = new WalletAccountReference(walletName, account.Name);
-            
+
                 IEnumerable<UnspentOutputReference> spendableTransactions = this.walletManager.GetSpendableTransactionsInAccount(accountReference, minConfirmations);
 
                 foreach (var spendableTx in spendableTransactions)
@@ -781,6 +781,11 @@ namespace Stratis.Bitcoin.Features.Wallet
                         continue;
 
                     if (addresses.Any() && !addresses.Contains(BitcoinAddress.Create(spendableTx.Address.Address, this.FullNode.Network)))
+                        continue;
+
+                    // Check if the transaction is already in the list.
+                    // The node operator could be using the wallet for both "actual" and watch only accounts. 
+                    if (unspentCoins.Any(u => u.Id == spendableTx.Transaction.Id && u.Index == spendableTx.Transaction.Index))
                         continue;
 
                     unspentCoins.Add(new UnspentCoinModel()
