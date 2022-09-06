@@ -785,7 +785,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
                     // Check if the transaction is already in the list.
                     // The node operator could be using the wallet for both "actual" and watch only accounts. 
-                    if (unspentCoins.Any(u => u.Id == spendableTx.Transaction.Id))
+                    if (unspentCoins.Any(u => u.Id == spendableTx.Transaction.Id && u.Index == spendableTx.Transaction.Index))
                         continue;
 
                     unspentCoins.Add(new UnspentCoinModel()
