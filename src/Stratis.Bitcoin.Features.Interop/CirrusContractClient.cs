@@ -6,8 +6,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Flurl;
 using Flurl.Http;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Newtonsoft.Json;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
 using Stratis.Bitcoin.Features.Interop.Settings;
@@ -105,6 +107,7 @@ namespace Stratis.Bitcoin.Features.Interop
         private readonly CirrusInteropSettings cirrusInteropSettings;
         private readonly ChainIndexer chainIndexer;
         private readonly Serializer serializer;
+        private readonly ILogger logger;
 
         /// <summary>
         /// The constructor.
@@ -116,6 +119,8 @@ namespace Stratis.Bitcoin.Features.Interop
             this.cirrusInteropSettings = interopSettings.GetSettings<CirrusInteropSettings>();
             this.chainIndexer = chainIndexer;
             this.serializer = new Serializer(new ContractPrimitiveSerializerV2(this.chainIndexer.Network));
+
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
         private async Task<MultisigTransactionIdentifiers> MultisigContractCallInternalAsync(string contractAddress, string methodName, string methodDataHex)
@@ -145,6 +150,8 @@ namespace Stratis.Bitcoin.Features.Interop
                     "10#" + methodDataHex
                     }
                 };
+
+                this.logger.LogDebug($"{nameof(contractAddress)}:{contractAddress} {nameof(methodName)}:{methodName} {nameof(methodDataHex)}:{methodDataHex}");
 
                 using (CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(180)))
                 {
@@ -501,11 +508,19 @@ namespace Stratis.Bitcoin.Features.Interop
                     }
                 };
 
-                response = await this.cirrusInteropSettings.CirrusClientUrl
-                    .AppendPathSegment("api/smartcontracts/build-and-send-call")
-                    .PostJsonAsync(request)
-                    .ReceiveJson<BuildCallContractTransactionResponse>()
-                    .ConfigureAwait(false);
+                using (CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(180)))
+                {
+                    response = await this.cirrusInteropSettings.CirrusClientUrl
+                        .AppendPathSegment("api/smartcontracts/build-and-send-call")
+                        .PostJsonAsync(request, cancellation.Token)
+                        .ReceiveJson<BuildCallContractTransactionResponse>()
+                        .ConfigureAwait(false);
+
+                    if (!response.Success)
+                    {
+                        return (null, $"Error confirming transfer '{response.TransactionId}': Possible transaction build and call timeout.");
+                    }
+                }
             }
             catch (Exception ex)
             {
