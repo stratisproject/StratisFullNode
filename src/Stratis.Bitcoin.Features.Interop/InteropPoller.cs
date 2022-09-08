@@ -464,7 +464,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     // Initially assume that it is an ERC20 request, i.e. the SRC20 token is being burned to initiate the process.
                     ContractType contractType = ContractType.ERC20;
                     ConversionRequestType conversionRequestType = ConversionRequestType.Burn;
-                    
+
                     // If the Cirrus contract address relates to a watched ERC721 contract then this must be regarded as an ERC721 request (SRC721 burn).
                     if (watchedErc721Contracts.Contains(receipt.To))
                         contractType = ContractType.ERC721;
@@ -1706,30 +1706,34 @@ namespace Stratis.Bitcoin.Features.Interop
         private (int Decimals, string DestinationText) RetrieveDecimalsAndTokenDestination(ConversionRequest request)
         {
             int decimals = 8;
-            string destinationText = request.DestinationChain.ToString();
-            SupportedContractAddress token = null;
 
             if (request.RequestType == ConversionRequestType.Burn)
             {
                 if (string.IsNullOrEmpty(request.TokenContract))
-                    destinationText = "wSTRAX->STRAX";
+                    return (decimals, "wSTRAX->STRAX");
                 else
-                    token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.NativeNetworkAddress.ToLowerInvariant() == request.TokenContract.ToLowerInvariant());
+                    return DetermineTokenOrNftContract(request);
             }
             else
             {
                 if (string.IsNullOrEmpty(request.TokenContract))
-                    destinationText = "STRAX->wSTRAX";
+                    return (decimals, "STRAX->wSTRAX");
                 else
-                    token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.SRC20Address.ToLowerInvariant() == request.TokenContract.ToLowerInvariant());
+                    return DetermineTokenOrNftContract(request);
             }
-            if (token != null)
-            {
-                decimals = token.Decimals;
-                destinationText = $"{token.TokenName}->{request.DestinationChain}";
-            }
+        }
 
-            return (decimals, destinationText);
+        private (int Decimals, string DestinationText) DetermineTokenOrNftContract(ConversionRequest request)
+        {
+            SupportedContractAddress token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.NativeNetworkAddress.ToLowerInvariant() == request.TokenContract.ToLowerInvariant());
+            if (token != null)
+                return (token.Decimals, $"{token.TokenName}->{request.DestinationChain}");
+
+            string nftContract = this.interopSettings.ETHSettings.WatchedErc721Contracts.Values.FirstOrDefault(n => n.ToLowerInvariant() == request.TokenContract.ToLowerInvariant());
+            if (nftContract != null)
+                return (8, "NFT->Cirrus");
+
+            return (8, "Unknown -> Cirrus");
         }
 
         private ulong CalculateProcessingHeight()
