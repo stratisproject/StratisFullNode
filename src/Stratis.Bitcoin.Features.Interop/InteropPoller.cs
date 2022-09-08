@@ -1712,7 +1712,13 @@ namespace Stratis.Bitcoin.Features.Interop
                 if (string.IsNullOrEmpty(request.TokenContract))
                     return (decimals, "wSTRAX->STRAX");
                 else
-                    return DetermineTokenOrNftContract(request);
+                {
+                    SupportedContractAddress token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.NativeNetworkAddress.ToLowerInvariant() == request.TokenContract.ToLowerInvariant());
+                    if (token != null)
+                        return (token.Decimals, $"{token.TokenName}->{request.DestinationChain}");
+                    else
+                        return (8, "Cirrus -> Unknown");
+                }
             }
             else
             {
@@ -1725,7 +1731,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private (int Decimals, string DestinationText) DetermineTokenOrNftContract(ConversionRequest request)
         {
-            SupportedContractAddress token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.NativeNetworkAddress.ToLowerInvariant() == request.TokenContract.ToLowerInvariant());
+            SupportedContractAddress token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.SRC20Address.ToLowerInvariant() == request.TokenContract.ToLowerInvariant());
             if (token != null)
                 return (token.Decimals, $"{token.TokenName}->{request.DestinationChain}");
 
