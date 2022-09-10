@@ -40,22 +40,45 @@ namespace Stratis.SmartContracts.Core.Receipts
                 topicsList.AddRange(topics);
             }
 
-            return this.SearchReceipts(contractAddress, fromBlock, toBlock, topicsList);
+            return this.SearchReceipts(new HashSet<string>() { contractAddress }, fromBlock, toBlock, topicsList);
         }
 
-        public List<Receipt> SearchReceipts(string contractAddress, int fromBlock = 0, int? toBlock = null, IEnumerable<byte[]> topics = null)
+        public List<Receipt> SearchReceipts(HashSet<string> contractAddresses, string eventName, int fromBlock, int? toBlock, IEnumerable<byte[]> topics)
+        {
+            var topicsList = new List<byte[]>();
+
+            if (!string.IsNullOrWhiteSpace(eventName))
+            {
+                topicsList.Add(Encoding.UTF8.GetBytes(eventName));
+            }
+
+            if (topics != null)
+            {
+                topicsList.AddRange(topics);
+            }
+
+            return this.SearchReceipts(contractAddresses, fromBlock, toBlock, topicsList);
+        }
+
+        public List<Receipt> SearchReceipts(HashSet<string> contractAddresses, int fromBlock = 0, int? toBlock = null, IEnumerable<byte[]> topics = null)
         {
             topics = topics?.Where(topic => topic != null) ?? Enumerable.Empty<byte[]>();
 
-            // Build the bytes we can use to check for this event.
-            // TODO use address.ToUint160 extension when it is in .Core.
-            var addressUint160 = new uint160(new BitcoinPubKeyAddress(contractAddress, this.network).Hash.ToBytes());
-            
             // Ensure that we perform the Keccak256 hash calculations only once before entering the loop.
             // This leads to "only" a two-fold speed improvement mostly because the db header retrieval is still slow.
             var filterBloom = new Bloom();
 
-            filterBloom.Add(addressUint160.ToBytes());
+            var addressesUint160 = new HashSet<uint160>();
+
+            foreach (string contractAddress in contractAddresses)
+            {
+                // Build the bytes we can use to check for this event.
+                // TODO use address.ToUint160 extension when it is in .Core.
+                var addressUint160 = new uint160(new BitcoinPubKeyAddress(contractAddress, this.network).Hash.ToBytes());
+
+                addressesUint160.Add(addressUint160);
+                filterBloom.Add(addressUint160.ToBytes());
+            }
 
             foreach (byte[] topic in topics)
             {
@@ -92,7 +115,7 @@ namespace Stratis.SmartContracts.Core.Receipts
             IList<Receipt> receipts = this.receiptRepository.RetrieveMany(transactionHashes);
 
             // For each block, get all receipts, and if they match, add to list to return.
-            return this.matcher.MatchReceipts(receipts, addressUint160, topics);
+            return this.matcher.MatchReceipts(receipts, addressesUint160, topics);
         }
     }
 }
