@@ -88,7 +88,7 @@ namespace Stratis.Features.Collateral
             this.signals = signals;
             this.asyncProvider = asyncProvider;
 
-            this.maxReorgLength = AddressIndexer.GetMaxReorgOrFallbackMaxReorg(network);
+            this.maxReorgLength = AddressIndexerCV.GetMaxReorgOrFallbackMaxReorg(network);
             this.cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(nodeLifetime.ApplicationStopping);
             this.locker = new object();
             this.balancesDataByAddress = new Dictionary<string, AddressIndexerData>();

@@ -129,15 +129,15 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         private readonly Network network;
         private readonly ICheckpoints checkpoints;
         private readonly IDateTimeProvider dateTimeProvider;
-        private readonly IBlockStore blockStore;
+        private readonly IConsensusManager consensusManager;
         private readonly CancellationTokenSource cancellationToken;
         private readonly ConsensusSettings consensusSettings;
         private CachePerformanceSnapshot latestPerformanceSnapShot;
 
         private readonly Random random;
 
-        public CachedCoinView(Network network, ICheckpoints checkpoints, ICoindb coindb, IDateTimeProvider dateTimeProvider, ILoggerFactory loggerFactory, INodeStats nodeStats, ConsensusSettings consensusSettings, 
-            StakeChainStore stakeChainStore = null, IRewindDataIndexCache rewindDataIndexCache = null, IBlockStore blockStore = null, INodeLifetime nodeLifetime = null)
+        public CachedCoinView(Network network, ICheckpoints checkpoints, ICoindb coindb, IDateTimeProvider dateTimeProvider, ILoggerFactory loggerFactory, INodeStats nodeStats, ConsensusSettings consensusSettings,
+            StakeChainStore stakeChainStore = null, IRewindDataIndexCache rewindDataIndexCache = null, IScriptAddressReader scriptAddressReader = null, IConsensusManager consensusManager = null, INodeLifetime nodeLifetime = null, NodeSettings nodeSettings = null)
         {
             Guard.NotNull(coindb, nameof(CachedCoinView.coindb));
 
@@ -149,7 +149,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             this.consensusSettings = consensusSettings;
             this.stakeChainStore = stakeChainStore;
             this.rewindDataIndexCache = rewindDataIndexCache;
-            this.blockStore = blockStore;
+            this.consensusManager = consensusManager;
             this.cancellationToken = (nodeLifetime == null) ? new CancellationTokenSource() : CancellationTokenSource.CreateLinkedTokenSource(nodeLifetime.ApplicationStopping);
             this.lockobj = new object();
             this.cachedUtxoItems = new Dictionary<OutPoint, CacheItem>();
@@ -216,8 +216,10 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     var coinViewRule = consensusRuleEngine.GetRule<CoinViewRule>();
                     var deploymentsRule = consensusRuleEngine.GetRule<SetActivationDeploymentsFullValidationRule>();
 
-                    foreach ((ChainedHeader chainedHeader, Block block) in this.blockStore.BatchBlocksFrom(chainIndexer[coinViewTip.Hash], chainIndexer, this.cancellationToken, batchSize: 1000))
+                    foreach (var chb in this.consensusManager.GetBlocksAfterBlock(chainIndexer[coinViewTip.Hash], 1000, this.cancellationToken))
                     {
+                        (Block block, ChainedHeader chainedHeader) = (chb.Block, chb.ChainedHeader);
+
                         if (block == null)
                             break;
 
