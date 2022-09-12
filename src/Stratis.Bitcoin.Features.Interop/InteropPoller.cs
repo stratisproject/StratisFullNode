@@ -1717,7 +1717,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     if (token != null)
                         return (token.Decimals, $"{token.TokenName}->{request.DestinationChain}");
                     else
-                        return (8, "Cirrus -> Unknown");
+                        return (8, "Cirrus->Unknown");
                 }
             }
             else
@@ -1739,7 +1739,7 @@ namespace Stratis.Bitcoin.Features.Interop
             if (nftContract != null)
                 return (8, "NFT->Cirrus");
 
-            return (8, "Unknown -> Cirrus");
+            return (8, "Unknown->Cirrus");
         }
 
         private ulong CalculateProcessingHeight()
