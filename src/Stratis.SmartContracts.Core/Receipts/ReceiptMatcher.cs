@@ -36,14 +36,9 @@ namespace Stratis.SmartContracts.Core.Receipts
                     continue;
 
                 // Match the receipts where all data passes the filter.
-                foreach (uint160 address in addresses)
+                if (storedReceipt.Logs.Any(log => BloomExtensions.Test(log.GetBloom(), addresses, topics)))
                 {
-                    if (storedReceipt.Logs.Any(log => BloomExtensions.Test(log.GetBloom(), address, topics)))
-                    {
-                        receiptResponses.Add(storedReceipt);
-
-                        break;
-                    }
+                    receiptResponses.Add(storedReceipt);
                 }
             }
 
