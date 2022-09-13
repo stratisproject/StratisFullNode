@@ -27,7 +27,6 @@ namespace Stratis.SmartContracts.Core.Receipts
         /// <returns>The list of receipts that were matched.</returns>
         public List<Receipt> MatchReceipts(IEnumerable<Receipt> receipts, HashSet<uint160> addresses, IEnumerable<byte[]> topics)
         {
-            // For each block, get all receipts, and if they match, add to list to return.
             var receiptResponses = new List<Receipt>();
 
             foreach (Receipt storedReceipt in receipts)

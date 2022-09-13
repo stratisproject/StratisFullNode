@@ -26,6 +26,23 @@ namespace Stratis.SmartContracts.Core.Receipts
             this.matcher = new ReceiptMatcher();
         }
 
+        public List<Receipt> SearchReceipts(string eventName, int fromBlock, int? toBlock, IEnumerable<byte[]> topics)
+        {
+            var topicsList = new List<byte[]>();
+
+            if (!string.IsNullOrWhiteSpace(eventName))
+            {
+                topicsList.Add(Encoding.UTF8.GetBytes(eventName));
+            }
+
+            if (topics != null)
+            {
+                topicsList.AddRange(topics);
+            }
+
+            return this.SearchReceipts((HashSet<string>)null, fromBlock, toBlock, topicsList);
+        }
+
         public List<Receipt> SearchReceipts(string contractAddress, string eventName, int fromBlock, int? toBlock, IEnumerable<byte[]> topics)
         {
             var topicsList = new List<byte[]>();
@@ -70,14 +87,17 @@ namespace Stratis.SmartContracts.Core.Receipts
 
             var addressesUint160 = new HashSet<uint160>();
 
-            foreach (string contractAddress in contractAddresses)
+            if (contractAddresses != null)
             {
-                // Build the bytes we can use to check for this event.
-                // TODO use address.ToUint160 extension when it is in .Core.
-                var addressUint160 = new uint160(new BitcoinPubKeyAddress(contractAddress, this.network).Hash.ToBytes());
+                foreach (string contractAddress in contractAddresses)
+                {
+                    // Build the bytes we can use to check for this event.
+                    // TODO use address.ToUint160 extension when it is in .Core.
+                    var addressUint160 = new uint160(new BitcoinPubKeyAddress(contractAddress, this.network).Hash.ToBytes());
 
-                addressesUint160.Add(addressUint160);
-                filterBloom.Add(addressUint160.ToBytes());
+                    addressesUint160.Add(addressUint160);
+                    filterBloom.Add(addressUint160.ToBytes());
+                }
             }
 
             foreach (byte[] topic in topics)
