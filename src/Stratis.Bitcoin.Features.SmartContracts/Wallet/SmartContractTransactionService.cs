@@ -415,18 +415,21 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         {
             var filteredContractAddresses = new HashSet<string>();
 
-            foreach (string contractAddress in contractAddresses)
+            if (contractAddresses != null)
             {
-                uint160 address = contractAddress.ToUint160(this.network);
-
-                byte[] contractCode = this.stateRoot.GetCode(address);
-
-                if (contractCode == null || !contractCode.Any())
+                foreach (string contractAddress in contractAddresses)
                 {
-                    continue;
-                }
+                    uint160 address = contractAddress.ToUint160(this.network);
 
-                filteredContractAddresses.Add(contractAddress);
+                    byte[] contractCode = this.stateRoot.GetCode(address);
+
+                    if (contractCode == null || !contractCode.Any())
+                    {
+                        continue;
+                    }
+
+                    filteredContractAddresses.Add(contractAddress);
+                }
             }
 
             IEnumerable<byte[]> topicsBytes = topics != null ? topics.Where(topic => topic != null).Select(t => t.HexToByteArray()) : new List<byte[]>();
