@@ -100,8 +100,18 @@ namespace Stratis.SmartContracts.Core.Receipts
                 }
             }
 
-            // Loop through all headers and check bloom.
-            IEnumerable<ChainedHeader> blockHeaders = chainIndexerRangeQuery.EnumerateRange(fromBlock, toBlock);
+            foreach (byte[] topic in topics)
+            {
+                if (topic != null)
+                {
+                    filterBloom.Add(topic);
+                }
+            }
+
+            IEnumerable<ChainedHeader> blockHeaders = this.chainIndexer[toBlock ?? this.chainIndexer.Tip.Height]
+                .EnumerateToGenesis()
+                .TakeWhile(c => c.Height >= fromBlock)
+                .Reverse();
 
             // Match the blocks where the combination of all receipts passes the filter.
             var matches = new List<ChainedHeader>();
@@ -109,7 +119,7 @@ namespace Stratis.SmartContracts.Core.Receipts
             {
                 var scHeader = (ISmartContractBlockHeader)chainedHeader.Header;
 
-                if (scHeader.LogsBloom.Test(addressUint160, topics))
+                if (scHeader.LogsBloom.Test(filterBloom))
                     matches.Add(chainedHeader);
             }
 
