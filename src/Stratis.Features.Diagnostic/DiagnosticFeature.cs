@@ -24,6 +24,12 @@ namespace Stratis.Features.Diagnostic
         private readonly DiagnosticSettings diagnosticSettings;
         private readonly PeerStatisticsCollector peerStatisticsCollector;
 
+        /// <summary>
+        /// The class instance constructor.
+        /// </summary>
+        /// <param name="signals">See <see cref="ISignals"/>.</param>
+        /// <param name="diagnosticSettings">See <see cref="DiagnosticSettings"/>.</param>
+        /// <param name="peerStatisticsCollector">See <see cref="PeerStatisticsCollector"/>.</param>
         public DiagnosticFeature(ISignals signals, DiagnosticSettings diagnosticSettings, PeerStatisticsCollector peerStatisticsCollector)
         {
             this.signals = Guard.NotNull(signals, nameof(signals));
@@ -31,6 +37,10 @@ namespace Stratis.Features.Diagnostic
             this.peerStatisticsCollector = Guard.NotNull(peerStatisticsCollector, nameof(peerStatisticsCollector));
         }
 
+        /// <summary>
+        /// Initializes the instance.
+        /// </summary>
+        /// <returns>The asynchronous task.</returns>
         public override Task InitializeAsync()
         {
             this.peerStatisticsCollector.Initialize();
@@ -46,14 +56,25 @@ namespace Stratis.Features.Diagnostic
             DiagnosticSettings.PrintHelp(network);
         }
 
+        /// <summary>
+        /// Disposes the instance.
+        /// </summary>
         public override void Dispose()
         {
             this.peerStatisticsCollector.Dispose();
         }
     }
 
+    /// <summary>
+    /// Extension for adding the feature to the node.
+    /// </summary>
     public static class DiagnosticFeatureExtension
     {
+        /// <summary>
+        /// Adds the feature to the node.
+        /// </summary>
+        /// <param name="fullNodeBuilder">See <see cref="IFullNodeBuilder"/>.</param>
+        /// <returns>The <see cref="IFullNodeBuilder"/>.</returns>
         public static IFullNodeBuilder UseDiagnosticFeature(this IFullNodeBuilder fullNodeBuilder)
         {
             LoggingConfiguration.RegisterFeatureNamespace<DiagnosticFeature>("diagnostic");

@@ -9,9 +9,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
     /// </summary>
     public interface ICoindb
     {
-        /// <summary>
-        /// Initialize the coindb.
-        /// </summary>
+        /// <summary> Initialize the coin database.</summary>
         void Initialize();
 
         /// <summary>
@@ -55,20 +53,42 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// and restoring recently spent outputs as UTXOs.
         /// </para>
         /// </summary>
+        /// <param name="target">The final rewind target or <c>null</c> if a single block should be rewound. See remarks.</param>
         /// <returns>Hash of the block header which is now the tip of the rewound coinview.</returns>
-        HashHeightPair Rewind();
+        /// <remarks>This method can be implemented to rewind one or more blocks. Implementations
+        /// that rewind only one block can ignore the target, while more advanced implementations
+        /// can rewind a batch of multiple blocks but not overshooting the <paramref name="target"/>.
+        /// </remarks>
+        HashHeightPair Rewind(HashHeightPair target);
 
         /// <summary>
         /// Gets the rewind data by block height.
         /// </summary>
         /// <param name="height">The height of the block.</param>
+        /// <returns>See <see cref="RewindData"/>.</returns>
         RewindData GetRewindData(int height);
+
+        /// <summary>Gets the minimum rewind height.</summary>
+        /// <returns>
+        /// <para>
+        /// The minimum rewind height or -1 if rewind is not possible.
+        /// </para>
+        /// </returns>
+        int GetMinRewindHeight();
     }
 
     public interface IStakedb : ICoindb
     {
+        /// <summary>
+        /// Persists unsaved POS blocks information to the database.
+        /// </summary>
+        /// <param name="stakeEntries">List of POS block information to be examined and persists if unsaved.</param>
         void PutStake(IEnumerable<StakeItem> stakeEntries);
 
+        /// <summary>
+        /// Retrieves POS blocks information from the database.
+        /// </summary>
+        /// <param name="blocklist">List of partially initialized POS block information that is to be fully initialized with the values from the database.</param>
         void GetStake(IEnumerable<StakeItem> blocklist);
     }
 }

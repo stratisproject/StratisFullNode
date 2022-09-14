@@ -2,7 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Configuration.Logging;
+using Stratis.Bitcoin.EventBus;
+using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Base
@@ -20,12 +24,17 @@ namespace Stratis.Bitcoin.Base
     public class ChainRepository : IChainRepository
     {
         private readonly IChainStore chainStore;
+        private readonly ILogger logger;
+        private readonly ISignals signals;
 
         private BlockLocator locator;
 
-        public ChainRepository(IChainStore chainStore)
+        public ChainRepository(IChainStore chainStore, ISignals signals = null)
         {
             this.chainStore = chainStore;
+            this.signals = signals;
+
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
         /// <inheritdoc />
@@ -45,23 +54,39 @@ namespace Stratis.Bitcoin.Base
 
                 Guard.Assert(data.Hash == genesisHeader.HashBlock); // can't swap networks
 
-                int index = 0;
+                int height = 0;
+
                 while (true)
                 {
-                    data = this.chainStore.GetChainData((index));
+                    data = this.chainStore.GetChainData(height);
 
                     if (data == null)
                         break;
 
                     tip = new ChainedHeader(data.Hash, data.Work, tip);
-                    if (tip.Height == 0) tip.SetChainStore(this.chainStore);
-                    index++;
+                    if (tip.Height == 0)
+                        tip.SetChainStore(this.chainStore);
+
+                    if (height % 50_000 == 0)
+                    {
+                        if (this.signals != null)
+                            this.signals.Publish(new FullNodeEvent() { Message = $"Loading chain at height {height}.", State = FullNodeState.Initializing.ToString() });
+
+                        this.logger.LogInformation($"Loading chain at height {height}.");
+                    }
+
+                    height++;
                 }
 
                 if (tip == null)
                 {
                     genesisHeader.SetChainStore(this.chainStore);
                     tip = genesisHeader;
+                }
+                else
+                {
+                    // Confirm that the chain tip exists in the headers table.
+                    this.chainStore.GetHeader(tip, tip.HashBlock);
                 }
 
                 this.locator = tip.GetLocator();
@@ -111,28 +136,38 @@ namespace Stratis.Bitcoin.Base
 
         public class ChainRepositoryData : IBitcoinSerializable
         {
-            public uint256 Hash;
-            public byte[] Work;
+            private uint256 hash;
+            private byte[] work;
+
+            public uint256 Hash => this.hash;
+
+            public byte[] Work => this.work;
 
             public ChainRepositoryData()
             {
             }
 
+            public ChainRepositoryData(uint256 hash, byte[] work) : this()
+            {
+                this.hash = hash;
+                this.work = work;
+            }
+
             public void ReadWrite(BitcoinStream stream)
             {
-                stream.ReadWrite(ref this.Hash);
+                stream.ReadWrite(ref this.hash);
                 if (stream.Serializing)
                 {
-                    int len = this.Work.Length;
+                    int len = this.work.Length;
                     stream.ReadWrite(ref len);
-                    stream.ReadWrite(ref this.Work);
+                    stream.ReadWrite(ref this.work);
                 }
                 else
                 {
                     int len = 0;
                     stream.ReadWrite(ref len);
-                    this.Work = new byte[len];
-                    stream.ReadWrite(ref this.Work);
+                    this.work = new byte[len];
+                    stream.ReadWrite(ref this.work);
                 }
             }
         }

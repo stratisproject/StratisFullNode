@@ -11,6 +11,7 @@ namespace Stratis.Bitcoin.Tests.Common
         /// <summary>
         /// Sets the tip of this chain based upon another block header.
         /// </summary>
+        /// <param name="chainIndexer">An instance of the <see cref="ChainIndexer"/> class being extended.</param>
         /// <param name="header">The block header to set to tip.</param>
         /// <returns>Whether the tip was set successfully.</returns>
         public static bool SetTip(this ChainIndexer chainIndexer, BlockHeader header)

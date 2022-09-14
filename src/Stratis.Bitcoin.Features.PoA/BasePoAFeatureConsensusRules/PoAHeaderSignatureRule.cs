@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -22,6 +24,8 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
         private HashHeightPair lastCheckPoint;
 
+        private PoAConsensusOptions poAConsensusOptions;
+
         /// <inheritdoc />
         public override void Initialize()
         {
@@ -33,16 +37,17 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             this.slotsManager = engine.SlotsManager;
             this.federationHistory = engine.FederationHistory;
             this.validator = engine.PoaHeaderValidator;
+            this.poAConsensusOptions = engine.Network.Consensus.Options as PoAConsensusOptions;
 
-            var lastCheckPoint = engine.Network.Checkpoints.LastOrDefault();
+            KeyValuePair<int, CheckpointInfo> lastCheckPoint = engine.Network.Checkpoints.LastOrDefault();
             this.lastCheckPoint = (lastCheckPoint.Value != null) ? new HashHeightPair(lastCheckPoint.Value.Hash, lastCheckPoint.Key) : null;
         }
 
-        public override async Task RunAsync(RuleContext context)
+        public override Task RunAsync(RuleContext context)
         {
             // Only start validating at the last checkpoint block.
             if (context.ValidationContext.ChainedHeaderToValidate.Height < (this.lastCheckPoint?.Height ?? 0))
-                return;
+                return Task.CompletedTask;
 
             ChainedHeader chainedHeader = context.ValidationContext.ChainedHeaderToValidate;
 
@@ -61,7 +66,8 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
             var header = chainedHeader.Header as PoABlockHeader;
 
-            PubKey pubKey = this.federationHistory.GetFederationMemberForBlock(chainedHeader)?.PubKey;
+            IFederationMember federationMember = this.federationHistory.GetFederationMemberForBlock(chainedHeader);
+            PubKey pubKey = federationMember?.PubKey;
             if (pubKey == null || !this.validator.VerifySignature(pubKey, header))
             {
                 this.Logger.LogWarning("The block signature could not be matched with a current federation member.");
@@ -69,8 +75,29 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 PoAConsensusErrors.InvalidHeaderSignature.Throw();
             }
 
+            if (chainedHeader.Height >= this.poAConsensusOptions.GetMiningTimestampV2ActivationStrictHeight)
+            {
+                uint expectedSlot = this.slotsManager.GetMiningTimestamp(chainedHeader.Previous, chainedHeader.Header.Time, pubKey);
+
+                if (chainedHeader.Header.Time != expectedSlot)
+                {
+                    this.Logger.LogWarning("Block {0} was mined in the wrong slot by miner '{1}'. The timestamp on the miner's block is {2} seconds earlier than expected.", chainedHeader.Height, pubKey.ToHex(), expectedSlot - chainedHeader.Header.Time);
+                    this.Logger.LogTrace("(-)[TIME_TOO_EARLY]");
+                    ConsensusErrors.BlockTimestampTooEarly.Throw();
+                }
+
+                return Task.CompletedTask;
+            }
+
+            // TODO: Remove this code once the last checkpoint exceeds 'GetMiningTimestampV2ActivationStrictHeight'.
             // Look at the last round of blocks to find the previous time that the miner mined.
-            var roundTime = this.slotsManager.GetRoundLength(this.federationHistory.GetFederationForBlock(chainedHeader).Count);
+            TimeSpan roundTime = this.slotsManager.GetRoundLength(this.federationHistory.GetFederationForBlock(chainedHeader).Count);
+
+            // Quick check for optimisation.
+            this.federationHistory.GetLastActiveTime(federationMember, chainedHeader.Previous, out uint lastActiveTime);
+            if ((chainedHeader.Header.Time - lastActiveTime) >= roundTime.TotalSeconds)
+                return Task.CompletedTask;
+
             int blockCounter = 0;
 
             for (ChainedHeader prevHeader = chainedHeader.Previous; prevHeader.Previous != null; prevHeader = prevHeader.Previous)
@@ -96,6 +123,8 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 this.Logger.LogTrace("(-)[TIME_TOO_EARLY]");
                 ConsensusErrors.BlockTimestampTooEarly.Throw();
             }
+
+            return Task.CompletedTask;
         }
     }
 }

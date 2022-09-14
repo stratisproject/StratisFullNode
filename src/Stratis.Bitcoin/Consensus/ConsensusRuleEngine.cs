@@ -48,6 +48,8 @@ namespace Stratis.Bitcoin.Consensus
         /// <summary>State of the current chain that hold consensus tip.</summary>
         public IChainState ChainState { get; }
 
+#pragma warning disable SA1648
+
         /// <inheritdoc cref="IInvalidBlockHashStore"/>
         private readonly IInvalidBlockHashStore invalidBlockHashStore;
 
@@ -55,6 +57,8 @@ namespace Stratis.Bitcoin.Consensus
 
         /// <inheritdoc cref="ConsensusRulesPerformanceCounter"/>
         private ConsensusRulesPerformanceCounter performanceCounter;
+
+#pragma warning restore SA1648
 
         protected ConsensusRuleEngine(
             Network network,
@@ -253,8 +257,8 @@ namespace Stratis.Bitcoin.Consensus
 
             uint256 hashToBan = validationContext.ChainedHeaderToValidate.HashBlock;
 
-            this.logger.LogWarning("Marking '{0}' invalid.", hashToBan);
-            this.invalidBlockHashStore.MarkInvalid(hashToBan, validationContext.RejectUntil);
+            this.logger.LogWarning("Marking '{0}' invalid with reason '{1}'.", hashToBan, validationContext.Error.Message);
+            this.invalidBlockHashStore.MarkInvalid(hashToBan, validationContext.RejectUntil, validationContext.Error);
         }
 
         private void ExecuteRules(IEnumerable<SyncConsensusRule> rules, RuleContext ruleContext)
@@ -289,7 +293,7 @@ namespace Stratis.Bitcoin.Consensus
         public abstract HashHeightPair GetBlockHash();
 
         /// <inheritdoc />
-        public abstract Task<RewindState> RewindAsync();
+        public abstract Task<RewindState> RewindAsync(HashHeightPair target);
 
         [NoTrace]
         public T GetRule<T>() where T : ConsensusRuleBase

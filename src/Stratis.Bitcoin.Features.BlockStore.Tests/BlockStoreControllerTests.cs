@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Net;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
@@ -68,9 +70,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             IActionResult response = controller.GetBlock(new SearchByHashRequest() { Hash = new uint256(1).ToString(), OutputJson = true });
 
-            response.Should().BeOfType<OkObjectResult>();
-            var result = (OkObjectResult)response;
-            result.StatusCode.Should().Be((int)HttpStatusCode.OK);
+            response.Should().BeOfType<NotFoundObjectResult>();
+            var result = (NotFoundObjectResult)response;
+            result.StatusCode.Should().Be((int)HttpStatusCode.NotFound);
             result.Value.Should().Be("Block not found");
         }
 
@@ -169,6 +171,34 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             int result = int.Parse(json.Value.ToString());
 
             Assert.Equal(2, result);
+        }
+
+        [Fact]
+        public void Get_Blocks_Should_Return_Blocks()
+        {
+            var logger = new Mock<ILoggerFactory>();
+            var store = new Mock<IBlockStore>();
+            var chainState = new Mock<IChainState>();
+            var addressIndexer = new Mock<IAddressIndexer>();
+            var utxoIndexer = new Mock<IUtxoIndexer>();
+            var scriptAddressReader = Mock.Of<IScriptAddressReader>();
+
+            ChainIndexer chainIndexer = WalletTestsHelpers.GenerateChainWithHeight(3, new StraxTest());
+
+            logger.Setup(l => l.CreateLogger(It.IsAny<string>())).Returns(Mock.Of<ILogger>);
+
+            chainState.Setup(c => c.ConsensusTip)
+                .Returns(chainIndexer.GetHeaderByHeight(2));
+
+            store.Setup(s => s.GetBlocks(It.IsAny<List<uint256>>())).Returns((List<uint256> hashes) => hashes.Select(h => chainIndexer[h].Block).ToList());
+
+            var controller = new BlockStoreController(new StraxMain(), logger.Object, store.Object, chainState.Object, chainIndexer, addressIndexer.Object, utxoIndexer.Object, scriptAddressReader);
+
+            var json = (JsonResult)controller.GetBlocks(new SearchByHeightRequest() { Height = 2, NumberOfBlocks = 2 });
+            var jsonResult = Assert.IsType<List<Block>>(json.Value);
+
+            Assert.Equal(2, jsonResult.Count);
+
         }
 
         private static (Mock<IBlockStore> store, BlockStoreController controller) GetControllerAndStore()

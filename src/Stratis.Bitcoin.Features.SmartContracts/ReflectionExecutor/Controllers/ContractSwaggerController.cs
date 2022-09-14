@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
 using Microsoft.OpenApi.Extensions;
 using Microsoft.OpenApi.Models;
@@ -23,7 +21,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
     /// <summary>
     /// Controller for dynamically generating swagger documents for smart contract assemblies.
     /// </summary>
-    [Route("swagger/contracts")]
     public class ContractSwaggerController : Controller
     {
         private readonly SwaggerGeneratorOptions options;
@@ -31,7 +28,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         private readonly IWalletManager walletmanager;
         private readonly IStateRepositoryRoot stateRepository;
         private readonly Network network;
-        private SwaggerUIOptions uiOptions;
+        private readonly SwaggerUIOptions uiOptions;
 
         public ContractSwaggerController(
             SwaggerGeneratorOptions options,
@@ -53,11 +50,11 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// Dynamically generates a swagger document for the contract at the given address.
         /// </summary>
         /// <param name="address">The contract's address.</param>
-        /// <returns>A <see cref="SwaggerDocument"/> model.</returns>
+        /// <returns>A swagger document serialized as an OpenApi 3.0 json string.</returns>
         /// <exception cref="Exception"></exception>
-        [Route("{address}")]
+        [Route("swagger/contracts/{address}")]
         [HttpGet]
-        public async Task<IActionResult> ContractSwaggerDoc(string address)
+        public Task<IActionResult> ContractSwaggerDoc(string address)
         {
             var code = this.stateRepository.GetCode(address.ToUint160(this.network));
 
@@ -85,7 +82,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             // TODO confirm v2/v3
             var outputString = doc.Serialize(OpenApiSpecVersion.OpenApi3_0, OpenApiFormat.Json);
 
-            return Ok(outputString);
+            return Task.FromResult<IActionResult>(Ok(outputString));
         }
 
         /// <summary>
@@ -94,25 +91,35 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <param name="address">The contract's address.</param>
         /// <returns>A success response.</returns>
         [HttpPost]
-        public async Task<IActionResult> AddContractToSwagger([FromBody] string address)
+        [Route("api/swagger/contracts")]
+        public Task<IActionResult> AddContractToSwagger([FromBody] AddContractRequest address)
         {
             // Check that the contract exists
-            var code = this.stateRepository.GetCode(address.ToUint160(this.network));
+            var code = this.stateRepository.GetCode(address.Address.ToUint160(this.network));
 
             if (code == null)
                 throw new Exception("Contract does not exist");
 
-            var newUrls = new List<UrlDescriptor>(this.uiOptions.ConfigObject.Urls);
-
-            newUrls.Add(new UrlDescriptor
+            var newUrls = new List<UrlDescriptor>(this.uiOptions.ConfigObject.Urls)
             {
-                Name = $"Contract {address}",
-                Url = $"/swagger/contracts/{address}"
-            });
+                new UrlDescriptor
+                {
+                    Name = $"Contract {address.Address}",
+                    Url = $"contracts/{address.Address}"
+                }
+            };
 
             this.uiOptions.ConfigObject.Urls = newUrls;
 
-            return Ok();
+            return Task.FromResult<IActionResult>(Ok());
+        }
+
+        public class AddContractRequest
+        {
+            /// <summary>
+            /// The contract address to add.
+            /// </summary>
+            public string Address { get; set; }
         }
     }
 }

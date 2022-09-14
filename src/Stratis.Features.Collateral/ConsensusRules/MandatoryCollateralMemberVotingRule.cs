@@ -21,7 +21,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         [NoTrace]
         public override void Initialize()
         {
-            this.votingDataEncoder = new VotingDataEncoder(this.Parent.LoggerFactory);
+            this.votingDataEncoder = new VotingDataEncoder();
             this.ruleEngine = (PoAConsensusRuleEngine)this.Parent;
             this.federationManager = this.ruleEngine.FederationManager;
             this.federationHistory = this.ruleEngine.FederationHistory;
@@ -30,6 +30,8 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         }
 
         /// <summary>Checks that whomever mined this block is participating in any pending polls to vote-in new federation members.</summary>
+        /// <param name="context">See <see cref="RuleContext"/>.</param>
+        /// <returns>The asynchronous task.</returns>
         public override Task RunAsync(RuleContext context)
         {
             // "AddFederationMember" polls, that were started at or before this height, that are still pending, which this node has voted in favor of.
@@ -37,7 +39,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
                 .Where(p => p.VotingData.Key == VoteKey.AddFederationMember
                     && p.PollStartBlockData != null
                     && p.PollStartBlockData.Height <= context.ValidationContext.ChainedHeaderToValidate.Height
-                    && p.PubKeysHexVotedInFavor.Any(pk => pk == this.federationManager.CurrentFederationKey.PubKey.ToHex())).ToList();
+                    && p.PubKeysHexVotedInFavor.Any(pk => pk.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex())).ToList();
 
             // Exit if there aren't any.
             if (!pendingPolls.Any())
@@ -45,7 +47,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
 
             // Ignore any polls that the miner has already voted on.
             PubKey blockMiner = this.federationHistory.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate).PubKey;
-            pendingPolls = pendingPolls.Where(p => !p.PubKeysHexVotedInFavor.Any(pk => pk == blockMiner.ToHex())).ToList();
+            pendingPolls = pendingPolls.Where(p => !p.PubKeysHexVotedInFavor.Any(pk => pk.PubKey == blockMiner.ToHex())).ToList();
 
             // Exit if there is nothing remaining.
             if (!pendingPolls.Any())

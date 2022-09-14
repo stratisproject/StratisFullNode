@@ -155,7 +155,7 @@ namespace Stratis.Bitcoin.P2P.Peer
             }
             catch (Exception ex) when (ex is IOException || ex is OperationCanceledException || ex is ObjectDisposedException)
             {
-                this.logger.LogDebug("The node stopped receiving messages, exception: {1}", ex.ToString());
+                this.logger.LogDebug("The node stopped receiving messages, exception: {0}", ex.ToString());
                 this.peer.Disconnect("The node stopped receiving messages.", ex);
             }
             catch (Exception ex)
@@ -468,7 +468,7 @@ namespace Stratis.Bitcoin.P2P.Peer
                 message = Message.ReadNext(memoryStream, this.network, protocolVersion, cancellation, this.payloadProvider, out PerformanceCounter counter);
             }
 
-            return(message, rawMessage.Length);
+            return (message, rawMessage.Length);
         }
 
         /// <inheritdoc />

@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using NLog;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.Signals;
 
@@ -33,31 +34,25 @@ namespace Stratis.Bitcoin.Features.SignalR
 
         public void Init()
         {
-            MethodInfo subscribeMethod = this.signals.GetType().GetMethod("Subscribe");
-            MethodInfo onEventCallbackMethod = typeof(EventSubscriptionService).GetMethod("OnEvent");
             foreach (IClientEvent eventToHandle in this.options.EventsToHandle)
             {
-                this.logger.Debug("Create subscription for {0}", eventToHandle.NodeEventType);
-                MethodInfo subscribeMethodInfo = subscribeMethod.MakeGenericMethod(eventToHandle.NodeEventType);
-                Type callbackType = typeof(Action<>).MakeGenericType(eventToHandle.NodeEventType);
-                Delegate onEventDelegate = Delegate.CreateDelegate(callbackType, this, onEventCallbackMethod);
+                this.logger.LogDebug("Create subscription for {0}", eventToHandle.NodeEventType);
 
-                var token = (SubscriptionToken)subscribeMethodInfo.Invoke(this.signals, new object[] { onEventDelegate });
-                this.subscriptions.Add(token);
+                async Task callback(EventBase eventBase)
+                {
+                    Type childType = eventBase.GetType();
+
+                    IClientEvent clientEvent = this.options.EventsToHandle.FirstOrDefault(ev => ev.NodeEventType == childType);
+                    if (clientEvent == null)
+                        return;
+
+                    clientEvent.BuildFrom(eventBase);
+
+                    await this.eventsHub.SendToClientsAsync(clientEvent).ConfigureAwait(false);
+                }
+
+                this.signals.Subscribe(eventToHandle.NodeEventType, callback);
             }
-        }
-
-        /// <summary> This is invoked through reflection.</summary>
-        public void OnEvent(EventBase @event)
-        {
-            Type childType = @event.GetType();
-
-            IClientEvent clientEvent = this.options.EventsToHandle.FirstOrDefault(ev => ev.NodeEventType == childType);
-            if (clientEvent == null)
-                return;
-
-            clientEvent.BuildFrom(@event);
-            this.eventsHub.SendToClientsAsync(clientEvent).ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
         public void Dispose()

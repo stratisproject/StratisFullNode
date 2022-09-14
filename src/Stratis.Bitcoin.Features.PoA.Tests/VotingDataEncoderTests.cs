@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Text;
 using NBitcoin;
-using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Xunit;
@@ -15,7 +14,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
         public VotingDataEncoderTests()
         {
-            this.encoder = new VotingDataEncoder(new ExtendedLoggerFactory());
+            this.encoder = new VotingDataEncoder();
         }
 
         [Fact]

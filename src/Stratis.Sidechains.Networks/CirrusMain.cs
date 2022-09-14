@@ -14,6 +14,8 @@ using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.PoA.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
+using Stratis.Bitcoin.Utilities.Extensions;
+using Stratis.Sidechains.Networks.Deployments;
 
 namespace Stratis.Sidechains.Networks
 {
@@ -44,6 +46,8 @@ namespace Stratis.Sidechains.Networks
             this.DefaultBanTimeSeconds = 1920; // 240 (MaxReorg) * 16 (TargetSpacing) / 2 = 32 Minutes
 
             this.CirrusRewardDummyAddress = "CPqxvnzfXngDi75xBJKqi4e6YrFsinrJka";
+
+            this.ConversionTransactionFeeDistributionDummyAddress = "CXK1AhmK8XhmBWHUrCKRt5WMhz1CcYeguF";
 
             var consensusFactory = new SmartContractCollateralPoAConsensusFactory();
 
@@ -168,14 +172,19 @@ namespace Stratis.Sidechains.Networks
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
                 autoKickIdleMembers: true,
-                federationMemberMaxIdleTimeSeconds: 60 * 60 * 24 * 2 // 2 days
-            )
-            {
-                EnforceMinProtocolVersionAtBlockHeight = 384675, // setting the value to zero makes the functionality inactive
-                EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
-                FederationMemberActivationTime = 1605862800, // Friday, November 20, 2020 9:00:00 AM
-                VotingManagerV2ActivationHeight = 1_683_000 // Tuesday, 12 January 2021 9:00:00 AM (Estimated)
-            };
+                federationMemberMaxIdleTimeSeconds: 60 * 60 * 24 * 2, // 2 days
+                enforceMinProtocolVersionAtBlockHeight: 384675, // setting the value to zero makes the functionality inactive
+                enforcedMinProtocolVersion: ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
+                federationMemberActivationTime: 1605862800, // Friday, November 20, 2020 9:00:00 AM
+                interFluxV2MainChainActivationHeight: 460_000,
+                votingManagerV2ActivationHeight: 1_683_000, // Tuesday, 12 January 2021 9:00:00 AM (Estimated)
+                getMiningTimestampV2ActivationHeight: 3_709_000, // Monday 14 February 00:00:00 (Estimated)
+                getMiningTimestampV2ActivationStrictHeight: 3_783_000, // Monday 28 February 07:00:00 (London Time) (Estimated)
+                release1100ActivationHeight: 3_426_950, // Monday, 20 December 2021 10:00:00 AM (Estimated)
+                pollExpiryBlocks: 50_000, // Roughly 9 days
+                contractSerializerV2ActivationHeight: 3_386_335, // Monday 13 December 16:00:00 (Estimated)
+                release1300ActivationHeight: 4_334_400
+            );
 
             var buriedDeployments = new BuriedDeploymentsArray
             {
@@ -184,7 +193,11 @@ namespace Stratis.Sidechains.Networks
                 [BuriedDeployments.BIP66] = 0
             };
 
-            var bip9Deployments = new NoBIP9Deployments();
+            var bip9Deployments = new CirrusBIP9Deployments()
+            {
+                // Deployment will go active once 75% of nodes are on 1.3.0.0 or later.
+                [CirrusBIP9Deployments.Release1320] = new BIP9DeploymentsParameters("Release1320", CirrusBIP9Deployments.FlagBitRelease1320, DateTime.Parse("2022-6-15 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-1-1 +0").ToUnixTimestamp(), 8100 /* 75% Activation Threshold */)
+            };
 
             this.Consensus = new Consensus(
                 consensusFactory: consensusFactory,
@@ -198,7 +211,7 @@ namespace Stratis.Sidechains.Networks
                 buriedDeployments: buriedDeployments,
                 bip9Deployments: bip9Deployments,
                 bip34Hash: new uint256("0x000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8"),
-                minerConfirmationWindow: 2016, // nPowTargetTimespan / nPowTargetSpacing
+                minerConfirmationWindow: 10800, // nPowTargetTimespan / nPowTargetSpacing
                 maxReorgLength: 240, // Heuristic. Roughly 2 * mining members
                 defaultAssumeValid: new uint256("0xbfd4a96a6c5250f18bf7c586761256fa5f8753ffa10b24160f0648a452823a95"), // 1400000
                 maxMoney: Money.Coins(100_000_000),
@@ -267,6 +280,13 @@ namespace Stratis.Sidechains.Networks
                 { 1_850_000, new CheckpointInfo(new uint256("0x6e2590bd9a8eaab25b236c0c9ac314abec70b18aa053b96c9257f2356dec8314")) },
                 { 2_150_000, new CheckpointInfo(new uint256("0x4c65f29b5098479cab275afd77d302ebe5ed8d8ef33e02ae54bf185865763f18")) },
                 { 2_500_000, new CheckpointInfo(new uint256("0x2853be7b7224840d3d4b60427ea832e9bd67d8fc6bfcd4956b8c6b2414cf8fc2")) },
+                { 2_827_550, new CheckpointInfo(new uint256("0xcf0ebdd99ec04ef260d22befe70ef7b948e50b5fcc18d9d37376d49e872372a0")) },
+                { 3_000_000, new CheckpointInfo(new uint256("0x79afa4a91a24b5e72632ad01d2a18330aecd1bc2cd4eea82eda5e3945fb0b238")) },
+                { 3_200_000, new CheckpointInfo(new uint256("0x6ec55b3b252f45e6677abf553601fb7bc97637319a9646e84d787769afe65988")) },
+                { 3_500_000, new CheckpointInfo(new uint256("0x1772356d6498935ab93cbd5eaf1b868c5265480edeef2b5fec133fbc21b292cb")) },
+                { 3_700_000, new CheckpointInfo(new uint256("0x16b41558dedb4945476f0212034bd148bef3cdeccdd1b55a198f8b1d6900716b")) },
+                { 3_834_160, new CheckpointInfo(new uint256("0xa0e7b27d1e642301a5b3a985dc98953858d89849e9b864de7e9b62e6856973a0")) },
+                { 4_100_000, new CheckpointInfo(new uint256("0x4f099739c22560ce27b7d5e6d30e86e7e6f52062504f0d31c25a427074de85f8")) }
             };
 
             this.DNSSeeds = new List<DNSSeedData>

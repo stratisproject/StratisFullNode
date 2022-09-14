@@ -21,6 +21,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
         /// <inheritdoc/>
         public override Task RunAsync(RuleContext context)
         {
+            if (context.SkipValidation)
+                return Task.CompletedTask;
+
             Block block = context.ValidationContext.BlockToValidate;
 
             foreach (Transaction transaction in block.Transactions)

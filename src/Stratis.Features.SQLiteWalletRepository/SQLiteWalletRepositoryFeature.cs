@@ -2,41 +2,22 @@
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
-using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 
 namespace Stratis.Features.SQLiteWalletRepository
 {
     public class SQLiteWalletRepositoryFeature : FullNodeFeature
-    {
-        /// <summary>The settings for the node.</summary>
-        private readonly NodeSettings nodeSettings;
-
-        /// <summary>The logger factory used to create instance loggers.</summary>
-        private readonly ILoggerFactory loggerFactory;
-
-        /// <summary>The instance logger.</summary>
-        private readonly ILogger logger;
-
-        /// <summary>The SQLite wallet repository.</summary>
-        private readonly SQLiteWalletRepository sqliteWalletRepository;
-
+    {        
         /// <summary>
         /// Initializes a new instance of the <see cref="SQLiteWalletRepositoryFeature"/> class.
         /// </summary>
         /// <param name="nodeSettings">The settings for the node.</param>
         /// <param name="loggerFactory">The factory used to create instance loggers.</param>
-        public SQLiteWalletRepositoryFeature(
-            NodeSettings nodeSettings,
-            ILoggerFactory loggerFactory)
+        public SQLiteWalletRepositoryFeature()
         {
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
-            this.loggerFactory = loggerFactory;
-            this.nodeSettings = nodeSettings;
         }
 
         /// <summary>

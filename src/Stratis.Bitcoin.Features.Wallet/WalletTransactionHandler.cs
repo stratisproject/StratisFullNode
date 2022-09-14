@@ -66,9 +66,12 @@ namespace Stratis.Bitcoin.Features.Wallet
 
                 Transaction transaction = context.TransactionBuilder.BuildTransaction(false);
 
-                // If there are cross chain deposits, try and validate them before
-                // we continue with signing and verification.
-                DepositValidationHelper.ValidateCrossChainDeposit(this.network, transaction);
+                if (!context.IsInteropFeeForMultisig)
+                {
+                    // If there are cross chain deposits, try and validate them before
+                    // we continue with signing and verification.
+                    DepositValidationHelper.ValidateCrossChainDeposit(this.network, transaction);
+                }
 
                 ICoin[] spentCoins = context.TransactionBuilder.FindSpentCoins(transaction);
 
@@ -107,58 +110,6 @@ namespace Stratis.Bitcoin.Features.Wallet
             string errorsMessage = string.Join(" - ", errors.Select(s => s.ToString()));
             this.logger.LogError($"Build transaction failed: {errorsMessage}");
             throw new WalletException($"Could not build the transaction. Details: {errorsMessage}");
-        }
-
-        // TODO: This only seems to be used in a test, consider removing it?
-        /// <inheritdoc />
-        public void FundTransaction(TransactionBuildContext context, Transaction transaction)
-        {
-            if (context.Recipients.Any())
-                throw new WalletException("Adding outputs is not allowed.");
-
-            // Turn the txout set into a Recipient array.
-            context.Recipients.AddRange(transaction.Outputs
-                .Select(s => new Recipient
-                {
-                    ScriptPubKey = s.ScriptPubKey,
-                    Amount = s.Value,
-                    SubtractFeeFromAmount = false // default for now
-                }));
-
-            context.AllowOtherInputs = true;
-
-            foreach (TxIn transactionInput in transaction.Inputs)
-                context.SelectedInputs.Add(transactionInput.PrevOut);
-
-            Transaction newTransaction = this.BuildTransaction(context);
-
-            if (context.ChangeAddress != null)
-            {
-                // find the position of the change and move it over.
-                int index = 0;
-                foreach (TxOut newTransactionOutput in newTransaction.Outputs)
-                {
-                    if (newTransactionOutput.ScriptPubKey == context.ChangeAddress.ScriptPubKey)
-                    {
-                        transaction.Outputs.Insert(index, newTransactionOutput);
-                    }
-
-                    index++;
-                }
-            }
-
-            // TODO: copy the new output amount size (this also includes spreading the fee over all outputs)
-
-            // copy all the inputs from the new transaction.
-            foreach (TxIn newTransactionInput in newTransaction.Inputs)
-            {
-                if (!context.SelectedInputs.Contains(newTransactionInput.PrevOut))
-                {
-                    transaction.Inputs.Add(newTransactionInput);
-
-                    // TODO: build a mechanism to lock inputs
-                }
-            }
         }
 
         /// <inheritdoc />
@@ -677,5 +628,11 @@ namespace Stratis.Bitcoin.Features.Wallet
         {
             get { return this.Recipients?.Any(r => r.SubtractFeeFromAmount) ?? false; }
         }
+
+        /// <summary>
+        /// A flag indicating that the output paying the multisig relates to an interop associated fee.
+        /// This will skip the OP_RETURN validation in the cross chain deposit validation helper.
+        /// </summary>
+        public bool IsInteropFeeForMultisig { get; set; }
     }
 }

@@ -94,7 +94,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
                 ICrossChainTransferStore fedSideStore = context.FedSide1.FullNode.NodeService<ICrossChainTransferStore>();
                 TestBase.WaitLoop(() =>
                 {
-                    ICrossChainTransfer[] fullySignedTransactions = fedSideStore.GetTransfersByStatus(new[] {CrossChainTransferStatus.FullySigned});
+                    ICrossChainTransfer[] fullySignedTransactions = fedSideStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.FullySigned });
                     return fullySignedTransactions.Length == toSend;
                 });
 

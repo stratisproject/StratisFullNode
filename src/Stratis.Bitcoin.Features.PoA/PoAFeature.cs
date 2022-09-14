@@ -153,6 +153,7 @@ namespace Stratis.Bitcoin.Features.PoA
         }
 
         /// <summary>Replaces default <see cref="ConsensusManagerBehavior"/> with <see cref="PoAConsensusManagerBehavior"/>.</summary>
+        /// <param name="connectionParameters">See <see cref="NetworkPeerConnectionParameters"/>.</param>
         private void ReplaceConsensusManagerBehavior(NetworkPeerConnectionParameters connectionParameters)
         {
             INetworkPeerBehavior defaultConsensusManagerBehavior = connectionParameters.TemplateBehaviors.FirstOrDefault(behavior => behavior is ConsensusManagerBehavior);
@@ -167,6 +168,7 @@ namespace Stratis.Bitcoin.Features.PoA
         }
 
         /// <summary>Replaces default <see cref="PoABlockStoreBehavior"/> with <see cref="PoABlockStoreBehavior"/>.</summary>
+        /// <param name="connectionParameters">See <see cref="NetworkPeerConnectionParameters"/>.</param>
         private void ReplaceBlockStoreBehavior(NetworkPeerConnectionParameters connectionParameters)
         {
             INetworkPeerBehavior defaultBlockStoreBehavior = connectionParameters.TemplateBehaviors.FirstOrDefault(behavior => behavior is BlockStoreBehavior);

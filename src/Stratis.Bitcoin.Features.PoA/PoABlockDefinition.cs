@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using NBitcoin;
+﻿using NBitcoin;
 using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.MemoryPool;
@@ -16,13 +15,12 @@ namespace Stratis.Bitcoin.Features.PoA
         public PoABlockDefinition(
             IConsensusManager consensusManager,
             IDateTimeProvider dateTimeProvider,
-            ILoggerFactory loggerFactory,
             ITxMempool mempool,
             MempoolSchedulerLock mempoolLock,
             Network network,
             MinerSettings minerSettings,
             NodeDeployments nodeDeployments)
-            : base(consensusManager, dateTimeProvider, loggerFactory, mempool, mempoolLock, minerSettings, network, nodeDeployments)
+            : base(consensusManager, dateTimeProvider, mempool, mempoolLock, minerSettings, network, nodeDeployments)
         {
         }
 

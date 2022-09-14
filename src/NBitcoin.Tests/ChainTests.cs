@@ -31,7 +31,7 @@ namespace NBitcoin.Tests
             ChainedHeader fork = this.AppendBlock(chain);
             this.AppendBlock(chain);
 
-            var chain2 = new ChainIndexer(this.network).Load(chain.ToBytes());
+            ChainIndexer chain2 = new ChainIndexer(this.network).Load(chain.ToBytes());
             Assert.True(chain.Tip.HashBlock == chain2.Tip.HashBlock);
         }
 
@@ -149,7 +149,7 @@ namespace NBitcoin.Tests
         [Trait("UnitTest", "UnitTest")]
         public void CanCalculateDifficulty()
         {
-            var main = new ChainIndexer(this.network).Load(this.LoadMainChain());
+            ChainIndexer main = new ChainIndexer(this.network).Load(this.LoadMainChain());
             // The state of the line separators may be affected by copy operations - so do an environment independent line split...
             string[] histories = File.ReadAllText(TestDataLocations.GetFileFromDataFolder("targethistory.csv")).Split(new string[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries);
 
@@ -161,7 +161,7 @@ namespace NBitcoin.Tests
                 BlockHeader block = main.GetHeaderByHeight(height).Header;
 
                 Assert.Equal(expectedTarget, block.Bits);
-                Target target = main.GetHeaderByHeight(height).GetWorkRequired(network);
+                Target target = main.GetHeaderByHeight(height).GetWorkRequired(this.network);
                 Assert.Equal(expectedTarget, target);
             }
         }
@@ -170,7 +170,7 @@ namespace NBitcoin.Tests
         [Trait("UnitTest", "UnitTest")]
         public void CanValidateChain()
         {
-            var main = new ChainIndexer(this.network).Load(this.LoadMainChain());
+            ChainIndexer main = new ChainIndexer(this.network).Load(this.LoadMainChain());
             foreach (ChainedHeader h in main.EnumerateToTip(main.Genesis))
             {
                 Assert.True(h.Validate(this.network));
@@ -340,7 +340,7 @@ namespace NBitcoin.Tests
         {
             var chain = new ChainIndexer(this.network);
 
-            var chainedHeaderPrev = chain.Tip;
+            ChainedHeader chainedHeaderPrev = chain.Tip;
 
             for (int i = 0; i < height; i++)
             {

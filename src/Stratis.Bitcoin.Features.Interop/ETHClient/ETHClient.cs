@@ -5,11 +5,12 @@ using Nethereum.ABI;
 using Nethereum.Contracts;
 using Nethereum.Hex.HexConvertors.Extensions;
 using Nethereum.Hex.HexTypes;
-using Nethereum.JsonRpc.Client;
 using Nethereum.RPC.Eth.Blocks;
 using Nethereum.RPC.Eth.DTOs;
 using Nethereum.Web3;
 using Nethereum.Web3.Accounts.Managed;
+using NLog;
+using Stratis.Bitcoin.Features.Interop.Settings;
 
 namespace Stratis.Bitcoin.Features.Interop.ETHClient
 {
@@ -22,11 +23,21 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// </summary>
         Task CreateTransferEventFilterAsync();
 
-        /// <summary>
-        /// Queries the previously created event filter for any new events matching the filter criteria.
-        /// </summary>
-        /// <returns>A list of event logs.</returns>
-        Task<List<EventLog<TransferEventDTO>>> GetTransferEventsForWrappedStraxAsync();
+        Task<Transaction> GetTransactionAsync(string transactionHash);
+
+        Task<SubmitTransactionFunction> GetSubmitTransactionAsync(string transactionHash);
+
+        Task<ConfirmTransactionFunction> GetConfirmTransactionAsync(string transactionHash);
+
+        Task<MintFunction> GetMintTransactionAsync(string transactionHash);
+
+        Task<BurnFunction> GetBurnTransactionAsync(string transactionHash);
+
+        Task<BlockWithTransactions> GetBlockAsync(BigInteger blockNumber);
+
+        List<(string TransactionHash, BurnFunction Burn)> GetWStraxBurnsFromBlock(BlockWithTransactions block);
+
+        Task<List<(string TransactionHash, string TransferContractAddress, TransferDetails Transfer)>> GetTransfersFromBlockAsync(BlockWithTransactions block, HashSet<string> erc20tokens, HashSet<string> erc721tokens);
 
         /// <summary>
         /// Retrieves the STRAX address that was recorded in the wrapped STRAX contract when a given account
@@ -43,34 +54,53 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         Task<BigInteger> GetBlockHeightAsync();
 
         /// <summary>
+        /// Retrieves the balance for an Ethereum account.
+        /// </summary>
+        /// <param name="address">The Ethereum account to retrieve the destination balance for.</param>
+        /// <returns>The balance of the account in wei.</returns>
+        Task<BigInteger> GetBalanceAsync(string address);
+
+        /// <summary>
         /// Submits a transaction to the multisig wallet contract, to enable it to be separately confirmed by a quorum of the multisig wallet owners.
         /// </summary>
         /// <param name="destination">The account that the transaction is being sent to after confirmation. For wSTRAX operations this will typically be the wSTRAX ERC20 contract address.</param>
         /// <param name="value">The amount that is being sent. For wSTRAX operations this is typically zero, as the balance changes are encoded within the additional data.</param>
         /// <param name="data">Additional transaction data. This is encoded in accordance with the applicable contract's ABI.</param>
-        /// <returns>Returns the transactionId of the transaction</returns>
-        Task<BigInteger> SubmitTransactionAsync(string destination, BigInteger value, string data);
+        /// <param name="gasPrice">The gas price to be used for the transaction, in gwei.</param>
+        /// <returns>Returns the hash and transactionId of the submission transaction.</returns>
+        Task<MultisigTransactionIdentifiers> SubmitTransactionAsync(string destination, BigInteger value, string data, int gasPrice);
 
         /// <summary>
         /// Confirms a multisig wallet transaction.
         /// </summary>
         /// <remarks>Once a sufficient threshold of confirmations is reached, the contract will automatically execute the saved transaction.</remarks>
         /// <param name="transactionId">The transactionId of an existing transaction stored in the multisig wallet contract.</param>
+        /// <param name="gasPrice">The gas price to be used for the transaction, in gwei.</param>
         /// <returns>The hash of the confirmation transaction.</returns>
-        Task<string> ConfirmTransactionAsync(BigInteger transactionId);
+        Task<string> ConfirmTransactionAsync(BigInteger transactionId, int gasPrice);
 
         /// <summary>
         /// Retrieve the number of confirmations a given transaction currently has in the multisig wallet contract.
         /// </summary>
-        /// <param name="transactionId">The identifier of the transaction.</param>
+        /// <param name="transactionId">The numeric identifier of the transaction stored inside the multisig contract.</param>
         /// <returns>The number of confirmations.</returns>
-        Task<BigInteger> GetConfirmationCountAsync(BigInteger transactionId);
+        Task<BigInteger> GetMultisigConfirmationCountAsync(BigInteger transactionId);
+
+        Task<(BigInteger ConfirmationCount, string BlockHash)> GetConfirmationsAsync(string transactionHash);
 
         /// <summary>
         /// Gets the list of owners for the multisig wallet contract.
         /// </summary>
         /// <returns>The list of owner accounts.</returns>
         Task<List<string>> GetOwnersAsync();
+
+        /// <summary>
+        /// Checks if the given address confirmed the given multisig transaction.
+        /// </summary>
+        /// <param name="transactionId">The identifier of the transaction.</param>
+        /// <param name="address">The address to check the confirmation status of.</param>
+        /// <returns>True if the address has confirmed the transaction in question.</returns>
+        Task<bool> AddressConfirmedTransactionAsync(BigInteger transactionId, string address);
 
         /// <summary>
         /// Gets a transaction out of the transactions mapping on the contract and decodes it.
@@ -91,7 +121,32 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// </summary>
         /// <param name="addressToQuery">The account to retrieve the ERC20 balance of.</param>
         /// <returns>The balance of the account.</returns>
-        Task<BigInteger> GetErc20BalanceAsync(string addressToQuery);
+        Task<BigInteger> GetWStraxBalanceAsync(string addressToQuery);
+
+        Task<BigInteger> GetErc20BalanceAsync(string addressToQuery, string contractAddress);
+
+        /// <summary>
+        /// Retrieves a string from the Key Value Store contract.
+        /// </summary>
+        /// <remarks>Submitted key-value pairs are not fully private to the node that submitted them, and can be
+        /// read by any participant on the associated network if they have knowledge of the submitter's address
+        /// as well as the key.</remarks>
+        /// <param name="address">The address of the node that originally submitted the key-value pair.</param>
+        /// <param name="key">The key of the key-value pair to be retrieved.</param>
+        /// <returns>The string value stored against the specified key by the specified submitting node.</returns>
+        Task<string> GetKeyValueStoreAsync(string address, string key);
+
+        /// <summary>
+        /// Stores a string value in the Key Value Store contract.
+        /// </summary>
+        /// <remarks>It is not possible to specify the 'source address', it is automatically set to
+        /// the address of the submitting node's wallet. It is also therefore not possible to overwrite
+        /// another node's submitted values, inadvertently or otherwise.</remarks>
+        /// <param name="key">The key to store the value against.</param>
+        /// <param name="value">The string value to be stored.</param>
+        /// <param name="gasPrice">The gas price to be used for the transaction, in gwei.</param>
+        /// <returns>The transaction ID of the resulting contract call transaction.</returns>
+        Task<string> SetKeyValueStoreAsync(string key, string value, BigInteger gasPrice);
 
         /// <summary>
         /// Returns the encoded form of transaction data that calls the transfer(address, uint256) method on the WrappedStrax contract.
@@ -147,6 +202,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
     {
         protected ETHInteropSettings settings;
         protected Web3 web3;
+        private readonly ILogger logger;
         protected Event<TransferEventDTO> transferEventHandler;
         protected NewFilterInput filterAllTransferEventsForContract;
         protected HexBigInteger filterId;
@@ -156,7 +212,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         public ETHClient(InteropSettings interopSettings)
         {
             this.SetupConfiguration(interopSettings);
-            
+
             if (!this.settings.InteropEnabled)
                 return;
 
@@ -164,6 +220,8 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
             // TODO: Support loading offline accounts from keystore JSON directly?
             this.web3 = !string.IsNullOrWhiteSpace(this.settings.ClientUrl) ? new Web3(account, this.settings.ClientUrl) : new Web3(account);
+
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
         protected virtual void SetupConfiguration(InteropSettings interopSettings)
@@ -179,21 +237,178 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
             this.filterId = await this.transferEventHandler.CreateFilterAsync(this.filterAllTransferEventsForContract).ConfigureAwait(false);
         }
 
-        /// <inheritdoc />
-        public async Task<List<EventLog<TransferEventDTO>>> GetTransferEventsForWrappedStraxAsync()
+        public async Task<Transaction> GetTransactionAsync(string transactionHash)
         {
-            try
+            return await this.web3.Eth.Transactions.GetTransactionByHash.SendRequestAsync(transactionHash).ConfigureAwait(false);
+        }
+
+        public async Task<SubmitTransactionFunction> GetSubmitTransactionAsync(string transactionHash)
+        {
+            Transaction tx = await GetTransactionAsync(transactionHash).ConfigureAwait(false);
+
+            return tx.DecodeTransactionToFunctionMessage<SubmitTransactionFunction>();
+        }
+
+        public async Task<ConfirmTransactionFunction> GetConfirmTransactionAsync(string transactionHash)
+        {
+            Transaction tx = await GetTransactionAsync(transactionHash).ConfigureAwait(false);
+
+            return tx.DecodeTransactionToFunctionMessage<ConfirmTransactionFunction>();
+        }
+
+        public async Task<MintFunction> GetMintTransactionAsync(string transactionHash)
+        {
+            Transaction tx = await GetTransactionAsync(transactionHash).ConfigureAwait(false);
+
+            return tx.DecodeTransactionToFunctionMessage<MintFunction>();
+        }
+
+        public async Task<BurnFunction> GetBurnTransactionAsync(string transactionHash)
+        {
+            Transaction tx = await GetTransactionAsync(transactionHash).ConfigureAwait(false);
+
+            return tx.DecodeTransactionToFunctionMessage<BurnFunction>();
+        }
+
+        public async Task<BlockWithTransactions> GetBlockAsync(BigInteger blockNumber)
+        {
+            return await this.web3.Eth.Blocks.GetBlockWithTransactionsByNumber.SendRequestAsync(new HexBigInteger(blockNumber)).ConfigureAwait(false);
+        }
+
+        public List<(string TransactionHash, BurnFunction Burn)> GetWStraxBurnsFromBlock(BlockWithTransactions block)
+        {
+            var burns = new List<(string TransactionHash, BurnFunction Burn)>();
+
+            foreach (Transaction tx in block.Transactions)
             {
-                // Note: this will only return events from after the filter is created.
-                return await this.transferEventHandler.GetFilterChanges(this.filterId).ConfigureAwait(false);
-            }
-            catch (RpcResponseException)
-            {
-                // If the filter is no longer available it may need to be re-created.
-                await this.CreateTransferEventFilterAsync().ConfigureAwait(false);
+                if (!tx.IsTo(this.settings.WrappedStraxContractAddress))
+                    continue;
+
+                BurnFunction burn;
+
+                try
+                {
+                    // It is known that there is only one 'valid' way of burning wSTRAX, so we can use a function instead of an event here.
+                    burn = tx.DecodeTransactionToFunctionMessage<BurnFunction>();
+                }
+                catch
+                {
+                    continue;
+                }
+
+                if (burn.Amount == BigInteger.Zero)
+                {
+                    // Ignoring zero-valued burn transaction.
+                    continue;
+                }
+
+                if (burn.Amount < BigInteger.Zero)
+                {
+                    // Ignoring negative-valued burn transaction.
+                    continue;
+                }
+
+                burns.Add((tx.TransactionHash, burn));
             }
 
-            return await this.transferEventHandler.GetFilterChanges(this.filterId).ConfigureAwait(false);
+            return burns;
+        }
+
+        public async Task<List<(string TransactionHash, string TransferContractAddress, TransferDetails Transfer)>> GetTransfersFromBlockAsync(BlockWithTransactions block, HashSet<string> erc20Tokens, HashSet<string> erc721Tokens)
+        {
+            var transfers = new List<(string TransactionHash, string TransferContractAddress, TransferDetails Transfer)>();
+
+            foreach (Transaction tx in block.Transactions)
+            {
+                // The transfer call obviously isn't made against the federation's multisig wallet contract itself. So we need to check against the list of previously added token contracts.
+                if (!erc20Tokens.Contains(tx.To) && !erc721Tokens.Contains(tx.To))
+                    continue;
+
+                try
+                {
+                    this.logger.Debug($"Decoding transaction of interest '{tx.TransactionHash}'");
+
+                    TransactionReceipt receipt = await this.web3.Eth.Transactions.GetTransactionReceipt.SendRequestAsync(tx.TransactionHash).ConfigureAwait(false);
+
+                    IEnumerable<FilterLogVO> logs = tx.GetTransactionLogs(receipt);
+
+                    foreach (FilterLogVO log in logs)
+                    {
+                        // By looking for the emitted event instead of looking for actual function calls we cater for a much wider variety of ERC20 implementations.
+                        EventLog<TransferEventDTO> eventLog = log?.Log?.DecodeEvent<TransferEventDTO>();
+
+                        // TODO: We could probably optimise this even further by only trying to decode the event as the expected type, not both when the first attempt fails.
+                        if (eventLog != null)
+                        {
+                            if (eventLog.Event.To != this.settings.MultisigWalletAddress)
+                            {
+                                // Ignoring transfers that are made to any address except the federation's multisig wallet.
+                                continue;
+                            }
+
+                            if (eventLog.Event.Value == BigInteger.Zero)
+                            {
+                                // Ignoring zero-valued transfer.
+                                continue;
+                            }
+
+                            if (eventLog.Event.Value < BigInteger.Zero)
+                            {
+                                // Ignoring negative-valued transfer.
+                                continue;
+                            }
+
+                            transfers.Add((tx.TransactionHash, tx.To, new TransferDetails
+                            {
+                                ContractType = ContractType.ERC20,
+                                TransferType = TransferType.Transfer,
+                                From = eventLog.Event.From,
+                                To = eventLog.Event.To,
+                                Value = eventLog.Event.Value
+                            }));
+
+                            continue;
+                        }
+
+                        EventLog<NftTransferEventDTO> nftEventLog = log?.Log?.DecodeEvent<NftTransferEventDTO>();
+
+                        if (nftEventLog != null)
+                        {
+                            if (nftEventLog.Event.To != this.settings.MultisigWalletAddress)
+                            {
+                                // Ignoring transfers that are made to any address except the federation's multisig wallet.
+                                continue;
+                            }
+
+                            if (nftEventLog.Event.TokenId == BigInteger.Zero)
+                            {
+                                // Ignoring zero-valued transfer.
+                                continue;
+                            }
+
+                            if (nftEventLog.Event.TokenId < BigInteger.Zero)
+                            {
+                                continue;
+                            }
+
+                            transfers.Add((tx.TransactionHash, tx.To, new TransferDetails
+                            {
+                                ContractType = ContractType.ERC721,
+                                TransferType = TransferType.Transfer,
+                                From = nftEventLog.Event.From,
+                                To = nftEventLog.Event.To,
+                                Value = nftEventLog.Event.TokenId
+                            }));
+                        }
+                    }
+                }
+                catch
+                {
+                    continue;
+                }
+            }
+
+            return transfers;
         }
 
         /// <inheritdoc />
@@ -207,24 +422,33 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         {
             var blockNumberHandler = new EthBlockNumber(this.web3.Client);
             HexBigInteger block = await blockNumberHandler.SendRequestAsync().ConfigureAwait(false);
-            
+
             return block.Value;
         }
 
         /// <inheritdoc />
-        public async Task<BigInteger> SubmitTransactionAsync(string destination, BigInteger value, string data)
+        public async Task<BigInteger> GetBalanceAsync(string address)
         {
-            return await MultisigWallet.SubmitTransactionAsync(this.web3, this.settings.MultisigWalletAddress, destination, value, data, this.settings.GasLimit, this.settings.GasPrice).ConfigureAwait(false);
+
+            HexBigInteger balance = await this.web3.Eth.GetBalance.SendRequestAsync(address).ConfigureAwait(false);
+
+            return balance.Value;
         }
 
         /// <inheritdoc />
-        public async Task<string> ConfirmTransactionAsync(BigInteger transactionId)
+        public async Task<MultisigTransactionIdentifiers> SubmitTransactionAsync(string destination, BigInteger value, string data, int gasPrice)
         {
-            return await MultisigWallet.ConfirmTransactionAsync(this.web3, this.settings.MultisigWalletAddress, transactionId, this.settings.GasLimit, this.settings.GasPrice).ConfigureAwait(false);
+            return await MultisigWallet.SubmitTransactionAsync(this.web3, this.settings.MultisigWalletAddress, destination, value, data, this.settings.GasLimit, gasPrice).ConfigureAwait(false);
         }
 
         /// <inheritdoc />
-        public async Task<BigInteger> GetConfirmationCountAsync(BigInteger transactionId)
+        public async Task<string> ConfirmTransactionAsync(BigInteger transactionId, int gasPrice)
+        {
+            return await MultisigWallet.ConfirmTransactionAsync(this.web3, this.settings.MultisigWalletAddress, transactionId, this.settings.GasLimit, gasPrice).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task<BigInteger> GetMultisigConfirmationCountAsync(BigInteger transactionId)
         {
             return await MultisigWallet.GetConfirmationCountAsync(this.web3, this.settings.MultisigWalletAddress, transactionId).ConfigureAwait(false);
         }
@@ -235,19 +459,63 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
             return await MultisigWallet.GetOwnersAsync(this.web3, this.settings.MultisigWalletAddress).ConfigureAwait(false);
         }
 
+        /// <inheritdoc />
         public async Task<TransactionDTO> GetMultisigTransactionAsync(BigInteger transactionId)
         {
             return await MultisigWallet.GetTransactionAsync(this.web3, this.settings.MultisigWalletAddress, transactionId).ConfigureAwait(false);
         }
 
+        /// <inheritdoc />
+        public async Task<bool> AddressConfirmedTransactionAsync(BigInteger transactionId, string address)
+        {
+            ConfirmationsDTO result = await MultisigWallet.AddressConfirmedTransactionAsync(this.web3, this.settings.MultisigWalletAddress, transactionId, address).ConfigureAwait(false);
+
+            return result.Confirmed;
+        }
+
+        /// <inheritdoc />
         public async Task<string> GetRawMultisigTransactionAsync(BigInteger transactionId)
         {
             return await MultisigWallet.GetRawTransactionAsync(this.web3, this.settings.MultisigWalletAddress, transactionId).ConfigureAwait(false);
         }
 
-        public async Task<BigInteger> GetErc20BalanceAsync(string addressToQuery)
+        /// <inheritdoc />
+        public async Task<(BigInteger ConfirmationCount, string BlockHash)> GetConfirmationsAsync(string transactionHash)
+        {
+            Transaction transaction = await this.web3.Eth.Transactions.GetTransactionByHash.SendRequestAsync(transactionHash).ConfigureAwait(false);
+
+            if (transaction == null || transaction.BlockNumber == null)
+                return (0, string.Empty);
+
+            BigInteger currentBlockHeight = await this.GetBlockHeightAsync().ConfigureAwait(false);
+
+            BigInteger confirmations = currentBlockHeight - transaction.BlockNumber.Value;
+
+            return (confirmations > 0 ? confirmations : BigInteger.Zero, transaction.BlockHash);
+        }
+
+        /// <inheritdoc />
+        public async Task<BigInteger> GetWStraxBalanceAsync(string addressToQuery)
         {
             return await WrappedStrax.GetErc20BalanceAsync(this.web3, this.settings.WrappedStraxContractAddress, addressToQuery).ConfigureAwait(false);
+        }
+
+        public async Task<BigInteger> GetErc20BalanceAsync(string addressToQuery, string contractAddress)
+        {
+            // TODO: Make a generic ERC20 contract interface for the necessary methods, rather than sharing this
+            return await WrappedStrax.GetErc20BalanceAsync(this.web3, contractAddress, addressToQuery).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task<string> GetKeyValueStoreAsync(string address, string key)
+        {
+            return await KVStore.GetAsync(this.web3, this.settings.KeyValueStoreContractAddress, address, key).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task<string> SetKeyValueStoreAsync(string key, string value, BigInteger gasPrice)
+        {
+            return await KVStore.SetAsync(this.web3, this.settings.KeyValueStoreContractAddress, key, value, this.settings.GasLimit, gasPrice).ConfigureAwait(false);
         }
 
         /// <inheritdoc />

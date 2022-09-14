@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.Text;
 using System.Threading.Tasks;
 using NBitcoin.DataEncoders;
 using Nethereum.ABI.FunctionEncoding.Attributes;
@@ -77,6 +76,23 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
     }
 
     [FunctionOutput]
+    public class ConfirmationsDTO : IFunctionOutputDTO
+    {
+        [Parameter("bool", "confirmed", 1)]
+        public bool Confirmed { get; set; }
+    }
+
+    [Function("confirmations", typeof(ConfirmationsDTO))]
+    public class ConfirmationsFunction : FunctionMessage
+    {
+        [Parameter("uint256", "transactionId", 1)]
+        public BigInteger TransactionId { get; set; }
+
+        [Parameter("address", "address", 1)]
+        public string Address { get; set; }
+    }
+
+    [FunctionOutput]
     public class TransactionDTO : IFunctionOutputDTO
     {
         /// <summary>
@@ -106,6 +122,29 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// </summary>
         [Parameter("bool", "executed", 4)]
         public bool Executed { get; set; }
+    }
+
+    public class MultisigTransactionIdentifiers
+    {
+        /// <summary>
+        /// The height of the block which included the transaction containing the multisig contract call (Cirrus or Ethereum).
+        /// </summary>
+        public int BlockHeight { get; internal set; }
+
+        /// <summary>
+        /// The hash of the Ethereum transaction containing the multisig contract call.
+        /// </summary>
+        public string TransactionHash { get; set; }
+
+        /// <summary>
+        /// The related multisig contract transaction ID.
+        /// </summary>
+        public BigInteger TransactionId { get; set; }
+
+        /// <summary>
+        /// Any messages related to the call (this will be used primarily for minting on Cirrus).
+        /// </summary>
+        public string Message { get; set; }
     }
 
     [Function("transactions", typeof(TransactionDTO))]
@@ -161,6 +200,21 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         }
 
         /// <summary>
+        /// Checks whether the given transaction identified by the transactionId has been confirmed by the given address.
+        /// </summary>
+        /// <param name="web3">The web3 interface instance to use.</param>
+        /// <param name="contractAddress">The address of the deployed multisig wallet contract.</param>
+        /// <param name="transactionId">The multisig wallet transaction identifier.</param>
+        /// <param name="address">The address to check the transaction's confirmation status with.</param>
+        /// <returns>An object containing the boolean confirmation state.</returns>
+        public static async Task<ConfirmationsDTO> AddressConfirmedTransactionAsync(Web3 web3, string contractAddress, BigInteger transactionId, string address)
+        {
+            ContractHandler handler = web3.Eth.GetContractHandler(contractAddress);
+
+            return await handler.QueryDeserializingToObjectAsync<ConfirmationsFunction, ConfirmationsDTO>(new ConfirmationsFunction() { TransactionId = transactionId, Address = address }).ConfigureAwait(false);
+        }
+
+        /// <summary>
         /// Gets a transaction out of the transactions mapping on the contract and decodes it.
         /// </summary>
         /// <param name="web3">The web3 interface instance to use.</param>
@@ -189,10 +243,10 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
             return Encoders.Hex.EncodeData(rawTransaction);
         }
 
-        public static async Task<BigInteger> SubmitTransactionAsync(Web3 web3, string contractAddress, string destination, BigInteger value, string data, BigInteger gas, BigInteger gasPrice)
+        public static async Task<MultisigTransactionIdentifiers> SubmitTransactionAsync(Web3 web3, string contractAddress, string destination, BigInteger value, string data, BigInteger gas, BigInteger gasPrice)
         {
             IContractTransactionHandler<SubmitTransactionFunction> submitHandler = web3.Eth.GetContractTransactionHandler<SubmitTransactionFunction>();
-            
+
             var submitTransactionFunctionMessage = new SubmitTransactionFunction()
             {
                 Destination = destination,
@@ -207,9 +261,9 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
             // Use -1 as an error indicator.
             if (submission == null)
-                return BigInteger.MinusOne;
+                return new MultisigTransactionIdentifiers() { TransactionId = BigInteger.MinusOne };
 
-            return submission.Event.TransactionId;
+            return new MultisigTransactionIdentifiers() { TransactionHash = submitTransactionReceipt.TransactionHash, TransactionId = submission.Event.TransactionId };
         }
 
         public static async Task<string> ConfirmTransactionAsync(Web3 web3, string contractAddress, BigInteger transactionId, BigInteger gas, BigInteger gasPrice)

@@ -4,6 +4,7 @@ using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Database;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Consensus.Interfaces;
 using Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders;
@@ -68,10 +69,10 @@ namespace Stratis.Bitcoin.Features.Consensus
                         services.AddSingleton<IProvenBlockHeaderStore, ProvenBlockHeaderStore>();
 
                         if (coindbType == DbType.Leveldb)
-                            services.AddSingleton<IProvenBlockHeaderRepository, LevelDbProvenBlockHeaderRepository>();
+                            services.AddSingleton<IProvenBlockHeaderRepository, ProvenBlockHeaderRepository<LevelDb>>();
 
                         if (coindbType == DbType.RocksDb)
-                            services.AddSingleton<IProvenBlockHeaderRepository, RocksDbProvenBlockHeaderRepository>();
+                            services.AddSingleton<IProvenBlockHeaderRepository, ProvenBlockHeaderRepository<RocksDb>>();
                     });
             });
 
@@ -80,17 +81,24 @@ namespace Stratis.Bitcoin.Features.Consensus
 
         public static void ConfigureCoinDatabaseImplementation(this IServiceCollection services, DbType coindbType)
         {
-            if (coindbType == DbType.Dbreeze)
-                services.AddSingleton<ICoindb, DBreezeCoindb>();
+            switch (coindbType)
+            {
+                case DbType.Dbreeze:
+                    services.AddSingleton<ICoindb, Coindb<DBreezeDbWithCoinDbNames>>();
+                    break;
 
-            if (coindbType == DbType.Leveldb)
-                services.AddSingleton<ICoindb, LevelDbCoindb>();
+                case DbType.Leveldb:
+                    services.AddSingleton<ICoindb, Coindb<LevelDb>>();
+                    break;
 
-            if (coindbType == DbType.Faster)
-                services.AddSingleton<ICoindb, FasterCoindb>();
+                case DbType.RocksDb:
+                    services.AddSingleton<ICoindb, Coindb<RocksDb>>();
+                    break;
 
-            if (coindbType == DbType.RocksDb)
-                services.AddSingleton<ICoindb, RocksDbCoindb>();
+                default:
+                    services.AddSingleton<ICoindb, Coindb<LevelDb>>();
+                    break;
+            }
         }
     }
 }

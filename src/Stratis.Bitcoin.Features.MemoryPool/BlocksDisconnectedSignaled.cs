@@ -53,6 +53,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// </summary>
         /// <remarks>This could potentially be optimized. with an async queue.</remarks>
         /// <param name="block">The disconnected block containing the transactions.</param>
+        /// <returns>The asynchronous task.</returns>
         private async Task AddBackToMempoolAsync(Block block)
         {
             var state = new MempoolValidationState(true);
@@ -78,6 +79,8 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// <summary>
         /// If there are any transactions in the mempool that depend on transactions no longer in the chain, remove them.
         /// </summary>
+        /// <param name="block">The block containing the coinbase that should not be spent.</param>
+        /// <returns>The asynchronous task.</returns>
         private async Task RemoveInvalidTransactionsAsync(Block block)
         {
             // TODO: This was initially implemented only to fix a known issue on Cirrus.
@@ -96,7 +99,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             // Invalid transactions would have spent the coinbase. The other transactions can be put back into the mempool and be fine.
             uint256 coinbaseId = block.Transactions[0].GetHash();
 
-            await this.mempoolLock.WriteAsync(async () =>
+            await this.mempoolLock.WriteAsync(() =>
             {
                 foreach (TxMempoolEntry mempoolEntry in this.mempool.MapTx.SpendsCoinbase.ToList())
                 {

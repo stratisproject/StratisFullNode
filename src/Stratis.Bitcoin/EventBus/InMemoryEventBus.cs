@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.EventBus.PerformanceCounters.InMemoryEventBus;
 using Stratis.Bitcoin.Utilities;
@@ -27,8 +28,12 @@ namespace Stratis.Bitcoin.EventBus
         /// </summary>
         private readonly object subscriptionsLock = new object();
 
+#pragma warning disable SA1648
+
         /// <inheritdoc cref="InMemoryEventBusPerformanceCounter"/>
         private readonly InMemoryEventBusPerformanceCounter performanceCounter;
+
+#pragma warning restore SA1648
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryEventBus"/> class.
@@ -43,6 +48,26 @@ namespace Stratis.Bitcoin.EventBus
             this.subscriptionErrorHandler = subscriptionErrorHandler ?? new DefaultSubscriptionErrorHandler(loggerFactory);
             this.subscriptions = new Dictionary<Type, List<ISubscription>>();
             this.performanceCounter = new InMemoryEventBusPerformanceCounter();
+        }
+
+        /// <inheritdoc />
+        public SubscriptionToken Subscribe(Type eventType, Func<EventBase, Task> handler)
+        {
+            if (handler == null)
+                throw new ArgumentNullException(nameof(handler));
+
+            lock (this.subscriptionsLock)
+            {
+                if (!this.subscriptions.ContainsKey(eventType))
+                {
+                    this.subscriptions.Add(eventType, new List<ISubscription>());
+                }
+
+                var subscriptionToken = new SubscriptionToken(this, eventType);
+                this.subscriptions[eventType].Add(new Subscription(handler, subscriptionToken));
+
+                return subscriptionToken;
+            }
         }
 
         /// <inheritdoc />

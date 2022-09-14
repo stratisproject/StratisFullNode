@@ -4,8 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
@@ -85,24 +85,69 @@ namespace Stratis.Bitcoin.BlockPulling
 
     public class BlockPuller : IBlockPuller
     {
-        /// <summary>Interval between checking if peers that were assigned important blocks didn't deliver the block.</summary>
-        private const int StallingLoopIntervalMs = 500;
+        public class Settings
+        {
+            /// <summary>Amount of samples that should be used for average block size calculation.</summary>
+            public int AverageBlockSizeSamplesCount => 1000;
 
-        /// <summary>The minimum empty slots percentage to start processing <see cref="downloadJobsQueue"/>.</summary>
-        private const double MinEmptySlotsPercentageToStartProcessingTheQueue = 0.1;
+            /// <summary>The minimal count of blocks that we can ask for simultaneous download.</summary>
+            public int MinimalCountOfBlocksBeingDownloaded { get; private set; } = 10;
 
-        /// <summary>
-        /// Defines which blocks are considered to be important.
-        /// If requested block height is less than out consensus tip height plus this value then the block is considered to be important.
-        /// </summary>
-        private const int ImportantHeightMargin = 10;
+            /// <summary>The maximum blocks being downloaded multiplier. Value of <c>1.1</c> means that we will ask for 10% more than we estimated peers can deliver.</summary>
+            public double MaxBlocksBeingDownloadedMultiplier => 1.1;
 
-        /// <summary>The maximum time in seconds in which peer should deliver an assigned block.</summary>
-        /// <remarks>If peer fails to deliver in that time his assignments will be released and the peer penalized.</remarks>
-        private const int MaxSecondsToDeliverBlock = 30; // TODO change to target spacing / 3
+            /// <summary>Interval between checking if peers that were assigned important blocks didn't deliver the block.</summary>
+            public int StallingLoopIntervalMs => 500;
 
-        /// <summary>This affects quality score only. If the peer is too fast don't give him all the assignments in the world when not in IBD.</summary>
-        private const int PeerSpeedLimitWhenNotInIbdBytesPerSec = 1024 * 1024;
+            /// <summary>The minimum empty slots percentage to start processing <see cref="downloadJobsQueue"/>.</summary>
+            public double MinEmptySlotsPercentageToStartProcessingTheQueue => 0.1;
+
+            /// <summary>
+            /// Defines which blocks are considered to be important.
+            /// If requested block height is less than out consensus tip height plus this value then the block is considered to be important.
+            /// </summary>
+            public int ImportantHeightMargin => 10;
+
+            /// <summary>The maximum time in seconds in which peer should deliver an assigned block.</summary>
+            /// <remarks>If peer fails to deliver in that time his assignments will be released and the peer penalized.</remarks>
+            public int MaxSecondsToDeliverBlock => 30; // TODO change to target spacing / 3
+
+            /// <summary>This affects quality score only. If the peer is too fast don't give him all the assignments in the world when not in IBD.</summary>
+            public int PeerSpeedLimitWhenNotInIbdBytesPerSec => 1024 * 1024;
+
+            public Settings(NodeSettings nodeSettings)
+            {
+                this.MinimalCountOfBlocksBeingDownloaded = nodeSettings.ConfigReader.GetOrDefault("minblksdownload", this.MinimalCountOfBlocksBeingDownloaded);
+            }
+
+            /// <summary>
+            /// Get the default configuration.
+            /// </summary>
+            /// <param name="builder">The string builder to add the settings to.</param>
+            /// <param name="network">The network to base the defaults off.</param>
+            public static void BuildDefaultConfigurationFile(StringBuilder builder, Network network)
+            {
+                builder.AppendLine("####BlockPuller Settings####");
+                builder.AppendLine($"#The minimum number of blocks to download. Default 10.");
+                builder.AppendLine($"#minblksdownload=10");
+            }
+
+            /// <summary>
+            /// Displays command-line help.
+            /// </summary>
+            /// <param name="network">The network to extract values from.</param>
+            public static void PrintHelp(Network network)
+            {
+                Guard.NotNull(network, nameof(network));
+
+                var defaults = NodeSettings.Default(network: network);
+
+                var builder = new StringBuilder();
+                builder.AppendLine($"-minblksdownload=<number> Minimum number of blocks to download. Defaults to 10.");
+
+                defaults.Logger.LogInformation(builder.ToString());
+            }
+        }
 
         /// <param name="blockHash">Hash of the delivered block.</param>
         /// <param name="block">The block.</param>
@@ -144,15 +189,6 @@ namespace Stratis.Bitcoin.BlockPulling
         /// <remarks>Write access to this object has to be protected by <see cref="queueLock" />.</remarks>
         private readonly AverageCalculator averageBlockSizeBytes;
 
-        /// <summary>Amount of samples that should be used for average block size calculation.</summary>
-        private const int AverageBlockSizeSamplesCount = 1000;
-
-        /// <summary>The minimal count of blocks that we can ask for simultaneous download.</summary>
-        private const int MinimalCountOfBlocksBeingDownloaded = 10;
-
-        /// <summary>The maximum blocks being downloaded multiplier. Value of <c>1.1</c> means that we will ask for 10% more than we estimated peers can deliver.</summary>
-        private const double MaxBlocksBeingDownloadedMultiplier = 1.1;
-
         /// <summary>Signaler that triggers <see cref="reassignedJobsQueue"/> and <see cref="downloadJobsQueue"/> processing when set.</summary>
         /// <remarks>This object has to be protected by <see cref="queueLock"/>.</remarks>
         private readonly AsyncManualResetEvent processQueuesSignal;
@@ -184,11 +220,16 @@ namespace Stratis.Bitcoin.BlockPulling
         /// <remarks>This object has to be protected by <see cref="peerLock"/>.</remarks>
         private bool isIbd;
 
+#pragma warning disable SA1648
+
         /// <inheritdoc cref="ILogger"/>
         private readonly ILogger logger;
 
         /// <inheritdoc cref="IChainState"/>
         private readonly IChainState chainState;
+
+        /// <inheritdoc cref="Settings"/>
+        private readonly Settings settings;
 
         /// <inheritdoc cref="NetworkPeerRequirement"/>
         /// <remarks>This object has to be protected by <see cref="peerLock"/>.</remarks>
@@ -199,6 +240,8 @@ namespace Stratis.Bitcoin.BlockPulling
 
         /// <inheritdoc cref="Random"/>
         private readonly Random random;
+
+#pragma warning restore SA1648
 
         /// <summary>Loop that assigns download jobs to the peers.</summary>
         private Task assignerLoop;
@@ -215,7 +258,8 @@ namespace Stratis.Bitcoin.BlockPulling
             this.assignedDownloadsSorted = new LinkedList<AssignedDownload>();
             this.assignedHeadersByPeerId = new Dictionary<int, List<ChainedHeader>>();
 
-            this.averageBlockSizeBytes = new AverageCalculator(AverageBlockSizeSamplesCount);
+            this.settings = new Settings(nodeSettings);
+            this.averageBlockSizeBytes = new AverageCalculator(this.settings.AverageBlockSizeSamplesCount);
 
             this.pullerBehaviorsByPeerId = new Dictionary<int, IBlockPullerBehavior>();
 
@@ -234,7 +278,7 @@ namespace Stratis.Bitcoin.BlockPulling
             this.cancellationSource = new CancellationTokenSource();
             this.random = new Random();
 
-            this.maxBlocksBeingDownloaded = MinimalCountOfBlocksBeingDownloaded;
+            this.maxBlocksBeingDownloaded = this.settings.MinimalCountOfBlocksBeingDownloaded;
 
             this.chainState = chainState;
             this.dateTimeProvider = dateTimeProvider;
@@ -268,7 +312,7 @@ namespace Stratis.Bitcoin.BlockPulling
 
                     if ((peer == null) || !this.networkPeerRequirement.Check(peer.PeerVersion, peer.Inbound, out reason))
                     {
-                        this.logger.Debug("Peer Id {0} does not meet requirements, reason: {1}", peerIdToBehavior.Key, reason);
+                        this.logger.LogDebug("Peer Id {0} does not meet requirements, reason: {1}", peerIdToBehavior.Key, reason);
                         peerIdsToRemove.Add(peerIdToBehavior.Key);
                     }
                 }
@@ -321,7 +365,7 @@ namespace Stratis.Bitcoin.BlockPulling
                 if (this.pullerBehaviorsByPeerId.TryGetValue(peerId, out IBlockPullerBehavior behavior))
                 {
                     behavior.Tip = newTip;
-                    this.logger.Debug("Tip for peer with ID {0} was changed to '{1}'.", peerId, newTip);
+                    this.logger.LogDebug("Tip for peer with ID {0} was changed to '{1}'.", peerId, newTip);
                 }
                 else
                 {
@@ -333,10 +377,10 @@ namespace Stratis.Bitcoin.BlockPulling
                         behavior.Tip = newTip;
                         this.pullerBehaviorsByPeerId.Add(peerId, behavior);
 
-                        this.logger.Debug("New peer with ID {0} and tip '{1}' was added.", peerId, newTip);
+                        this.logger.LogDebug("New peer with ID {0} and tip '{1}' was added.", peerId, newTip);
                     }
                     else
-                        this.logger.Debug("Peer ID {0} was discarded since he doesn't support the requirements, reason: {1}", peerId, reason);
+                        this.logger.LogDebug("Peer ID {0} was discarded since he doesn't support the requirements, reason: {1}", peerId, reason);
                 }
             }
         }
@@ -370,7 +414,7 @@ namespace Stratis.Bitcoin.BlockPulling
                     Id = jobId
                 });
 
-                this.logger.Debug("{0} blocks were requested from puller. Job ID {1} was created.", headers.Count, jobId);
+                this.logger.LogDebug("{0} blocks were requested from puller. Job ID {1} was created.", headers.Count, jobId);
 
                 this.processQueuesSignal.Set();
             }
@@ -387,7 +431,7 @@ namespace Stratis.Bitcoin.BlockPulling
                 }
                 catch (OperationCanceledException)
                 {
-                    this.logger.Trace("(-)[CANCELLED]");
+                    this.logger.LogTrace("(-)[CANCELLED]");
                     return;
                 }
 
@@ -402,11 +446,11 @@ namespace Stratis.Bitcoin.BlockPulling
             {
                 try
                 {
-                    await Task.Delay(StallingLoopIntervalMs, this.cancellationSource.Token).ConfigureAwait(false);
+                    await Task.Delay(this.settings.StallingLoopIntervalMs, this.cancellationSource.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
-                    this.logger.Trace("(-)[CANCELLED]");
+                    this.logger.LogTrace("(-)[CANCELLED]");
                     return;
                 }
 
@@ -432,32 +476,32 @@ namespace Stratis.Bitcoin.BlockPulling
                     emptySlots = this.maxBlocksBeingDownloaded - this.assignedDownloadsByHash.Count;
                 }
 
-                int slotsThreshold = (int)(this.maxBlocksBeingDownloaded * MinEmptySlotsPercentageToStartProcessingTheQueue);
+                int slotsThreshold = (int)(this.maxBlocksBeingDownloaded * this.settings.MinEmptySlotsPercentageToStartProcessingTheQueue);
 
                 if (emptySlots >= slotsThreshold)
                     this.ProcessQueueLocked(this.downloadJobsQueue, newAssignments, failedHashes, emptySlots);
                 else
-                    this.logger.Debug("Slots threshold is not met, queue will not be processed. There are {0} empty slots, threshold is {1}.", emptySlots, slotsThreshold);
+                    this.logger.LogDebug("Slots threshold is not met, queue will not be processed. There are {0} empty slots, threshold is {1}.", emptySlots, slotsThreshold);
 
                 this.processQueuesSignal.Reset();
             }
 
             if (newAssignments.Count != 0)
             {
-                this.logger.Debug("Total amount of downloads assigned in this iteration is {0}.", newAssignments.Count);
+                this.logger.LogDebug("Total amount of downloads assigned in this iteration is {0}.", newAssignments.Count);
                 await this.AskPeersForBlocksAsync(newAssignments).ConfigureAwait(false);
             }
 
             // Call callbacks with null since puller failed to deliver requested blocks.
             if (failedHashes.Count != 0)
-                this.logger.Debug("{0} jobs partially or fully failed.", failedHashes.Count);
+                this.logger.LogDebug("{0} jobs partially or fully failed.", failedHashes.Count);
 
             foreach (uint256 failedJob in failedHashes)
             {
                 // Avoid calling callbacks on shutdown.
                 if (this.cancellationSource.IsCancellationRequested)
                 {
-                    this.logger.Debug("Callbacks won't be called because component is being disposed.");
+                    this.logger.LogDebug("Callbacks won't be called because component is being disposed.");
                     break;
                 }
 
@@ -483,7 +527,7 @@ namespace Stratis.Bitcoin.BlockPulling
 
                 emptySlots -= assignments.Count;
 
-                this.logger.Debug("Assigned {0} headers out of {1} for job {2}.", assignments.Count, jobHeadersCount, jobToAssign.Id);
+                this.logger.LogDebug("Assigned {0} headers out of {1} for job {2}.", assignments.Count, jobHeadersCount, jobToAssign.Id);
 
                 lock (this.assignedLock)
                 {
@@ -598,7 +642,7 @@ namespace Stratis.Bitcoin.BlockPulling
 
                 if (!success)
                 {
-                    this.logger.Debug("Failed to ask peer {0} for {1} blocks.", peerId, hashes.Count);
+                    this.logger.LogDebug("Failed to ask peer {0} for {1} blocks.", peerId, hashes.Count);
                     this.PeerDisconnected(peerId);
                 }
             }
@@ -606,7 +650,7 @@ namespace Stratis.Bitcoin.BlockPulling
 
         /// <summary>Distributes download job's headers to peers that can provide blocks represented by those headers.</summary>
         /// <remarks>
-        /// If some of the blocks from the job can't be provided by any peer those headers will be added to a <param name="failedHashes"></param>.
+        /// If some of the blocks from the job can't be provided by any peer those headers will be added to a <paramref name="failedHashes" />.
         /// <para>
         /// Have to be locked by <see cref="queueLock"/>.
         /// </para>
@@ -633,7 +677,7 @@ namespace Stratis.Bitcoin.BlockPulling
 
             if (peerBehaviors.Count == 0)
             {
-                this.logger.Debug("There are no peers that can participate in download job distribution! Job ID {0} failed.", downloadJob.Id);
+                this.logger.LogDebug("There are no peers that can participate in download job distribution! Job ID {0} failed.", downloadJob.Id);
                 jobFailed = true;
             }
 
@@ -679,7 +723,7 @@ namespace Stratis.Bitcoin.BlockPulling
 
                         lastSucceededIndex = index;
 
-                        this.logger.Debug("Block '{0}' was assigned to peer ID {1}.", header.HashBlock, peerId);
+                        this.logger.LogDebug("Block '{0}' was assigned to peer ID {1}.", header.HashBlock, peerId);
                         break;
                     }
                     else
@@ -691,7 +735,7 @@ namespace Stratis.Bitcoin.BlockPulling
                             continue;
 
                         jobFailed = true;
-                        this.logger.Debug("Job {0} failed because there is no peer claiming header '{1}'.", downloadJob.Id, header);
+                        this.logger.LogDebug("Job {0} failed because there is no peer claiming header '{1}'.", downloadJob.Id, header);
                     }
                 }
             }
@@ -716,8 +760,8 @@ namespace Stratis.Bitcoin.BlockPulling
         /// <summary>Checks if peers failed to deliver important blocks and penalizes them if they did.</summary>
         private void CheckStalling()
         {
-            int lastImportantHeight = this.chainState.ConsensusTip.Height + ImportantHeightMargin;
-            this.logger.Debug("Blocks up to height {0} are considered to be important.", lastImportantHeight);
+            int lastImportantHeight = this.chainState.ConsensusTip.Height + this.settings.ImportantHeightMargin;
+            this.logger.LogDebug("Blocks up to height {0} are considered to be important.", lastImportantHeight);
 
             var allReleasedAssignments = new List<Dictionary<int, List<ChainedHeader>>>();
 
@@ -740,7 +784,7 @@ namespace Stratis.Bitcoin.BlockPulling
                     int peerId = current.Value.PeerId;
                     current = current.Next;
 
-                    if (secondsPassed < MaxSecondsToDeliverBlock)
+                    if (secondsPassed < this.settings.MaxSecondsToDeliverBlock)
                         continue;
 
                     // Peer already added to the collection of peers to release and reassign.
@@ -751,7 +795,7 @@ namespace Stratis.Bitcoin.BlockPulling
 
                     int assignedCount = this.assignedHeadersByPeerId[peerId].Count;
 
-                    this.logger.Debug("Peer {0} failed to deliver {1} blocks from which some were important.", peerId, assignedCount);
+                    this.logger.LogDebug("Peer {0} failed to deliver {1} blocks from which some were important.", peerId, assignedCount);
 
                     lock (this.peerLock)
                     {
@@ -793,15 +837,15 @@ namespace Stratis.Bitcoin.BlockPulling
             {
                 if (!this.assignedDownloadsByHash.TryGetValue(blockHash, out assignedDownload))
                 {
-                    this.logger.Trace("(-)[BLOCK_NOT_REQUESTED]");
+                    this.logger.LogTrace("(-)[BLOCK_NOT_REQUESTED]");
                     return;
                 }
 
-                this.logger.Debug("Assignment '{0}' for peer ID {1} was delivered by peer ID {2}.", blockHash, assignedDownload.PeerId, peerId);
+                this.logger.LogDebug("Assignment '{0}' for peer ID {1} was delivered by peer ID {2}.", blockHash, assignedDownload.PeerId, peerId);
 
                 if (assignedDownload.PeerId != peerId)
                 {
-                    this.logger.Trace("(-)[WRONG_PEER_DELIVERED]");
+                    this.logger.LogTrace("(-)[WRONG_PEER_DELIVERED]");
                     return;
                 }
 
@@ -809,7 +853,7 @@ namespace Stratis.Bitcoin.BlockPulling
             }
 
             double deliveredInSeconds = (this.dateTimeProvider.GetUtcNow() - assignedDownload.AssignedTime).TotalSeconds;
-            this.logger.Debug("Peer {0} delivered block '{1}' in {2} seconds.", assignedDownload.PeerId, blockHash, deliveredInSeconds);
+            this.logger.LogDebug("Peer {0} delivered block '{1}' in {2} seconds.", assignedDownload.PeerId, blockHash, deliveredInSeconds);
 
             lock (this.peerLock)
             {
@@ -845,8 +889,8 @@ namespace Stratis.Bitcoin.BlockPulling
             long bestSpeed = this.pullerBehaviorsByPeerId.Max(x => x.Value.SpeedBytesPerSecond);
 
             long adjustedBestSpeed = bestSpeed;
-            if (!this.isIbd && (adjustedBestSpeed > PeerSpeedLimitWhenNotInIbdBytesPerSec))
-                adjustedBestSpeed = PeerSpeedLimitWhenNotInIbdBytesPerSec;
+            if (!this.isIbd && (adjustedBestSpeed > this.settings.PeerSpeedLimitWhenNotInIbdBytesPerSec))
+                adjustedBestSpeed = this.settings.PeerSpeedLimitWhenNotInIbdBytesPerSec;
 
             if (pullerBehavior.SpeedBytesPerSecond != bestSpeed)
             {
@@ -855,7 +899,7 @@ namespace Stratis.Bitcoin.BlockPulling
             }
             else
             {
-                this.logger.Debug("Peer ID {0} is the fastest peer. Recalculating quality score of all peers.", peerId);
+                this.logger.LogDebug("Peer ID {0} is the fastest peer. Recalculating quality score of all peers.", peerId);
 
                 // This is the best peer. Recalculate quality score for everyone.
                 foreach (IBlockPullerBehavior peerPullerBehavior in this.pullerBehaviorsByPeerId.Values)
@@ -872,12 +916,12 @@ namespace Stratis.Bitcoin.BlockPulling
         {
             // How many blocks we can download in 1 second.
             if (this.averageBlockSizeBytes.Average > 0)
-                this.maxBlocksBeingDownloaded = (int)((this.GetTotalSpeedOfAllPeersBytesPerSec() * MaxBlocksBeingDownloadedMultiplier) / this.averageBlockSizeBytes.Average);
+                this.maxBlocksBeingDownloaded = (int)((this.GetTotalSpeedOfAllPeersBytesPerSec() * this.settings.MaxBlocksBeingDownloadedMultiplier) / this.averageBlockSizeBytes.Average);
 
-            if (this.maxBlocksBeingDownloaded < MinimalCountOfBlocksBeingDownloaded)
-                this.maxBlocksBeingDownloaded = MinimalCountOfBlocksBeingDownloaded;
+            if (this.maxBlocksBeingDownloaded < this.settings.MinimalCountOfBlocksBeingDownloaded)
+                this.maxBlocksBeingDownloaded = this.settings.MinimalCountOfBlocksBeingDownloaded;
 
-            this.logger.Debug("Max number of blocks that can be downloaded at the same time is set to {0}.", this.maxBlocksBeingDownloaded);
+            this.logger.LogDebug("Max number of blocks that can be downloaded at the same time is set to {0}.", this.maxBlocksBeingDownloaded);
         }
 
         /// <summary>
@@ -928,7 +972,7 @@ namespace Stratis.Bitcoin.BlockPulling
 
                     assignmentsToRemove.Add(assignment);
 
-                    this.logger.Debug("Header '{0}' for job ID {1} was released from peer ID {2}.", header, assignment.JobId, peerId);
+                    this.logger.LogDebug("Header '{0}' for job ID {1} was released from peer ID {2}.", header, assignment.JobId, peerId);
                 }
 
                 foreach (AssignedDownload assignment in assignmentsToRemove)

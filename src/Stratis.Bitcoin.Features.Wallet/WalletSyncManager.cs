@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -97,12 +96,12 @@ namespace Stratis.Bitcoin.Features.Wallet
                 TimeSpan.FromSeconds(1),
                 TimeSpan.FromSeconds(1));
 
-            this.transactionAddedSubscription = this.signals.Subscribe<TransactionAddedToMemoryPool>(this.OnTransactionAdded);
+            this.transactionAddedSubscription = this.signals.Subscribe<TransactionAddedToMemoryPoolEvent>(this.OnTransactionAdded);
             this.transactionRemovedSubscription = this.signals.Subscribe<TransactionRemovedFromMemoryPool>(this.OnTransactionRemoved);
             this.blockConnectedSubscription = this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
         }
 
-        private void OnTransactionAdded(TransactionAddedToMemoryPool transactionAddedToMempool)
+        private void OnTransactionAdded(TransactionAddedToMemoryPoolEvent transactionAddedToMempool)
         {
             this.logger.LogDebug("Adding transaction '{0}' as it was added to the mempool.", transactionAddedToMempool.AddedTransaction.GetHash());
             this.walletManager.ProcessTransaction(transactionAddedToMempool.AddedTransaction);
@@ -149,7 +148,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
         private void ProcessBlocks()
         {
-            this.walletManager.ProcessBlocks((previousBlock) => { return this.BatchBlocksFrom(previousBlock); });
+            this.walletManager.ProcessBlocks((previousBlock) => { return this.blockStore.BatchBlocksFrom(previousBlock, this.chainIndexer, this.syncCancellationToken); });
         }
 
         private void OnBlockConnected(BlockConnected blockConnected)
@@ -194,39 +193,6 @@ namespace Stratis.Bitcoin.Features.Wallet
             {
                 // Log the error but keep going.
                 this.logger.LogError("'{0}' failed with: {1}.", nameof(OrchestrateWalletSync), e.ToString());
-            }
-        }
-
-        private IEnumerable<(ChainedHeader, Block)> BatchBlocksFrom(ChainedHeader previousBlock)
-        {
-            for (int height = previousBlock.Height + 1; !this.syncCancellationToken.IsCancellationRequested;)
-            {
-                var hashes = new List<uint256>();
-                for (int i = 0; i < 100; i++)
-                {
-                    ChainedHeader header = this.chainIndexer.GetHeaderByHeight(height + i);
-                    if (header == null)
-                        break;
-
-                    if (header.Previous != previousBlock)
-                        break;
-
-                    hashes.Add(header.HashBlock);
-
-                    previousBlock = header;
-                }
-
-                if (hashes.Count == 0)
-                    yield break;
-
-                List<Block> blocks = this.blockStore.GetBlocks(hashes);
-
-                var buffer = new List<(ChainedHeader, Block)>();
-                for (int i = 0; i < blocks.Count && !this.syncCancellationToken.IsCancellationRequested; height++, i++)
-                {
-                    ChainedHeader header = this.chainIndexer.GetHeaderByHeight(height);
-                    yield return ((header, blocks[i]));
-                }
             }
         }
 

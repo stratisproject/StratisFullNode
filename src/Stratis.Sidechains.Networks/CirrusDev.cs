@@ -14,6 +14,8 @@ using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.PoA.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
+using Stratis.Bitcoin.Utilities.Extensions;
+using Stratis.Sidechains.Networks.Deployments;
 
 namespace Stratis.Sidechains.Networks
 {
@@ -35,6 +37,8 @@ namespace Stratis.Sidechains.Networks
             this.DefaultMaxInboundConnections = 109;
             this.DefaultRPCPort = 26175;
             this.DefaultAPIPort = 38223;
+            this.DefaultAPIPort = 38223;
+            this.DefaultSignalRPort = 39823;
             this.MaxTipAge = 768; // 20% of the fastest time it takes for one MaxReorgLength of blocks to be mined.
             this.MinTxFee = 10000;
             this.FallbackFee = 10000;
@@ -45,6 +49,8 @@ namespace Stratis.Sidechains.Networks
             this.DefaultBanTimeSeconds = 1920; // 240 (MaxReorg) * 16 (TargetSpacing) / 2 = 32 Minutes
 
             this.CirrusRewardDummyAddress = "PDpvfcpPm9cjQEoxWzQUL699N8dPaf8qML";
+
+            this.ConversionTransactionFeeDistributionDummyAddress = "PTCPsLQoF3WNoH1qXMy5PouquiXQKp7WBV";
 
             var consensusFactory = new SmartContractPoAConsensusFactory();
 
@@ -85,7 +91,8 @@ namespace Stratis.Sidechains.Networks
                 genesisFederationMembers: genesisFederationMembers,
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
-                autoKickIdleMembers: true
+                autoKickIdleMembers: true,
+                pollExpiryBlocks: 10
             );
 
             var buriedDeployments = new BuriedDeploymentsArray
@@ -95,7 +102,11 @@ namespace Stratis.Sidechains.Networks
                 [BuriedDeployments.BIP66] = 0
             };
 
-            var bip9Deployments = new NoBIP9Deployments();
+            var bip9Deployments = new CirrusBIP9Deployments()
+            {
+                // Deployment will go active once 75% of nodes are on 1.3.0.0 or later.
+                [CirrusBIP9Deployments.Release1320] = new BIP9DeploymentsParameters("Release1320", CirrusBIP9Deployments.FlagBitRelease1320, DateTime.Parse("2022-6-15 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Now.AddDays(50).ToUnixTimestamp(), BIP9DeploymentsParameters.DefaultRegTestThreshold)
+            };
 
             this.Consensus = new Consensus(
                 consensusFactory: consensusFactory,

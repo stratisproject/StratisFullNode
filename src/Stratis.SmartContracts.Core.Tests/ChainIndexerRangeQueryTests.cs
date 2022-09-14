@@ -28,7 +28,7 @@ namespace Stratis.SmartContracts.Core.Tests
         {
             var chainIndexer = new ChainIndexer(this.network);
 
-            var chain = this.CreateChain(chainIndexer.Genesis, chainLength);
+            ChainedHeader[] chain = this.CreateChain(chainIndexer.Genesis, chainLength);
 
             chainIndexer.Initialize(chain.Last());
 
@@ -102,14 +102,14 @@ namespace Stratis.SmartContracts.Core.Tests
         {
             var chainIndexer = new ChainIndexer(this.network);
 
-            var chain = this.CreateChain(chainIndexer.Genesis, 1);
+            ChainedHeader[] chain = this.CreateChain(chainIndexer.Genesis, 1);
 
             chainIndexer.Initialize(chain.Last());
 
             var query = new ChainIndexerRangeQuery(chainIndexer);
 
             // Chain length is only the genesis block, so this should fail.
-            var result = query.EnumerateRange(1, 10);
+            IEnumerable<ChainedHeader> result = query.EnumerateRange(1, 10);
 
             Assert.Empty(result);
         }
@@ -119,14 +119,14 @@ namespace Stratis.SmartContracts.Core.Tests
         {
             var chainIndexer = new ChainIndexer(this.network);
 
-            var chain = this.CreateChain(chainIndexer.Genesis, 5);
+            ChainedHeader[] chain = this.CreateChain(chainIndexer.Genesis, 5);
 
             chainIndexer.Initialize(chain.Last());
 
             var query = new ChainIndexerRangeQuery(chainIndexer);
 
             // Chain length is only 5, so this should return all elements.
-            var result = query.EnumerateRange(0, 10);
+            IEnumerable<ChainedHeader> result = query.EnumerateRange(0, 10);
 
             Assert.Equal(5, result.Count());
         }
@@ -145,19 +145,20 @@ namespace Stratis.SmartContracts.Core.Tests
         /// <summary>
         /// Creates a chain of headers of the specified length, starting from the specified header.
         /// </summary>
-        /// <param name="length"></param>
-        /// <returns></returns>
+        /// <param name="start">The <see cref="ChainedHeader"/> to start at, which is included in the result.</param>
+        /// <param name="length">The number of headers to create.</param>
+        /// <returns>A chain of <see cref="ChainedHeader"/> objects of the specified length, starting from the specified header.</returns>
         private ChainedHeader[] CreateChain(ChainedHeader start, int length)
         {
             var random = new Random();
-            var prevBlockHeader = start;
+            ChainedHeader prevBlockHeader = start;
             var headers = new ChainedHeader[length];
 
             headers[0] = start;
 
             for (var i = 1; i < length; i++)
             {
-                var bh = this.network.Consensus.ConsensusFactory.CreateBlockHeader();
+                BlockHeader bh = this.network.Consensus.ConsensusFactory.CreateBlockHeader();
                 bh.HashPrevBlock = prevBlockHeader.HashBlock;
 
                 var hash = new byte[32];

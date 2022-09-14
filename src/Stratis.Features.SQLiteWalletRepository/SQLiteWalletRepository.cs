@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Events;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
@@ -620,7 +621,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                 if (!force && !this.TestMode && account.ExtPubKey != null)
                     throw new Exception("Addresses can only be added to watch-only accounts.");
 
-                conn.CreateWatchOnlyAddresses(account, addressType, addresses, force);
+                conn.CreateWatchOnlyAddresses(new WalletAccountReference(walletName, accountName), account, addressType, addresses, force);
                 conn.Commit();
 
                 walletContainer.AddressesOfInterest.AddAll(account.WalletId, account.AccountIndex);
@@ -733,7 +734,9 @@ namespace Stratis.Features.SQLiteWalletRepository
 
             DBConnection conn = walletContainer.Conn;
 
-            walletContainer.WriteLockWait();
+            const int minAddressesPerSecond = 20;
+
+            walletContainer.WriteLockWait(true, 120 + count / minAddressesPerSecond);
 
             try
             {
@@ -869,7 +872,7 @@ namespace Stratis.Features.SQLiteWalletRepository
 
                         Parallel.ForEach(rounds, round =>
                         {
-                            if (!ParallelProcessBlock(round, block, chainedHeader))
+                            if (!ParallelProcessBlock(round, block, chainedHeader, out bool _))
                                 done = true;
                         });
 
@@ -883,18 +886,34 @@ namespace Stratis.Features.SQLiteWalletRepository
                 ProcessBlocksInfo round = (walletName != null) ? this.Wallets[walletName] : this.processBlocksInfo;
 
                 if (this.StartBatch(round, blocks.First().header))
+                {
+                    bool signalUI = false;
+
                     foreach ((ChainedHeader chainedHeader, Block block) in blocks.Append((null, null)))
                     {
                         this.logger.LogDebug("Processing '{0}'.", chainedHeader);
 
-                        if (!ParallelProcessBlock(round, block, chainedHeader))
+                        if (!ParallelProcessBlock(round, block, chainedHeader, out bool transactionOfInterestProcessed))
                             break;
+
+                        if (transactionOfInterestProcessed)
+                            signalUI = true;
                     }
+
+                    if (signalUI)
+                    {
+                        // We only want to raise events for the UI (via SignalR) to query the wallet balance if a transaction pertaining to the wallet 
+                        // was processed.
+                        this.signals?.Publish(new WalletProcessedTransactionOfInterestEvent() { Source = "processblock" });
+                    }
+                }
             }
         }
 
-        private bool ParallelProcessBlock(ProcessBlocksInfo round, Block block, ChainedHeader chainedHeader)
+        private bool ParallelProcessBlock(ProcessBlocksInfo round, Block block, ChainedHeader chainedHeader, out bool transactionOfInterestProcessed)
         {
+            transactionOfInterestProcessed = false;
+
             try
             {
                 HDWallet wallet = round.Wallet;
@@ -1016,10 +1035,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                     ITransactionsToLists transactionsToLists = new TransactionsToLists(this.Network, this.ScriptAddressReader, round, this.dateTimeProvider);
                     if (transactionsToLists.ProcessTransactions(block.Transactions, new HashHeightPair(chainedHeader), blockTime: block.Header.BlockTime.ToUnixTimeSeconds()))
                     {
-                        // We only want to raise events for the UI (via SignalR) to query the wallet balance if a transaction pertaining to the wallet 
-                        // was processed.
-                        this.signals?.Publish(new WalletProcessedTransactionOfInterestEvent());
-
+                        transactionOfInterestProcessed = true;
                         this.Metrics.ProcessCount++;
                     }
 
@@ -1080,7 +1096,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                     {
                         WalletContainer walletContainer = this.Wallets[walletName];
 
-                        if (walletContainer.WriteLockWait(true))
+                        if (walletContainer.WriteLockWait(false))
                             return;
 
                         this.logger.LogDebug("Could not obtain lock for wallet '{0}'.", walletName);
@@ -1222,17 +1238,15 @@ namespace Stratis.Features.SQLiteWalletRepository
 
             ProcessBlocksInfo processBlocksInfo = walletContainer;
 
+            bool notifyWallet = false;
+
             try
             {
                 IEnumerable<IEnumerable<string>> txToScript;
                 {
                     var transactionsToLists = new TransactionsToLists(this.Network, this.ScriptAddressReader, processBlocksInfo, this.dateTimeProvider);
                     if (transactionsToLists.ProcessTransactions(new[] { transaction }, null, fixedTxId))
-                    {
-                        // We only want to raise events for the UI (via SignalR) to query the wallet balance if a transaction pertaining to the wallet 
-                        // was processed.
-                        this.signals?.Publish(new WalletProcessedTransactionOfInterestEvent());
-                    }
+                        notifyWallet = true;
 
                     txToScript = (new[] { processBlocksInfo.Outputs, processBlocksInfo.PrevOuts }).Select(list => list.CreateScript());
                 }
@@ -1276,6 +1290,13 @@ namespace Stratis.Features.SQLiteWalletRepository
                 walletContainer.LockProcessBlocks.Release();
                 walletContainer.WriteLockRelease();
             }
+
+            if (notifyWallet)
+            {
+                // We only want to raise events for the UI (via SignalR) to query the wallet balance if a transaction pertaining to the wallet 
+                // was processed.
+                this.signals?.Publish(new WalletProcessedTransactionOfInterestEvent() { Source = "processtx" });
+            }
         }
 
         /// <inheritdoc />
@@ -1287,26 +1308,46 @@ namespace Stratis.Features.SQLiteWalletRepository
             Wallet hdWallet = this.GetWallet(walletAccountReference.WalletName);
             HdAccount hdAccount = this.GetAccounts(hdWallet, walletAccountReference.AccountName).FirstOrDefault();
 
-            var extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey, this.Network);
-
             var spendable = conn.GetSpendableOutputs(walletContainer.Wallet.WalletId, hdAccount.Index, currentChainHeight, coinBaseMaturity ?? this.Network.Consensus.CoinbaseMaturity, confirmations);
+
+            ExtPubKey extPubKey = null;
+
+            // The extPubKey will be null if this is a watch only account.
+            if (hdAccount.ExtendedPubKey != null)
+            {
+                extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey, this.Network);
+            }
 
             var cachedPubKeys = new Dictionary<KeyPath, PubKey>();
 
             foreach (HDTransactionData transactionData in spendable)
             {
-                var keyPath = new KeyPath($"{transactionData.AddressType}/{transactionData.AddressIndex}");
-                PubKey pubKey = null;
-                if (!cachedPubKeys.TryGetValue(keyPath, out pubKey))
+                int tdConfirmations = (transactionData.OutputBlockHeight == null) ? 0 : (currentChainHeight + 1) - (int)transactionData.OutputBlockHeight;
+
+                PubKey pubKey;
+
+                if (extPubKey == null)
                 {
-                    pubKey = extPubKey.Derive(keyPath).PubKey;
-                    cachedPubKeys.Add(keyPath, pubKey);
+                    if (!walletContainer.AddressesOfInterest.Contains(Script.FromHex(transactionData.RedeemScript), out AddressIdentifier addressIdentifier))
+                        continue;
+
+                    Script p2pkScript = Script.FromHex(addressIdentifier.PubKeyScript);
+                    
+                    pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(p2pkScript);
+                }
+                else
+                {
+                    var keyPath = new KeyPath($"{transactionData.AddressType}/{transactionData.AddressIndex}");
+
+                    if (!cachedPubKeys.TryGetValue(keyPath, out pubKey))
+                    {
+                        pubKey = extPubKey.Derive(keyPath).PubKey;
+                        cachedPubKeys.Add(keyPath, pubKey);
+                    }
                 }
 
                 Script scriptPubKey = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
                 Script witScriptPubKey = PayToWitPubKeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
-
-                int tdConfirmations = (transactionData.OutputBlockHeight == null) ? 0 : (currentChainHeight + 1) - (int)transactionData.OutputBlockHeight;
 
                 // We do not use the address from the transaction (i.e. UTXO) data here in case it is a segwit (P2WPKH) UTXO.
                 // That is because the bech32 functionality is somewhat bolted onto the HdAddress, so we need to return an HdAddress augmented with bech32 data rather than only bech32 data.
@@ -1326,11 +1367,11 @@ namespace Stratis.Features.SQLiteWalletRepository
                 TransactionData txData = this.ToTransactionData(transactionData, hdAddress.Transactions);
 
                 // Check if this wallet is a normal purpose wallet (not cold staking, etc).
-                if (hdAccount.IsNormalAccount())
+                if (hdAccount.IsNormalAccount() || hdAccount.Name == Wallet.WatchOnlyAccountName)
                 {
                     bool isColdCoinStake = txData.IsColdCoinStake ?? false;
 
-                    // Skip listing the UTXO if this is a normal wallet, and the UTXO is marked as an cold coin stake.
+                    // Skip listing the UTXO if this is a normal wallet, and the UTXO is marked as a cold coin stake.
                     if (isColdCoinStake)
                     {
                         continue;
@@ -1510,7 +1551,7 @@ namespace Stratis.Features.SQLiteWalletRepository
             WalletContainer walletContainer = this.GetWalletContainer(wallet.Name);
             (HDWallet HDWallet, DBConnection conn) = (walletContainer.Wallet, walletContainer.Conn);
 
-            var result = HDTransactionData.GetHistory(conn, HDWallet.WalletId, account.Index, limit, offset, txId, accountAddress, forSmartContracts);
+            var result = HDTransactionData.GetHistory(conn, HDWallet.WalletId, account.Index, limit, offset, txId, accountAddress, forSmartContracts, this.Network.Name.Contains("Cirrus"));
 
             // Filter ColdstakeUtxos
             result = result.Where(r =>
@@ -1580,11 +1621,23 @@ namespace Stratis.Features.SQLiteWalletRepository
 
                 if (!addressDict.TryGetValue(addressIdentifier, out HdAddress hdAddress))
                 {
-                    ExtPubKey extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey, this.Network);
+                    PubKey pubKey;
 
-                    var keyPath = new KeyPath($"{tranData.AddressType}/{tranData.AddressIndex}");
+                    if (hdAccount.ExtendedPubKey != null)
+                    {
+                        ExtPubKey extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey, this.Network);
 
-                    PubKey pubKey = extPubKey.Derive(keyPath).PubKey;
+                        var keyPath = new KeyPath($"{tranData.AddressType}/{tranData.AddressIndex}");
+
+                        pubKey = extPubKey.Derive(keyPath).PubKey;
+                    }
+                    else
+                    {
+                        // TODO: Verify if PubKeyScript is getting populated correctly for TransactionsOfInterest-derived AddressIdentifiers
+                        Script p2pkScript = Script.FromHex(addressIdentifier.PubKeyScript);
+
+                        pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(p2pkScript);
+                    }
 
                     hdAddress = this.ToHdAddress(new HDAddress()
                     {

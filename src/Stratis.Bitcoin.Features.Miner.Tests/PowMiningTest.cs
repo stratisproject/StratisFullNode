@@ -361,7 +361,6 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
             return new Mock<PowBlockDefinition>(
                     this.consensusManager.Object,
                     DateTimeProvider.Default,
-                    this.LoggerFactory.Object,
                     this.mempool.Object,
                     this.mempoolLock,
                     this.minerSettings,

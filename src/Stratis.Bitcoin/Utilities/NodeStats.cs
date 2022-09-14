@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using NLog;
+using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Interfaces;
@@ -14,7 +14,6 @@ namespace Stratis.Bitcoin.Utilities
 {
     public interface INodeStats
     {
-
         /// <summary>
         /// A flag indicating whether or not to display bench stats on the console output.
         /// </summary>
@@ -39,6 +38,8 @@ namespace Stratis.Bitcoin.Utilities
 
         /// <summary>Collects benchmark stats.</summary>
         string GetBenchmark();
+
+        DateTime NodeStartedOn { get; }
     }
 
     public class NodeStats : INodeStats
@@ -55,9 +56,10 @@ namespace Stratis.Bitcoin.Utilities
         private readonly IDateTimeProvider dateTimeProvider;
         private readonly ILogger logger;
         private readonly NodeSettings nodeSettings;
-        private readonly string nodeStartedOn;
         private List<StatsItem> stats;
         private readonly IVersionProvider versionProvider;
+
+        public DateTime NodeStartedOn { get; private set; }
 
         public NodeStats(IDateTimeProvider dateTimeProvider, NodeSettings nodeSettings, IVersionProvider versionProvider)
         {
@@ -69,7 +71,7 @@ namespace Stratis.Bitcoin.Utilities
             this.stats = new List<StatsItem>();
             this.versionProvider = versionProvider;
 
-            this.nodeStartedOn = this.dateTimeProvider.GetUtcNow().ToString(CultureInfo.InvariantCulture);
+            this.NodeStartedOn = this.dateTimeProvider.GetUtcNow();
         }
 
         /// <inheritdoc />
@@ -126,11 +128,11 @@ namespace Stratis.Bitcoin.Utilities
                     }
                     catch (OperationCanceledException)
                     {
-                        this.logger.Warn("{0} failed to provide inline statistics after {1} seconds, please investigate...", inlineStatItem.ComponentName, ComponentStatsWaitSeconds);
+                        this.logger.LogWarning("{0} failed to provide inline statistics after {1} seconds, please investigate...", inlineStatItem.ComponentName, ComponentStatsWaitSeconds);
                     }
                     catch (Exception ex)
                     {
-                        this.logger.Warn("{0} failed to provide inline statistics: {1}", inlineStatItem.ComponentName, ex.ToString());
+                        this.logger.LogWarning("{0} failed to provide inline statistics: {1}", inlineStatItem.ComponentName, ex.ToString());
                     }
                 });
 
@@ -155,11 +157,11 @@ namespace Stratis.Bitcoin.Utilities
                     }
                     catch (OperationCanceledException)
                     {
-                        this.logger.Warn("{0} failed to provide statistics after {1} seconds, please investigate...", componentStatItem.ComponentName, ComponentStatsWaitSeconds);
+                        this.logger.LogWarning("{0} failed to provide statistics after {1} seconds, please investigate...", componentStatItem.ComponentName, ComponentStatsWaitSeconds);
                     }
                     catch (Exception ex)
                     {
-                        this.logger.Warn("{0} failed to provide statistics: {1}", componentStatItem.ComponentName, ex.ToString());
+                        this.logger.LogWarning("{0} failed to provide statistics: {1}", componentStatItem.ComponentName, ex.ToString());
                     }
                 });
 
@@ -170,7 +172,7 @@ namespace Stratis.Bitcoin.Utilities
                 statsBuilder.AppendLine("Agent".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.nodeSettings.Agent}:{this.versionProvider.GetVersion()} ({(int)this.nodeSettings.ProtocolVersion})");
                 statsBuilder.AppendLine("Network".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.nodeSettings.Network.Name}");
                 statsBuilder.AppendLine("Database".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.nodeSettings.ConfigReader.GetOrDefault("dbtype", "leveldb")}");
-                statsBuilder.AppendLine("Node Started".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.nodeStartedOn}");
+                statsBuilder.AppendLine("Node Started".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.NodeStartedOn.ToString(CultureInfo.InvariantCulture)}");
                 statsBuilder.AppendLine("Current Date".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {currentDateTime}");
 
                 if (this.nodeSettings.ConfigReader.GetOrDefault("displayextendednodestats", false))

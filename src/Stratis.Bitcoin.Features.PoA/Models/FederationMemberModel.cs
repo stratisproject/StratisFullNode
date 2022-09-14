@@ -5,11 +5,17 @@ namespace Stratis.Bitcoin.Features.PoA.Models
 {
     public class FederationMemberModel
     {
+        [JsonProperty("collateralAddress")]
+        public string CollateralAddress { get; set; }
+
         [JsonProperty("pubkey")]
         public string PubKey { get; set; }
 
         [JsonProperty("collateralAmount")]
         public decimal CollateralAmount { get; set; }
+
+        [JsonProperty("isMultiSig")]
+        public bool IsMultiSig { get; set; }
 
         [JsonProperty("lastActiveTime")]
         public DateTime? LastActiveTime { get; set; }
@@ -46,5 +52,11 @@ namespace Stratis.Bitcoin.Features.PoA.Models
 
         [JsonProperty("rewardEstimatePerBlock")]
         public double RewardEstimatePerBlock { get; set; }
+
+        [JsonProperty("federationSize")]
+        public int FederationSize { get; set; }
+
+        [JsonProperty("miningStats")]
+        public MiningStatisticsModel MiningStatistics { get; set; }
     }
 }

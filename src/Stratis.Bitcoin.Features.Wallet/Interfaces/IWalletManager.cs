@@ -71,6 +71,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         IEnumerable<UnspentOutputReference> GetSpendableTransactionsInAccount(WalletAccountReference walletAccountReference, int confirmations = 0);
 
         /// <summary>
+        /// Lists all transactions from the account specified in <see cref="WalletAccountReference"/>.
+        /// </summary>
+        /// <returns>A collection of transactions.</returns>
+        IEnumerable<TransactionData> GetAllTransactionsInWallet(string walletName, Func<HdAccount, bool> accountFilter);
+
+        /// <summary>
         /// Creates a wallet and persist it as a file on the local system.
         /// </summary>
         /// <param name="password">The password used to encrypt sensitive info.</param>
@@ -272,6 +278,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// <param name="walletName">The name of the wallet to look into.</param>
         /// <returns>The list of accounts in the specified wallet.</returns>
         IEnumerable<HdAccount> GetAccounts(string walletName);
+
+        /// <summary>
+        /// Gets a list of accounts.
+        /// </summary>
+        /// <param name="walletName">The name of the wallet to look into.</param>
+        /// <param name="accountFilter">Optional filter for the accounts to return. Defaults to returning normal accounts only.</param>
+        /// <returns>The list of accounts in the specified wallet.</returns>
+        IEnumerable<HdAccount> GetAccounts(string walletName, Func<HdAccount, bool> accountFilter);
 
         /// <summary>
         /// Gets a list of all the accounts in all wallets.

@@ -48,7 +48,8 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
                 targetSpacingSeconds: 60,
                 votingEnabled: baseOptions.VotingEnabled,
                 autoKickIdleMembers: false,
-                federationMemberMaxIdleTimeSeconds: baseOptions.FederationMemberMaxIdleTimeSeconds
+                federationMemberMaxIdleTimeSeconds: baseOptions.FederationMemberMaxIdleTimeSeconds,
+                pollExpiryBlocks: 450
             );
 
             this.Consensus.SetPrivatePropertyValue(nameof(this.Consensus.MaxReorgLength), (uint)5);
@@ -66,7 +67,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
             foreach (IFederationMember member in members)
                 options.GenesisFederationMembers.Add(member);
 
-            this.ConsensusOptions.AutoKickIdleMembers = enableIdleKicking;
+            this.ConsensusOptions.SetPrivatePropertyValue("AutoKickIdleMembers", enableIdleKicking);
             this.Consensus.ConsensusRules.FullValidationRules.Add(typeof(MandatoryCollateralMemberVotingRule));
             this.Consensus.MempoolRules.Add(typeof(VotingRequestValidationRule));
 

@@ -1,8 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
@@ -44,7 +43,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         private const int MinConfirmationsAllChecks = 1;
 
         private readonly IBroadcasterManager broadcasterManager;
-        private readonly IBlockStore blockStore;
         private readonly ChainIndexer chainIndexer;
         private readonly CSharpContractDecompiler contractDecompiler;
         private readonly ILogger logger;
@@ -82,7 +80,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;
             this.chainIndexer = chainIndexer;
-            this.blockStore = blockStore;
             this.walletManager = walletManager;
             this.broadcasterManager = broadcasterManager;
             this.serializer = serializer;
@@ -193,7 +190,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
 
             if (storageValue == null)
             {
-                return this.Json(new
+                return this.NotFound(new
                 {
                     Message = string.Format("No data at storage with key {0}", request.StorageKey)
                 });
@@ -277,36 +274,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         [ActionDescription("Searches for receipts matching the filter criteria.")]
         public List<ReceiptResponse> ReceiptSearch(string contractAddress, string eventName, List<string> topics = null, int fromBlock = 0, int? toBlock = null)
         {
-            uint160 address = contractAddress.ToUint160(this.network);
-
-            byte[] contractCode = this.stateRoot.GetCode(address);
-
-            if (contractCode == null || !contractCode.Any())
-            {
-                return null;
-            }
-
-            IEnumerable<byte[]> topicsBytes = topics != null ? topics.Where(topic => topic != null).Select(t => t.HexToByteArray()) : new List<byte[]>();
-
-
-            var deserializer = new ApiLogDeserializer(this.primitiveSerializer, this.network, this.stateRoot, this.contractAssemblyCache);
-
-            var receiptSearcher = new ReceiptSearcher(this.chainIndexer, this.blockStore, this.receiptRepository, this.network);
-
-            List<Receipt> receipts = receiptSearcher.SearchReceipts(contractAddress, eventName, fromBlock, toBlock, topicsBytes);
-
-            var result = new List<ReceiptResponse>();
-
-            foreach (Receipt receipt in receipts)
-            {
-                List<LogResponse> logResponses = deserializer.MapLogResponses(receipt.Logs);
-
-                var receiptResponse = new ReceiptResponse(receipt, logResponses, this.network);
-
-                result.Add(receiptResponse);
-            }
-
-            return result;
+            return this.smartContractTransactionService.ReceiptSearch(contractAddress, eventName, topics, fromBlock, toBlock);
         }
 
         // Note: We may not know exactly how to best structure "receipt search" queries until we start building 
@@ -332,16 +300,16 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <returns>A list of receipts for transactions relating to a specific smart contract and a specific event in that smart contract.</returns>
         [Route("api/[controller]/receipt-search")]
         [HttpGet]
-        public async Task<IActionResult> ReceiptSearchAPI([FromQuery] string contractAddress, [FromQuery] string eventName, [FromQuery] List<string> topics = null, [FromQuery] int fromBlock = 0, [FromQuery] int? toBlock = null)
+        public Task<IActionResult> ReceiptSearchAPI([FromQuery] string contractAddress, [FromQuery] string eventName, [FromQuery] List<string> topics = null, [FromQuery] int fromBlock = 0, [FromQuery] int? toBlock = null)
         {
-            List<ReceiptResponse> result = this.ReceiptSearch(contractAddress, eventName, topics, fromBlock, toBlock);
+            List<ReceiptResponse> result = this.smartContractTransactionService.ReceiptSearch(contractAddress, eventName, topics, fromBlock, toBlock);
 
             if (result == null)
             {
-                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.InternalServerError, "No code exists", $"No contract execution code exists at {contractAddress}");
+                return Task.FromResult<IActionResult>(ErrorHelpers.BuildErrorResponse(HttpStatusCode.InternalServerError, "No code exists", $"No contract execution code exists at {contractAddress}"));
             }
 
-            return this.Json(result);
+            return Task.FromResult<IActionResult>(this.Json(result));
         }
 
         /// <summary>
@@ -398,7 +366,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             if (!this.ModelState.IsValid)
                 return ModelStateErrors.BuildErrorResponse(this.ModelState);
 
-            var response = this.smartContractTransactionService.BuildCallTx(request);
+            BuildCallContractTransactionResponse response = this.smartContractTransactionService.BuildCallTx(request);
 
             if (!response.Success)
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, response.Message, string.Empty);
@@ -560,7 +528,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             // Check if transaction was actually added to a mempool.
             TransactionBroadcastEntry transactionBroadCastEntry = this.broadcasterManager.GetTransaction(transaction.GetHash());
 
-            if (transactionBroadCastEntry?.TransactionBroadcastState == Features.Wallet.Broadcasting.TransactionBroadcastState.CantBroadcast)
+            if (transactionBroadCastEntry?.TransactionBroadcastState == TransactionBroadcastState.CantBroadcast)
             {
                 this.logger.LogError("Exception occurred: {0}", transactionBroadCastEntry.ErrorMessage);
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, transactionBroadCastEntry.ErrorMessage, "Transaction Exception");
@@ -603,15 +571,27 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             {
                 ContractTxData txData = this.smartContractTransactionService.BuildLocalCallTxData(request);
 
-                var height = request.BlockHeight.HasValue ? request.BlockHeight.Value : (ulong)this.chainIndexer.Height;
+                var height = request.BlockHeight ?? (ulong)this.chainIndexer.Height;
 
                 ILocalExecutionResult result = this.localExecutor.Execute(
                     height,
                     request.Sender?.ToUint160(this.network) ?? new uint160(),
-                    string.IsNullOrWhiteSpace(request.Amount) ? (Money)request.Amount : 0,
+                    !string.IsNullOrWhiteSpace(request.Amount) ? (Money)request.Amount : 0,
                     txData);
 
-                return this.Json(result, new JsonSerializerSettings
+                var deserializer = new ApiLogDeserializer(this.primitiveSerializer, this.network, result.StateRoot, this.contractAssemblyCache);
+
+                var response = new LocalExecutionResponse
+                {
+                    InternalTransfers = deserializer.MapTransferInfo(result.InternalTransfers.ToArray()),
+                    Logs = deserializer.MapLogResponses(result.Logs.ToArray()),
+                    GasConsumed = result.GasConsumed,
+                    Revert = result.Revert,
+                    ErrorMessage = result.ErrorMessage,
+                    Return = result.Return // All return values should be primitives, let default serializer handle.
+                };
+
+                return this.Json(response, new JsonSerializerSettings
                 {
                     ContractResolver = new ContractParametersContractResolver(this.network)
                 });

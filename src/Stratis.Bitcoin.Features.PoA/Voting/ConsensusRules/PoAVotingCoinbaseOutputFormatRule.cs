@@ -15,7 +15,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting.ConsensusRules
         [NoTrace]
         public override void Initialize()
         {
-            this.votingDataEncoder = new VotingDataEncoder(this.Parent.LoggerFactory);
+            this.votingDataEncoder = new VotingDataEncoder();
 
             base.Initialize();
         }

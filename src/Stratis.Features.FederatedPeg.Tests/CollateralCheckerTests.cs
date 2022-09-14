@@ -9,15 +9,14 @@ using Moq;
 using NBitcoin;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.Features.BlockStore.Controllers;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Networks;
-using Stratis.Bitcoin.Persistence.KeyValueStores;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
@@ -70,7 +69,8 @@ namespace Stratis.Features.FederatedPeg.Tests
             var fullNode = new Mock<IFullNode>();
 
             IFederationManager federationManager = new FederationManager(fullNode.Object, network, nodeSettings, signals, counterChainSettings);
-            var votingManager = new VotingManager(federationManager, loggerFactory, new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, signals, network);
+
+            var votingManager = new VotingManager(federationManager, new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, signals, network, chainIndexerMock.Object);
             var federationHistory = new FederationHistory(federationManager, network, votingManager);
             votingManager.Initialize(federationHistory);
 
@@ -78,7 +78,8 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             federationManager.Initialize();
 
-            this.collateralChecker = new CollateralChecker(clientFactory, counterChainSettings, federationManager, signals, network, asyncMock.Object, (new Mock<INodeLifetime>()).Object);
+            this.collateralChecker = new CollateralChecker(clientFactory, counterChainSettings, federationManager, signals, network,
+                asyncMock.Object, new Mock<INodeLifetime>().Object, new NodeDeployments(network, chainIndexerMock.Object));
         }
 
         [Fact]
@@ -129,9 +130,9 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             await this.collateralChecker.InitializeAsync();
 
-            Assert.True(this.collateralChecker.CheckCollateral(this.collateralFederationMembers[0], this.collateralCheckHeight));
-            Assert.True(this.collateralChecker.CheckCollateral(this.collateralFederationMembers[1], this.collateralCheckHeight));
-            Assert.False(this.collateralChecker.CheckCollateral(this.collateralFederationMembers[2], this.collateralCheckHeight));
+            Assert.True(this.collateralChecker.CheckCollateral(this.collateralFederationMembers[0], this.collateralCheckHeight, 0));
+            Assert.True(this.collateralChecker.CheckCollateral(this.collateralFederationMembers[1], this.collateralCheckHeight, 0));
+            Assert.False(this.collateralChecker.CheckCollateral(this.collateralFederationMembers[2], this.collateralCheckHeight, 0));
 
             // Now change what the client returns and make sure collateral check fails after update.
             AddressIndexerData updated = collateralData.BalancesData.First(b => b.Address == this.collateralFederationMembers[0].CollateralMainchainAddress);
@@ -140,7 +141,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             // Wait CollateralUpdateIntervalSeconds + 1 seconds
 
             await Task.Delay(21_000);
-            Assert.False(this.collateralChecker.CheckCollateral(this.collateralFederationMembers[0], this.collateralCheckHeight));
+            Assert.False(this.collateralChecker.CheckCollateral(this.collateralFederationMembers[0], this.collateralCheckHeight, 0));
 
             this.collateralChecker.Dispose();
         }

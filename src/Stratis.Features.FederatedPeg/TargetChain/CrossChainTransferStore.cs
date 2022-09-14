@@ -8,8 +8,8 @@ using System.Threading.Tasks;
 using DBreeze;
 using DBreeze.DataTypes;
 using DBreeze.Utils;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.BlockStore;
@@ -35,7 +35,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <summary>
         /// Maximum number of partial transactions.
         /// </summary>
-        public const int MaximumPartialTransactions = 5;
+        public const int MaximumPartialTransactions = 100;
 
         /// <summary>This table contains the cross-chain transfer information.</summary>
         private const string transferTableName = "Transfers";
@@ -224,7 +224,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                 List<(Transaction transaction, IWithdrawal withdrawal)> walletData = this.federationWalletManager.FindWithdrawalTransactions(partialTransfer.DepositTransactionId);
 
-                this.logger.Trace("DepositTransactionId:{0}; {1}:{2}", partialTransfer.DepositTransactionId, nameof(walletData), walletData.Count);
+                this.logger.LogTrace("DepositTransactionId:{0}; {1}:{2}", partialTransfer.DepositTransactionId, nameof(walletData), walletData.Count);
 
                 if (walletData.Count == 1 && this.ValidateTransaction(walletData[0].transaction))
                 {
@@ -246,7 +246,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         continue;
                     }
 
-                    this.logger.Debug("Templates don't match for {0} and {1}.", walletTran.GetHash(), partialTransfer.PartialTransaction.GetHash());
+                    this.logger.LogDebug("Templates don't match for {0} and {1}.", walletTran.GetHash(), partialTransfer.PartialTransaction.GetHash());
                 }
 
                 // The chain may have been rewound so that this transaction or its UTXO's have been lost.
@@ -254,14 +254,14 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 if (partialTransfer.DepositHeight < newChainATip)
                     newChainATip = partialTransfer.DepositHeight ?? newChainATip;
 
-                this.logger.Debug("Setting DepositId {0} to Suspended", partialTransfer.DepositTransactionId);
+                this.logger.LogDebug("Setting DepositId {0} to Suspended", partialTransfer.DepositTransactionId);
 
                 tracker.SetTransferStatus(partialTransfer, CrossChainTransferStatus.Suspended);
             }
 
             if (tracker.Count == 0)
             {
-                this.logger.Trace("(-)[NO_CHANGES_IN_TRACKER]");
+                this.logger.LogTrace("(-)[NO_CHANGES_IN_TRACKER]");
                 return crossChainTransfers;
             }
 
@@ -314,7 +314,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <param name="reason">Short reason/context code of failure.</param>
         private void RollbackAndThrowTransactionError(DBreeze.Transactions.Transaction dbreezeTransaction, Exception exception, string reason = "FAILED_TRANSACTION")
         {
-            this.logger.Error("Error during database update: {0}, reason: {1}", exception.Message, reason);
+            this.logger.LogError("Error during database update: {0}, reason: {1}", exception.Message, reason);
 
             dbreezeTransaction.Rollback();
             throw exception;
@@ -373,7 +373,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         }
                         catch (Exception err)
                         {
-                            this.logger.Error("An error occurred when processing deposits {0}", err);
+                            this.logger.LogError("An error occurred when processing deposits {0}", err);
 
                             this.RollbackAndThrowTransactionError(dbreezeTransaction, err, "REJECT_ERROR");
                         }
@@ -400,13 +400,13 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     if (maturedBlockDeposits.Count == 0 || maturedBlockDeposits.First().BlockInfo.BlockHeight != this.NextMatureDepositHeight)
                     {
-                        this.logger.Debug("(-)[NO_VIABLE_BLOCKS]:true");
+                        this.logger.LogDebug($"No viable blocks to process; {nameof(maturedBlockDeposits)}={maturedBlockDeposits.Count};{nameof(this.NextMatureDepositHeight)}={this.NextMatureDepositHeight}");
                         return new RecordLatestMatureDepositsResult().Succeeded();
                     }
 
                     if (maturedBlockDeposits.Last().BlockInfo.BlockHeight != this.NextMatureDepositHeight + maturedBlockDeposits.Count - 1)
                     {
-                        this.logger.Debug("(-)[DUPLICATE_BLOCKS]:true");
+                        this.logger.LogDebug("(-)[DUPLICATE_BLOCKS]:true");
                         return new RecordLatestMatureDepositsResult().Succeeded();
                     }
 
@@ -417,7 +417,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     {
                         this.NextMatureDepositHeight += maturedBlockDeposits.Count;
 
-                        this.logger.Debug("(-)[NO_DEPOSITS]:true");
+                        this.logger.LogDebug("(-)[NO_DEPOSITS]:true");
                         return new RecordLatestMatureDepositsResult().Succeeded();
                     }
 
@@ -428,8 +428,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         if (!this.Synchronize())
                             return;
 
-                        this.logger.Info($"{maturedBlockDeposits.Count} blocks received, containing a total of {maturedBlockDeposits.SelectMany(d => d.Deposits).Where(a => a.Amount > 0).Count()} deposits.");
-                        this.logger.Info($"Block Range : {maturedBlockDeposits.Min(a => a.BlockInfo.BlockHeight)} to {maturedBlockDeposits.Max(a => a.BlockInfo.BlockHeight)}.");
+                        this.logger.LogInformation($"{maturedBlockDeposits.Count} blocks received, containing a total of {maturedBlockDeposits.SelectMany(d => d.Deposits).Where(a => a.Amount > 0).Count()} deposits.");
+                        this.logger.LogInformation($"Block Range : {maturedBlockDeposits.Min(a => a.BlockInfo.BlockHeight)} to {maturedBlockDeposits.Max(a => a.BlockInfo.BlockHeight)}.");
 
                         foreach (MaturedBlockDepositsModel maturedDeposit in maturedBlockDeposits)
                         {
@@ -445,7 +445,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                             if (!this.federationWalletManager.IsFederationWalletActive())
                             {
-                                this.logger.Error("The store can't persist mature deposits while the federation is inactive.");
+                                this.logger.LogError("The store can't persist mature deposits while the federation is inactive.");
                                 continue;
                             }
 
@@ -467,6 +467,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                 IDeposit deposit = deposits[i];
                                 Transaction transaction = null;
                                 CrossChainTransferStatus status = CrossChainTransferStatus.Suspended;
+
+                                // Log the target address in the event that it fails.
+                                this.logger.LogDebug($"Attempting to create script pubkey from target address '{deposit.TargetAddress}'.");
                                 Script scriptPubKey = BitcoinAddress.Create(deposit.TargetAddress, this.network).ScriptPubKey;
 
                                 if (!haveSuspendedTransfers)
@@ -492,12 +495,14 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                                     if (invalidRecipient)
                                     {
+                                        this.logger.LogInformation("Invalid recipient.");
+
                                         status = CrossChainTransferStatus.Rejected;
                                     }
                                     else if ((tracker.Count(t => t.Value == CrossChainTransferStatus.Partial) + this.depositsIdsByStatus[CrossChainTransferStatus.Partial].Count) >= this.settings.MaximumPartialTransactionThreshold)
                                     {
                                         haveSuspendedTransfers = true;
-                                        this.logger.Info($"Partial transaction limit of {this.settings.MaximumPartialTransactionThreshold} reached, processing of deposits will continue once the partial transaction count falls below this value.");
+                                        this.logger.LogWarning($"Partial transaction limit of {this.settings.MaximumPartialTransactionThreshold} reached, processing of deposits will continue once the partial transaction count falls below this value.");
                                     }
                                     else
                                     {
@@ -510,7 +515,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                                             if (!this.ValidateTransaction(transaction))
                                             {
-                                                this.logger.Debug("Suspending transfer for deposit '{0}' to retry invalid transaction later.", deposit.Id);
+                                                this.logger.LogInformation("Suspending transfer for deposit '{0}' to retry invalid transaction later.", deposit.Id);
 
                                                 this.federationWalletManager.RemoveWithdrawalTransactions(deposit.Id);
                                                 haveSuspendedTransfers = true;
@@ -524,22 +529,27 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                         }
                                         else
                                         {
+                                            this.logger.LogInformation("Unable to build withdrawal transaction, suspending.");
                                             haveSuspendedTransfers = true;
                                         }
                                     }
+                                }
+                                else
+                                {
+                                    this.logger.LogInformation("Suspended flag set: '{0}'", deposit);
                                 }
 
                                 if (transfers[i] == null || transaction == null)
                                 {
                                     transfers[i] = new CrossChainTransfer(status, deposit.Id, scriptPubKey, deposit.Amount, maturedDeposit.BlockInfo.BlockHeight, transaction, null, null);
                                     tracker.SetTransferStatus(transfers[i]);
-                                    this.logger.Debug("Set {0} to {1}.", transfers[i]?.DepositTransactionId, status);
+                                    this.logger.LogDebug("Set {0} to {1}.", transfers[i]?.DepositTransactionId, status);
                                 }
                                 else
                                 {
                                     transfers[i].SetPartialTransaction(transaction);
                                     tracker.SetTransferStatus(transfers[i], CrossChainTransferStatus.Partial);
-                                    this.logger.Debug("Set {0} to Partial.", transfers[i]?.DepositTransactionId);
+                                    this.logger.LogDebug("Set {0} to Partial.", transfers[i]?.DepositTransactionId);
                                 }
                             }
 
@@ -565,16 +575,14 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                     // Ensure we get called for a retry by NOT advancing the chain A tip if the block
                                     // contained any suspended transfers.
                                     if (!haveSuspendedTransfers)
-                                    {
                                         this.SaveNextMatureHeight(dbreezeTransaction, this.NextMatureDepositHeight + 1);
-                                    }
 
                                     dbreezeTransaction.Commit();
                                     this.UpdateLookups(tracker);
                                 }
                                 catch (Exception err)
                                 {
-                                    this.logger.Error("An error occurred when processing deposits {0}", err);
+                                    this.logger.LogError("An error occurred when processing deposits {0}", err);
 
                                     // Undo reserved UTXO's.
                                     if (walletUpdated)
@@ -624,55 +632,55 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     if (transfer == null)
                     {
-                        this.logger.Debug("(-)[MERGE_NOT_FOUND]:null");
+                        this.logger.LogDebug("(-)[MERGE_NOT_FOUND]:null");
                         return null;
                     }
 
                     if (transfer.Status != CrossChainTransferStatus.Partial)
                     {
-                        this.logger.Debug("(-)[MERGE_BAD_STATUS]:{0}={1}", nameof(transfer.Status), transfer.Status);
+                        this.logger.LogDebug("(-)[MERGE_BAD_STATUS]:{0}={1}", nameof(transfer.Status), transfer.Status);
                         return transfer.PartialTransaction;
                     }
 
                     try
                     {
 
-                        this.logger.Debug("Partial Transaction inputs:{0}", partialTransactions[0].Inputs.Count);
-                        this.logger.Debug("Partial Transaction outputs:{0}", partialTransactions[0].Outputs.Count);
+                        this.logger.LogDebug("Partial Transaction inputs:{0}", partialTransactions[0].Inputs.Count);
+                        this.logger.LogDebug("Partial Transaction outputs:{0}", partialTransactions[0].Outputs.Count);
 
                         for (int i = 0; i < partialTransactions[0].Inputs.Count; i++)
                         {
                             TxIn input = partialTransactions[0].Inputs[i];
-                            this.logger.Debug("Partial Transaction Input N:{0} : Hash:{1}", input.PrevOut.N, input.PrevOut.Hash);
+                            this.logger.LogDebug("Partial Transaction Input N:{0} : Hash:{1}", input.PrevOut.N, input.PrevOut.Hash);
                         }
 
                         for (int i = 0; i < partialTransactions[0].Outputs.Count; i++)
                         {
                             TxOut output = partialTransactions[0].Outputs[i];
-                            this.logger.Debug("Partial Transaction Output Value:{0} : ScriptPubKey:{1}", output.Value, output.ScriptPubKey);
+                            this.logger.LogDebug("Partial Transaction Output Value:{0} : ScriptPubKey:{1}", output.Value, output.ScriptPubKey);
                         }
 
-                        this.logger.Debug("Transfer Partial Transaction inputs:{0}", transfer.PartialTransaction.Inputs.Count);
-                        this.logger.Debug("Transfer Partial Transaction outputs:{0}", transfer.PartialTransaction.Outputs.Count);
+                        this.logger.LogDebug("Transfer Partial Transaction inputs:{0}", transfer.PartialTransaction.Inputs.Count);
+                        this.logger.LogDebug("Transfer Partial Transaction outputs:{0}", transfer.PartialTransaction.Outputs.Count);
 
                         for (int i = 0; i < transfer.PartialTransaction.Inputs.Count; i++)
                         {
                             TxIn transferInput = transfer.PartialTransaction.Inputs[i];
-                            this.logger.Debug("Transfer Partial Transaction Input N:{0} : Hash:{1}", transferInput.PrevOut.N, transferInput.PrevOut.Hash);
+                            this.logger.LogDebug("Transfer Partial Transaction Input N:{0} : Hash:{1}", transferInput.PrevOut.N, transferInput.PrevOut.Hash);
                         }
 
                         for (int i = 0; i < transfer.PartialTransaction.Outputs.Count; i++)
                         {
                             TxOut transferOutput = transfer.PartialTransaction.Outputs[i];
-                            this.logger.Debug("Transfer Partial Transaction Output Value:{0} : ScriptPubKey:{1}", transferOutput.Value, transferOutput.ScriptPubKey);
+                            this.logger.LogDebug("Transfer Partial Transaction Output Value:{0} : ScriptPubKey:{1}", transferOutput.Value, transferOutput.ScriptPubKey);
                         }
                     }
                     catch (Exception err)
                     {
-                        this.logger.Debug("Failed to log transactions: {0}.", err.Message);
+                        this.logger.LogDebug("Failed to log transactions: {0}.", err.Message);
                     }
 
-                    this.logger.Debug("Merging signatures for deposit : {0}", depositId);
+                    this.logger.LogDebug("Merging signatures for deposit : {0}", depositId);
 
                     var builder = new TransactionBuilder(this.network);
                     Transaction oldTransaction = transfer.PartialTransaction;
@@ -684,7 +692,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         // We will finish dealing with the request here if an invalid signature is sent.
                         // The incoming partial transaction will not have the same inputs / outputs as what our node has generated
                         // so would have failed CrossChainTransfer.TemplatesMatch() and leave through here.
-                        this.logger.Debug("(-)[MERGE_UNCHANGED_TX_HASHES_MATCH]");
+                        this.logger.LogDebug("(-)[MERGE_UNCHANGED_TX_HASHES_MATCH]");
                         return transfer.PartialTransaction;
                     }
 
@@ -699,13 +707,13 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                             if (this.ValidateTransaction(transfer.PartialTransaction, true))
                             {
-                                this.logger.Debug("Deposit: {0} collected enough signatures and is FullySigned", transfer.DepositTransactionId);
+                                this.logger.LogDebug("Deposit: {0} collected enough signatures and is FullySigned", transfer.DepositTransactionId);
                                 transfer.SetStatus(CrossChainTransferStatus.FullySigned);
                                 this.signals.Publish(new CrossChainTransferTransactionFullySigned(transfer));
                             }
                             else
                             {
-                                this.logger.Debug("Deposit: {0} did not collect enough signatures and is Partial", transfer.DepositTransactionId);
+                                this.logger.LogDebug("Deposit: {0} did not collect enough signatures and is Partial", transfer.DepositTransactionId);
                             }
 
                             this.PutTransfer(dbreezeTransaction, transfer);
@@ -717,7 +725,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         }
                         catch (Exception err)
                         {
-                            this.logger.Error("Error: {0} ", err);
+                            this.logger.LogError("Error: {0} ", err);
 
                             // Restore expected store state in case the calling code retries / continues using the store.
                             transfer.SetPartialTransaction(oldTransaction);
@@ -740,10 +748,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// identified in the blocks.
         /// </summary>
         /// <param name="blocks">The blocks used to update the store. Must be sorted by ascending height leading up to the new tip.</param>
+        /// <param name="chainedHeadersSnapshot">The chained headers corresponding to the blocks.</param>
         private void Put(List<Block> blocks, Dictionary<uint256, ChainedHeader> chainedHeadersSnapshot)
         {
             if (blocks.Count == 0)
-                this.logger.Trace("(-)[NO_BLOCKS]:0");
+                this.logger.LogTrace("(-)[NO_BLOCKS]:0");
 
             Dictionary<uint256, ICrossChainTransfer> transferLookup;
             Dictionary<uint256, IWithdrawal[]> allWithdrawals;
@@ -765,7 +774,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 // Exiting here and saving the tip after the sync.
                 this.TipHashAndHeight = chainedHeadersSnapshot[blocks.Last().GetHash()];
 
-                this.logger.Trace("(-)[NO_DEPOSIT_IDS]");
+                this.logger.LogTrace("(-)[NO_DEPOSIT_IDS]");
                 return;
             }
 
@@ -850,7 +859,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         {
             if (this.TipHashAndHeight == null)
             {
-                this.logger.Trace("(-)[CCTS_TIP_NOT_SET]");
+                this.logger.LogTrace("(-)[CCTS_TIP_NOT_SET]");
                 return;
             }
 
@@ -859,7 +868,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             // Indicates that the CCTS is synchronized with the Federation Wallet.
             if (this.TipHashAndHeight.HashBlock == tipToChase.Hash)
             {
-                this.logger.Trace("(-)[SYNCHRONIZED]");
+                this.logger.LogTrace("(-)[SYNCHRONIZED]");
                 return;
             }
 
@@ -947,8 +956,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             {
                 if (this.TipHashAndHeight == null)
                 {
-                    this.logger.Error("Synchronization failed as the store's tip is null.");
-                    this.logger.Trace("(-)[CCTS_TIP_NOT_SET]:false");
+                    this.logger.LogError("Synchronization failed as the store's tip is null.");
+                    this.logger.LogTrace("(-)[CCTS_TIP_NOT_SET]:false");
                     return false;
                 }
 
@@ -957,15 +966,15 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 // Check if the federation wallet's tip is on chain, if not exit.
                 if (this.chainIndexer.GetHeaderByHash(federationWalletTip.Hash) == null)
                 {
-                    this.logger.Debug("Synchronization failed as the federation wallet tip is not on chain; {0}='{1}', {2}='{3}'", nameof(this.chainIndexer.Tip), this.chainIndexer.Tip, nameof(federationWalletTip), federationWalletTip);
-                    this.logger.Trace("(-)[FED_WALLET_TIP_NOT_ONCHAIN]:false");
+                    this.logger.LogDebug("Synchronization failed as the federation wallet tip is not on chain; {0}='{1}', {2}='{3}'", nameof(this.chainIndexer.Tip), this.chainIndexer.Tip, nameof(federationWalletTip), federationWalletTip);
+                    this.logger.LogTrace("(-)[FED_WALLET_TIP_NOT_ONCHAIN]:false");
                     return false;
                 }
 
                 // If the federation wallet tip matches the store's tip, exit.
                 if (federationWalletTip.Hash == this.TipHashAndHeight.HashBlock)
                 {
-                    this.logger.Trace("(-)[SYNCHRONIZED]:true");
+                    this.logger.LogTrace("(-)[SYNCHRONIZED]:true");
                     return true;
                 }
 
@@ -980,7 +989,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         }
                         catch (Exception ex)
                         {
-                            this.logger.Error($"An error occurred whilst synchronizing the store: {ex}.");
+                            this.logger.LogError($"An error occurred whilst synchronizing the store: {ex}.");
                             throw ex;
                         }
                     }
@@ -1004,8 +1013,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                             // responsible for cleaning transactions past max reorg.
                             // Doing this from the federation wallet manager could mean transactions
                             // are cleaned before they are processed by the CCTS (which means they will
-                            // be wrongly added back.
-                            if (this.federationWalletManager.CleanTransactionsPastMaxReorg(this.TipHashAndHeight.Height))
+                            // be wrongly added back).
+                            if (this.federationWalletManager.IsSyncedWithChain() && this.federationWalletManager.CleanTransactionsPastMaxReorg(this.TipHashAndHeight.Height))
                                 this.federationWalletManager.SaveWallet();
 
                             return true;
@@ -1035,7 +1044,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             {
                 // If the federation tip is found to be not on chain, we need to throw an
                 // exception to ensure that we exit the synchronization process.
-                this.logger.Trace("(-)[FEDERATION_WALLET_TIP_NOT_ON CHAIN]:{0}='{1}', {2}='{3}'", nameof(this.chainIndexer.Tip), this.chainIndexer.Tip, nameof(federationWalletTip), federationWalletTip);
+                this.logger.LogTrace("(-)[FEDERATION_WALLET_TIP_NOT_ON CHAIN]:{0}='{1}', {2}='{3}'", nameof(this.chainIndexer.Tip), this.chainIndexer.Tip, nameof(federationWalletTip), federationWalletTip);
                 throw new FederationWalletTipNotOnChainException();
             }
 
@@ -1064,7 +1073,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             {
                 Block lastBlock = blocks[availableBlocks - 1];
                 this.Put(blocks.GetRange(0, availableBlocks), chainedHeadersSnapshot);
-                this.logger.Info("Synchronized {0} blocks with cross-chain store to advance tip to block {1}", availableBlocks, this.TipHashAndHeight?.Height);
+                this.logger.LogInformation("Synchronized {0} blocks with cross-chain store to advance tip to block {1}", availableBlocks, this.TipHashAndHeight?.Height);
             }
 
             bool done = availableBlocks < SynchronizationBatchSize;
@@ -1321,7 +1330,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 {
                     // Transaction is no longer seen and the FederationWalletManager is going to remove the transaction anyhow
                     // So don't prolong - just set to Suspended now.
-                    this.logger.Debug("Setting DepositId {0} to Suspended", transfer.DepositTransactionId);
+                    this.logger.LogDebug("Setting DepositId {0} to Suspended", transfer.DepositTransactionId);
                     tracker.SetTransferStatus(transfer, CrossChainTransferStatus.Suspended);
 
                     // Write the transfer status to the database.
@@ -1482,7 +1491,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             {
                 benchLog.AppendLine("--- Pending Withdrawals ---");
                 benchLog.AppendLine("Failed to retrieve data");
-                this.logger.Error("Exception occurred while getting pending withdrawals: '{0}'.", exception.ToString());
+                this.logger.LogError("Exception occurred while getting pending withdrawals: '{0}'.", exception.ToString());
             }
         }
 
@@ -1495,26 +1504,31 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         }
 
         /// <inheritdoc />
-        public int DeleteSuspendedTransfers()
+        public (bool result, string message) DeleteSuspendedTransfer(uint256 depositId)
         {
             HashSet<uint256> depositIds = this.depositsIdsByStatus[CrossChainTransferStatus.Suspended];
-            ICrossChainTransfer[] transfers = this.Get(depositIds.ToArray()).Where(t => t != null).ToArray();
+            if (depositIds.Count == 0)
+                return (false, "There are no suspended transfers.");
+
+            uint256 transferDepositId = depositIds.FirstOrDefault(d => d == depositId);
+            if (transferDepositId == null)
+                return (false, $"'{depositId.ToString()}' does not exists in suspended transfers.");
+
+            ICrossChainTransfer transfer = this.Get(new uint256[] { transferDepositId }).Where(t => t != null).FirstOrDefault();
 
             using (DBreeze.Transactions.Transaction dbreezeTransaction = this.DBreeze.GetTransaction())
             {
                 dbreezeTransaction.SynchronizeTables(transferTableName, commonTableName);
                 dbreezeTransaction.ValuesLazyLoadingIsOn = false;
 
-                foreach (ICrossChainTransfer transfer in transfers)
-                {
-                    this.DeleteTransfer(dbreezeTransaction, transfer);
-                    this.logger.Debug($"Suspended transfer with deposit id '{transfer.DepositTransactionId}' deleted.");
-                }
+                this.DeleteTransfer(dbreezeTransaction, transfer);
+                this.depositsIdsByStatus[CrossChainTransferStatus.Suspended].Clear();
+                this.logger.LogDebug($"Suspended transfer with deposit id '{transfer.DepositTransactionId}' deleted.");
 
                 dbreezeTransaction.Commit();
             }
 
-            return transfers.Count();
+            return (true, null);
         }
 
         /// <inheritdoc />

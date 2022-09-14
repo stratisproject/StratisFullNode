@@ -19,7 +19,7 @@ namespace Stratis.SmartContracts.CLR.Tests
         public ContractLogHolderTests()
         {
             this.network = new SmartContractsRegTest();
-            this.serializer = new ContractPrimitiveSerializer(this.network);
+            this.serializer = new ContractPrimitiveSerializerV2(this.network);
             this.logHolder = new ContractLogHolder();
         }
 

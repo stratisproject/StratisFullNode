@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Signals;
 using Stratis.Features.FederatedPeg.Distribution;
@@ -26,6 +27,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly Network network;
 
         private readonly Script cirrusRewardDummyAddressScriptPubKey;
+        private readonly Script conversionTransactionFeeDistributionScriptPubKey;
         private readonly IFederationWalletManager federationWalletManager;
         private readonly IFederationWalletTransactionHandler federationWalletTransactionHandler;
         private readonly IFederatedPegSettings federatedPegSettings;
@@ -52,6 +54,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             if (!this.federatedPegSettings.IsMainChain)
                 this.cirrusRewardDummyAddressScriptPubKey = BitcoinAddress.Create(this.network.CirrusRewardDummyAddress).ScriptPubKey;
 
+            if (!this.federatedPegSettings.IsMainChain)
+                this.conversionTransactionFeeDistributionScriptPubKey = BitcoinAddress.Create(this.network.ConversionTransactionFeeDistributionDummyAddress).ScriptPubKey;
+
             this.previousDistributionHeight = 0;
         }
 
@@ -60,7 +65,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         {
             try
             {
-                this.logger.Info("BuildDeterministicTransaction depositId(opReturnData)={0}; recipient.ScriptPubKey={1}; recipient.Amount={2}; height={3}", depositId, recipient.ScriptPubKey, recipient.Amount, blockHeight);
+                this.logger.LogDebug("BuildDeterministicTransaction depositId(opReturnData)={0}; recipient.ScriptPubKey={1}; recipient.Amount={2}; height={3}", depositId, recipient.ScriptPubKey, recipient.Amount, blockHeight);
 
                 // Build the multisig transaction template.
                 uint256 opReturnData = depositId;
@@ -80,17 +85,24 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 multiSigContext.Recipients = new List<Recipient> { recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee) };
 
                 // Withdrawals from the sidechain won't have the OP_RETURN transaction tag, so we need to check against the ScriptPubKey of the Cirrus Dummy address.
-                if (!this.federatedPegSettings.IsMainChain && recipient.ScriptPubKey.Length > 0 && recipient.ScriptPubKey == this.cirrusRewardDummyAddressScriptPubKey)
+                if (!this.federatedPegSettings.IsMainChain && recipient.ScriptPubKey.Length > 0)
                 {
-                    // Use the distribution manager to determine the actual list of recipients.
-                    // TODO: This would probably be neater if it was moved to the CCTS with the current method accepting a list of recipients instead
-                    if (this.previousDistributionHeight != blockHeight)
+                    if (recipient.ScriptPubKey == this.cirrusRewardDummyAddressScriptPubKey && this.previousDistributionHeight != blockHeight)
                     {
+                        // Use the distribution manager to determine the actual list of recipients.
+                        // TODO: This would probably be neater if it was moved to the CCTS with the current method accepting a list of recipients instead
                         multiSigContext.Recipients = this.distributionManager.Distribute(blockHeight, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount); // Reduce the overall amount by the fee first before splitting it up.
 
                         // This can be transient as it is just to stop distribution happening multiple times
                         // on blocks that contain more than one deposit.
                         this.previousDistributionHeight = blockHeight;
+                    }
+
+                    if (recipient.ScriptPubKey == this.conversionTransactionFeeDistributionScriptPubKey)
+                    {
+                        this.logger.LogDebug("Generating recipient list for conversion transaction fee distribution.");
+
+                        multiSigContext.Recipients = this.distributionManager.DistributeToMultisigNodes(depositId, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount);
                     }
                 }
 
@@ -99,9 +111,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                 if (coins.Count > FederatedPegSettings.MaxInputs)
                 {
-                    this.logger.Debug("Too many inputs. Triggering the consolidation process.");
+                    this.logger.LogDebug("Too many inputs. Triggering the consolidation process.");
                     this.signals.Publish(new WalletNeedsConsolidation(recipient.Amount));
-                    this.logger.Trace("(-)[CONSOLIDATING_INPUTS]");
+                    this.logger.LogTrace("(-)[CONSOLIDATING_INPUTS]");
                     return null;
                 }
 
@@ -111,7 +123,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 // Build the transaction.
                 Transaction transaction = this.federationWalletTransactionHandler.BuildTransaction(multiSigContext);
 
-                this.logger.Debug("transaction = {0}", transaction.ToString(this.network, RawFormat.BlockExplorer));
+                this.logger.LogDebug("transaction = {0}", transaction.ToString(this.network, RawFormat.BlockExplorer));
 
                 return transaction;
             }
@@ -121,15 +133,15 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     (walletException.Message == FederationWalletTransactionHandler.NoSpendableTransactionsMessage
                      || walletException.Message == FederationWalletTransactionHandler.NotEnoughFundsMessage))
                 {
-                    this.logger.Warn("Not enough spendable transactions in the wallet. Should be resolved when a pending transaction is included in a block.");
+                    this.logger.LogWarning("Not enough spendable transactions in the wallet. Should be resolved when a pending transaction is included in a block.");
                 }
                 else
                 {
-                    this.logger.Error("Could not create transaction for deposit {0}: {1}", depositId, error.Message);
+                    this.logger.LogError("Could not create transaction for deposit {0}: {1}", depositId, error.Message);
                 }
             }
 
-            this.logger.Trace("(-)[FAIL]");
+            this.logger.LogTrace("(-)[FAIL]");
             return null;
         }
     }

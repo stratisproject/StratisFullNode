@@ -79,7 +79,7 @@ namespace Stratis.Bitcoin.Features.Miner
         /// <param name="network">The network to extract values from.</param>
         public static void PrintHelp(Network network)
         {
-            MinerSettings.PrintHelp(network);
+            BaseSettings.PrintHelp(typeof(MinerSettings), network);
         }
 
         /// <summary>
@@ -89,7 +89,7 @@ namespace Stratis.Bitcoin.Features.Miner
         /// <param name="network">The network to base the defaults off.</param>
         public static void BuildDefaultConfigurationFile(StringBuilder builder, Network network)
         {
-            MinerSettings.BuildDefaultConfigurationFile(builder, network);
+            BaseSettings.BuildDefaultConfigurationFile(typeof(MinerSettings), builder, network);
         }
 
         /// <summary>
@@ -260,6 +260,7 @@ namespace Stratis.Bitcoin.Features.Miner
         /// Adds POW and POS miner components to the node, so that it can mine or stake.
         /// </summary>
         /// <param name="fullNodeBuilder">The object used to build the current node.</param>
+        /// <param name="straxMode">Indicates whether the <see cref="StraxMinting"/> class should be used.</param>
         /// <returns>The full node builder, enriched with the new component.</returns>
         public static IFullNodeBuilder AddPowPosMining(this IFullNodeBuilder fullNodeBuilder, bool straxMode)
         {

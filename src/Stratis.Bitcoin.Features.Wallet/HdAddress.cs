@@ -294,6 +294,8 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <summary>
         /// Get the address total spendable value for both confirmed and unconfirmed UTXO.
         /// </summary>
+        /// <param name="excludeColdStakeUtxo">Set this to exclude cold staking UTXOs.</param>
+        /// <returns>A tuple containing the confirmed and unconfirmed amounts respectively.</returns>
         public (Money confirmedAmount, Money unConfirmedAmount) GetBalances(bool excludeColdStakeUtxo)
         {
             return GetBalances(excludeColdStakeUtxo ? this.Transactions.Where(t => t.IsColdCoinStake != true) : this.Transactions);

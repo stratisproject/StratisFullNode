@@ -13,6 +13,7 @@ using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.Notifications;
 using Stratis.Bitcoin.Features.RPC;
+using Stratis.Bitcoin.Features.SignalR;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
@@ -56,13 +57,15 @@ namespace Stratis.CirrusMinerD
                         throw new ArgumentException($"Gateway node needs to be started specifying either a {SidechainArgument} or a {MainchainArgument} argument");
 
                     fullNode = isMainchainNode ? BuildStraxNode(args) : BuildCirrusMiningNode(args);
-
-                    // set the console window title to identify which node this is (for clarity when running Strax and Cirrus on the same machine)
-                    Console.Title = isMainchainNode ? $"Strax Full Node {fullNode.Network.NetworkType}" : $"Cirrus Full Node {fullNode.Network.NetworkType}";
                 }
 
                 if (fullNode != null)
+                {
+                    // Set the console window title to identify which node this is (for clarity when running Strax and Cirrus on the same machine).
+                    Console.Title = isMainchainNode ? $"Strax Full Node {fullNode.Network.NetworkType}" : $"Cirrus Full Node {fullNode.Network.NetworkType}";
+
                     await fullNode.RunAsync();
+                }
             }
             catch (Exception ex)
             {
@@ -100,6 +103,10 @@ namespace Stratis.CirrusMinerD
                 })
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()
+                .AddSignalR(options =>
+                {
+                    DaemonConfiguration.ConfigureSignalRForCirrus(options);
+                })
                 .Build();
 
             return node;
@@ -107,7 +114,7 @@ namespace Stratis.CirrusMinerD
 
         private static IFullNode BuildDevCirrusMiningNode(string[] args)
         {
-            string[] devModeArgs = new[] { "-bootstrap=1", "-dbtype=rocksdb", "-defaultwalletname=cirrusdev", "-defaultwalletpassword=password" }.Concat(args).ToArray();
+            string[] devModeArgs = new[] { "-bootstrap=1", "-defaultwalletname=cirrusdev", "-defaultwalletpassword=password" }.Concat(args).ToArray();
             var network = new CirrusDev();
 
             var nodeSettings = new NodeSettings(network, protocolVersion: ProtocolVersion.CIRRUS_VERSION, args: devModeArgs)
@@ -135,6 +142,10 @@ namespace Stratis.CirrusMinerD
                 })
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()
+                .AddSignalR(options =>
+                {
+                    DaemonConfiguration.ConfigureSignalRForCirrus(options);
+                })
                 .Build();
 
             return node;
@@ -143,6 +154,8 @@ namespace Stratis.CirrusMinerD
         /// <summary>
         /// Returns a standard Stratis node. Just like StratisD.
         /// </summary>
+        /// <param name="args">The command-line arguments.</param>
+        /// <returns>See <see cref="IFullNode"/>.</returns>
         private static IFullNode BuildStraxNode(string[] args)
         {
             // TODO: Hardcode -addressindex for better user experience
@@ -166,6 +179,10 @@ namespace Stratis.CirrusMinerD
                 .UseWallet()
                 .AddSQLiteWalletRepository()
                 .AddPowPosMining(true)
+                .AddSignalR(options =>
+                {
+                    DaemonConfiguration.ConfigureSignalRForCirrus(options);
+                })
                 .Build();
 
             return node;

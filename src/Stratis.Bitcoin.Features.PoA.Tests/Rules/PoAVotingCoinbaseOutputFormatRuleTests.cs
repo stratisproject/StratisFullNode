@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using NBitcoin;
-using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.PoA.Voting;
@@ -49,7 +48,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests.Rules
         [Fact]
         public void ThrowsIfEmptyList()
         {
-            var encoder = new VotingDataEncoder(new ExtendedLoggerFactory());
+            var encoder = new VotingDataEncoder();
             byte[] bytes = encoder.Encode(new List<VotingData>());
 
             List<byte> votingData = new List<byte>(VotingDataEncoder.VotingOutputPrefixBytes);

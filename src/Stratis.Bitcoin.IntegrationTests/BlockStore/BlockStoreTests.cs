@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
+using Stratis.Bitcoin.Database;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.BlockStore.Repositories;
 using Stratis.Bitcoin.IntegrationTests.Common;
@@ -27,7 +28,7 @@ namespace Stratis.Bitcoin.IntegrationTests.BlockStore
         {
             var dBreezeSerializer = new DBreezeSerializer(this.network.Consensus.ConsensusFactory);
 
-            using (var blockRepository = new LevelDbBlockRepository(this.network, TestBase.CreateDataFolder(this), dBreezeSerializer))
+            using (var blockRepository = new BlockRepository<LevelDb>(this.network, TestBase.CreateDataFolder(this), dBreezeSerializer))
             {
                 blockRepository.Initialize();
 

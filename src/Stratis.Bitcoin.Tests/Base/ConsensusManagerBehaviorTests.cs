@@ -29,6 +29,7 @@ namespace Stratis.Bitcoin.Tests.Base
         /// Make sure that <see cref="GetHeadersPayload"/> wasn't sent to the peer, <see cref="ConsensusManager.HeadersPresented"/> wasn't called.
         /// Return value is <c>null</c>.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ConsensusTipChanged_ConsensusTipAdvancedBuNoCachedHeadersAsync()
         {
@@ -47,6 +48,7 @@ namespace Stratis.Bitcoin.Tests.Base
         /// Make sure <see cref="ConsensusManagerBehavior.BestReceivedTip"/> == 12, cached headers are empty and <see cref="GetHeadersPayload"/> was sent to the peer.
         /// Make sure headers up to header 12 were consumed.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ConsensusTipChanged_CachedHeadersConsumedFullyAsync()
         {
@@ -76,6 +78,7 @@ namespace Stratis.Bitcoin.Tests.Base
         /// cached headers contain 10 items (41 to 50) and <see cref="GetHeadersPayload"/> wasn't sent to the peer.
         /// Make sure in return value headers up to header 40 were consumed.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ConsensusTipChanged_CachedHeadersConsumedPartiallyAsync()
         {
@@ -112,6 +115,7 @@ namespace Stratis.Bitcoin.Tests.Base
         /// <see cref="GetHeadersPayload"/> was sent to the peer is called and <see cref="ConsensusManagerBehavior.BestReceivedTip"/> is still 10.
         /// Make sure return value is <c>null</c>.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ConsensusTipChanged_NotAbleToConnectCachedHeadersAsync()
         {
@@ -139,6 +143,7 @@ namespace Stratis.Bitcoin.Tests.Base
         /// Peer is not attached (attached peer is <c>null</c>). <see cref="ConsensusManagerBehavior.ConsensusTipChangedAsync"/> called with header 6.
         /// Make sure return value is <c>null</c>.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ConsensusTipChanged_PeerNotAttachedAsync()
         {
@@ -160,6 +165,7 @@ namespace Stratis.Bitcoin.Tests.Base
         /// Consensus tip is at header 10. We are in IBD. Node receives a message with <see cref="GetHeadersPayload"/>
         /// with <see cref="BlockLocator"/> generated from block 5. <see cref="HeadersPayload"/> wasn't sent.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ProcessGetHeadersAsync_DontAnswerIfInIBDAsync()
         {
@@ -175,6 +181,7 @@ namespace Stratis.Bitcoin.Tests.Base
         /// Consensus tip is at header 10. We are in IBD. Node is whitelisted. Node receives a message with <see cref="GetHeadersPayload"/>
         /// with <see cref="BlockLocator"/> generated from block 5. <see cref="HeadersPayload"/> was sent with headers 6-10.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ProcessGetHeadersAsync_AnswerToWHitelistedPeersInIBDAsync()
         {
@@ -196,6 +203,7 @@ namespace Stratis.Bitcoin.Tests.Base
         /// Consensus tip is at header 10. We are not in IBD. Node receives a message with <see cref="GetHeadersPayload"/>
         /// with <see cref="BlockLocator"/> generated from block 5. <see cref="HeadersPayload"/> was sent with headers 6-10.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ProcessGetHeadersAsync_HeadersSentNormallyAsync()
         {
@@ -215,6 +223,7 @@ namespace Stratis.Bitcoin.Tests.Base
         /// Consensus tip is at header 10. We are not in IBD. Node receives a message with <see cref="GetHeadersPayload"/>
         /// with <see cref="BlockLocator"/> containing 5 bogus headers. <see cref="HeadersPayload"/> wasn't sent.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ProcessGetHeadersAsync_BlockLocatorWithBogusHeadersIgnoredAsync()
         {
@@ -233,6 +242,7 @@ namespace Stratis.Bitcoin.Tests.Base
         /// <see cref="BlockLocator"/> generated from block 1000. <see cref="HeadersPayload"/> was sent with
         /// headers 1001 to 1001 + maximum amount of headers according to protocol restrictions.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ProcessGetHeadersAsync_SendsHeadersWithCountLimitedByProtocolAsync()
         {
@@ -256,6 +266,7 @@ namespace Stratis.Bitcoin.Tests.Base
         /// Consensus tip is at header 100a. We are not in IBD. Node receives a message with <see cref="GetHeadersPayload"/>
         /// <see cref="BlockLocator"/> that contains headers 90b, 60b, 50a, 30a, 10a. <see cref="HeadersPayload"/> was sent with headers 51a to 100a.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ProcessGetHeadersAsync_SendsHeadersIfLocatorIsPartiallyOnAForkAsync()
         {
@@ -288,6 +299,7 @@ namespace Stratis.Bitcoin.Tests.Base
         /// <see cref="BlockLocator"/> generated from block 1000 with a <see cref="GetHeadersPayload.HashStop"/> equal to 1500.
         /// Make sure <see cref="HeadersPayload"/> was called with headers 1001 to 1500.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ProcessGetHeadersAsync_SendsHeadersUpTpHashStopAsync()
         {
@@ -310,6 +322,7 @@ namespace Stratis.Bitcoin.Tests.Base
         /// Present 0 headers, make sure <inheritdoc cref="IConsensusManager.HeadersPresented"/> wasn't called and
         /// <see cref="GetHeadersPayload"/> wasn't sent.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ProcessHeadersAsync_EmptyHeadersMessageReceivedAsync()
         {
@@ -322,6 +335,7 @@ namespace Stratis.Bitcoin.Tests.Base
         }
 
         /// <summary>Present non-consecutive headers. Make sure peer was banned.</summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ProcessHeadersAsync_NonConsecutiveHeadersPresentedAsync()
         {
@@ -339,6 +353,7 @@ namespace Stratis.Bitcoin.Tests.Base
         /// Initialize cached headers so it's full. Present some headers.
         /// Make sure <inheritdoc cref="IConsensusManager.HeadersPresented"/> wasn't called and <see cref="GetHeadersPayload"/> wasn't sent.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ProcessHeadersAsync_DontSyncAfterCacheIsFullAsync()
         {
@@ -359,6 +374,7 @@ namespace Stratis.Bitcoin.Tests.Base
         /// Initialize cached headers with 1 item. Present 10 headers. Make sure cached headers
         /// now have 11 items and <see cref="GetHeadersPayload"/> wasn't sent.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ProcessHeadersAsync_DontSyncAfterCacheIsPopulatedAsync()
         {
@@ -378,6 +394,7 @@ namespace Stratis.Bitcoin.Tests.Base
         /// <summary>
         /// Consensus tip is at 10. We are not in IBD. Present headers from 12 to 20. Make sure <see cref="GetHeadersPayload"/> was sent.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ProcessHeadersAsync_SyncWhenCacheIsEmptyAsync()
         {
@@ -393,6 +410,7 @@ namespace Stratis.Bitcoin.Tests.Base
         /// Consensus tip is at 10a. We are not in IBD. Mock consensus manager to throw checkpoints exception. Present some headers.
         /// Make sure <see cref="GetHeadersPayload"/> wasn't sent and peer was banned.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ProcessHeadersAsync_PeerThatViolatesCheckpointIsBannedAsync()
         {
@@ -409,11 +427,12 @@ namespace Stratis.Bitcoin.Tests.Base
         /// Consensus tip is at 10. We are not in IBD. Present headers 11-15, where one header is invalid.
         /// Make sure <see cref="GetHeadersPayload"/> wasn't sent and peer was banned.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ProcessHeadersAsync_PeerThatSentInvalidHeaderIsBannedAsync()
         {
             this.helper.CreateAndAttachBehavior(this.headers[10], null, null, NetworkPeerState.HandShaked,
-                (presentedHeaders, triggerDownload) => { throw new HeaderInvalidException(); });
+                (presentedHeaders, triggerDownload) => { throw new HeaderInvalidException(new ConsensusError("code", "message")); });
 
             await this.helper.ReceivePayloadAsync(new HeadersPayload(this.headers.Skip(11).Take(5).Select(x => x.Header)));
 
@@ -425,6 +444,7 @@ namespace Stratis.Bitcoin.Tests.Base
         /// Consensus tip is at 10. We are not in IBD. Present headers 11-15, where one header is invalid.
         /// Make sure <see cref="GetHeadersPayload"/> wasn't sent and peer was banned.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ProcessHeadersAsync_PeerThatSentInvalidHeaderThatThrowFromRuleEngineIsBannedAsync()
         {
@@ -441,6 +461,7 @@ namespace Stratis.Bitcoin.Tests.Base
         /// Consensus tip is at 10. We are not in IBD. Present headers 11-15. Make sure <see cref="ConsensusManagerBehavior.BestReceivedTip"/>
         /// is header 15 and <see cref="GetHeadersPayload"/> was sent.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ProcessHeadersAsync_ConsumeAllHeadersAndAskForMoreAsync()
         {
@@ -461,6 +482,7 @@ namespace Stratis.Bitcoin.Tests.Base
         /// Present headers 11-50.  Make sure that <see cref="ConsensusManagerBehavior.BestReceivedTip"/> is header 40 and
         /// <see cref="GetHeadersPayload"/> wasn't sent. Cached headers contain headers from 41 to 50.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ProcessHeadersAsync_DontSyncAfterSomeHeadersConsumedAndSomeCachedAsync()
         {
@@ -483,6 +505,7 @@ namespace Stratis.Bitcoin.Tests.Base
         }
 
         /// <summary>We receive more headers than max allowed. Make sure peer was banned.</summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ProcessHeadersAsync_BanPeerThatViolatedMaxHeadersCountAsync()
         {
@@ -504,6 +527,7 @@ namespace Stratis.Bitcoin.Tests.Base
         /// Simulate that peer state became <see cref="NetworkPeerState.HandShaked"/>.
         /// Make sure <see cref="GetHeadersPayload"/> was sent.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task OnStateChangedAsync_SyncOnHandshakeAsync()
         {
@@ -519,6 +543,7 @@ namespace Stratis.Bitcoin.Tests.Base
         /// Initialize <see cref="ConsensusManagerBehavior.BestReceivedTip"/> to be header 5. Call <see cref="ConsensusManagerBehavior.ResetPeerTipInformationAndSyncAsync"/>.
         /// Make sure <see cref="ConsensusManagerBehavior.BestReceivedTip"/> became <c>null</c> and <see cref="GetHeadersPayload"/> was sent.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ResetPeerTipInformationAndSyncAsync_ResyncsAndResetsAsync()
         {
@@ -536,6 +561,7 @@ namespace Stratis.Bitcoin.Tests.Base
         /// Simulate that peer state is now <see cref="NetworkPeerState.HandShaked"/>.
         /// Make sure <see cref="GetHeadersPayload"/> was sent to the peer and it contains some blocks with hashes over header 50.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ResyncAsync_SyncsIfStateIsHanshakedAsync()
         {
@@ -566,6 +592,7 @@ namespace Stratis.Bitcoin.Tests.Base
         /// Simulate that peer state is now <see cref="NetworkPeerState.HandShaked"/>.
         /// Make sure <see cref="GetHeadersPayload"/> was sent to the peer and it contains blocks with hashes below header 50 and over header 30, but no blocks over 50.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task ResyncAsync_SendsProperLocatorAsync()
         {

@@ -36,6 +36,9 @@ using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
 {
+    /// <summary>
+    /// Full node wrapper for testing purposes.
+    /// </summary>
     public class CoreNode
     {
         private readonly NetworkCredential creds;
@@ -483,8 +486,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
         /// <summary>
         /// Emit a ping and wait the pong.
         /// </summary>
-        /// <param name="cancellation"></param>
-        /// <param name="peer"></param>
+        /// <param name="peer"><see cref="INetworkPeer"/>.</param>
+        /// <param name="cancellation">See <see cref="CancellationToken"/>.</param>
         /// <returns>Latency.</returns>
         public async Task<TimeSpan> PingPongAsync(INetworkPeer peer, CancellationToken cancellation = default(CancellationToken))
         {
@@ -595,7 +598,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
         /// </summary>
         /// <param name="peer">Peer to get chain from.</param>
         /// <param name="hashStop">The highest block wanted.</param>
-        /// <param name="cancellationToken"></param>
+        /// <param name="cancellationToken">See <see cref="CancellationToken"/>.</param>
         /// <returns>The chain of headers.</returns>
         private ChainIndexer GetChain(INetworkPeer peer, uint256 hashStop = null, CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -610,8 +613,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
         /// <param name="peer">Node to synchronize the chain for.</param>
         /// <param name="chain">The chain to synchronize.</param>
         /// <param name="hashStop">The location until which it synchronize.</param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
+        /// <param name="cancellationToken">See <see cref="CancellationToken"/>.</param>
+        /// <returns>An enumeration of <see cref="ChainedHeader"/> objects added to the fork point.</returns>
         private IEnumerable<ChainedHeader> SynchronizeChain(INetworkPeer peer, ChainIndexer chain, uint256 hashStop = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             ChainedHeader oldTip = chain.Tip;

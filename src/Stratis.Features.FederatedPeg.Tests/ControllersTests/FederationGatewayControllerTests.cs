@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -11,14 +12,16 @@ using NSubstitute;
 using NSubstitute.Core;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.BlockStore;
+using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Networks;
-using Stratis.Bitcoin.Persistence.KeyValueStores;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
@@ -28,7 +31,6 @@ using Stratis.Features.FederatedPeg.Controllers;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
 using Stratis.Features.FederatedPeg.SourceChain;
-using Stratis.Features.FederatedPeg.TargetChain;
 using Stratis.Sidechains.Networks;
 using Xunit;
 
@@ -56,8 +58,6 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
         private readonly ISignals signals;
 
-        private readonly ISignedMultisigTransactionBroadcaster signedMultisigTransactionBroadcaster;
-
         public FederationGatewayControllerTests()
         {
             this.network = CirrusNetwork.NetworksSelector.Regtest();
@@ -71,29 +71,30 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             this.federatedPegSettings = Substitute.For<IFederatedPegSettings>();
             this.federationWalletManager = Substitute.For<IFederationWalletManager>();
             this.signals = new Signals(this.loggerFactory, null);
-
-            this.signedMultisigTransactionBroadcaster = Substitute.For<ISignedMultisigTransactionBroadcaster>();
         }
 
         private FederationGatewayController CreateController(IFederatedPegSettings federatedPegSettings)
         {
+            var retrievalTypeConfirmations = new RetrievalTypeConfirmations(this.network, new NodeDeployments(this.network, new ChainIndexer(this.network)), federatedPegSettings, null, null);
+
             var controller = new FederationGatewayController(
                 Substitute.For<IAsyncProvider>(),
                 new ChainIndexer(),
                 Substitute.For<IConnectionManager>(),
                 this.crossChainTransferStore,
-                this.GetMaturedBlocksProvider(federatedPegSettings),
+                this.GetMaturedBlocksProvider(retrievalTypeConfirmations),
                 this.network,
                 this.federatedPegSettings,
                 this.federationWalletManager,
                 Substitute.For<IFullNode>(),
                 Substitute.For<IPeerBanning>(),
+                Substitute.For<IBlockStore>(),
                 this.federationManager);
 
             return controller;
         }
 
-        private MaturedBlocksProvider GetMaturedBlocksProvider(IFederatedPegSettings federatedPegSettings)
+        private MaturedBlocksProvider GetMaturedBlocksProvider(IRetrievalTypeConfirmations retrievalTypeConfirmations)
         {
             IBlockRepository blockRepository = Substitute.For<IBlockRepository>();
 
@@ -110,11 +111,13 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 return blocks;
             });
 
-            return new MaturedBlocksProvider(this.consensusManager, this.depositExtractor, federatedPegSettings);
+            IExternalApiPoller externalApiPoller = Substitute.For<IExternalApiPoller>();
+
+            return new MaturedBlocksProvider(this.consensusManager, this.depositExtractor, retrievalTypeConfirmations);
         }
 
         [Fact]
-        public void GetMaturedBlockDeposits_Fails_When_Block_Height_Greater_Than_Minimum_Deposit_Confirmations_Async()
+        public async Task GetMaturedBlockDeposits_Fails_When_Block_Height_Greater_Than_Minimum_Deposit_Confirmations_Async()
         {
             ChainedHeader tip = ChainedHeadersHelper.CreateConsecutiveHeaders(5, null, true).Last();
             this.consensusManager.Tip.Returns(tip);
@@ -131,7 +134,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             ChainedHeader earlierBlock = tip.GetAncestor(maturedHeight + 1);
 
             // Mature height = 2 (Chain header height (4) - Minimum deposit confirmations (2))
-            IActionResult result = controller.GetMaturedBlockDeposits(earlierBlock.Height);
+            IActionResult result = await controller.GetMaturedBlockDepositsAsync(earlierBlock.Height);
 
             // Block height (3) > Mature height (2) - returns error message
             var maturedBlockDepositsResult = (result as JsonResult).Value as SerializableResult<List<MaturedBlockDepositsModel>>;
@@ -141,7 +144,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
         }
 
         [Fact]
-        public void GetMaturedBlockDeposits_Gets_All_Matured_Block_Deposits()
+        public async Task GetMaturedBlockDeposits_Gets_All_Matured_Block_DepositsAsync()
         {
             ChainedHeader tip = ChainedHeadersHelper.CreateConsecutiveHeaders(10, null, true).Last();
             this.consensusManager.Tip.Returns(tip);
@@ -156,8 +159,8 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             ChainedHeader earlierBlock = tip.GetAncestor(minConfirmations);
 
             int depositExtractorCallCount = 0;
-            this.depositExtractor.ExtractDepositsFromBlock(Arg.Any<Block>(), Arg.Any<int>(), Arg.Any<DepositRetrievalType[]>()).Returns(new List<IDeposit>());
-            this.depositExtractor.When(x => x.ExtractDepositsFromBlock(Arg.Any<Block>(), Arg.Any<int>(), Arg.Any<DepositRetrievalType[]>())).Do(info =>
+            this.depositExtractor.ExtractDepositsFromBlock(Arg.Any<Block>(), Arg.Any<int>(), Arg.Any<IRetrievalTypeConfirmations>()).Returns(new List<IDeposit>());
+            this.depositExtractor.When(x => x.ExtractDepositsFromBlock(Arg.Any<Block>(), Arg.Any<int>(), Arg.Any<IRetrievalTypeConfirmations>())).Do(info =>
             {
                 depositExtractorCallCount++;
             });
@@ -175,7 +178,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 return blocks;
             });
 
-            IActionResult result = controller.GetMaturedBlockDeposits(earlierBlock.Height);
+            IActionResult result = await controller.GetMaturedBlockDepositsAsync(earlierBlock.Height);
 
             result.Should().BeOfType<JsonResult>();
             var maturedBlockDepositsResult = (result as JsonResult).Value as SerializableResult<List<MaturedBlockDepositsModel>>;
@@ -209,17 +212,20 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             var federatedPegSettings = new FederatedPegSettings(nodeSettings, new CounterChainNetworkWrapper(KnownNetworks.StraxRegTest));
 
+            var retrievalTypeConfirmations = new RetrievalTypeConfirmations(this.network, new NodeDeployments(this.network, new ChainIndexer(this.network)), federatedPegSettings, null, null);
+
             var controller = new FederationGatewayController(
                 Substitute.For<IAsyncProvider>(),
                 new ChainIndexer(),
                 Substitute.For<IConnectionManager>(),
                 this.crossChainTransferStore,
-                this.GetMaturedBlocksProvider(federatedPegSettings),
+                this.GetMaturedBlocksProvider(retrievalTypeConfirmations),
                 this.network,
                 federatedPegSettings,
                 this.federationWalletManager,
                 Substitute.For<IFullNode>(),
                 Substitute.For<IPeerBanning>(),
+                Substitute.For<IBlockStore>(),
                 this.federationManager);
 
             IActionResult result = controller.GetInfo();
@@ -262,7 +268,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             var header = new BlockHeader();
             chainIndexerMock.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
 
-            var votingManager = new VotingManager(this.federationManager, this.loggerFactory, new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, this.signals, this.network);
+            var votingManager = new VotingManager(this.federationManager, new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, this.signals, this.network, chainIndexerMock.Object);
             var federationHistory = new FederationHistory(this.federationManager, this.network, votingManager);
             votingManager.Initialize(federationHistory);
 
@@ -301,18 +307,20 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             this.federationWalletManager.IsFederationWalletActive().Returns(true);
 
             var settings = new FederatedPegSettings(nodeSettings, new CounterChainNetworkWrapper(KnownNetworks.StraxRegTest));
+            var retrievalTypeConfirmations = new RetrievalTypeConfirmations(this.network, new NodeDeployments(this.network, new ChainIndexer(this.network)), settings, null, null);
 
             var controller = new FederationGatewayController(
                 Substitute.For<IAsyncProvider>(),
                 new ChainIndexer(),
                 Substitute.For<IConnectionManager>(),
                 this.crossChainTransferStore,
-                this.GetMaturedBlocksProvider(settings),
+                this.GetMaturedBlocksProvider(retrievalTypeConfirmations),
                 this.network,
                 settings,
                 this.federationWalletManager,
                 Substitute.For<IFullNode>(),
                 Substitute.For<IPeerBanning>(),
+                Substitute.For<IBlockStore>(),
                 this.federationManager);
 
             IActionResult result = controller.GetInfo();

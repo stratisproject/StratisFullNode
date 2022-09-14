@@ -10,10 +10,10 @@ using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.SmartContracts;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Caching;
-using Stratis.SmartContracts.CLR.Loader;
 using Stratis.SmartContracts.CLR.Serialization;
 using Stratis.SmartContracts.Core.Receipts;
 using Stratis.SmartContracts.Core.State;
+using Stratis.SmartContracts.Core.State.AccountAbstractionLayer;
 
 namespace Stratis.Bitcoin.Features.SmartContracts
 {
@@ -24,15 +24,26 @@ namespace Stratis.Bitcoin.Features.SmartContracts
     {
         private readonly IContractPrimitiveSerializer primitiveSerializer;
         private readonly Network network;
-        private readonly IStateRepositoryRoot stateRepositoryRoot;
+        private readonly IStateRepository stateRepositoryRoot;
         private readonly IContractAssemblyCache contractAssemblyCache;
 
-        public ApiLogDeserializer(IContractPrimitiveSerializer primitiveSerializer, Network network, IStateRepositoryRoot stateRepositoryRoot, IContractAssemblyCache contractAssemblyCache)
+        public ApiLogDeserializer(IContractPrimitiveSerializer primitiveSerializer, Network network, IStateRepository stateRepositoryRoot, IContractAssemblyCache contractAssemblyCache)
         {
             this.primitiveSerializer = primitiveSerializer;
             this.network = network;
             this.stateRepositoryRoot = stateRepositoryRoot;
             this.contractAssemblyCache = contractAssemblyCache;
+        }
+
+        public List<TransferResponse> MapTransferInfo(TransferInfo[] transferInfos)
+        {
+            return transferInfos.Select(t => new TransferResponse
+            {
+                From = t.From.ToBase58Address(this.network),
+                To = t.To.ToBase58Address(this.network),
+                Value = t.Value
+            })
+            .ToList();
         }
 
         public List<LogResponse> MapLogResponses(Log[] logs)
@@ -71,7 +82,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                 }
 
                 // Deserialize it
-                dynamic deserialized = DeserializeLogData(log.Data, eventType);
+                LogData deserialized = DeserializeLogData(log.Data, eventType);
 
                 logResponse.Log = deserialized;
             }
@@ -83,7 +94,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
         {
             var codeHashBytes = this.stateRepositoryRoot.GetCodeHash(address);
 
-            if (codeHashBytes == null)
+            if (codeHashBytes == null || codeHashBytes.Length != 32)
                 return null;
 
             var codeHash = new uint256(codeHashBytes);
@@ -95,16 +106,16 @@ namespace Stratis.Bitcoin.Features.SmartContracts
             {
                 // Cache is not thread-safe so don't load into the cache if not found - leave that for consensus for now.
                 var byteCode = this.stateRepositoryRoot.GetCode(address);
-                
+
                 if (byteCode == null)
                 {
                     return null;
                 }
-                
+
                 return Assembly.Load(byteCode);
             }
 
-            return cachedAssembly.Assembly.Assembly;            
+            return cachedAssembly.Assembly.Assembly;
         }
 
         /// <summary>
@@ -114,13 +125,11 @@ namespace Stratis.Bitcoin.Features.SmartContracts
         /// <param name="bytes">The raw event log data.</param>
         /// <param name="type">The type to attempt to deserialize.</param>
         /// <returns>An <see cref="ExpandoObject"/> containing the fields of the Type and its deserialized values.</returns>
-        public dynamic DeserializeLogData(byte[] bytes, Type type)
+        public LogData DeserializeLogData(byte[] bytes, Type type)
         {
             RLPCollection collection = (RLPCollection)RLP.Decode(bytes);
 
             var instance = new ExpandoObject() as IDictionary<string, object>;
-
-            instance["Event"] = type.Name;
 
             FieldInfo[] fields = type.GetFields();
 
@@ -147,7 +156,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                 }
             }
 
-            return instance;
+            return new LogData(type.Name, instance);
         }
     }
 }

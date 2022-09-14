@@ -234,10 +234,11 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
                 this.loggerFactory, DateTimeProvider.Default, walletRepository);
 
             var reserveUtxoService = new ReserveUtxoService(this.loggerFactory, new Mock<ISignals>().Object);
+            var walletFeePolicy = new Mock<IWalletFeePolicy>().Object;
+            var broadcasterManager = new Mock<IBroadcasterManager>().Object;
+            var walletTransactionHandler = new WalletTransactionHandler(this.loggerFactory, this.coldStakingManager, walletFeePolicy, this.Network, new StandardTransactionPolicy(this.Network), reserveUtxoService);
 
-            var walletTransactionHandler = new WalletTransactionHandler(this.loggerFactory, this.coldStakingManager, new Mock<IWalletFeePolicy>().Object, this.Network, new StandardTransactionPolicy(this.Network), reserveUtxoService);
-
-            this.coldStakingController = new ColdStakingController(this.loggerFactory, this.coldStakingManager, walletTransactionHandler);
+            this.coldStakingController = new ColdStakingController(this.loggerFactory, this.coldStakingManager, walletTransactionHandler, walletFeePolicy, broadcasterManager);
 
             this.asyncProvider = new AsyncProvider(this.loggerFactory, new Mock<ISignals>().Object);
 
@@ -809,6 +810,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
         /// Adds a spendable cold staking transaction to a wallet.
         /// </summary>
         /// <param name="wallet">Wallet to add the transaction to.</param>
+        /// <param name="script">Set to <c>true</c> to output to the <see cref="WitScriptId.ScriptPubKey"/>.</param>
         /// <returns>The spendable transaction that was added to the wallet.</returns>
         private Transaction AddSpendableColdstakingTransactionToWallet(Wallet.Wallet wallet, bool script = false)
         {
@@ -854,6 +856,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
         /// Adds a spendable cold staking transaction to a normal account, as oppose to dedicated special account.
         /// </summary>
         /// <param name="wallet">Wallet to add the transaction to.</param>
+        /// <param name="script">Set to <c>true</c> to output to the <see cref="WitScriptId.ScriptPubKey"/>.</param>
         /// <returns>The spendable transaction that was added to the wallet.</returns>
         private Transaction AddSpendableColdstakingTransactionToNormalWallet(Wallet.Wallet wallet, bool script = false)
         {

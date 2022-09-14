@@ -42,7 +42,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.CoinViews
             this.loggerFactory = new ExtendedLoggerFactory();
             this.nodeStats = new NodeStats(this.dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object);
 
-            this.coindb = new DBreezeCoindb(this.network, this.dataFolder, this.dateTimeProvider, this.loggerFactory, this.nodeStats, new DBreezeSerializer(this.network.Consensus.ConsensusFactory));
+            this.coindb = new Coindb<DBreezeDbWithCoinDbNames>(this.network, this.dataFolder, this.dateTimeProvider, this.nodeStats, new DBreezeSerializer(this.network.Consensus.ConsensusFactory));
             this.coindb.Initialize();
 
             this.chainIndexer = new ChainIndexer(this.network);
@@ -176,7 +176,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.CoinViews
             this.cachedCoinView.SaveChanges(unspent, new HashHeightPair(previous), new HashHeightPair(current));
         }
 
-        private async Task ValidateCoinviewIntegrityAsync(List<OutPoint> expectedAvailableOutPoints)
+        private Task ValidateCoinviewIntegrityAsync(List<OutPoint> expectedAvailableOutPoints)
         {
             FetchCoinsResponse result = this.cachedCoinView.FetchCoins(expectedAvailableOutPoints.ToArray());
 
@@ -197,6 +197,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.CoinViews
             {
                 Assert.Contains(referenceOutPoint, availableOutPoints);
             }
+
+            return Task.CompletedTask;
         }
 
         private void Shuffle<T>(IList<T> list)

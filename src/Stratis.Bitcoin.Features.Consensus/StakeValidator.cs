@@ -49,7 +49,8 @@ namespace Stratis.Bitcoin.Features.Consensus
         /// <summary>When checking the POS block signature this determines the maximum push data (public key) size following the OP_RETURN in the nonspendable output.</summary>
         private const int MaxPushDataSize = 40;
 
-        // TODO: move this to IConsensus
+        // TODO: Move this to IConsensus.
+
         /// <summary>Time interval in minutes that is used in the retarget calculation.</summary>
         private const uint RetargetIntervalMinutes = 16;
 
@@ -64,6 +65,9 @@ namespace Stratis.Bitcoin.Features.Consensus
 
         /// <summary>Consensus' view of UTXO set.</summary>
         private readonly ICoinView coinView;
+
+
+#pragma warning disable SA1648 // inheritdoc must be used with inheriting class
 
         /// <inheritdoc cref="Network"/>
         private readonly Network network;
@@ -82,6 +86,8 @@ namespace Stratis.Bitcoin.Features.Consensus
             this.coinView = coinView;
             this.network = network;
         }
+
+#pragma warning restore SA1648 // inheritdoc must be used with inheriting class
 
         /// <inheritdoc/>
         public ChainedHeader GetLastPowPosChainedBlock(IStakeChain stakeChain, ChainedHeader startChainedHeader, bool proofOfStake)

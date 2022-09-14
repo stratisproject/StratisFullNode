@@ -11,6 +11,7 @@ using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.Consensus;
+using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.Interop;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Miner;
@@ -61,11 +62,13 @@ namespace Stratis.CirrusPegD
 
                 IFullNode node = isMainchainNode ? GetMainchainFullNode(args) : GetSidechainFullNode(args);
 
-                // set the console window title to identify which node this is (for clarity when running Strax and Cirrus on the same machine)
-                Console.Title = isMainchainNode ? $"Strax Full Node {node.Network.NetworkType}" : $"Cirrus Full Node {node.Network.NetworkType}";
-
                 if (node != null)
+                {
+                    // Set the console window title to identify which node this is (for clarity when running Strax and Cirrus on the same machine).
+                    Console.Title = isMainchainNode ? $"Strax Full Node {node.Network.NetworkType}" : $"Cirrus Full Node {node.Network.NetworkType}";
+
                     await node.RunAsync();
+                }
             }
             catch (Exception ex)
             {
@@ -134,6 +137,7 @@ namespace Stratis.CirrusPegD
                     options.UseReflectionExecutor();
                     options.UsePoAWhitelistedContracts();
                 })
+                .AddExternalApi()
                 .AddInteroperability()
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()

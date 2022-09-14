@@ -10,7 +10,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
     /// <summary>Rest client for <see cref="WalletController"/>.</summary>
     public interface IWalletClient : IRestApiClientBase
     {
-        /// <summary><see cref="WalletController.SignMessage"/></summary>
+        /// <summary><see cref="WalletController.SignMessageAsync"/></summary>
         Task<string> SignMessageAsync(SignMessageRequest request, CancellationToken cancellation = default);
     }
 

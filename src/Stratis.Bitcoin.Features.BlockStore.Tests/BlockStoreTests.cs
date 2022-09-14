@@ -333,6 +333,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
         /// <summary>
         /// Tests reorgs inside the batch and inside the database at the same time.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         [Trait("Unstable", "True")]
         public async Task ReorgedBlocksAreDeletedFromRepositoryIfReorgDetectedAsync()

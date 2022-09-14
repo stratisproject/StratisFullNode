@@ -135,7 +135,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
 
             // Send 10 coins to node.
             var transaction = from.FullNode.WalletTransactionHandler().BuildTransaction(WalletTests.CreateContext(from.FullNode.Network, new WalletAccountReference(walletName, accountName), password, toAddress.ScriptPubKey, coins, FeeType.Medium, 10));
-            from.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(transaction.ToHex()));
+            from.FullNode.NodeController<WalletController>().SendTransactionAsync(new SendTransactionRequest(transaction.ToHex()));
 
             TestBase.WaitLoop(() => from.CreateRPCClient().GetRawMempool().Length > 0);
 

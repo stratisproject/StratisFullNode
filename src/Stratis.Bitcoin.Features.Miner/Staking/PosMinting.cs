@@ -501,6 +501,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
         /// </summary>
         /// <param name="block">The new block.</param>
         /// <param name="chainTip">Block that was considered as a chain tip when the block staking started.</param>
+        /// <returns>The asynchronous task.</returns>
         private async Task CheckStakeAsync(Block block, ChainedHeader chainTip)
         {
             if (!BlockStake.IsProofOfStake(block))

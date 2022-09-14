@@ -252,7 +252,7 @@ namespace Stratis.Bitcoin.Consensus
 
                 // In case block store initialized behind, rewind until or before the block store tip.
                 // The node will complete loading before connecting to peers so the chain will never know if a reorg happened.
-                RewindState transitionState = await this.ConsensusRules.RewindAsync().ConfigureAwait(false);
+                RewindState transitionState = await this.ConsensusRules.RewindAsync(new HashHeightPair(this.chainState.BlockStoreTip)).ConfigureAwait(false);
                 coinViewTip = transitionState.BlockHash;
             }
 
@@ -692,7 +692,7 @@ namespace Stratis.Bitcoin.Consensus
             // Add peers that needed to be banned as a result of a failure to connect blocks.
             // Otherwise they get lost as we are returning a different ConnnectBlocksResult.
             // We also need to set the ban reason and ban time otherwise it is not known why
-            // connecting the new chain failed and hence why the peer is being disconnected in 
+            // connecting the new chain failed and hence why the peer is being disconnected in
             // peer banning.
             reconnectionResult.BanReason = connectBlockResult.BanReason;
             reconnectionResult.BanDurationSeconds = connectBlockResult.BanDurationSeconds;
@@ -739,7 +739,7 @@ namespace Stratis.Bitcoin.Consensus
                     }
                 }
 
-                await this.ConsensusRules.RewindAsync().ConfigureAwait(false);
+                await this.ConsensusRules.RewindAsync(new HashHeightPair(current.Previous)).ConfigureAwait(false);
 
                 lock (this.peerLock)
                 {
@@ -820,7 +820,7 @@ namespace Stratis.Bitcoin.Consensus
                 // TODO: Validate block size display, seems incorrect
                 this.logger.LogDebug("New tip = {0}-{1} : time  = {2} ms : size = {3} kb : trx count = {4}",
                     blockToConnect.ChainedHeader.Height, blockToConnect.ChainedHeader.HashBlock,
-                    dsb.watch.ElapsedMilliseconds, blockToConnect.Block.BlockSize.Value.BytesToKiloBytes(), blockToConnect.Block.Transactions.Count());
+                    dsb.Watch.ElapsedMilliseconds, blockToConnect.Block.BlockSize.Value.BytesToKiloBytes(), blockToConnect.Block.Transactions.Count());
             }
 
             // After successfully connecting all blocks set the tree tip and claim the branch.
@@ -1507,6 +1507,11 @@ namespace Stratis.Bitcoin.Consensus
 
                 log.AppendLine("Tip Age".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": { TimeSpan.FromSeconds(tipAge):dd\\.hh\\:mm\\:ss} (maximum is { TimeSpan.FromSeconds(maxTipAge):dd\\.hh\\:mm\\:ss})");
                 log.AppendLine("Synced with Network".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": { (this.isIbd ? "No" : "Yes") }");
+
+                if (this.signals != null)
+                {
+                   this.signals.Publish(new ConsensusManagerStatusEvent(this.isIbd, this.HeaderTip));
+                }
 
                 string unconsumedBlocks = this.FormatBigNumber(this.chainedHeaderTree.UnconsumedBlocksCount);
 

@@ -3,11 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
-using LevelDB;
 using NBitcoin;
+using Stratis.Bitcoin.Database;
 using Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders;
 using Stratis.Bitcoin.Interfaces;
-using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Tests.Common.Logging;
 using Stratis.Bitcoin.Utilities;
@@ -55,10 +54,12 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
                 await repo.PutAsync(items, blockHashHeightPair);
             }
 
-            using (var engine = new DB(new Options() { CreateIfMissing = true }, folder))
+            using (var db = new LevelDb())
             {
-                var headerOut = this.dBreezeSerializer.Deserialize<ProvenBlockHeader>(engine.Get(ProvenBlockHeaderTable, BitConverter.GetBytes(blockHashHeightPair.Height)));
-                var hashHeightPairOut = this.DBreezeSerializer.Deserialize<HashHeightPair>(engine.Get(BlockHashHeightTable, new byte[] { 1 }));
+                db.Open(folder);
+
+                var headerOut = this.dBreezeSerializer.Deserialize<ProvenBlockHeader>(db.Get(ProvenBlockHeaderTable, BitConverter.GetBytes(blockHashHeightPair.Height)));
+                var hashHeightPairOut = this.DBreezeSerializer.Deserialize<HashHeightPair>(db.Get(BlockHashHeightTable, new byte[] { 1 }));
 
                 headerOut.Should().NotBeNull();
                 headerOut.GetHash().Should().Be(provenBlockHeaderIn.GetHash());
@@ -86,17 +87,18 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
             }
 
             // Check the ProvenBlockHeader exists in the database.
-            using (var engine = new DB(new Options() { CreateIfMissing = true }, folder))
+            using (IDb db = new LevelDb())
             {
-                var headersOut = new Dictionary<byte[], byte[]>();
-                var enumerator = engine.GetEnumerator();
-                while (enumerator.MoveNext())
-                    if (enumerator.Current.Key[0] == ProvenBlockHeaderTable)
-                        headersOut.Add(enumerator.Current.Key, enumerator.Current.Value);
+                db.Open(folder);
 
-                headersOut.Keys.Count.Should().Be(2);
-                this.dBreezeSerializer.Deserialize<ProvenBlockHeader>(headersOut.First().Value).GetHash().Should().Be(items[0].GetHash());
-                this.dBreezeSerializer.Deserialize<ProvenBlockHeader>(headersOut.Last().Value).GetHash().Should().Be(items[1].GetHash());
+                using (IDbIterator iterator = db.GetIterator(ProvenBlockHeaderTable))
+                {
+                    var headersOut = iterator.GetAll().ToDictionary(i => i.key, i => i.value);
+
+                    headersOut.Keys.Count.Should().Be(2);
+                    this.dBreezeSerializer.Deserialize<ProvenBlockHeader>(headersOut.First().Value).GetHash().Should().Be(items[0].GetHash());
+                    this.dBreezeSerializer.Deserialize<ProvenBlockHeader>(headersOut.Last().Value).GetHash().Should().Be(items[1].GetHash());
+                }
             }
         }
 
@@ -109,13 +111,19 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
 
             int blockHeight = 1;
 
-            using (var engine = new DB(new Options() { CreateIfMissing = true }, folder))
+            using (IDb db = new LevelDb())
             {
-                engine.Put(ProvenBlockHeaderTable, BitConverter.GetBytes(blockHeight), this.dBreezeSerializer.Serialize(headerIn));
+                db.Open(folder);
+
+                using (var batch = db.GetWriteBatch())
+                {
+                    batch.Put(ProvenBlockHeaderTable, BitConverter.GetBytes(blockHeight), this.dBreezeSerializer.Serialize(headerIn));
+                    batch.Write();
+                }
             }
 
             // Query the repository for the item that was inserted in the above code.
-            using (LevelDbProvenBlockHeaderRepository repo = this.SetupRepository(this.Network, folder))
+            using (IProvenBlockHeaderRepository repo = this.SetupRepository(this.Network, folder))
             {
                 var headerOut = await repo.GetAsync(blockHeight).ConfigureAwait(false);
 
@@ -129,13 +137,19 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
         {
             string folder = CreateTestDir(this);
 
-            using (var engine = new DB(new Options() { CreateIfMissing = true }, folder))
+            using (var engine = new LevelDb())
             {
-                engine.Put(ProvenBlockHeaderTable, BitConverter.GetBytes(1), this.dBreezeSerializer.Serialize(CreateNewProvenBlockHeaderMock()));
-                engine.Put(BlockHashHeightTable, new byte[0], this.DBreezeSerializer.Serialize(new HashHeightPair(new uint256(), 1)));
+                engine.Open(folder);
+
+                using (var batch = engine.GetWriteBatch())
+                {
+                    batch.Put(ProvenBlockHeaderTable, BitConverter.GetBytes(1), this.dBreezeSerializer.Serialize(CreateNewProvenBlockHeaderMock()));
+                    batch.Put(BlockHashHeightTable, new byte[0], this.DBreezeSerializer.Serialize(new HashHeightPair(new uint256(), 1)));
+                    batch.Write();
+                }
             }
 
-            using (LevelDbProvenBlockHeaderRepository repo = this.SetupRepository(this.Network, folder))
+            using (IProvenBlockHeaderRepository repo = this.SetupRepository(this.Network, folder))
             {
                 // Select a different block height.
                 ProvenBlockHeader outHeader = await repo.GetAsync(2).ConfigureAwait(false);
@@ -173,9 +187,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
             }
         }
 
-        private LevelDbProvenBlockHeaderRepository SetupRepository(Network network, string folder)
+        private IProvenBlockHeaderRepository SetupRepository(Network network, string folder)
         {
-            var repo = new LevelDbProvenBlockHeaderRepository(network, folder, this.LoggerFactory.Object, this.dBreezeSerializer);
+            var repo = new ProvenBlockHeaderRepository<LevelDb>(network, folder, this.LoggerFactory.Object, this.dBreezeSerializer);
 
             Task task = repo.InitializeAsync();
 

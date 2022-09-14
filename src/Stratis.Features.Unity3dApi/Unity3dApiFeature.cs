@@ -8,6 +8,7 @@ using NBitcoin;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
+using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.Wallet.Controllers;
 using Stratis.Features.Unity3dApi.Controllers;
@@ -34,17 +35,21 @@ namespace Stratis.Features.Unity3dApi
 
         private readonly ICertificateStore certificateStore;
 
+        private readonly INFTTransferIndexer NFTTransferIndexer;
+
         public Unity3dApiFeature(
             IFullNodeBuilder fullNodeBuilder,
             FullNode fullNode,
             Unity3dApiSettings apiSettings,
             ILoggerFactory loggerFactory,
-            ICertificateStore certificateStore)
+            ICertificateStore certificateStore,
+            INFTTransferIndexer NFTTransferIndexer)
         {
             this.fullNodeBuilder = fullNodeBuilder;
             this.fullNode = fullNode;
             this.apiSettings = apiSettings;
             this.certificateStore = certificateStore;
+            this.NFTTransferIndexer = NFTTransferIndexer;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
 
             this.InitializeBeforeBase = true;
@@ -60,6 +65,8 @@ namespace Stratis.Features.Unity3dApi
 
             this.logger.LogInformation("Unity API starting on URL '{0}'.", this.apiSettings.ApiUri);
             this.webHost = Program.Initialize(this.fullNodeBuilder.Services, this.fullNode, this.apiSettings, this.certificateStore, new WebHostBuilder());
+
+            this.NFTTransferIndexer.Initialize();
 
             if (this.apiSettings.KeepaliveTimer == null)
             {
@@ -89,7 +96,7 @@ namespace Stratis.Features.Unity3dApi
         /// <param name="network">The network to extract values from.</param>
         public static void PrintHelp(Network network)
         {
-            ApiSettings.PrintHelp(network);
+            BaseSettings.PrintHelp(typeof(ApiSettings), network);
         }
 
         /// <summary>
@@ -99,7 +106,7 @@ namespace Stratis.Features.Unity3dApi
         /// <param name="network">The network to base the defaults off.</param>
         public static void BuildDefaultConfigurationFile(StringBuilder builder, Network network)
         {
-            ApiSettings.BuildDefaultConfigurationFile(builder, network);
+            BaseSettings.BuildDefaultConfigurationFile(typeof(ApiSettings), builder, network);
         }
 
         /// <inheritdoc />
@@ -120,6 +127,8 @@ namespace Stratis.Features.Unity3dApi
                 this.webHost.StopAsync(TimeSpan.FromSeconds(ApiStopTimeoutSeconds)).Wait();
                 this.webHost = null;
             }
+
+            this.NFTTransferIndexer.Dispose();
         }
     }
 
@@ -139,6 +148,7 @@ namespace Stratis.Features.Unity3dApi
                     services.AddSingleton(fullNodeBuilder);
                     services.AddSingleton<Unity3dApiSettings>();
                     services.AddSingleton<ICertificateStore, CertificateStore>();
+                    services.AddSingleton<INFTTransferIndexer, NFTTransferIndexer>();
 
                     // Controller
                     services.AddTransient<Unity3dController>();

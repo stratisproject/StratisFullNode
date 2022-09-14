@@ -38,8 +38,11 @@ namespace Stratis.Bitcoin.Controllers.Models
         /// <summary>System identifier of the node's process.</summary>
         public int ProcessId { get; set; }
 
-        /// <summary>The height of the consensus.</summary>
+        /// <summary>The height of consensus.</summary>
         public int? ConsensusHeight { get; set; }
+
+        /// <summary>The height of the header store.</summary>
+        public int? HeaderHeight { get; set; }
 
         /// <summary>Height of the most recent block in persistent storage.</summary>
         /// <seealso cref="Stratis.Bitcoin.Features.BlockRepository.HighestPersistedBlock.Height"/>
@@ -81,6 +84,9 @@ namespace Stratis.Bitcoin.Controllers.Models
 
         /// <summary>Returns whether or not the node is in Initial Block Download (syncing).</summary>
         public bool? InIbd { get; set; }
+
+        /// <summary>Returns the Node Start Datetime.</summary>
+        public DateTime NodeStarted { get; set; }
     }
 
     /// <summary>

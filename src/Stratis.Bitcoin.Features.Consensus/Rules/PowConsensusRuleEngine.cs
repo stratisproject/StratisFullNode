@@ -52,11 +52,11 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules
         }
 
         /// <inheritdoc />
-        public override Task<RewindState> RewindAsync()
+        public override Task<RewindState> RewindAsync(HashHeightPair target)
         {
             var state = new RewindState()
             {
-                BlockHash = this.UtxoSet.Rewind()
+                BlockHash = this.UtxoSet.Rewind(target)
             };
 
             return Task.FromResult(state);
@@ -67,26 +67,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules
         {
             base.Initialize(chainTip);
 
-            var coinDatabase = ((CachedCoinView)this.UtxoSet).ICoindb;
-            coinDatabase.Initialize();
-
-            HashHeightPair coinViewTip = coinDatabase.GetTipHash();
-
-            while (true)
-            {
-                ChainedHeader pendingTip = chainTip.FindAncestorOrSelf(coinViewTip.Hash);
-
-                if (pendingTip != null)
-                    break;
-
-                this.logger.LogInformation("Rewinding coin view from '{0}'.", coinViewTip);
-
-                // If the block store was initialized behind the coin view's tip, rewind it to on or before it's tip.
-                // The node will complete loading before connecting to peers so the chain will never know that a reorg happened.
-                coinViewTip = coinDatabase.Rewind();
-            }
-
-            this.logger.LogInformation("Coin view rewound to '{0}'.", coinDatabase.GetTipHash());
+            this.UtxoSet.Initialize(chainTip, this.ChainIndexer, this);
         }
 
         public override async Task<ValidationContext> FullValidationAsync(ChainedHeader header, Block block)

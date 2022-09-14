@@ -8,6 +8,8 @@ using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.ColdStaking;
+using Stratis.Bitcoin.Features.ColdStaking.Controllers;
+using Stratis.Bitcoin.Features.ColdStaking.Models;
 using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Miner;
@@ -106,6 +108,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
         /// the cold staking setup using a cold staking address obtained from the cold wallet node.
         /// Success is determined by whether the balance in the cold wallet increases.
         /// </description>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         [Trait("Unstable", "True")]
         public async Task WalletCanMineWithColdWalletCoinsAsync()
@@ -149,7 +152,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 Transaction transaction1 = stratisSender.FullNode.WalletTransactionHandler().BuildTransaction(CreateContext(stratisSender.FullNode.Network, new WalletAccountReference(WalletName, Account), Password, sendto.ScriptPubKey, amountToSend, FeeType.Medium, 1));
 
                 // Broadcast to the other node
-                await stratisSender.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(transaction1.ToHex()));
+                await stratisSender.FullNode.NodeController<WalletController>().SendTransactionAsync(new SendTransactionRequest(transaction1.ToHex()));
 
                 // Wait for the transaction to arrive
                 TestBase.WaitLoop(() => stratisHotStake.CreateRPCClient().GetRawMempool().Length > 0);
@@ -166,7 +169,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     coldWalletAddress.Address, hotWalletAddress.Address, WalletName, Account, Password, amountToSend2, new Money(0.02m, MoneyUnit.BTC), false, false, 1, false);
 
                 // Broadcast to the other node
-                await stratisHotStake.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(transaction2.ToHex()));
+                await stratisHotStake.FullNode.NodeController<WalletController>().SendTransactionAsync(new SendTransactionRequest(transaction2.ToHex()));
 
                 // Wait for the transaction to arrive
                 TestBase.WaitLoop(() => coldWalletManager.GetSpendableTransactionsInColdWallet(WalletName, true).Any());
@@ -197,6 +200,56 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     TestHelper.MineBlocks(stratisSender, 1, true);
                     return coldWalletManager.GetSpendableTransactionsInColdWallet(WalletName, true).Sum(s => s.Transaction.Amount) > receivetotal2;
                 }, cancellationToken: cancellationToken);
+            }
+        }
+
+        [Fact]
+        [Trait("Unstable", "True")]
+        public async Task CanRetrieveFilteredUtxosAsync()
+        {
+            using (var builder = NodeBuilder.Create(this))
+            {
+                var network = new StraxRegTest();
+
+                CoreNode stratisSender = CreatePowPosMiningNode(builder, network, TestBase.CreateTestDir(this), coldStakeNode: false);
+                CoreNode stratisColdStake = CreatePowPosMiningNode(builder, network, TestBase.CreateTestDir(this), coldStakeNode: true);
+
+                stratisSender.WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
+                stratisColdStake.WithWallet().Start();
+
+                var coldWalletManager = stratisColdStake.FullNode.WalletManager() as ColdStakingManager;
+
+                // Set up cold staking account on cold wallet.
+                coldWalletManager.GetOrCreateColdStakingAccount(WalletName, true, Password, null);
+                HdAddress coldWalletAddress = coldWalletManager.GetFirstUnusedColdStakingAddress(WalletName, true);
+
+                var walletAccountReference = new WalletAccountReference(WalletName, Account);
+                long total2 = stratisSender.FullNode.WalletManager().GetSpendableTransactionsInAccount(walletAccountReference, 1).Sum(s => s.Transaction.Amount);
+
+                // Sync nodes.
+                TestHelper.Connect(stratisSender, stratisColdStake);
+
+                // Send coins to cold address.
+                Money amountToSend = total2 - network.Consensus.ProofOfWorkReward;
+                Transaction transaction1 = stratisSender.FullNode.WalletTransactionHandler().BuildTransaction(CreateContext(stratisSender.FullNode.Network, new WalletAccountReference(WalletName, Account), Password, coldWalletAddress.ScriptPubKey, amountToSend, FeeType.Medium, 1));
+
+                // Broadcast to the other nodes.
+                await stratisSender.FullNode.NodeController<WalletController>().SendTransactionAsync(new SendTransactionRequest(transaction1.ToHex()));
+
+                // Wait for the transaction to arrive.
+                TestBase.WaitLoop(() => stratisColdStake.CreateRPCClient().GetRawMempool().Length > 0);
+
+                // Despite the funds being sent to an address in the cold account, the wallet does not recognise the output as funds belonging to it.
+                Assert.True(stratisColdStake.FullNode.WalletManager().GetBalances(WalletName, Account).Sum(a => a.AmountUnconfirmed + a.AmountUnconfirmed) == 0);
+
+                uint256[] mempoolTransactionId = stratisColdStake.CreateRPCClient().GetRawMempool();
+
+                Transaction misspentTransaction = stratisColdStake.CreateRPCClient().GetRawTransaction(mempoolTransactionId[0]);
+
+                // Now retrieve the UTXO sent to the cold address. The funds will reappear in a normal account on the cold staking node.
+                stratisColdStake.FullNode.NodeController<ColdStakingController>().RetrieveFilteredUtxos(new RetrieveFilteredUtxosRequest() { WalletName = stratisColdStake.WalletName, WalletPassword = stratisColdStake.WalletPassword, Hex = misspentTransaction.ToHex(), WalletAccount = null, Broadcast = true});
+
+                TestBase.WaitLoop(() => stratisColdStake.FullNode.WalletManager().GetBalances(WalletName, Account).Sum(a => a.AmountUnconfirmed + a.AmountUnconfirmed) > 0);
             }
         }
     }

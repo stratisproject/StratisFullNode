@@ -186,9 +186,9 @@ namespace Stratis.Bitcoin.IntegrationTests.API
             TestHelper.MineBlocks(this.firstStratisPowApiNode, this.maturity);
         }
 
-        private async Task a_real_transaction()
+        private void a_real_transaction()
         {
-            await this.SendTransaction(await this.BuildTransaction());
+            this.SendTransactionAsync(this.BuildTransactionAsync().GetAwaiter().GetResult()).GetAwaiter().GetResult();
         }
 
         private void the_block_with_the_transaction_is_mined()
@@ -419,7 +419,7 @@ namespace Stratis.Bitcoin.IntegrationTests.API
         {
             var commands = JsonDataSerializer.Instance.Deserialize<List<RpcCommandModel>>(this.responseText);
 
-            commands.Count.Should().Be(37);
+            commands.Count.Should().Be(39);
         }
 
         private void status_information_is_returned()
@@ -528,19 +528,19 @@ namespace Stratis.Bitcoin.IntegrationTests.API
             }
         }
 
-        private async Task SendTransaction(IActionResult transactionResult)
+        private async Task SendTransactionAsync(IActionResult transactionResult)
         {
             var walletTransactionModel = (WalletBuildTransactionModel)(transactionResult as JsonResult)?.Value;
             this.transaction = this.firstStratisPowApiNode.FullNode.Network.CreateTransaction(walletTransactionModel.Hex);
             await this.firstStratisPowApiNode.FullNode.NodeController<WalletController>()
-                .SendTransaction(new SendTransactionRequest(walletTransactionModel.Hex));
+                .SendTransactionAsync(new SendTransactionRequest(walletTransactionModel.Hex));
         }
 
-        private async Task<IActionResult> BuildTransaction()
+        private async Task<IActionResult> BuildTransactionAsync()
         {
             IActionResult transactionResult = await this.firstStratisPowApiNode.FullNode
                 .NodeController<WalletController>()
-                .BuildTransaction(new BuildTransactionRequest
+                .BuildTransactionAsync(new BuildTransactionRequest
                 {
                     AccountName = WalletAccountName,
                     AllowUnconfirmed = true,

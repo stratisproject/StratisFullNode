@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
+using Stratis.Bitcoin.Features.PoA.Models;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
@@ -16,19 +18,25 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
     [Route("api/[controller]")]
     public sealed class VotingController : Controller
     {
+        private readonly ChainIndexer chainIndexer;
         private readonly IFederationManager federationManager;
         private readonly ILogger logger;
+        private readonly Network network;
         private readonly IPollResultExecutor pollExecutor;
         private readonly VotingManager votingManager;
         private readonly IWhitelistedHashesRepository whitelistedHashesRepository;
 
         public VotingController(
+            ChainIndexer chainIndexer,
             IFederationManager federationManager,
+            Network network,
             VotingManager votingManager,
             IWhitelistedHashesRepository whitelistedHashesRepository,
             IPollResultExecutor pollExecutor)
         {
+            this.chainIndexer = chainIndexer;
             this.federationManager = federationManager;
+            this.network = network;
             this.pollExecutor = pollExecutor;
             this.votingManager = votingManager;
             this.whitelistedHashesRepository = whitelistedHashesRepository;
@@ -37,8 +45,44 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>
+        /// Retrieves the tip of the polls repository.
+        /// </summary>
+        /// <returns>The poll repository tip.</returns>
+        /// <response code="200">The request succeeded.</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route("polls/tip")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult GetPollsRepositoryTip()
+        {
+            try
+            {
+                var model = new PollsRepositoryHeightModel() { TipHeight = 0, TipHeightPercentage = 0 };
+                ChainedHeader pollsRepoTip = this.votingManager.GetPollsRepositoryTip();
+                if (this.chainIndexer.Tip != null && pollsRepoTip != null)
+                {
+                    model = new PollsRepositoryHeightModel()
+                    {
+                        TipHeight = pollsRepoTip.Height,
+                        TipHeightPercentage = (int)((decimal)pollsRepoTip.Height / this.chainIndexer.Tip.Height * 100)
+                    };
+                }
+
+                return this.Json(model);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
         /// Retrieves a list of pending or "active" polls.
         /// </summary>
+        /// <param name="voteType">See <see cref="VoteKey"/>0 = Kick Member, 1 - Add Member, 2 = Whitelist Hash, 3 = Remove Hash</param>
+        /// <param name="pubKeyOfMemberBeingVotedOn">The public key of the member being voted on (in hexadecimal). If omitted or empty then all polls are returned.</param>
         /// <returns>Active polls</returns>
         /// <response code="200">Returns the active polls</response>
         /// <response code="400">Unexpected exception occurred</response>
@@ -60,7 +104,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -68,6 +112,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <summary>
         /// Retrieves a list of finished polls.
         /// </summary>
+        /// <param name="voteType">See <see cref="VoteKey"/>0 = Kick Member, 1 - Add Member, 2 = Whitelist Hash, 3 = Remove Hash</param>
+        /// <param name="pubKeyOfMemberBeingVotedOn">The public key of the member being voted on (in hexadecimal). If omitted or empty then all polls are returned.</param>
         /// <returns>Finished polls</returns>
         /// <response code="200">Returns the finished polls</response>
         /// <response code="400">Unexpected exception occurred</response>
@@ -89,7 +135,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -97,6 +143,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <summary>
         /// Retrieves a list of executed polls.
         /// </summary>
+        /// <param name="voteType">See <see cref="VoteKey"/>0 = Kick Member, 1 - Add Member, 2 = Whitelist Hash, 3 = Remove Hash</param>
+        /// <param name="pubKeyOfMemberBeingVotedOn">The public key of the member being voted on (in hexadecimal). If omitted or empty then all polls are returned.</param>
         /// <returns>Finished polls</returns>
         /// <response code="200">Returns the finished polls</response>
         /// <response code="400">Unexpected exception occurred</response>
@@ -118,7 +166,89 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a list of executed member polls.
+        /// </summary>
+        /// <param name="pubKeyOfMemberBeingVotedOn">The public key of the member being voted on (in hexadecimal). If omitted or empty then all polls are returned.</param>
+        /// <returns>Finished polls</returns>
+        /// <response code="200">Returns a set of execute polls</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route("polls/members/executed")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult GetExecutedPolls([FromQuery] string pubKeyOfMemberBeingVotedOn = "")
+        {
+            try
+            {
+                IEnumerable<Poll> polls = this.votingManager.GetExecutedPolls().MemberPolls();
+                IEnumerable<PollViewModel> models = polls.Select(x => new PollViewModel(x, this.pollExecutor));
+
+                if (!string.IsNullOrEmpty(pubKeyOfMemberBeingVotedOn))
+                    models = models.Where(m => m.VotingDataString.Contains(pubKeyOfMemberBeingVotedOn));
+
+                return this.Json(models.OrderBy(p => p.PollExecutedBlockDataHeight));
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a list of expired member polls.
+        /// </summary>
+        /// <returns>Expired polls</returns>
+        /// <response code="200">Returns the expired polls</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route("polls/expired/members")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult GetExpiredPollsMembers()
+        {
+            try
+            {
+                IEnumerable<Poll> polls = this.votingManager.GetExpiredPolls().MemberPolls();
+                IEnumerable<PollViewModel> models = polls.Select(x => new PollViewModel(x, this.pollExecutor));
+
+                return this.Json(models);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a list of expired whitelist hash polls.
+        /// </summary>
+        /// <returns>Expired polls</returns>
+        /// <response code="200">Returns the expired polls</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route("polls/expired/whitelist")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult GetExpiredPollsWhitelist()
+        {
+            try
+            {
+                IEnumerable<Poll> polls = this.votingManager.GetExpiredPolls().WhitelistPolls();
+                IEnumerable<PollViewModel> models = polls.Select(x => new PollViewModel(x, this.pollExecutor));
+
+                return this.Json(models);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -143,7 +273,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -151,6 +281,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <summary>
         /// Votes to add a hash to the whitelist.
         /// </summary>
+        /// <param name="request">See <see cref="HashModel"/>.</param>
         /// <returns>The HTTP response</returns>
         /// <response code="200">Voted to add hash to whitelist</response>
         /// <response code="400">Invalid request, node is not a federation member, or an unexpected exception occurred</response>
@@ -168,6 +299,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <summary>
         /// Votes to remove a hash from the whitelist.
         /// </summary>
+        /// <param name="request">See <see cref="HashModel"/>.</param>
         /// <returns>The HTTP response</returns>
         /// <response code="200">Voted to remove hash from whitelist</response>
         /// <response code="400">Invalid request, node is not a federation member, or an unexpected exception occurred</response>
@@ -206,7 +338,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "There was a problem executing a command.", e.ToString());
             }
         }
@@ -233,8 +365,59 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Votes to kick/remove a member from the federation.
+        /// </summary>
+        /// <param name="model">See <see cref="KickFederationMemberModel"/>.</param>
+        /// <returns>The HTTP response</returns>
+        /// <response code="200">Voted to remove a member from the federation.</response>
+        /// <response code="400">Invalid request, node is not a federation member, or an unexpected exception occurred</response>
+        /// <response code="500">The request is null</response>
+        [Route("schedulevote-kickmember")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult VoteKickFederationMember([FromBody] KickFederationMemberModel model)
+        {
+            Guard.NotNull(model, nameof(model));
+
+            if (!this.ModelState.IsValid)
+                return ModelStateErrors.BuildErrorResponse(this.ModelState);
+
+            if (!this.federationManager.IsFederationMember)
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Only federation members can vote.", string.Empty);
+
+            try
+            {
+                IFederationMember federationMember = this.federationManager.GetFederationMembers().SingleOrDefault(m => m.PubKey.ToHex() == model.PubKey);
+                if (federationMember == null)
+                    return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, $"'{model.PubKey}' is not currently a federation member.", string.Empty);
+
+                var consensusFactory = this.network.Consensus.ConsensusFactory as PoAConsensusFactory;
+                byte[] federationMemberBytes = consensusFactory.SerializeFederationMember(federationMember);
+
+                bool alreadyKicking = this.votingManager.AlreadyVotingFor(VoteKey.KickFederationMember, federationMemberBytes);
+                if (alreadyKicking)
+                    return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, $"Skipping because kicking {model.PubKey} is already being voted on.", string.Empty);
+
+                this.votingManager.ScheduleVote(new VotingData()
+                {
+                    Key = VoteKey.KickFederationMember,
+                    Data = federationMemberBytes
+                });
+
+                return Ok($"A vote to kick '{model.PubKey}' has now been scheduled.");
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "There was a problem executing a vote to be scheduled.", e.ToString());
             }
         }
     }

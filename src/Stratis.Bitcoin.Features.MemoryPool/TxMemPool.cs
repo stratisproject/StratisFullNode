@@ -379,7 +379,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
 
             if (this.signals != null)
             {
-                this.signals.Publish(new TransactionAddedToMemoryPool(entry.Transaction));
+                this.signals.Publish(new TransactionAddedToMemoryPoolEvent(entry.Transaction, this.MapTx.Count));
             }
 
             return true;

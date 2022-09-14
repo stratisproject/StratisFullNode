@@ -11,7 +11,10 @@ namespace Stratis.Bitcoin.Features.SignalR
             new ReconstructFederationClientEvent(),
             new FullNodeClientEvent(),
             new TransactionReceivedClientEvent(),
-            new WalletProcessedTransactionOfInterestClientEvent()
+            new WalletProcessedTransactionOfInterestClientEvent(),
+            new TransactionAddedToMemoryPoolClientEvent(),
+            new MiningStatisticsClientEvent(),
+            new ConsensusManagerStatusClientEvent()
         };
 
         private static ClientEventBroadcasterSettings Settings = new ClientEventBroadcasterSettings
