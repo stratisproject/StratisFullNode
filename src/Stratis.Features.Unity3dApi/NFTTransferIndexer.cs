@@ -126,7 +126,7 @@ namespace Stratis.Features.Unity3dApi
 
             if (indexerStateModel == null)
             {
-                indexerStateModel = new IndexerStateModel() { LastProcessedHeight = 0 };
+                indexerStateModel = new IndexerStateModel() { LastProcessedHeight = GetWatchFromHeight() };
             }
 
             return indexerStateModel;
@@ -196,7 +196,7 @@ namespace Stratis.Features.Unity3dApi
 
             this.NFTContractCollection.Upsert(updated);
 
-            this.UpdateLastUpdatedBlock(0);
+            this.UpdateLastUpdatedBlock(GetWatchFromHeight());
 
             this.logger.LogTrace("ReindexAllContracts(-)");
         }
@@ -274,7 +274,7 @@ namespace Stratis.Features.Unity3dApi
                                     break;
                                 }
 
-                                this.logger.LogTrace("Found new NFT contract: " + receiptRes.To);
+                                this.logger.LogDebug("Found new NFT contract: " + receiptRes.To);
 
                                 knownContracts.Add(receiptRes.To);
 
