@@ -11,10 +11,10 @@ using NBitcoin;
 using Newtonsoft.Json;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
 using Stratis.Bitcoin.Utilities;
+using Stratis.SmartContracts.CLR;
 using FileMode = LiteDB.FileMode;
 
 namespace Stratis.Features.Unity3dApi
@@ -23,12 +23,6 @@ namespace Stratis.Features.Unity3dApi
     {
         /// <summary>Initialized NFT indexer.</summary>
         void Initialize();
-
-        /// <summary>Adds NFT contract to watch list. Only contracts from the watch list are being indexed.</summary>
-        void WatchNFTContract(string contractAddress);
-
-        /// <summary>Removes NFT contract from watch list.</summary>
-        void UnwatchNFTContract(string contractAddress);
 
         /// <summary>Provides a list of all nft contract addresses that are being tracked.</summary>
         List<string> GetWatchedNFTContracts();
@@ -49,33 +43,42 @@ namespace Stratis.Features.Unity3dApi
     /// <summary>This component maps addresses to NFT Ids they own.</summary>
     public class NFTTransferIndexer : INFTTransferIndexer
     {
-        public ChainedHeader IndexerTip { get; private set; }
-
+        private const string NftTransferEventName = "TransferLog";
         private const string DatabaseFilename = "NFTTransferIndexer.litedb";
         private const string DbOwnedNFTsKey = "OwnedNfts";
+        private const string IndexerStateKey = "IndexerState";
 
         private readonly DataFolder dataFolder;
         private readonly ILogger logger;
         private readonly ChainIndexer chainIndexer;
         private readonly IAsyncProvider asyncProvider;
+        private readonly INodeLifetime nodeLifetime;
         private readonly ISmartContractTransactionService smartContractTransactionService;
         private readonly Network network;
+        private readonly NftContractLocalClient nftContractLocalClient;
 
         private LiteDatabase db;
         private LiteCollection<NFTContractModel> NFTContractCollection;
+        private LiteCollection<IndexerStateModel> indexerState;
+        private HashSet<string> knownContracts;
         private CancellationTokenSource cancellation;
-        private Task indexingTask;
+        private IAsyncLoop indexingLoop;
 
-        public NFTTransferIndexer(DataFolder dataFolder, ILoggerFactory loggerFactory, IAsyncProvider asyncProvider,
-            ChainIndexer chainIndexer, Network network, ISmartContractTransactionService smartContractTransactionService = null)
+        public NFTTransferIndexer(DataFolder dataFolder, ILoggerFactory loggerFactory, IAsyncProvider asyncProvider, INodeLifetime nodeLifetime,
+            ChainIndexer chainIndexer, Network network, ILocalExecutor localExecutor, Unity3dApiSettings apiSettings, ISmartContractTransactionService smartContractTransactionService = null)
         {
             this.network = network;
             this.dataFolder = dataFolder;
             this.cancellation = new CancellationTokenSource();
             this.asyncProvider = asyncProvider;
+            this.nodeLifetime = nodeLifetime;
             this.chainIndexer = chainIndexer;
-            this.smartContractTransactionService = smartContractTransactionService;
 
+            var localCallContract = new LocalCallContract(network, smartContractTransactionService, chainIndexer, localExecutor);
+
+            this.nftContractLocalClient = new NftContractLocalClient(localCallContract, apiSettings.LocalCallSenderAddress);
+            this.smartContractTransactionService = smartContractTransactionService;
+            
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
         }
 
@@ -91,8 +94,41 @@ namespace Stratis.Features.Unity3dApi
             this.db = new LiteDatabase(new ConnectionString() { Filename = dbPath, Mode = fileMode });
             this.NFTContractCollection = this.db.GetCollection<NFTContractModel>(DbOwnedNFTsKey);
 
-            this.indexingTask = Task.Run(async () => await this.IndexNFTsContinuouslyAsync().ConfigureAwait(false));
-            this.asyncProvider.RegisterTask($"{nameof(AddressIndexer)}.{nameof(this.indexingTask)}", this.indexingTask);
+            this.indexerState = this.db.GetCollection<IndexerStateModel>(IndexerStateKey);
+
+            if (this.indexerState.Count() == 0)
+            {
+                this.logger.LogInformation("NFT indexer state not found, restarting index.");
+
+                // Will automatically add the state model once it is finished.
+                this.ReindexAllContracts();
+            }
+
+            this.logger.LogInformation("Building cache of known contract addresses.");
+
+            this.knownContracts = new HashSet<string>();
+
+            foreach (NFTContractModel model in this.NFTContractCollection.FindAll())
+            {
+                this.knownContracts.Add(model.ContractAddress);
+            }
+
+            this.logger.LogInformation("Finished building cache of known contract addresses.");
+
+            this.indexingLoop = this.asyncProvider.CreateAndRunAsyncLoop("IndexNftsContinuously", async (cancellationTokenSource) =>
+                {
+                    try
+                    {
+                        await this.IndexNFTsContinuouslyAsync().ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        this.logger.LogWarning("Exception raised while indexing NFTs. {0}", e);
+                    }
+                },
+                this.nodeLifetime.ApplicationStopping,
+                repeatEvery: TimeSpans.TenSeconds,
+                startAfter: TimeSpans.Second);
 
             this.logger.LogDebug("NFTTransferIndexer initialized.");
         }
@@ -104,49 +140,30 @@ namespace Stratis.Features.Unity3dApi
             return watchFromHeight;
         }
 
-        /// <inheritdoc />
-        public void WatchNFTContract(string contractAddress)
+        private IndexerStateModel GetIndexerState()
         {
-            try
+            IndexerStateModel indexerStateModel = this.indexerState.FindAll().FirstOrDefault();
+
+            if (indexerStateModel == null)
             {
-                // Check that contract address is a valid address
-                var addr = new BitcoinPubKeyAddress(contractAddress, this.network);
-            }
-            catch (FormatException)
-            {
-                return;
+                indexerStateModel = new IndexerStateModel() { LastProcessedHeight = GetWatchFromHeight() };
             }
 
-            int watchFromHeight = this.GetWatchFromHeight();
-
-            if (!this.NFTContractCollection.Exists(x => x.ContractAddress == contractAddress))
-            {
-                NFTContractModel model = new NFTContractModel()
-                {
-                    ContractAddress = contractAddress,
-                    LastUpdatedBlock = watchFromHeight,
-                    OwnedIDsByAddress = new Dictionary<string, HashSet<long>>()
-                };
-
-                this.NFTContractCollection.Upsert(model);
-
-                this.logger.LogDebug("Added contract " + contractAddress + " to watchlist.");
-            }
-            else
-                this.logger.LogDebug("Tried to add contract " + contractAddress + " to watchlist, but it's already tracked.");
+            return indexerStateModel;
         }
 
-        /// <inheritdoc />
-        public void UnwatchNFTContract(string contractAddress)
+        private void UpdateLastUpdatedBlock(int blockHeight)
         {
-            NFTContractModel entryToRemove = this.NFTContractCollection.FindOne(x => x.ContractAddress == contractAddress);
+            IndexerStateModel indexerStateModel = this.indexerState.FindAll().FirstOrDefault();
 
-            if (entryToRemove == null)
-                return;
+            if (indexerStateModel == null)
+            {
+                indexerStateModel = new IndexerStateModel();
+            }
 
-            this.NFTContractCollection.Delete(entryToRemove.Id);
+            indexerStateModel.LastProcessedHeight = blockHeight;
 
-            this.logger.LogDebug("Unwatched contract " + contractAddress);
+            this.indexerState.Upsert(indexerStateModel);
         }
 
         /// <inheritdoc />
@@ -162,7 +179,7 @@ namespace Stratis.Features.Unity3dApi
 
             List<NFTContractModel> NFTContractModels = this.NFTContractCollection.FindAll().Where(x => x.OwnedIDsByAddress.ContainsKey(address)).ToList();
 
-            OwnedNFTsModel output = new OwnedNFTsModel() { OwnedIDsByContractAddress = new Dictionary<string, List<long>>() };
+            var output = new OwnedNFTsModel() { OwnedIDsByContractAddress = new Dictionary<string, List<long>>() };
 
             foreach (NFTContractModel contractModel in NFTContractModels)
             {
@@ -186,15 +203,18 @@ namespace Stratis.Features.Unity3dApi
         {
             this.logger.LogTrace("ReindexAllContracts()");
 
-            int watchFromHeight = this.GetWatchFromHeight();
+            var updated = new List<NFTContractModel>();
 
             foreach (NFTContractModel contractModel in this.NFTContractCollection.FindAll().ToList())
             {
                 contractModel.OwnedIDsByAddress = new Dictionary<string, HashSet<long>>();
-                contractModel.LastUpdatedBlock = watchFromHeight;
 
-                this.NFTContractCollection.Upsert(contractModel);
+                updated.Add(contractModel);
             }
+
+            this.NFTContractCollection.Upsert(updated);
+
+            this.UpdateLastUpdatedBlock(GetWatchFromHeight());
 
             this.logger.LogTrace("ReindexAllContracts(-)");
         }
@@ -209,119 +229,108 @@ namespace Stratis.Features.Unity3dApi
 
         private async Task IndexNFTsContinuouslyAsync()
         {
-            await Task.Delay(1);
+            IndexerStateModel currentIndexerState = GetIndexerState();
 
-            this.logger.LogDebug("Indexing started");
-
-            try
+            if (this.chainIndexer.Tip.Height < GetWatchFromHeight())
             {
-                while (!this.cancellation.Token.IsCancellationRequested)
+                await Task.Delay(5000);
+                return;
+            }
+
+            ChainedHeader chainTip = this.chainIndexer.Tip;
+
+            if (chainTip.Height == currentIndexerState.LastProcessedHeight)
+            {
+                this.logger.LogTrace("No need to update, already up to tip.");
+                return;
+            }
+
+            // Return TransferLog receipts for any contract (we won't know definitively if they're NFT contracts until we check the cache or query the contract's supported interfaces).
+            List<ReceiptResponse> receipts = this.smartContractTransactionService.ReceiptSearch((List<string>)null, NftTransferEventName, null, currentIndexerState.LastProcessedHeight + 1, chainTip.Height);
+
+            if ((receipts == null) || (receipts.Count == 0))
+            {
+                this.logger.LogTrace("No receipts found. Updated to height " + chainTip.Height);
+
+                this.UpdateLastUpdatedBlock(chainTip.Height);
+                return;
+            }
+
+            int processedCount = 0;
+
+            var changedContracts = new HashSet<NFTContractModel>();
+
+            foreach (ReceiptResponse receiptRes in receipts)
+            {
+                foreach (LogResponse logResponse in receiptRes.Logs)
                 {
-                    if (this.chainIndexer.Tip.Height < GetWatchFromHeight())
-                    {
-                        await Task.Delay(5000);
+                    if (logResponse.Log.Event != NftTransferEventName)
                         continue;
-                    }
 
-                    List<string> contracts = this.NFTContractCollection.FindAll().Select(x => x.ContractAddress).ToList();
-
-                    foreach (string contractAddr in contracts)
+                    // Now check if this is an NFT contract. As this is more expensive than retrieving the receipts we check it second.
+                    if (!this.knownContracts.Contains(receiptRes.To))
                     {
-                        if (this.cancellation.Token.IsCancellationRequested)
+                        if (!this.nftContractLocalClient.SupportsInterface((ulong)chainTip.Height, receiptRes.To, TokenInterface.INonFungibleToken))
+                        {
+                            this.logger.LogTrace("Found TransferLog for non-NFT contract: " + receiptRes.To);
+
                             break;
-
-                        this.logger.LogTrace("Updating data for contract: " + contractAddr);
-
-                        NFTContractModel currentContract = this.NFTContractCollection.FindOne(x => x.ContractAddress == contractAddr);
-
-                        ChainedHeader chainTip = this.chainIndexer.Tip;
-
-                        if (chainTip.Height == currentContract.LastUpdatedBlock)
-                        {
-                            this.logger.LogTrace("No need to update, already up to tip.");
-                            continue;
                         }
 
-                        List<ReceiptResponse> receipts = this.smartContractTransactionService.ReceiptSearch(
-                            contractAddr, "TransferLog", null, currentContract.LastUpdatedBlock + 1, chainTip.Height);
+                        this.logger.LogDebug("Found new NFT contract: " + receiptRes.To);
 
-                        if ((receipts == null) || (receipts.Count == 0))
+                        this.knownContracts.Add(receiptRes.To);
+
+                        this.NFTContractCollection.Insert(new NFTContractModel
                         {
-                            currentContract.LastUpdatedBlock = chainTip.Height;
-                            this.NFTContractCollection.Upsert(currentContract);
-
-                            this.logger.LogTrace("No receipts found. Updated to height " + chainTip.Height);
-                            continue;
-                        }
-
-                        int lastReceiptHeight = 0;
-                        if (receipts.Any())
-                            lastReceiptHeight = (int)receipts.Last().BlockNumber.Value;
-
-                        currentContract.LastUpdatedBlock = new List<int>() { chainTip.Height, lastReceiptHeight }.Max();
-
-                        List<TransferLog> transferLogs = new List<TransferLog>(receipts.Count);
-
-                        foreach (ReceiptResponse receiptRes in receipts)
-                        {
-                            LogData log = receiptRes.Logs.First().Log;
-                            string jsonLog = JsonConvert.SerializeObject(log);
-
-                            TransferLogRoot infoObj = JsonConvert.DeserializeObject<TransferLogRoot>(jsonLog);
-                            transferLogs.Add(infoObj.Data);
-                        }
-
-                        this.logger.LogDebug("Processing transafer logs.");
-
-                        for (int i = 0; i < transferLogs.Count; i++)
-                        {
-                            TransferLog transferInfo = transferLogs[i];
-
-                            this.logger.LogDebug("log #{0}: From: {1} To: {2} Id:{3}", i, transferInfo.From, transferInfo.To, transferInfo.TokenId);
-
-                            if ((transferInfo.From != null) && currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.From))
-                            {
-                                bool fromExists = currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.From);
-
-                                this.logger.LogDebug("FromExists: {0} ",  fromExists);
-
-                                currentContract.OwnedIDsByAddress[transferInfo.From].Remove(transferInfo.TokenId);
-
-                                if (currentContract.OwnedIDsByAddress[transferInfo.From].Count == 0)
-                                    currentContract.OwnedIDsByAddress.Remove(transferInfo.From);
-                            }
-
-                            if (!currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.To))
-                            {
-                                this.logger.LogDebug("Added ID to To");
-                                currentContract.OwnedIDsByAddress.Add(transferInfo.To, new HashSet<long>());
-                            }
-                            else
-                                this.logger.LogDebug("Already added!");
-
-                            currentContract.OwnedIDsByAddress[transferInfo.To].Add(transferInfo.TokenId);
-                        }
-
-                        this.NFTContractCollection.Upsert(currentContract);
-
-                        this.logger.LogTrace("Found " + transferLogs.Count + " transfer logs. Last updated block: " + currentContract.LastUpdatedBlock);
+                            ContractAddress = receiptRes.To,
+                            OwnedIDsByAddress = new Dictionary<string, HashSet<long>>()
+                        });
                     }
 
-                    try
+                    string jsonLog = JsonConvert.SerializeObject(logResponse.Log);
+
+                    TransferLogRoot infoObj = JsonConvert.DeserializeObject<TransferLogRoot>(jsonLog);
+
+                    TransferLog transferInfo = infoObj.Data;
+
+                    this.logger.LogDebug("Log from: {0}, to: {1}, ID: {2}", transferInfo.From, transferInfo.To, transferInfo.TokenId);
+
+                    NFTContractModel currentContract = this.NFTContractCollection.FindOne(c => c.ContractAddress == receiptRes.To);
+
+                    if ((transferInfo.From != null) && currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.From))
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(1), this.cancellation.Token);
+                        bool fromExists = currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.From);
+
+                        this.logger.LogDebug("FromExists: {0} ", fromExists);
+
+                        currentContract.OwnedIDsByAddress[transferInfo.From].Remove(transferInfo.TokenId);
+
+                        if (currentContract.OwnedIDsByAddress[transferInfo.From].Count == 0)
+                            currentContract.OwnedIDsByAddress.Remove(transferInfo.From);
                     }
-                    catch (TaskCanceledException)
+
+                    if (!currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.To))
                     {
+                        this.logger.LogDebug("Added ID to To");
+                        currentContract.OwnedIDsByAddress.Add(transferInfo.To, new HashSet<long>());
                     }
+                    else
+                        this.logger.LogDebug("Already added!");
+
+                    currentContract.OwnedIDsByAddress[transferInfo.To].Add(transferInfo.TokenId);
+
+                    processedCount++;
+
+                    changedContracts.Add(currentContract);
                 }
             }
-            catch (Exception e)
-            {
-                this.logger.LogError(e.ToString());
-            }
 
-            this.logger.LogDebug("Indexing stopped");
+            this.NFTContractCollection.Upsert(changedContracts);
+
+            this.UpdateLastUpdatedBlock(chainTip.Height);
+
+            this.logger.LogTrace("Found " + processedCount + " transfer logs. Last updated block: " + chainTip.Height);
         }
 
         public void Dispose()
@@ -329,7 +338,7 @@ namespace Stratis.Features.Unity3dApi
             this.logger.LogDebug("Dispose()");
 
             this.cancellation.Cancel();
-            this.indexingTask?.GetAwaiter().GetResult();
+            this.indexingLoop?.Dispose();
             this.db?.Dispose();
 
             this.logger.LogDebug("Dispose(-)");
@@ -344,13 +353,18 @@ namespace Stratis.Features.Unity3dApi
 
         // Key is nft owner address, value is list of NFT IDs
         public Dictionary<string, HashSet<long>> OwnedIDsByAddress { get; set; }
-
-        public int LastUpdatedBlock { get; set; }
     }
 
     public class OwnedNFTsModel
     {
         public Dictionary<string, List<long>> OwnedIDsByContractAddress { get; set; }
+    }
+
+    public class IndexerStateModel
+    {
+        public int Id { get; set; }
+
+        public int LastProcessedHeight { get; set; }
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.4.3.0 (Newtonsoft.Json v11.0.0.0)")]
