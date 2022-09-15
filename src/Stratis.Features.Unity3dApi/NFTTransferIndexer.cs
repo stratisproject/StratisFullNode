@@ -115,7 +115,7 @@ namespace Stratis.Features.Unity3dApi
 
             this.logger.LogInformation("Finished building cache of known contract addresses.");
 
-            this.indexingLoop = this.asyncProvider.CreateAndRunAsyncLoop("IndexNftsContinuously", async (cancellationTokenSource) =>
+            this.indexingLoop = this.asyncProvider.CreateAndRunAsyncLoop(nameof(IndexNFTsContinuouslyAsync), async (cancellationTokenSource) =>
                 {
                     try
                     {
@@ -201,8 +201,6 @@ namespace Stratis.Features.Unity3dApi
         /// <inheritdoc />
         public void ReindexAllContracts()
         {
-            this.logger.LogTrace("ReindexAllContracts()");
-
             var updated = new List<NFTContractModel>();
 
             foreach (NFTContractModel contractModel in this.NFTContractCollection.FindAll().ToList())
@@ -216,7 +214,7 @@ namespace Stratis.Features.Unity3dApi
 
             this.UpdateLastUpdatedBlock(GetWatchFromHeight());
 
-            this.logger.LogTrace("ReindexAllContracts(-)");
+            this.logger.LogInformation($"A re-index of all contracts will be triggered from block {GetWatchFromHeight()}.");
         }
 
         /// <inheritdoc />
@@ -241,24 +239,27 @@ namespace Stratis.Features.Unity3dApi
 
             if (chainTip.Height == currentIndexerState.LastProcessedHeight)
             {
-                this.logger.LogTrace("No need to update, already up to tip.");
+                this.logger.LogInformation("No need to update, already up to tip.");
                 return;
             }
 
             // Return TransferLog receipts for any contract (we won't know definitively if they're NFT contracts until we check the cache or query the contract's supported interfaces).
+            this.logger.LogInformation($"Initiating receipt search from block {currentIndexerState.LastProcessedHeight + 1} to {chainTip.Height}.");
             List<ReceiptResponse> receipts = this.smartContractTransactionService.ReceiptSearch((List<string>)null, NftTransferEventName, null, currentIndexerState.LastProcessedHeight + 1, chainTip.Height);
 
             if ((receipts == null) || (receipts.Count == 0))
             {
-                this.logger.LogTrace("No receipts found. Updated to height " + chainTip.Height);
-
+                this.logger.LogInformation($"No receipts found, updated to height {chainTip.Height}.");
                 this.UpdateLastUpdatedBlock(chainTip.Height);
+
                 return;
             }
 
             int processedCount = 0;
 
             var changedContracts = new HashSet<NFTContractModel>();
+
+            this.logger.LogInformation($"{receipts.Count} receipts found for indexing.");
 
             foreach (ReceiptResponse receiptRes in receipts)
             {
@@ -277,7 +278,7 @@ namespace Stratis.Features.Unity3dApi
                             break;
                         }
 
-                        this.logger.LogDebug("Found new NFT contract: " + logResponse.Address);
+                        this.logger.LogInformation($"Found new NFT contract '{logResponse.Address}'");
 
                         this.knownContracts.Add(logResponse.Address);
 
@@ -330,7 +331,7 @@ namespace Stratis.Features.Unity3dApi
 
             this.UpdateLastUpdatedBlock(chainTip.Height);
 
-            this.logger.LogTrace("Found " + processedCount + " transfer logs. Last updated block: " + chainTip.Height);
+            this.logger.LogInformation("Found " + processedCount + " transfer logs. Last updated block: " + chainTip.Height);
         }
 
         public void Dispose()
