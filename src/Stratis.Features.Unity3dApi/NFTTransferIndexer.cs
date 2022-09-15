@@ -78,7 +78,7 @@ namespace Stratis.Features.Unity3dApi
 
             this.nftContractLocalClient = new NftContractLocalClient(localCallContract, apiSettings.LocalCallSenderAddress);
             this.smartContractTransactionService = smartContractTransactionService;
-            
+
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
         }
 
@@ -261,6 +261,8 @@ namespace Stratis.Features.Unity3dApi
 
             this.logger.LogInformation($"{receipts.Count} receipts found for indexing.");
 
+            var app = receipts.SelectMany(r => r.Logs).Where(f => f.Address == "tMfqmeRReLQ1FpYUi7X2pL4bLjui21H64p").ToList();
+
             foreach (ReceiptResponse receiptRes in receipts)
             {
                 foreach (LogResponse logResponse in receiptRes.Logs)
@@ -297,7 +299,10 @@ namespace Stratis.Features.Unity3dApi
 
                     this.logger.LogDebug("Log from: {0}, to: {1}, ID: {2}", transferInfo.From, transferInfo.To, transferInfo.TokenId);
 
-                    NFTContractModel currentContract = this.NFTContractCollection.FindOne(c => c.ContractAddress == logResponse.Address);
+                    // Check if the contract already had modifications and if so, use that one.
+                    NFTContractModel currentContract = changedContracts.FirstOrDefault(c => c.ContractAddress == logResponse.Address);
+                    if (currentContract == null)
+                        currentContract = this.NFTContractCollection.FindOne(c => c.ContractAddress == logResponse.Address);
 
                     if ((transferInfo.From != null) && currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.From))
                     {
