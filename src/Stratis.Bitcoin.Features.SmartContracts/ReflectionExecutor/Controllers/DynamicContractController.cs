@@ -15,6 +15,7 @@ using Stratis.Bitcoin.Features.SmartContracts.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Loader;
+using Stratis.SmartContracts.CLR.Serialization;
 using Stratis.SmartContracts.Core.State;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
@@ -53,6 +54,43 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             this.network = network;
         }
 
+        private void ByteArrayRLPEncoding(JObject requestData, ParameterInfo[] parameterInfos)
+        {
+            // Check for byte arrays containing parameter lists and RLP encode them.
+            // When its a parameter list a '#' will be present where hex code is otherwise expected.
+
+            MethodParameterStringSerializer stringSerializer = null;
+            MethodParameterByteSerializer byteSerializer = null;
+
+            foreach (ParameterInfo parameter in parameterInfos)
+            {
+                if (parameter.ParameterType != typeof(byte[]))
+                    continue;
+
+                JToken jObParam = requestData[parameter.Name];
+                if (jObParam == null)
+                    continue;
+
+                string parameters = $"{jObParam}";
+
+                if (!(parameters.Contains("#")))
+                    continue;
+
+                stringSerializer ??= new MethodParameterStringSerializer(this.network);
+                byteSerializer ??= new MethodParameterByteSerializer(new ContractPrimitiveSerializer(this.network, null));
+
+                // "#" is a special case for indicating an empty list of parameters.
+                object[] objects = (parameters == "#") ? new object[0] : stringSerializer.Deserialize(parameters);
+
+                // RLP encode the parameters.
+                var output = byteSerializer.Serialize(objects);
+
+                string hexEncodedByteArray = BitConverter.ToString(output).Replace("-", "");
+
+                requestData[parameter.Name] = hexEncodedByteArray;
+            }
+        }
+
         /// <summary>
         /// Call a method on the contract by broadcasting a call transaction to the network.
         /// </summary>
@@ -81,6 +119,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
 
             if (!this.ValidateParams(requestData, parameters))
                 throw new Exception("Parameters don't match method signature.");
+
+            ByteArrayRLPEncoding(requestData, parameters);
 
             // Map the JObject to the parameter + types expected by the call.
             string[] methodParams = parameters.Map(requestData);
