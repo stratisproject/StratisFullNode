@@ -268,22 +268,22 @@ namespace Stratis.Features.Unity3dApi
                         continue;
 
                     // Now check if this is an NFT contract. As this is more expensive than retrieving the receipts we check it second.
-                    if (!this.knownContracts.Contains(receiptRes.To))
+                    if (!this.knownContracts.Contains(logResponse.Address))
                     {
-                        if (!this.nftContractLocalClient.SupportsInterface((ulong)chainTip.Height, receiptRes.To, TokenInterface.INonFungibleToken))
+                        if (!this.nftContractLocalClient.SupportsInterface((ulong)chainTip.Height, logResponse.Address, TokenInterface.INonFungibleToken))
                         {
-                            this.logger.LogTrace("Found TransferLog for non-NFT contract: " + receiptRes.To);
+                            this.logger.LogTrace("Found TransferLog for non-NFT contract: " + logResponse.Address);
 
                             break;
                         }
 
-                        this.logger.LogDebug("Found new NFT contract: " + receiptRes.To);
+                        this.logger.LogDebug("Found new NFT contract: " + logResponse.Address);
 
-                        this.knownContracts.Add(receiptRes.To);
+                        this.knownContracts.Add(logResponse.Address);
 
                         this.NFTContractCollection.Insert(new NFTContractModel
                         {
-                            ContractAddress = receiptRes.To,
+                            ContractAddress = logResponse.Address,
                             OwnedIDsByAddress = new Dictionary<string, HashSet<long>>()
                         });
                     }
@@ -296,7 +296,7 @@ namespace Stratis.Features.Unity3dApi
 
                     this.logger.LogDebug("Log from: {0}, to: {1}, ID: {2}", transferInfo.From, transferInfo.To, transferInfo.TokenId);
 
-                    NFTContractModel currentContract = this.NFTContractCollection.FindOne(c => c.ContractAddress == receiptRes.To);
+                    NFTContractModel currentContract = this.NFTContractCollection.FindOne(c => c.ContractAddress == logResponse.Address);
 
                     if ((transferInfo.From != null) && currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.From))
                     {
