@@ -261,8 +261,6 @@ namespace Stratis.Features.Unity3dApi
 
             this.logger.LogInformation($"{receipts.Count} receipts found for indexing.");
 
-            var app = receipts.SelectMany(r => r.Logs).Where(f => f.Address == "tMfqmeRReLQ1FpYUi7X2pL4bLjui21H64p").ToList();
-
             foreach (ReceiptResponse receiptRes in receipts)
             {
                 foreach (LogResponse logResponse in receiptRes.Logs)
