@@ -102,6 +102,22 @@ namespace Stratis.SmartContracts.CLR.Serialization
             return this.StringToObjects(parameters);
         }
 
+        public byte[] HexOrEncodingToByteArray(string hex)
+        {
+            if (!hex.Contains("#"))
+                return hex.HexToByteArray();
+
+            var byteSerializer = new MethodParameterByteSerializer(new ContractPrimitiveSerializer(this.network, null));
+
+            // "#" is a special case for indicating an empty list of parameters.
+            object[] objects = (hex == "#") ? new object[0] : this.Deserialize(hex);
+
+            // RLP encode the parameters.
+            var output = byteSerializer.Serialize(objects);
+
+            return output;
+        }
+
         private object[] StringToObjects(string parameters)
         {
             string[] split = Regex.Split(parameters, @"(?<!(?<!\\)*\\)\|").ToArray();
@@ -153,7 +169,7 @@ namespace Stratis.SmartContracts.CLR.Serialization
                         processedParameters.Add(parameterSignature[1].ToAddress(this.network));
 
                     else if (parameterSignature[0] == MethodParameterDataType.ByteArray.ToString("d"))
-                        processedParameters.Add(parameterSignature[1].HexToByteArray());
+                        processedParameters.Add(HexOrEncodingToByteArray(parameterSignature[1]));
 
                     else if (parameterSignature[0] == MethodParameterDataType.UInt128.ToString("d"))
                         processedParameters.Add(UInt128.Parse(parameterSignature[1]));
