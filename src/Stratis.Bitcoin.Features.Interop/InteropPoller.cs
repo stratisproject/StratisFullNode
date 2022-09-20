@@ -284,12 +284,13 @@ namespace Stratis.Bitcoin.Features.Interop
                     return;
                 }
 
-                // In the event that the last polled block was set back a considerable distance from the tip, we need to first catch up faster.
-                // If we are already in the acceptable range, the usual logic will apply.
-                await EnsureLastPolledBlockIsSyncedWithCirrusChainAsync().ConfigureAwait(false);
-
                 try
                 {
+                    // In the event that the last polled block was set back a considerable distance from the tip, we need to first catch up faster.
+                    // If we are already in the acceptable range, the usual logic will apply.
+                    // This needs to be in the try catch so that any exceptions doesnt break teh async cloop.
+                    await EnsureLastPolledBlockIsSyncedWithCirrusChainAsync().ConfigureAwait(false);
+
                     CheckForBlockHeightOverrides(DestinationChain.CIRRUS);
 
                     var cirrusTipHeight = this.chainIndexer.Tip.Height;
