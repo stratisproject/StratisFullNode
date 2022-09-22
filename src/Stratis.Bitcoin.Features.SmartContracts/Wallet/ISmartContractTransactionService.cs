@@ -26,5 +26,16 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         /// <param name="toBlock">The block number where searching finishes.</param>
         /// <returns>A list of all matching receipts.</returns>
         List<ReceiptResponse> ReceiptSearch(string contractAddress, string eventName, List<string> topics = null, int fromBlock = 0, int? toBlock = null);
+
+        /// <summary>
+        /// Searches for receipts that match the given filter criteria. Filter criteria are ANDed together.
+        /// </summary>
+        /// <param name="contractAddresses">The contract addresses from which events were raised.</param>
+        /// <param name="eventName">The name of the event raised.</param>
+        /// <param name="topics">The topics to search. All specified topics must be present.</param>
+        /// <param name="fromBlock">The block number from which to start searching.</param>
+        /// <param name="toBlock">The block number where searching finishes.</param>
+        /// <returns>A list of all matching receipts.</returns>
+        List<ReceiptResponse> ReceiptSearch(List<string> contractAddresses, string eventName, List<string> topics = null, int fromBlock = 0, int? toBlock = null);
     }
 }

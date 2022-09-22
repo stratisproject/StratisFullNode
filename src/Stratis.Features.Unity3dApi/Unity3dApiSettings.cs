@@ -45,6 +45,12 @@ namespace Stratis.Features.Unity3dApi
         public bool UseHttps { get; set; }
 
         /// <summary>
+        /// A wallet address to use for local contract calls.
+        /// </summary>
+        /// <remarks>Can be an arbitrary valid address.</remarks>
+        public string LocalCallSenderAddress { get; set; }
+
+        /// <summary>
         /// Initializes an instance of the object from the node configuration.
         /// </summary>
         /// <param name="nodeSettings">The node configuration.</param>
@@ -102,6 +108,11 @@ namespace Stratis.Features.Unity3dApi
                     Interval = keepAlive * 1000
                 };
             }
+
+            this.LocalCallSenderAddress = config.GetOrDefault("unityapi_localcallsenderaddress", (string)null);
+
+            if (string.IsNullOrWhiteSpace(this.LocalCallSenderAddress))
+                throw new ConfigurationException("The local call sender address must be specified.");
         }
 
         /// <summary>Prints the help information on how to configure the API settings to the logger.</summary>
@@ -116,6 +127,7 @@ namespace Stratis.Features.Unity3dApi
             builder.AppendLine($"-unityapi_keepalive=<seconds>              Keep Alive interval (set in seconds). Default: 0 (no keep alive).");
             builder.AppendLine($"-unityapi_usehttps=<bool>                  Use https protocol on the API. Defaults to false.");
             builder.AppendLine($"-unityapi_certificatefilepath=<string>     Path to the certificate used for https traffic encryption. Defaults to <null>. Password protected files are not supported. On MacOs, only p12 certificates can be used without password.");
+            builder.AppendLine($"-unityapi_localcallsenderaddress=<string>  Arbitrary address to be used for submitting local contract calls (non-monetary).");
 
             var logger = NodeSettings.Default(network).LoggerFactory.CreateLogger(typeof(Unity3dApiSettings).FullName);
             logger.LogInformation(builder.ToString());
@@ -142,6 +154,7 @@ namespace Stratis.Features.Unity3dApi
             builder.AppendLine($"#Path to the file containing the certificate to use for https traffic encryption. Password protected files are not supported. On MacOs, only p12 certificates can be used without password.");
             builder.AppendLine(@"#Please refer to .Net Core documentation for usage: 'https://docs.microsoft.com/en-us/dotnet/api/system.security.cryptography.x509certificates.x509certificate2.-ctor?view=netcore-2.1#System_Security_Cryptography_X509Certificates_X509Certificate2__ctor_System_Byte___'.");
             builder.AppendLine($"#unityapi_certificatefilepath=");
+            builder.AppendLine($"#unityapi_localcallsenderaddress=");
         }
     }
 }
