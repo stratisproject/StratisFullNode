@@ -7,11 +7,11 @@ namespace Stratis.Bitcoin.EventBus.CoreEvents
 {
     public class PeerConnectionInfoEvent : EventBase
     {
-        public IEnumerable<PeerConnectionModel> peerConnectionModels { get; set; }
+        public IEnumerable<PeerConnectionModel> PeerConnectionModels { get; set; }
 
         public PeerConnectionInfoEvent(IEnumerable<PeerConnectionModel> peerConnectionModels)
         {
-            this.peerConnectionModels = peerConnectionModels;
+            this.PeerConnectionModels = peerConnectionModels;
         }
     }
 }

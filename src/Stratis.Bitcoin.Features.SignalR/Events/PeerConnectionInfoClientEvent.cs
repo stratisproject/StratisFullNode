@@ -9,14 +9,14 @@ namespace Stratis.Bitcoin.Features.SignalR.Events
 {
     public class PeerConnectionInfoClientEvent : IClientEvent
     {
-        public IEnumerable<PeerConnectionModel> peerConnectionModels { get; set; }
+        public IEnumerable<PeerConnectionModel> PeerConnectionModels { get; set; }
         public Type NodeEventType { get; } = typeof(PeerConnectionInfoEvent);
 
         public void BuildFrom(EventBase @event)
         {
             if (@event is PeerConnectionInfoEvent peerConnectionInfo)
             {
-                this.peerConnectionModels = peerConnectionInfo.peerConnectionModels;
+                this.PeerConnectionModels = peerConnectionInfo.PeerConnectionModels;
 
                 return;
             }
