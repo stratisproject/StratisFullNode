@@ -333,9 +333,9 @@ namespace Stratis.Bitcoin.Connection
                 peerList.Add(peerNode);
             }
 
-           if (this.signals != null)
+            if (this.signals != null)
             {
-               this.signals.Publish(new PeerConnectionInfoEvent(peerList));
+                this.signals.Publish(new PeerConnectionInfoEvent(peerList));
             }
 
             int inbound = this.ConnectedPeers.Count(x => x.Inbound);
