@@ -93,8 +93,6 @@ namespace Stratis.Bitcoin.Connection
 
         private readonly ISignals signals;
 
-        public IEnumerable<PeerConnectionModel> peerConnectionModels { get; set; }
-
         public ConnectionManager(IDateTimeProvider dateTimeProvider,
             ILoggerFactory loggerFactory,
             Network network,
@@ -335,10 +333,9 @@ namespace Stratis.Bitcoin.Connection
                 peerList.Add(peerNode);
             }
 
-            this.peerConnectionModels = peerList;
-            if (this.signals != null)
+           if (this.signals != null)
             {
-                this.signals.Publish(new PeerConnectionInfoEvent(this.peerConnectionModels));
+               this.signals.Publish(new PeerConnectionInfoEvent(peerList));
             }
 
             int inbound = this.ConnectedPeers.Count(x => x.Inbound);
