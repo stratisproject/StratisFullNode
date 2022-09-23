@@ -124,7 +124,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private async Task ProcessConversionRequestPayloadAsync(INetworkPeer peer, ConversionRequestPayload payload)
         {
-            this.logger.LogDebug($"Conversion request payload request for id '{payload.RequestId}' received from '{peer.PeerEndPoint.Address}':'{peer.RemoteSocketEndpoint.Address}' proposing transaction ID '{payload.TransactionId}', (IsTransfer: {payload.IsTransfer}, IsReplenishment: {payload.IsReplenishment}).");
+            this.logger.LogDebug($"Conversion request payload request for id '{payload.RequestId}' received from '{peer.PeerEndPoint.Address}':'{peer.RemoteSocketEndpoint.Address}' proposing transaction ID '{payload.TransactionId}', (IsTransfer: {payload.IsTransfer}, IsReplenishment: {payload.IsReplenishment}, IsKeyValue: {payload.IsKeyValue}).");
 
             if (payload.TransactionId == BigInteger.MinusOne)
                 return;
@@ -168,7 +168,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
 
                 string signature = this.federationManager.CurrentFederationKey.SignMessage(payload.RequestId + payload.TransactionId);
-                await this.AttachedPeer.SendMessageAsync(ConversionRequestPayload.Reply(payload.RequestId, payload.TransactionId, signature, payload.DestinationChain, payload.IsTransfer, payload.IsReplenishment)).ConfigureAwait(false);
+                await this.AttachedPeer.SendMessageAsync(ConversionRequestPayload.Reply(payload.RequestId, payload.TransactionId, signature, payload.DestinationChain, payload.IsTransfer, payload.IsReplenishment, payload.IsKeyValue)).ConfigureAwait(false);
             }
         }
 

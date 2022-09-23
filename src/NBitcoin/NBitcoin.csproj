@@ -7,11 +7,11 @@
   </PropertyGroup>
   
   <PropertyGroup>
-    <Version>4.0.0.85</Version>
+    <Version>4.0.0.87</Version>
   </PropertyGroup>
   
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <RootNamespace>NBitcoin</RootNamespace>
     <PackageId>NStratis</PackageId>
     <Authors>NStratis</Authors>

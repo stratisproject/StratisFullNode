@@ -1,16 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <PreserveCompilationContext>true</PreserveCompilationContext>
     <AssemblyName>Stratis.Bitcoin.Features.Api</AssemblyName>
     <OutputType>Library</OutputType>
     <PackageId>Stratis.Features.Api</PackageId>
-    <Version>1.3.2.0</Version>
+    <Version>1.3.3.0</Version>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
     <ApplicationIcon />
     <OutputTypeEx>library</OutputTypeEx>
     <StartupObject />
+	<ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
     <!-- Force packing of a web project https://github.com/aspnet/websdk/issues/228 -->
     <IsPackable>true</IsPackable>
     <Authors>Stratis Group Ltd.</Authors>

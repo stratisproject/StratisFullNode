@@ -132,8 +132,12 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
          *
          * Until we update the SmartContractsController to retrieve only mature transactions, we need this test.
          */
+
+        /// <summary>
+        /// SmartContractsController_Builds_Transaction_With_Minimum_Inputs
+        /// </summary>
         [Fact]
-        public void SmartContractsController_Builds_Transaction_With_Minimum_Inputs()
+        public void BuildSmartContractControllerTransaction()
         {
             using (SmartContractNodeBuilder builder = SmartContractNodeBuilder.Create(this))
             {

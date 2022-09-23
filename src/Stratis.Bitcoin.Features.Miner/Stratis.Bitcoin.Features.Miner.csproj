@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Description>Stratis Bitcoin Features Miner</Description>
     <AssemblyTitle>Stratis.Bitcoin.Features.Miner</AssemblyTitle>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <AssemblyName>Stratis.Bitcoin.Features.Miner</AssemblyName>
     <PackageId>Stratis.Features.Miner</PackageId>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
@@ -14,7 +14,7 @@
     <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
     <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
     <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
-    <Version>1.3.2.0</Version>
+    <Version>1.3.3.0</Version>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
     <Authors>Stratis Group Ltd.</Authors>
   </PropertyGroup>

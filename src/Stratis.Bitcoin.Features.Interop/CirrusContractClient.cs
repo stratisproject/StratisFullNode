@@ -6,8 +6,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Flurl;
 using Flurl.Http;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Newtonsoft.Json;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
 using Stratis.Bitcoin.Features.Interop.Settings;
@@ -34,6 +36,16 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <returns>The transactionId of the mint request submitted to the Cirrus multisig wallet contract.</returns>
         /// <remarks>The target SRC20 contract must obviously support the IMintable interface.</remarks>
         Task<MultisigTransactionIdentifiers> MintAsync(string contractAddress, string destinationAddress, BigInteger amount);
+
+        /// <summary>
+        /// Submits a multisig transaction with its encoded parameters set to invoke the Mint method on a target SRC721 contract.
+        /// </summary>
+        /// <param name="contractAddress">The SRC20 contract address that tokens should be minted for.</param>
+        /// <param name="destinationAddress">The Cirrus address that the SRC20 tokens should be minted and assigned to.</param>
+        /// <param name="tokenId">The tokenId of the SRC721 token to be minted.</param>
+        /// <param name="uri">The URI of the SRC721 token to be minted.</param>
+        /// <returns>The transactionId of the mint request submitted to the Cirrus multisig wallet contract.</returns>
+        Task<MultisigTransactionIdentifiers> MintNftAsync(string contractAddress, string destinationAddress, BigInteger tokenId, string uri);
 
         /// <summary>
         /// Retrieves the receipt for a given smart contract invocation.
@@ -75,19 +87,27 @@ namespace Stratis.Bitcoin.Features.Interop
         /// </summary>
         /// <returns>If succesfull, the transaction hash of the confirmation transaction, else null and the error message.</returns>
         Task<(string TransactionHash, string Message)> ConfirmTransactionAsync(BigInteger transactionId);
+
+        Task<string> GetKeyValueStoreAsync(string address, string key, ulong blockHeight);
+
+        Task<MultisigTransactionIdentifiers> SetKeyValueStoreAsync(string key, string value);
     }
 
     /// <inheritdoc />
     public class CirrusContractClient : ICirrusContractClient
     {
         private const int GetReceiptWaitTimeSeconds = 180;
+        public const string KeyValueGetMethodName = "Get";
+        public const string KeyValueSetMethodName = "Set";
         public const string MultisigConfirmMethodName = "Confirm";
         public const string MultisigSubmitMethodName = "Submit";
         public const string SRC20MintMethodName = "Mint";
+        public const string SRC721MintMethodName = "Mint";
 
         private readonly CirrusInteropSettings cirrusInteropSettings;
         private readonly ChainIndexer chainIndexer;
         private readonly Serializer serializer;
+        private readonly ILogger logger;
 
         /// <summary>
         /// The constructor.
@@ -99,35 +119,15 @@ namespace Stratis.Bitcoin.Features.Interop
             this.cirrusInteropSettings = interopSettings.GetSettings<CirrusInteropSettings>();
             this.chainIndexer = chainIndexer;
             this.serializer = new Serializer(new ContractPrimitiveSerializerV2(this.chainIndexer.Network));
+
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
-        /// <inheritdoc />
-        public async Task<MultisigTransactionIdentifiers> MintAsync(string contractAddress, string destinationAddress, BigInteger amount)
+        private async Task<MultisigTransactionIdentifiers> MultisigContractCallInternalAsync(string contractAddress, string methodName, string methodDataHex)
         {
             BuildCallContractTransactionResponse response;
             try
             {
-                Address mintRecipient = destinationAddress.ToAddress(this.chainIndexer.Network);
-
-                // Pack the parameters of the Mint method invocation into the format used by the multisig contract.
-                byte[] accountBytes = this.serializer.Serialize(mintRecipient);
-                byte[] accountBytesPadded = new byte[accountBytes.Length + 1];
-                accountBytesPadded[0] = 9; // 9 = Address
-                Array.Copy(accountBytes, 0, accountBytesPadded, 1, accountBytes.Length);
-
-                byte[] amountBytes = this.serializer.Serialize(new UInt256(amount.ToByteArray()));
-                byte[] amountBytesPadded = new byte[amountBytes.Length + 1];
-                amountBytesPadded[0] = 12; // 12 = UInt256
-                Array.Copy(amountBytes, 0, amountBytesPadded, 1, amountBytes.Length);
-
-                byte[] output = this.serializer.Serialize(new byte[][]
-                {
-                accountBytesPadded,
-                amountBytesPadded
-                });
-
-                string mintDataHex = BitConverter.ToString(output).Replace("-", "");
-
                 var request = new BuildCallContractTransactionRequest
                 {
                     WalletName = this.cirrusInteropSettings.CirrusWalletCredentials.WalletName,
@@ -142,14 +142,16 @@ namespace Stratis.Bitcoin.Features.Interop
                     Sender = this.cirrusInteropSettings.CirrusSmartContractActiveAddress,
                     Parameters = new string[]
                     {
-                    // Destination - this is the SRC20 contract that the mint will be invoked against, *not* the Cirrus address the minted tokens will be sent to
+                    // Destination - in the case of a mint this is the SRC20/SRC721 contract that the mint will be invoked against, *not* the Cirrus address the minted tokens will be sent to
                     "9#" + contractAddress,
                     // MethodName
-                    "4#" + SRC20MintMethodName,
+                    "4#" + methodName,
                     // Data - this is an analogue of the ABI-encoded data used in Ethereum contract calls
-                    "10#" + mintDataHex
+                    "10#" + methodDataHex
                     }
                 };
+
+                this.logger.LogDebug($"{nameof(contractAddress)}:{contractAddress} {nameof(methodName)}:{methodName} {nameof(methodDataHex)}:{methodDataHex}");
 
                 using (CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(180)))
                 {
@@ -221,6 +223,90 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
+        private byte[] GetMintData(Address mintRecipient, BigInteger amount)
+        {
+            // Pack the parameters of the Mint method invocation into the format used by the multisig contract.
+            byte[] accountBytes = this.serializer.Serialize(mintRecipient);
+            byte[] accountBytesPadded = CreatePaddedParameterArray(accountBytes, 9); // 9 = Address
+
+            byte[] amountBytes = this.serializer.Serialize(new UInt256(amount.ToByteArray()));
+            byte[] amountBytesPadded = CreatePaddedParameterArray(amountBytes, 12); // 12 = UInt256
+
+            return this.serializer.Serialize(new byte[][]
+            {
+                accountBytesPadded,
+                amountBytesPadded
+            });
+        }
+
+        /// <inheritdoc />
+        public async Task<MultisigTransactionIdentifiers> MintAsync(string contractAddress, string destinationAddress, BigInteger amount)
+        {
+            try
+            {
+                Address mintRecipient = destinationAddress.ToAddress(this.chainIndexer.Network);
+
+                byte[] mintData = GetMintData(mintRecipient, amount);
+
+                string mintDataHex = BitConverter.ToString(mintData).Replace("-", "");
+
+                return await MultisigContractCallInternalAsync(contractAddress, SRC20MintMethodName, mintDataHex).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                return new MultisigTransactionIdentifiers
+                {
+                    Message = $"Exception occurred trying to build and send the mint transaction: {ex}",
+                    TransactionHash = "",
+                    TransactionId = -1
+                };
+            }
+        }
+
+        private byte[] GetMintNftData(Address mintRecipient, BigInteger tokenId, string uri)
+        {
+            // Pack the parameters of the SRC721 Mint method invocation into the format used by the multisig contract.
+            byte[] accountBytes = this.serializer.Serialize(mintRecipient);
+            byte[] accountBytesPadded = CreatePaddedParameterArray(accountBytes, 9); // 9 = Address
+
+            byte[] tokenIdBytes = this.serializer.Serialize(new UInt256(tokenId.ToByteArray()));
+            byte[] tokenIdBytesPadded = CreatePaddedParameterArray(tokenIdBytes, 12); // 12 = UInt256
+
+            byte[] uriBytes = this.serializer.Serialize(uri);
+            byte[] uriBytesPadded = CreatePaddedParameterArray(uriBytes, 4); // 4 = String
+
+            return this.serializer.Serialize(new byte[][]
+            {
+                accountBytesPadded,
+                tokenIdBytesPadded,
+                uriBytesPadded
+            });
+        }
+
+        /// <inheritdoc />
+        public async Task<MultisigTransactionIdentifiers> MintNftAsync(string contractAddress, string destinationAddress, BigInteger tokenId, string uri)
+        {
+            try
+            {
+                Address mintRecipient = destinationAddress.ToAddress(this.chainIndexer.Network);
+
+                byte[] mintData = GetMintNftData(mintRecipient, tokenId, uri);
+
+                string mintDataHex = BitConverter.ToString(mintData).Replace("-", "");
+
+                return await MultisigContractCallInternalAsync(contractAddress, SRC721MintMethodName, mintDataHex).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                return new MultisigTransactionIdentifiers
+                {
+                    Message = $"Exception occurred trying to build and send the mint transaction: {ex}",
+                    TransactionHash = "",
+                    TransactionId = -1
+                };
+            }
+        }
+
         /// <inheritdoc />
         public async Task<CirrusReceiptResponse> GetReceiptAsync(string txHash)
         {
@@ -259,25 +345,33 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public async Task<NBitcoin.Block> GetBlockByHeightAsync(int blockHeight)
         {
-            string blockHash = await this.cirrusInteropSettings.CirrusClientUrl
+            string blockHash;
+
+            using (CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(GetReceiptWaitTimeSeconds)))
+            {
+                blockHash = await this.cirrusInteropSettings.CirrusClientUrl
                 .AppendPathSegment("api/Consensus/getblockhash")
                 .SetQueryParam("height", blockHeight)
-                .GetJsonAsync<string>()
+                .GetJsonAsync<string>(cancellation.Token)
                 .ConfigureAwait(false);
+            }
 
-            if (blockHash == null)
+            if (string.IsNullOrEmpty(blockHash))
                 return null;
 
-            var hexResponse = await this.cirrusInteropSettings.CirrusClientUrl
+            using (CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(GetReceiptWaitTimeSeconds)))
+            {
+                var hexResponse = await this.cirrusInteropSettings.CirrusClientUrl
                 .AppendPathSegment("api/BlockStore/block")
                 .SetQueryParam("Hash", blockHash)
                 .SetQueryParam("ShowTransactionDetails", false)
                 .SetQueryParam("OutputJson", false)
-                .GetStringAsync()
+                .GetStringAsync(cancellation.Token)
                 .ConfigureAwait(false);
 
-            var block = NBitcoin.Block.Parse(JsonConvert.DeserializeObject<string>(hexResponse), this.chainIndexer.Network.Consensus.ConsensusFactory);
-            return block;
+                var block = NBitcoin.Block.Parse(JsonConvert.DeserializeObject<string>(hexResponse), this.chainIndexer.Network.Consensus.ConsensusFactory);
+                return block;
+            }
         }
 
         public async Task<TransactionVerboseModel> GetRawTransactionAsync(string transactionId)
@@ -422,11 +516,19 @@ namespace Stratis.Bitcoin.Features.Interop
                     }
                 };
 
-                response = await this.cirrusInteropSettings.CirrusClientUrl
-                    .AppendPathSegment("api/smartcontracts/build-and-send-call")
-                    .PostJsonAsync(request)
-                    .ReceiveJson<BuildCallContractTransactionResponse>()
-                    .ConfigureAwait(false);
+                using (CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(180)))
+                {
+                    response = await this.cirrusInteropSettings.CirrusClientUrl
+                        .AppendPathSegment("api/smartcontracts/build-and-send-call")
+                        .PostJsonAsync(request, cancellation.Token)
+                        .ReceiveJson<BuildCallContractTransactionResponse>()
+                        .ConfigureAwait(false);
+
+                    if (!response.Success)
+                    {
+                        return (null, $"Error confirming transfer '{response.TransactionId}': Possible transaction build and call timeout.");
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -451,6 +553,92 @@ namespace Stratis.Bitcoin.Features.Interop
             {
                 return (null, $"Exception occurred trying to retrieve the receipt: {ex}");
             }
+        }
+
+        /// <inheritdoc />
+        public async Task<string> GetKeyValueStoreAsync(string address, string key, ulong blockHeight)
+        {
+            var request = new LocalCallContractRequest
+            {
+                BlockHeight = blockHeight,
+                Amount = "0",
+                ContractAddress = this.cirrusInteropSettings.CirrusKeyValueStoreContractAddress,
+                GasLimit = 250_000,
+                GasPrice = 100,
+                MethodName = KeyValueGetMethodName,
+                Parameters = new[]
+                {
+                    "9#" + address,
+                    "4#" + key
+                },
+                Sender = this.cirrusInteropSettings.CirrusSmartContractActiveAddress
+            };
+
+            try
+            {
+                LocalExecutionResponse result = await this.cirrusInteropSettings.CirrusClientUrl
+                    .AppendPathSegment("api/smartcontracts/local-call")
+                    .AllowAnyHttpStatus()
+                    .PostJsonAsync(request)
+                    .ReceiveJson<LocalExecutionResponse>()
+                    .ConfigureAwait(false);
+
+                if (result.Return == null)
+                    return null;
+
+                return (string)result.Return;
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<MultisigTransactionIdentifiers> SetKeyValueStoreAsync(string key, string value)
+        {
+            try
+            {
+                byte[] methodCallData = KeyValueData(key, value);
+
+                string methodCallDataHex = BitConverter.ToString(methodCallData).Replace("-", "");
+
+                return await MultisigContractCallInternalAsync(this.cirrusInteropSettings.CirrusMultisigContractAddress, KeyValueSetMethodName, methodCallDataHex).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                return new MultisigTransactionIdentifiers
+                {
+                    Message = $"Exception occurred trying to build and send the KVS Set transaction: {ex}",
+                    TransactionHash = "",
+                    TransactionId = -1
+                };
+            }
+        }
+
+        private byte[] KeyValueData(string key, string value)
+        {
+            // Pack the parameters of the KVS Set method invocation into the format used by the multisig contract.
+            byte[] keyBytes = this.serializer.Serialize(key);
+            byte[] keyBytesPadded = CreatePaddedParameterArray(keyBytes, 4); // 4 = String
+
+            byte[] valueBytes = this.serializer.Serialize(value);
+            byte[] valueBytesPadded = CreatePaddedParameterArray(valueBytes, 4); // 4 = String
+
+            return this.serializer.Serialize(new byte[][]
+            {
+                keyBytesPadded,
+                valueBytesPadded
+            });
+        }
+
+        private byte[] CreatePaddedParameterArray(byte[] paramBytes, int paramType)
+        {
+            byte[] paramBytesPadded = new byte[paramBytes.Length + 1];
+            paramBytesPadded[0] = (byte)paramType;
+            Array.Copy(paramBytes, 0, paramBytesPadded, 1, paramBytes.Length);
+
+            return paramBytesPadded;
         }
     }
 

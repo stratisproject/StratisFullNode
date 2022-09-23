@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <AssemblyName>FodyNlogAdapter</AssemblyName>
-    <Version>1.3.2.0</Version>
+    <Version>1.3.3.0</Version>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
     <Authors>Stratis Group Ltd.</Authors>
     <PackageId>Stratis.Utils.FodyNlogAdapter</PackageId>

@@ -8,11 +8,11 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>    
+    <TargetFramework>net6.0</TargetFramework>    
     <DebugType>Full</DebugType>
     <CodeAnalysisRuleSet>..\None.ruleset</CodeAnalysisRuleSet>
     <Authors>Stratis Group Ltd.</Authors>
-    <Version>4.0.9.1</Version>
+    <Version>4.0.10.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
