@@ -16,7 +16,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
         /// <summary><see cref="BlockStoreController.GetVerboseAddressesBalancesData"/></summary>
         Task<VerboseAddressBalancesResult> GetVerboseAddressesBalancesDataAsync(IEnumerable<string> addresses, CancellationToken cancellation = default);
 
-        /// <summary><see cref="BlockStoreController.GetVerboseAddressesBalancesData"/></summary>
+        /// <summary><see cref="BlockStoreController.VerboseAddressesBalancesData"/></summary>
         Task<VerboseAddressBalancesResult> VerboseAddressesBalancesDataAsync(IEnumerable<string> addresses, CancellationToken cancellation = default);
     }
 
