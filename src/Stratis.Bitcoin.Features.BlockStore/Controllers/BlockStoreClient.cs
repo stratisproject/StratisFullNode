@@ -59,8 +59,6 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
         {
             string addrString = string.Join(",", addresses);
 
-            string arguments = $"{nameof(addresses)}={addrString}";
-
             return this.SendPostRequestAsync<string, VerboseAddressBalancesResult>(addrString, BlockStoreRouteEndPoint.GetVerboseAddressesBalances2, cancellation);
         }
     }
