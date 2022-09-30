@@ -24,7 +24,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
     {
         public const string GetAddressesBalances = "getaddressesbalances";
         public const string GetVerboseAddressesBalances = "getverboseaddressesbalances";
-        public const string GetVerboseAddressesBalances2 = "getverboseaddressesbalances2";
+        public const string VerboseAddressesBalances = "verboseaddressesbalances";
         public const string GetAddressIndexerTip = "addressindexertip";
         public const string GetBlock = "block";
         public const string GetBlocks = "blocks";
@@ -325,11 +325,11 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
         /// <returns>A result object containing the balance for each requested address and if so, a message stating why the indexer is not queryable.</returns>
         /// <response code="200">Returns balances for the requested addresses</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route(BlockStoreRouteEndPoint.GetVerboseAddressesBalances2)]
+        [Route(BlockStoreRouteEndPoint.VerboseAddressesBalances)]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        public IActionResult GetVerboseAddressesBalancesData2([FromBody] string addresses)
+        public IActionResult VerboseAddressesBalancesData([FromBody] string addresses)
         {
             try
             {
