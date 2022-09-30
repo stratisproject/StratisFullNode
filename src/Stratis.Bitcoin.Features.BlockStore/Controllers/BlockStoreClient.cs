@@ -15,6 +15,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
 
         /// <summary><see cref="BlockStoreController.GetVerboseAddressesBalancesData"/></summary>
         Task<VerboseAddressBalancesResult> GetVerboseAddressesBalancesDataAsync(IEnumerable<string> addresses, CancellationToken cancellation = default);
+
+        /// <summary><see cref="BlockStoreController.GetVerboseAddressesBalancesData"/></summary>
+        Task<VerboseAddressBalancesResult> GetVerboseAddressesBalancesData2Async(IEnumerable<string> addresses, CancellationToken cancellation = default);
     }
 
     /// <inheritdoc cref="IBlockStoreClient"/>
@@ -49,6 +52,16 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
             string arguments = $"{nameof(addresses)}={addrString}";
 
             return this.SendGetRequestAsync<VerboseAddressBalancesResult>(BlockStoreRouteEndPoint.GetVerboseAddressesBalances, arguments, cancellation);
+        }
+
+        /// <inheritdoc />
+        public Task<VerboseAddressBalancesResult> GetVerboseAddressesBalancesData2Async(IEnumerable<string> addresses, CancellationToken cancellation = default)
+        {
+            string addrString = string.Join(",", addresses);
+
+            string arguments = $"{nameof(addresses)}={addrString}";
+
+            return this.SendPostRequestAsync<string, VerboseAddressBalancesResult>(addrString, BlockStoreRouteEndPoint.GetVerboseAddressesBalances2, cancellation);
         }
     }
 }
