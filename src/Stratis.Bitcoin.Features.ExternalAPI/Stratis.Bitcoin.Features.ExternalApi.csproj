@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>    
-    <Version>1.3.2.1</Version>
+    <Version>1.3.2.2</Version>
     <Authors>Stratis Group Ltd.</Authors>
     <PackageId>Stratis.Features.ExternalAPI</PackageId>
     <Product>Stratis.Features.ExternalAPI</Product>
