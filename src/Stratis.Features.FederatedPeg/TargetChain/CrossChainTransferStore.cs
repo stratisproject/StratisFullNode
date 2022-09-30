@@ -79,6 +79,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly DBreezeSerializer dBreezeSerializer;
         private readonly IFederationWalletManager federationWalletManager;
         private readonly Network network;
+        private readonly INodeStats nodeStats;
         private readonly IFederatedPegSettings settings;
         private readonly ISignals signals;
         private readonly IStateRepositoryRoot stateRepositoryRoot;
@@ -109,6 +110,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             Guard.NotNull(withdrawalTransactionBuilder, nameof(withdrawalTransactionBuilder));
 
             this.network = network;
+            this.nodeStats = nodeStats;
             this.chainIndexer = chainIndexer;
             this.blockRepository = blockRepository;
             this.federationWalletManager = federationWalletManager;
