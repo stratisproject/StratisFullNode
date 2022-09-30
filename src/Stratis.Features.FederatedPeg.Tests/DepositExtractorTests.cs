@@ -10,6 +10,7 @@ using Stratis.Bitcoin;
 using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.Wallet;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Networks;
 using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -32,6 +33,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         private readonly MultisigAddressHelper addressHelper;
         private readonly TestTransactionBuilder transactionBuilder;
         private readonly RetrievalTypeConfirmations retrievalTypeConfirmations;
+        private readonly IBlockStore blockStore;
 
         public DepositExtractorTests()
         {
@@ -50,9 +52,11 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.opReturnDataReader = Substitute.For<IOpReturnDataReader>();
             this.opReturnDataReader.TryGetTargetAddress(null, out string address).Returns(callInfo => { callInfo[1] = null; return false; });
 
+            this.blockStore = Substitute.For<IBlockStore>();
+
             IExternalApiClient externalClient = Substitute.For<IExternalApiClient>();
             externalClient.EstimateConversionTransactionFeeAsync().Returns("1.0");
-            this.depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federationSettings, this.network, this.opReturnDataReader);
+            this.depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federationSettings, this.network, this.opReturnDataReader, this.blockStore);
             this.transactionBuilder = new TestTransactionBuilder();
 
             this.retrievalTypeConfirmations = new RetrievalTypeConfirmations(this.network, new NodeDeployments(this.network, new ChainIndexer(this.network)), this.federationSettings, null, null);
