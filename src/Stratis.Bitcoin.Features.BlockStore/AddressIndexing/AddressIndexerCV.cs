@@ -11,6 +11,29 @@ using Stratis.Bitcoin.Interfaces;
 
 namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 {
+    /// <summary>Component that builds an index of all addresses and deposits\withdrawals that happened to\from them.</summary>
+    public interface IAddressIndexer : IDisposable
+    {
+        ChainedHeader IndexerTip { get; }
+
+        void Initialize();
+
+        /// <summary>Returns balance of the given address confirmed with at least <paramref name="minConfirmations"/> confirmations.</summary>
+        /// <param name="addresses">The set of addresses that will be queried.</param>
+        /// <param name="minConfirmations">Only blocks below consensus tip less this parameter will be considered.</param>
+        /// <returns>Balance of a given address or <c>null</c> if address wasn't indexed or doesn't exists.</returns>
+        AddressBalancesResult GetAddressBalances(string[] addresses, int minConfirmations = 0);
+
+        /// <summary>Returns verbose balances data.</summary>
+        /// <param name="addresses">The set of addresses that will be queried.</param>
+        /// <returns>See <see cref="VerboseAddressBalancesResult"/>.</returns>
+        VerboseAddressBalancesResult GetAddressIndexerState(string[] addresses);
+
+        IFullNodeFeature InitializingFeature { set; }
+
+        LastBalanceDecreaseTransactionModel GetLastBalanceDecreaseTransaction(string address);
+    }
+
     public class AddressIndexerCV : IAddressIndexer
     {
         private readonly Network network;
@@ -22,12 +45,31 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         public IFullNodeFeature InitializingFeature { set; private get; }
 
+        /// <summary>Max supported reorganization length for networks without max reorg property.</summary>
+        public const int FallBackMaxReorg = 200;
+
+        /// <summary>
+        /// This is a window of some blocks that is needed to reduce the consequences of nodes having different view of consensus chain.
+        /// We assume that nodes usually don't have view that is different from other nodes by that constant of blocks.
+        /// </summary>
+        public const int SyncBuffer = 50;
+
         public AddressIndexerCV(Network network, ChainIndexer chainIndexer, IScriptAddressReader scriptAddressReader, ICoinView coinView)
         {
             this.network = network;
             this.coinView = coinView;
             this.chainIndexer = chainIndexer;
             this.scriptAddressReader = scriptAddressReader;
+        }
+
+        /// <summary>Gets the maxReorg of <see cref="FallBackMaxReorg"/> in case maxReorg is <c>0</c>.</summary>
+        /// <param name="network">The network to get the value for.</param>
+        /// <returns>Returns the maxReorg or <see cref="FallBackMaxReorg"/> value.</returns>
+        public static int GetMaxReorgOrFallbackMaxReorg(Network network)
+        {
+            int maxReorgLength = network.Consensus.MaxReorgLength == 0 ? FallBackMaxReorg : (int)network.Consensus.MaxReorgLength;
+
+            return maxReorgLength;
         }
 
         private ChainedHeader GetTip()
