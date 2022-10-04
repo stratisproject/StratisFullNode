@@ -47,7 +47,7 @@ namespace Stratis.StraxD
                     .AddSQLiteWalletRepository()
                     .AddPowPosMining(true)
                     .UseApi()
-                    .UseUnity3dApi()
+                    .UseUnity3dApi(false)
                     .AddRPC()
                     .AddSignalR(options =>
                     {
