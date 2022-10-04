@@ -259,25 +259,33 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public async Task<NBitcoin.Block> GetBlockByHeightAsync(int blockHeight)
         {
-            string blockHash = await this.cirrusInteropSettings.CirrusClientUrl
+            string blockHash;
+
+            using (CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(GetReceiptWaitTimeSeconds)))
+            {
+                blockHash = await this.cirrusInteropSettings.CirrusClientUrl
                 .AppendPathSegment("api/Consensus/getblockhash")
                 .SetQueryParam("height", blockHeight)
-                .GetJsonAsync<string>()
+                .GetJsonAsync<string>(cancellation.Token)
                 .ConfigureAwait(false);
+            }
 
-            if (blockHash == null)
+            if (string.IsNullOrEmpty(blockHash))
                 return null;
 
-            var hexResponse = await this.cirrusInteropSettings.CirrusClientUrl
+            using (CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(GetReceiptWaitTimeSeconds)))
+            {
+                var hexResponse = await this.cirrusInteropSettings.CirrusClientUrl
                 .AppendPathSegment("api/BlockStore/block")
                 .SetQueryParam("Hash", blockHash)
                 .SetQueryParam("ShowTransactionDetails", false)
                 .SetQueryParam("OutputJson", false)
-                .GetStringAsync()
+                .GetStringAsync(cancellation.Token)
                 .ConfigureAwait(false);
 
-            var block = NBitcoin.Block.Parse(JsonConvert.DeserializeObject<string>(hexResponse), this.chainIndexer.Network.Consensus.ConsensusFactory);
-            return block;
+                var block = NBitcoin.Block.Parse(JsonConvert.DeserializeObject<string>(hexResponse), this.chainIndexer.Network.Consensus.ConsensusFactory);
+                return block;
+            }
         }
 
         public async Task<TransactionVerboseModel> GetRawTransactionAsync(string transactionId)
