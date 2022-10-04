@@ -134,7 +134,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         private readonly Network network;
         private readonly ICheckpoints checkpoints;
         private readonly IDateTimeProvider dateTimeProvider;
-        private readonly IConsensusManager consensusManager;
+        private IConsensusManager consensusManager;
         private readonly CancellationTokenSource cancellationToken;
         private readonly ConsensusSettings consensusSettings;
         private readonly bool addressIndexingEnabled;
@@ -144,7 +144,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         private readonly Random random;
 
         public CachedCoinView(Network network, ICheckpoints checkpoints, ICoindb coindb, IDateTimeProvider dateTimeProvider, ILoggerFactory loggerFactory, INodeStats nodeStats, ConsensusSettings consensusSettings,
-            StakeChainStore stakeChainStore = null, IRewindDataIndexCache rewindDataIndexCache = null, IScriptAddressReader scriptAddressReader = null, IConsensusManager consensusManager = null, INodeLifetime nodeLifetime = null, NodeSettings nodeSettings = null)
+            StakeChainStore stakeChainStore = null, IRewindDataIndexCache rewindDataIndexCache = null, IScriptAddressReader scriptAddressReader = null, INodeLifetime nodeLifetime = null, NodeSettings nodeSettings = null)
         {
             Guard.NotNull(coindb, nameof(CachedCoinView.coindb));
 
@@ -156,7 +156,6 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             this.consensusSettings = consensusSettings;
             this.stakeChainStore = stakeChainStore;
             this.rewindDataIndexCache = rewindDataIndexCache;
-            this.consensusManager = consensusManager;
             this.cancellationToken = (nodeLifetime == null) ? new CancellationTokenSource() : CancellationTokenSource.CreateLinkedTokenSource(nodeLifetime.ApplicationStopping);
             this.lockobj = new object();
             this.cachedUtxoItems = new Dictionary<OutPoint, CacheItem>();
@@ -208,8 +207,10 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             }
         }
 
-        public void Initialize(ChainedHeader chainTip, ChainIndexer chainIndexer, IConsensusRuleEngine consensusRuleEngine)
+        public void Initialize(ChainedHeader chainTip, ChainIndexer chainIndexer, IConsensusRuleEngine consensusRuleEngine, IConsensusManager consensusManager)
         {
+            this.consensusManager = consensusManager;
+
             this.coindb.Initialize(this.addressIndexingEnabled);
 
             Sync(chainIndexer);
