@@ -179,7 +179,7 @@ namespace Stratis.Features.Collateral
 
             this.logger.LogDebug("Addresses to check {0}.", addressesToCheck.Count);
 
-            VerboseAddressBalancesResult verboseAddressBalanceResult = await this.blockStoreClient.GetVerboseAddressesBalancesDataAsync(addressesToCheck, cancellation).ConfigureAwait(false);
+            VerboseAddressBalancesResult verboseAddressBalanceResult = await this.blockStoreClient.VerboseAddressesBalancesDataAsync(addressesToCheck, cancellation).ConfigureAwait(false);
 
             if (verboseAddressBalanceResult == null)
             {
