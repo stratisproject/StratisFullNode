@@ -1,19 +1,23 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using LiteDB;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Database;
 using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
 using Stratis.Bitcoin.Features.BlockStore.Repositories;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Consensus.Rules;
+using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Primitives;
@@ -45,18 +49,15 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
         {
             this.network = new StraxMain();
             this.chainIndexer = new ChainIndexer(this.network);
-            var nodeSettings = NodeSettings.Default(this.network);
+            var nodeSettings = new NodeSettings(this.network, args: new[] { "-addressindex", "-txindex" });
+
             var mockingServices = new ServiceCollection()
                 .AddSingleton(this.network)
                 .AddSingleton(nodeSettings)
                 .AddSingleton(nodeSettings.LoggerFactory)
-                .AddSingleton(new StoreSettings(nodeSettings)
-                {
-                    AddressIndex = true,
-                    TxIndex = true
-                })
                 .AddSingleton(new DataFolder(TestBase.CreateTestDir(this)))
                 .AddSingleton<IScriptAddressReader, ScriptAddressReader>()
+                .AddSingleton<ConsensusRulesContainer>()
                 .AddSingleton<IConsensusRuleEngine, PosConsensusRuleEngine>()
                 .AddSingleton<IBlockRepository>(typeof(BlockRepository<LevelDb>).GetConstructors().First(c => c.GetParameters().Any(p => p.ParameterType == typeof(DataFolder))))
                 .AddSingleton<IBlockStore, BlockStoreQueue>()
@@ -70,6 +71,13 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             this.addressIndexer = mockingContext.GetService<IAddressIndexer>();
             this.genesisHeader = mockingContext.GetService<ChainIndexer>().GetHeader(0);
+
+            var rulesContainer = mockingContext.GetService<ConsensusRulesContainer>();
+            rulesContainer.FullValidationRules.Add(Activator.CreateInstance(typeof(LoadCoinviewRule)) as FullValidationConsensusRule);
+            rulesContainer.FullValidationRules.Add(Activator.CreateInstance(typeof(SaveCoinviewRule)) as FullValidationConsensusRule);
+            rulesContainer.FullValidationRules.Add(Activator.CreateInstance(typeof(StraxCoinviewRule)) as FullValidationConsensusRule);
+            rulesContainer.FullValidationRules.Add(Activator.CreateInstance(typeof(SetActivationDeploymentsFullValidationRule)) as FullValidationConsensusRule);
+
             this.consensusManagerMock = mockingContext.GetService<Mock<IConsensusManager>>();
             this.coinView = mockingContext.GetService<ICoinView>();
             this.consensusRuleEngine = mockingContext.GetService<IConsensusRuleEngine>();
@@ -129,32 +137,38 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             tx.Inputs.Add(new TxIn(new OutPoint(block5.Transactions.First().GetHash(), 0)));
             var block10 = new Block() { Transactions = new List<Transaction>() { tx } };
 
-            this.consensusManagerMock.Setup(x => x.GetBlockData(It.IsAny<List<uint256>>())).Returns((List<uint256> hashes) =>
+            ChainedHeaderBlock GetChainedHeaderBlock(uint256 hash)
             {
-                ChainedHeaderBlock GetChainedHeaderBlock(uint256 hash)
+                ChainedHeader header = headers.SingleOrDefault(x => x.HashBlock == hash);
+
+                switch (header?.Height)
                 {
-                    ChainedHeader header = headers.SingleOrDefault(x => x.HashBlock == hash);
+                    case 1:
+                        return new ChainedHeaderBlock(block1, header);
 
-                    switch (header?.Height)
-                    {
-                        case 1:
-                            return new ChainedHeaderBlock(block1, header);
+                    case 5:
+                        return new ChainedHeaderBlock(block5, header);
 
-                        case 5:
-                            return new ChainedHeaderBlock(block5, header);
-
-                        case 10:
-                            return new ChainedHeaderBlock(block10, header);
-                    }
-
-                    return new ChainedHeaderBlock(new Block(), header);
+                    case 10:
+                        return new ChainedHeaderBlock(block10, header);
                 }
 
+                return new ChainedHeaderBlock(new Block(), header);
+            }
+
+            this.consensusManagerMock.Setup(x => x.GetBlockData(It.IsAny<List<uint256>>())).Returns((List<uint256> hashes) =>
+            {
                 return hashes.Select(h => GetChainedHeaderBlock(h)).ToArray();
             });
 
+            this.consensusManagerMock.Setup(x => x.GetBlocksAfterBlock(It.IsAny<ChainedHeader>(), It.IsAny<int>(), It.IsAny<CancellationTokenSource>())).Returns((ChainedHeader header, int size, CancellationTokenSource token) =>
+            {
+                return headers.Select(h => GetChainedHeaderBlock(h.HashBlock)).ToArray();
+
+            });
+
+            this.consensusRuleEngine.Initialize(headers.Last(), this.consensusManagerMock.Object);
             this.addressIndexer.Initialize();
-            this.coinView.Initialize(this.chainIndexer.Tip, this.chainIndexer, this.consensusRuleEngine); // Initialize rule engine instead?
 
             TestBase.WaitLoop(() => this.addressIndexer.IndexerTip == headers.Last());
 
@@ -166,7 +180,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             // Now trigger rewind to see if indexer can handle reorgs.
             ChainedHeader forkPoint = headers.Single(x => x.Height == 8);
 
-            List<ChainedHeader> headersFork = ChainedHeadersHelper.CreateConsecutiveHeaders(100, forkPoint, false, null, this.network);
+            List<ChainedHeader> headersFork = ChainedHeadersHelper.CreateConsecutiveHeaders(100, forkPoint, false, null, this.network, chainIndexer: this.chainIndexer);
 
             this.consensusManagerMock.Setup(x => x.GetBlockData(It.IsAny<uint256>())).Returns((uint256 hash) =>
             {
@@ -175,7 +189,13 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
                 return new ChainedHeaderBlock(new Block(), headerFork);
             });
 
+            this.consensusManagerMock.Setup(x => x.GetBlocksAfterBlock(It.IsAny<ChainedHeader>(), It.IsAny<int>(), It.IsAny<CancellationTokenSource>())).Returns((ChainedHeader header, int size, CancellationTokenSource token) =>
+            {
+                return headersFork.Where(h => h.Height > header.Height).Select(h => new ChainedHeaderBlock(new Block(), h)).ToArray();
+            });
+
             this.consensusManagerMock.Setup(x => x.Tip).Returns(() => headersFork.Last());
+
             TestBase.WaitLoop(() => this.addressIndexer.IndexerTip == headersFork.Last());
 
             Assert.Equal(70_000, this.addressIndexer.GetAddressBalances(new[] { address1 }).Balances.First().Balance.Satoshi);

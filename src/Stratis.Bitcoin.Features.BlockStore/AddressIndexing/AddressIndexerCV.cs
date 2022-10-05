@@ -74,7 +74,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         private ChainedHeader GetTip()
         {
-            this.coinView.Sync(this.chainIndexer);
+            this.coinView.Sync();
+            this.coinView.CatchUp();
 
             return this.chainIndexer[this.coinView.GetTipHash().Hash];
         }
@@ -98,7 +99,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                     .Select(t => new AddressBalanceResult()
                     {
                         Address = t.address,
-                        Balance = (t.destination == null) ? 0 : new Money(this.coinView.GetBalance(t.destination).First().satoshis),
+                        Balance = (t.destination == null) ? 0 : new Money(this.coinView.GetBalance(t.destination).First(x => x.height <= (this.chainIndexer.Tip.Height - minConfirmations)).satoshis),
 
                     }).ToList()
             };

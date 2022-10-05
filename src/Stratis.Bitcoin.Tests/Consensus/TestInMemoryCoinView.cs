@@ -35,13 +35,18 @@ namespace Stratis.Bitcoin.Tests.Consensus
         }
 
         /// <inheritdoc />
-        public void Initialize(ChainedHeader chainTip, ChainIndexer chainIndexer, IConsensusRuleEngine consensusRuleEngine)
+        public void Initialize(ChainedHeader chainTip, ChainIndexer chainIndexer, IConsensusRuleEngine consensusRuleEngine, IConsensusManager consensusManager)
         {
             throw new NotImplementedException();
         }
 
         /// <inheritdoc />
         public void Sync(ChainIndexer chainIndexer)
+        {
+        }
+
+        /// <inheritdoc />
+        public void CatchUp()
         {
         }
 

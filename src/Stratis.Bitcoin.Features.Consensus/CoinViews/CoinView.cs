@@ -46,8 +46,12 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// <summary>
         /// Brings the coinview back on-chain if a re-org occurred.
         /// </summary>
-        /// <param name="chainIndexer">The current consensus chain.</param>
-        void Sync(ChainIndexer chainIndexer);
+        void Sync();
+
+        /// <summary>
+        /// Brings the coinview in sync with the chain.
+        /// </summary>
+        void CatchUp();
 
         /// <summary>
         /// Obtains information about unspent outputs.

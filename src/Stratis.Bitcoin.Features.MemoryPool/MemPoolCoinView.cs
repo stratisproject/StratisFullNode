@@ -56,7 +56,12 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         }
 
         /// <inheritdoc />
-        public void Sync(ChainIndexer chainIndexer)
+        public void Sync()
+        {
+        }
+
+        /// <inheritdoc />
+        public void CatchUp()
         {
         }
 

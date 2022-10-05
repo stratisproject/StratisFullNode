@@ -47,7 +47,12 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         }
 
         /// <inheritdoc />
-        public void Sync(ChainIndexer chainIndexer)
+        public void Sync()
+        {
+        }
+
+        /// <inheritdoc />
+        public void CatchUp()
         {
         }
 
