@@ -269,7 +269,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             }
         }
 
-        public void Initialize(ChainedHeader chainTip, ChainIndexer chainIndexer, IConsensusRuleEngine consensusRuleEngine, IConsensusManager consensusManager)
+        public void Initialize(ChainIndexer chainIndexer, IConsensusRuleEngine consensusRuleEngine, IConsensusManager consensusManager)
         {
             this.consensusManager = consensusManager;
             this.chainIndexer = chainIndexer;

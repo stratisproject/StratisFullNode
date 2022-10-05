@@ -50,7 +50,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             this.Set = new UnspentOutputSet();
         }
 
-        public void Initialize(ChainedHeader chainTip, ChainIndexer chainIndexer, IConsensusRuleEngine consensusRuleEngine, IConsensusManager consensusManager)
+        public void Initialize(ChainIndexer chainIndexer, IConsensusRuleEngine consensusRuleEngine, IConsensusManager consensusManager)
         {
             throw new NotImplementedException();
         }
