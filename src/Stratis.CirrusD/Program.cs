@@ -79,7 +79,7 @@ namespace Stratis.CirrusD
             .UseSmartContractWallet()
             .AddSQLiteWalletRepository()
             .UseApi()
-            .UseUnity3dApi()
+            .UseUnity3dApi(true)
             .AddRPC()
             .AddSignalR(options =>
             {
