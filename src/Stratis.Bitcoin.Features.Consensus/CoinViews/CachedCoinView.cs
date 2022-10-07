@@ -262,15 +262,18 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         public HashHeightPair GetTipHash()
         {
-            if (this.blockHash == null)
+            lock (this.lockobj)
             {
-                HashHeightPair response = this.coindb.GetTipHash();
+                if (this.blockHash == null)
+                {
+                    HashHeightPair response = this.coindb.GetTipHash();
 
-                this.innerBlockHash = response;
-                this.blockHash = this.innerBlockHash;
+                    this.innerBlockHash = response;
+                    this.blockHash = this.innerBlockHash;
+                }
+
+                return this.blockHash;
             }
-
-            return this.blockHash;
         }
 
         /// <inheritdoc />
@@ -416,44 +419,44 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// </remarks>
         public void Flush(bool force = true)
         {
-            if (!force)
-            {
-                // Check if periodic flush is required.
-                // Ideally this will flush less frequent and always be behind 
-                // blockstore which is currently set to 17 sec.
-
-                DateTime now = this.dateTimeProvider.GetUtcNow();
-                bool flushTimeLimit = (now - this.lastCacheFlushTime).TotalSeconds >= this.CacheFlushTimeIntervalSeconds;
-
-                // The size of the cache was reached and most likely TryEvictCacheLocked didn't work
-                // so the cahces is pulledted with flushable items, then we flush anyway.
-
-                long totalBytes = this.cacheSizeBytes + this.rewindDataSizeBytes;
-                bool flushSizeLimit = totalBytes > this.MaxCacheSizeBytes;
-
-                if (!flushTimeLimit && !flushSizeLimit)
-                {
-                    return;
-                }
-
-                this.logger.LogDebug("Flushing, reasons flushTimeLimit={0} flushSizeLimit={1}.", flushTimeLimit, flushSizeLimit);
-            }
-
-            // Before flushing the coinview persist the stake store
-            // the stake store depends on the last block hash
-            // to be stored after the stake store is persisted.
-            if (this.stakeChainStore != null)
-                this.stakeChainStore.Flush(true);
-
-            // Before flushing the coinview persist the rewind data index store as well.
-            if (this.rewindDataIndexCache != null)
-                this.rewindDataIndexCache.SaveAndEvict(this.blockHash.Height, null);
-
-            if (this.innerBlockHash == null)
-                this.innerBlockHash = this.coindb.GetTipHash();
-
             lock (this.lockobj)
             {
+                if (!force)
+                {
+                    // Check if periodic flush is required.
+                    // Ideally this will flush less frequent and always be behind 
+                    // blockstore which is currently set to 17 sec.
+
+                    DateTime now = this.dateTimeProvider.GetUtcNow();
+                    bool flushTimeLimit = (now - this.lastCacheFlushTime).TotalSeconds >= this.CacheFlushTimeIntervalSeconds;
+
+                    // The size of the cache was reached and most likely TryEvictCacheLocked didn't work
+                    // so the cahces is pulledted with flushable items, then we flush anyway.
+
+                    long totalBytes = this.cacheSizeBytes + this.rewindDataSizeBytes;
+                    bool flushSizeLimit = totalBytes > this.MaxCacheSizeBytes;
+
+                    if (!flushTimeLimit && !flushSizeLimit)
+                    {
+                        return;
+                    }
+
+                    this.logger.LogDebug("Flushing, reasons flushTimeLimit={0} flushSizeLimit={1}.", flushTimeLimit, flushSizeLimit);
+                }
+
+                // Before flushing the coinview persist the stake store
+                // the stake store depends on the last block hash
+                // to be stored after the stake store is persisted.
+                if (this.stakeChainStore != null)
+                    this.stakeChainStore.Flush(true);
+
+                // Before flushing the coinview persist the rewind data index store as well.
+                if (this.rewindDataIndexCache != null)
+                    this.rewindDataIndexCache.SaveAndEvict(this.blockHash.Height, null);
+
+                if (this.innerBlockHash == null)
+                    this.innerBlockHash = this.coindb.GetTipHash();
+
                 if (this.innerBlockHash == null)
                 {
                     this.logger.LogTrace("(-)[NULL_INNER_TIP]");
@@ -480,10 +483,9 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 this.cachedRewindData.Clear();
                 this.rewindDataSizeBytes = 0;
                 this.dirtyCacheCount = 0;
-                this.innerBlockHash = this.blockHash;
+                this.innerBlockHash = this.blockHash;                
+                this.lastCacheFlushTime = this.dateTimeProvider.GetUtcNow();
             }
-
-            this.lastCacheFlushTime = this.dateTimeProvider.GetUtcNow();
         }
 
         /// <inheritdoc />
@@ -672,16 +674,16 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         public HashHeightPair Rewind(HashHeightPair target = null)
         {
-            if (this.innerBlockHash == null)
-            {
-                this.innerBlockHash = this.coindb.GetTipHash();
-            }
-
-            // Flush the entire cache before rewinding
-            this.Flush(true);
-
             lock (this.lockobj)
             {
+                if (this.innerBlockHash == null)
+                {
+                    this.innerBlockHash = this.coindb.GetTipHash();
+                }
+
+                // Flush the entire cache before rewinding
+                this.Flush(true);
+
                 HashHeightPair hash = this.coindb.Rewind(target);
 
                 foreach (KeyValuePair<OutPoint, CacheItem> cachedUtxoItem in this.cachedUtxoItems)
@@ -711,10 +713,13 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// <inheritdoc />
         public RewindData GetRewindData(int height)
         {
-            if (this.cachedRewindData.TryGetValue(height, out RewindData existingRewindData))
-                return existingRewindData;
+            lock (this.lockobj)
+            {
+                if (this.cachedRewindData.TryGetValue(height, out RewindData existingRewindData))
+                    return existingRewindData;
 
-            return this.coindb.GetRewindData(height);
+                return this.coindb.GetRewindData(height);
+            }
         }
 
         [NoTrace]
