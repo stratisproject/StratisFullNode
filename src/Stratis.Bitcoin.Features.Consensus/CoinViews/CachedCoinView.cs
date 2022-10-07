@@ -127,7 +127,6 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         private long rewindDataSizeBytes;
         private DateTime lastCacheFlushTime;
         private readonly Network network;
-        private readonly ICheckpoints checkpoints;
         private readonly IDateTimeProvider dateTimeProvider;
         private readonly IBlockStore blockStore;
         private readonly CancellationTokenSource cancellationToken;
@@ -136,7 +135,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         private readonly Random random;
 
-        public CachedCoinView(Network network, ICheckpoints checkpoints, ICoindb coindb, IDateTimeProvider dateTimeProvider, ILoggerFactory loggerFactory, INodeStats nodeStats, ConsensusSettings consensusSettings, 
+        public CachedCoinView(Network network, ICoindb coindb, IDateTimeProvider dateTimeProvider, ILoggerFactory loggerFactory, INodeStats nodeStats, ConsensusSettings consensusSettings, 
             StakeChainStore stakeChainStore = null, IRewindDataIndexCache rewindDataIndexCache = null, IBlockStore blockStore = null, INodeLifetime nodeLifetime = null)
         {
             Guard.NotNull(coindb, nameof(CachedCoinView.coindb));
@@ -144,7 +143,6 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             this.coindb = coindb;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;
-            this.checkpoints = checkpoints;
             this.dateTimeProvider = dateTimeProvider;
             this.consensusSettings = consensusSettings;
             this.stakeChainStore = stakeChainStore;
