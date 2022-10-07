@@ -173,17 +173,17 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             lock (this.lockobj)
             {
                 HashHeightPair coinViewTip = this.GetTipHash();
-                if (coinViewTip.Hash == chainIndexer.Tip.HashBlock)
+                if (coinViewTip.Hash == this.chainIndexer.Tip.HashBlock)
                     return;
 
                 Flush();
 
-                ChainedHeader fork = chainIndexer[coinViewTip.Hash];
+                ChainedHeader fork = this.chainIndexer[coinViewTip.Hash];
                 if (fork == null)
                 {
                     // Determine the last usable height.
-                    int height = BinarySearch.BinaryFindFirst(h => (h > chainIndexer.Height) || this.GetRewindData(h).PreviousBlockHash.Hash != chainIndexer[h].Previous.HashBlock, 0, coinViewTip.Height + 1) - 1;
-                    fork = chainIndexer[(height < 0) ? coinViewTip.Height : height];
+                    int height = BinarySearch.BinaryFindFirst(h => (h > this.chainIndexer.Height) || this.GetRewindData(h).PreviousBlockHash.Hash != this.chainIndexer[h].Previous.HashBlock, 0, coinViewTip.Height + 1) - 1;
+                    fork = this.chainIndexer[(height < 0) ? coinViewTip.Height : height];
                 }
 
                 while (coinViewTip.Height != fork.Height)
@@ -218,7 +218,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     var coinViewRule = consensusRuleEngine.GetRule<CoinViewRule>();
                     var deploymentsRule = consensusRuleEngine.GetRule<SetActivationDeploymentsFullValidationRule>();
 
-                    foreach ((ChainedHeader chainedHeader, Block block) in this.blockStore.BatchBlocksFrom(chainIndexer[coinViewTip.Hash], chainIndexer, this.cancellationToken, batchSize: 1000))
+                    foreach ((ChainedHeader chainedHeader, Block block) in this.blockStore.BatchBlocksFrom(this.chainIndexer[coinViewTip.Hash], this.chainIndexer, this.cancellationToken, batchSize: 1000))
                     {
                         if (block == null)
                             break;
