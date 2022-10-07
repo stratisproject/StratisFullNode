@@ -131,11 +131,12 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         private readonly IBlockStore blockStore;
         private readonly CancellationTokenSource cancellationToken;
         private readonly ConsensusSettings consensusSettings;
+        private readonly ChainIndexer chainIndexer;
         private CachePerformanceSnapshot latestPerformanceSnapShot;
 
         private readonly Random random;
 
-        public CachedCoinView(Network network, ICoindb coindb, IDateTimeProvider dateTimeProvider, ILoggerFactory loggerFactory, INodeStats nodeStats, ConsensusSettings consensusSettings, 
+        public CachedCoinView(Network network, ICoindb coindb, IDateTimeProvider dateTimeProvider, ILoggerFactory loggerFactory, INodeStats nodeStats, ConsensusSettings consensusSettings, ChainIndexer chainIndexer, 
             StakeChainStore stakeChainStore = null, IRewindDataIndexCache rewindDataIndexCache = null, IBlockStore blockStore = null, INodeLifetime nodeLifetime = null)
         {
             Guard.NotNull(coindb, nameof(CachedCoinView.coindb));
@@ -145,6 +146,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             this.network = network;
             this.dateTimeProvider = dateTimeProvider;
             this.consensusSettings = consensusSettings;
+            this.chainIndexer = chainIndexer;
             this.stakeChainStore = stakeChainStore;
             this.rewindDataIndexCache = rewindDataIndexCache;
             this.blockStore = blockStore;
@@ -166,7 +168,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// <summary>
         /// Remain on-chain.
         /// </summary>
-        public void Sync(ChainIndexer chainIndexer)
+        public void Sync()
         {
             lock (this.lockobj)
             {
@@ -196,11 +198,13 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             }
         }
 
-        public void Initialize(ChainedHeader chainTip, ChainIndexer chainIndexer, IConsensusRuleEngine consensusRuleEngine)
+        public void Initialize(IConsensusRuleEngine consensusRuleEngine)
         {
+            ChainedHeader chainTip = this.chainIndexer.Tip;
+
             this.coindb.Initialize();
 
-            Sync(chainIndexer);
+            Sync();
 
             HashHeightPair coinViewTip = this.coindb.GetTipHash();
 
