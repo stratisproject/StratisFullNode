@@ -35,7 +35,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
         }
 
         /// <inheritdoc />
-        public void Initialize(ChainIndexer chainIndexer, IConsensusRuleEngine consensusRuleEngine, IConsensusManager consensusManager)
+        public void Initialize(IConsensusManager consensusManager)
         {
             throw new NotImplementedException();
         }

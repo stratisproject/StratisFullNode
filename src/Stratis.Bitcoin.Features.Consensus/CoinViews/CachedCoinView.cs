@@ -137,14 +137,14 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         private readonly CancellationTokenSource cancellationToken;
         private readonly ConsensusSettings consensusSettings;
         private readonly bool addressIndexingEnabled;
+        private readonly ChainIndexer chainIndexer;
         private CachePerformanceSnapshot latestPerformanceSnapShot;
         private IScriptAddressReader scriptAddressReader;
-        private ChainIndexer chainIndexer;
         private IConsensusRuleEngine consensusRuleEngine;
 
         private readonly Random random;
 
-        public CachedCoinView(Network network, ICoindb coindb, IDateTimeProvider dateTimeProvider, ILoggerFactory loggerFactory, INodeStats nodeStats, ConsensusSettings consensusSettings,
+        public CachedCoinView(Network network, ICoindb coindb, IDateTimeProvider dateTimeProvider, ILoggerFactory loggerFactory, INodeStats nodeStats, ConsensusSettings consensusSettings, ChainIndexer chainIndexer,
             StakeChainStore stakeChainStore = null, IRewindDataIndexCache rewindDataIndexCache = null, IScriptAddressReader scriptAddressReader = null, INodeLifetime nodeLifetime = null, NodeSettings nodeSettings = null)
         {
             Guard.NotNull(coindb, nameof(CachedCoinView.coindb));
@@ -154,6 +154,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             this.network = network;
             this.dateTimeProvider = dateTimeProvider;
             this.consensusSettings = consensusSettings;
+            this.chainIndexer = chainIndexer;
             this.stakeChainStore = stakeChainStore;
             this.rewindDataIndexCache = rewindDataIndexCache;
             this.cancellationToken = (nodeLifetime == null) ? new CancellationTokenSource() : CancellationTokenSource.CreateLinkedTokenSource(nodeLifetime.ApplicationStopping);
@@ -275,11 +276,10 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             }
         }
 
-        public void Initialize(ChainIndexer chainIndexer, IConsensusRuleEngine consensusRuleEngine, IConsensusManager consensusManager)
+        public void Initialize(IConsensusManager consensusManager)
         {
             this.consensusManager = consensusManager;
-            this.chainIndexer = chainIndexer;
-            this.consensusRuleEngine = consensusRuleEngine;
+            this.consensusRuleEngine = consensusManager.ConsensusRules;
 
             this.coindb.Initialize(this.addressIndexingEnabled);
 

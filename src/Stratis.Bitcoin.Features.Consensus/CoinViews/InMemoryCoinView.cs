@@ -36,7 +36,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         }
 
         /// <inheritdoc />
-        public void Initialize(ChainIndexer chainIndexer, IConsensusRuleEngine consensusRuleEngine, IConsensusManager consensusManager)
+        public void Initialize(IConsensusManager consensusManager)
         {
             throw new NotImplementedException();
         }
@@ -142,10 +142,6 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         public RewindData GetRewindData(int height)
         {
             throw new NotImplementedException();
-        }
-
-        public void Initialize()
-        {
         }
     }
 }
