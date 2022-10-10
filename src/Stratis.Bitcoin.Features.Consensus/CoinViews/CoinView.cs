@@ -14,7 +14,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// <summary>
         /// Initializes the coin view.
         /// </summary>
-        /// <param name="consensusManager">The consensus manager,</param>
+        /// <param name="consensusManager">The consensus manager.</param>
         void Initialize(IConsensusManager consensusManager);
 
         /// <summary>
