@@ -105,7 +105,7 @@ namespace Stratis.Bitcoin.Consensus
         }
 
         /// <inheritdoc />
-        public virtual void Initialize(ChainedHeader chainTip)
+        public virtual void Initialize(ChainedHeader chainTip, IConsensusManager consensusManager)
         {
             this.SetupRulesEngineParent();
         }

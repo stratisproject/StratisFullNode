@@ -34,7 +34,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         }
 
         /// <inheritdoc />
-        public void Initialize(IConsensusRuleEngine consensusRuleEngine)
+        public void Initialize(IConsensusManager consensusManager)
         {
             throw new NotImplementedException();
         }

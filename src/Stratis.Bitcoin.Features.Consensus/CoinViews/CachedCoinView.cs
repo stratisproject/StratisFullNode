@@ -198,7 +198,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             }
         }
 
-        public void Initialize(IConsensusRuleEngine consensusRuleEngine)
+        public void Initialize(IConsensusManager consensusManager)
         {
             ChainedHeader chainTip = this.chainIndexer.Tip;
 
@@ -213,6 +213,8 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             {
                 try
                 {
+                    IConsensusRuleEngine consensusRuleEngine = consensusManager.ConsensusRules;
+
                     var loadCoinViewRule = consensusRuleEngine.GetRule<LoadCoinviewRule>();
                     var saveCoinViewRule = consensusRuleEngine.GetRule<SaveCoinviewRule>();
                     var coinViewRule = consensusRuleEngine.GetRule<CoinViewRule>();
