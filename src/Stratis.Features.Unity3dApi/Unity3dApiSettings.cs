@@ -109,7 +109,7 @@ namespace Stratis.Features.Unity3dApi
                 };
             }
 
-            this.LocalCallSenderAddress = config.GetOrDefault("unityapi_localcallsenderaddress", (string)null);
+            this.LocalCallSenderAddress = config.GetOrDefault("unityapi_localcallsenderaddress", nodeSettings.Network.CirrusRewardDummyAddress);
 
             if (string.IsNullOrWhiteSpace(this.LocalCallSenderAddress))
                 throw new ConfigurationException("The local call sender address must be specified.");
