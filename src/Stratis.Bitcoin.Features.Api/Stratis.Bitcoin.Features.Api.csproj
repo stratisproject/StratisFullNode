@@ -6,7 +6,7 @@
     <AssemblyName>Stratis.Bitcoin.Features.Api</AssemblyName>
     <OutputType>Library</OutputType>
     <PackageId>Stratis.Features.Api</PackageId>
-    <Version>1.3.2.2</Version>
+    <Version>1.3.2.4</Version>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
     <ApplicationIcon />
     <OutputTypeEx>library</OutputTypeEx>
