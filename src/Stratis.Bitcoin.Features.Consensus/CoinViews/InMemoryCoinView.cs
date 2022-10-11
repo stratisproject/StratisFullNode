@@ -34,13 +34,13 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         }
 
         /// <inheritdoc />
-        public void Initialize(ChainedHeader chainTip, ChainIndexer chainIndexer, IConsensusRuleEngine consensusRuleEngine)
+        public void Initialize(IConsensusManager consensusManager)
         {
             throw new NotImplementedException();
         }
 
         /// <inheritdoc />
-        public void Sync(ChainIndexer chainIndexer)
+        public void Sync()
         {
         }
 
