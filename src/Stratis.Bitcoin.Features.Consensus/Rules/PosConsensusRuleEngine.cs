@@ -48,9 +48,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules
         }
 
         /// <inheritdoc />
-        public override void Initialize(ChainedHeader chainTip)
+        public override void Initialize(ChainedHeader chainTip, IConsensusManager consensusManager)
         {
-            base.Initialize(chainTip);
+            base.Initialize(chainTip, consensusManager);
 
             this.StakeChain.Load();
 
