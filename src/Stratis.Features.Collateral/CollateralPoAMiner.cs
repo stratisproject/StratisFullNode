@@ -81,8 +81,7 @@ namespace Stratis.Features.Collateral
             }
 
             // Check that the commitment height is not less that of the prior block.
-            ChainedHeader prevHeader = this.chainIndexer[blockTemplate.Block.Header.HashPrevBlock];
-            ChainedHeaderBlock prevBlock = this.consensusManager.GetBlockData(prevHeader.HashBlock);
+            ChainedHeaderBlock prevBlock = this.consensusManager.GetBlockData(blockTemplate.Block.Header.HashPrevBlock);
             (int? commitmentHeightPrev, _) = this.encoder.DecodeCommitmentHeight(prevBlock.Block.Transactions.First());
             if (commitmentHeight < commitmentHeightPrev)
             {
