@@ -189,7 +189,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Stratis.Features.Unity3dApi
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Stratis.Bitcoin.Features.ExternalApi", "Stratis.Bitcoin.Features.ExternalAPI\Stratis.Bitcoin.Features.ExternalApi.csproj", "{21D41C53-62D8-4F68-A3D1-88BB2AB195E3}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Stratis.Interop.Contracts", "Stratis.Interop.Contracts\Stratis.Interop.Contracts.csproj", "{3A82CB5E-FB80-4A19-9223-AF25123F7288}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Stratis.Interop.Contracts", "Stratis.Interop.Contracts\Stratis.Interop.Contracts.csproj", "{3A82CB5E-FB80-4A19-9223-AF25123F7288}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
