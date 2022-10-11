@@ -1,6 +1,8 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using NBitcoin;
+using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Features.PoA.Collateral;
@@ -34,6 +36,29 @@ namespace Stratis.Features.Collateral
                 // Not having a commitment should always result in a permanent ban of the block.
                 this.Logger.LogTrace("(-)[COLLATERAL_COMMITMENT_HEIGHT_MISSING]");
                 PoAConsensusErrors.CollateralCommitmentHeightMissing.Throw();
+            }
+
+            // Check that the commitment height is not less that of the prior block.
+            int release1340ActivationHeight = 0;
+            NodeDeployments nodeDeployments = this.Parent.NodeDeployments;
+            if (nodeDeployments.BIP9.ArraySize > 0  /* Not NoBIP9Deployments */)
+                release1340ActivationHeight = nodeDeployments.BIP9.ActivationHeightProviders[1 /* Release1340 */].ActivationHeight;
+
+            if (context.ValidationContext.ChainedHeaderToValidate.Height >= release1340ActivationHeight)
+            {
+                ChainedHeader prevHeader = context.ValidationContext.ChainedHeaderToValidate.Previous;
+                if (prevHeader.BlockDataAvailability == BlockDataAvailabilityState.BlockAvailable)
+                {
+                    if (prevHeader.Block != null)
+                    {
+                        (int? commitmentHeightPrev, _) = commitmentHeightEncoder.DecodeCommitmentHeight(prevHeader.Block.Transactions.First());
+                        if (commitmentHeight < commitmentHeightPrev)
+                        {
+                            this.Logger.LogTrace("(-)[COLLATERAL_COMMITMENT_TOO_OLD]");
+                            PoAConsensusErrors.InvalidCollateralAmountCommitmentTooOld.Throw();
+                        }
+                    }
+                }
             }
 
             return Task.CompletedTask;

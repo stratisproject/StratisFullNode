@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
@@ -39,6 +40,8 @@ namespace Stratis.Features.Collateral
 
         private readonly JoinFederationRequestMonitor joinFederationRequestMonitor;
 
+        private readonly CancellationTokenSource cancellationSource;
+
         public CollateralPoAMiner(IConsensusManager consensusManager, IDateTimeProvider dateTimeProvider, Network network, INodeLifetime nodeLifetime, IInitialBlockDownloadState ibdState,
             BlockDefinition blockDefinition, ISlotsManager slotsManager, IConnectionManager connectionManager, JoinFederationRequestMonitor joinFederationRequestMonitor, PoABlockHeaderValidator poaHeaderValidator,
             IFederationManager federationManager, IFederationHistory federationHistory, IIntegrityValidator integrityValidator, IWalletManager walletManager, ChainIndexer chainIndexer, INodeStats nodeStats,
@@ -52,6 +55,7 @@ namespace Stratis.Features.Collateral
             this.encoder = new CollateralHeightCommitmentEncoder();
             this.chainIndexer = chainIndexer;
             this.joinFederationRequestMonitor = joinFederationRequestMonitor;
+            this.cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(nodeLifetime.ApplicationStopping);
         }
 
         /// <inheritdoc />
@@ -74,6 +78,25 @@ namespace Stratis.Features.Collateral
 
                 this.logger.LogTrace("(-)[LOW_COMMITMENT_HEIGHT]");
                 return;
+            }
+
+            // Check that the commitment height is not less that of the prior block.
+            ChainedHeader prevHeader = this.chainIndexer[blockTemplate.Block.Header.HashPrevBlock];
+            ChainedHeaderBlock prevBlock = this.consensusManager.GetBlockData(prevHeader.HashBlock);
+            (int? commitmentHeightPrev, _) = this.encoder.DecodeCommitmentHeight(prevBlock.Block.Transactions.First());
+            if (commitmentHeight < commitmentHeightPrev)
+            {
+                this.collateralChecker.UpdateCollateralInfoAsync(this.cancellationSource.Token).GetAwaiter().GetResult();
+                counterChainHeight = this.collateralChecker.GetCounterChainConsensusHeight();
+                commitmentHeight = counterChainHeight - maxReorgLength - AddressIndexer.SyncBuffer;
+
+                if (commitmentHeight < commitmentHeightPrev)
+                {
+                    dropTemplate = true;
+                    this.logger.LogWarning("Counter chain should first advance at least at {0}! Block can't be produced.", commitmentHeightPrev - commitmentHeight);
+                    this.logger.LogTrace("(-)[LOW_COMMITMENT_HEIGHT]");
+                    return;
+                }
             }
 
             IFederationMember currentMember = this.federationManager.GetCurrentFederationMember();
