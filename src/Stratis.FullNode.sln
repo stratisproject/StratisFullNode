@@ -581,7 +581,4 @@ Global
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {6C780ABA-5872-4B83-AD3F-A5BD423AD907}
 	EndGlobalSection
-	GlobalSection(CRMSolutionProperties) = preSolution
-		SolutionIsBoundToCRM = True
-	EndGlobalSection
 EndGlobal
