@@ -83,6 +83,8 @@ namespace Stratis.Features.Collateral
             // Check that the commitment height is not less that of the prior block.
             ChainedHeaderBlock prevBlock = this.consensusManager.GetBlockData(blockTemplate.Block.Header.HashPrevBlock);
             (int? commitmentHeightPrev, _) = this.encoder.DecodeCommitmentHeight(prevBlock.Block.Transactions.First());
+            // If the intended commitment height is less than the previous block's commitment height, update our local
+            // counter chain height and try again.
             if (commitmentHeight < commitmentHeightPrev)
             {
                 this.collateralChecker.UpdateCollateralInfoAsync(this.cancellationSource.Token).GetAwaiter().GetResult();
@@ -92,7 +94,7 @@ namespace Stratis.Features.Collateral
                 if (commitmentHeight < commitmentHeightPrev)
                 {
                     dropTemplate = true;
-                    this.logger.LogWarning("Counter chain should first advance at least at {0}! Block can't be produced.", commitmentHeightPrev - commitmentHeight);
+                    this.logger.LogWarning("Block can't be produced, the counter chain should first advance at least {0} blocks. ", commitmentHeightPrev - commitmentHeight);
                     this.logger.LogTrace("(-)[LOW_COMMITMENT_HEIGHT]");
                     return;
                 }
