@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Configuration;
@@ -30,17 +31,19 @@ namespace Stratis.Features.PoA.Voting
         private readonly IFullNode fullNode;
         private readonly IHttpClientFactory httpClientFactory;
         private readonly IInitialBlockDownloadState initialBlockDownloadState;
+        private readonly ILoggerFactory loggerFactory;
         private readonly PoANetwork network;
         private readonly NodeSettings nodeSettings;
         private readonly VotingManager votingManager;
 
-        public JoinFederationRequestService(ICounterChainSettings counterChainSettings, IFederationManager federationManager, IFullNode fullNode, IInitialBlockDownloadState initialBlockDownloadState, IHttpClientFactory httpClientFactory, Network network, NodeSettings nodeSettings, VotingManager votingManager)
+        public JoinFederationRequestService(ICounterChainSettings counterChainSettings, IFederationManager federationManager, IFullNode fullNode, IInitialBlockDownloadState initialBlockDownloadState, IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory, Network network, NodeSettings nodeSettings, VotingManager votingManager)
         {
             this.counterChainSettings = counterChainSettings;
             this.federationManager = federationManager;
             this.fullNode = fullNode;
             this.initialBlockDownloadState = initialBlockDownloadState;
             this.httpClientFactory = httpClientFactory;
+            this.loggerFactory = loggerFactory;
             this.network = network as PoANetwork;
             this.nodeSettings = nodeSettings;
             this.votingManager = votingManager;
@@ -99,7 +102,7 @@ namespace Stratis.Features.PoA.Voting
                 ExternalAddress = request.CollateralAddress
             };
 
-            var walletClient = new WalletClient(this.httpClientFactory, $"http://{this.counterChainSettings.CounterChainApiHost}", this.counterChainSettings.CounterChainApiPort);
+            var walletClient = new WalletClient(this.loggerFactory, this.httpClientFactory, $"http://{this.counterChainSettings.CounterChainApiHost}", this.counterChainSettings.CounterChainApiPort);
 
             try
             {

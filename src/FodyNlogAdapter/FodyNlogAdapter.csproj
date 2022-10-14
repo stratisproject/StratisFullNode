@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <AssemblyName>FodyNlogAdapter</AssemblyName>
-    <Version>1.3.2.2</Version>
+    <Version>1.3.2.4</Version>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
     <Authors>Stratis Group Ltd.</Authors>
     <PackageId>Stratis.Utils.FodyNlogAdapter</PackageId>
