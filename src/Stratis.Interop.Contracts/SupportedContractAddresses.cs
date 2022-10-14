@@ -25,7 +25,7 @@ namespace Stratis.Interop.Contracts
                     {
                         NativeNetwork = SupportedNativeChain.Ethereum,
                         NativeNetworkAddress = "0xf197f5f8c406d269e2cc44aaf495fbc4eb519634",
-                        SRC20Address = "tWCCJ3FxmoYuzrE4aUcDLDh9gn51EJ4cvM",
+                        SRC20Address = "tMZ2dKG9BKvCfVWvxUN47enXyaDyWLe44z",
                         TokenName = "TSZ2",
                         Decimals = 8
                     },
