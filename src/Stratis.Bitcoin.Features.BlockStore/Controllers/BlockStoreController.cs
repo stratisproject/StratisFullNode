@@ -23,6 +23,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
     {
         public const string GetAddressesBalances = "getaddressesbalances";
         public const string GetVerboseAddressesBalances = "getverboseaddressesbalances";
+        public const string VerboseAddressesBalances = "verboseaddressesbalances";
         public const string GetAddressIndexerTip = "addressindexertip";
         public const string GetBlock = "block";
         public const string GetBlockCount = "getblockcount";
@@ -250,6 +251,34 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
             try
             {
                 string[] addressesArray = addresses?.Split(',') ?? new string[] { };
+
+                this.logger.LogDebug("Asking data for {0} addresses.", addressesArray.Length);
+
+                VerboseAddressBalancesResult result = this.addressIndexer.GetAddressIndexerState(addressesArray);
+
+                return this.Json(result);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>Provides verbose balance data of the given addresses.</summary>
+        /// <param name="addresses">A comma delimited set of addresses that will be queried.</param>
+        /// <returns>A result object containing the balance for each requested address and if so, a message stating why the indexer is not queryable.</returns>
+        /// <response code="200">Returns balances for the requested addresses</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route(BlockStoreRouteEndPoint.VerboseAddressesBalances)]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult VerboseAddressesBalancesData([FromBody] string addresses)
+        {
+            try
+            {
+                string[] addressesArray = string.IsNullOrWhiteSpace(addresses) ? new string[] { } : addresses.Split(',');
 
                 this.logger.LogDebug("Asking data for {0} addresses.", addressesArray.Length);
 

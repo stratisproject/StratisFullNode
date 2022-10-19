@@ -124,7 +124,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 }
             };
 
-            blockStoreClientMock.Setup(x => x.GetVerboseAddressesBalancesDataAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>())).ReturnsAsync(collateralData);
+            blockStoreClientMock.Setup(x => x.VerboseAddressesBalancesDataAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>())).ReturnsAsync(collateralData);
 
             this.collateralChecker.SetPrivateVariableValue("blockStoreClient", blockStoreClientMock.Object);
 

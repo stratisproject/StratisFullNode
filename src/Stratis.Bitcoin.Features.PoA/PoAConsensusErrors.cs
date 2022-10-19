@@ -34,5 +34,7 @@ namespace Stratis.Bitcoin.Features.PoA
         public static ConsensusError CollateralCommitmentHeightMissing => new ConsensusError("collateral-commitment-height-missing", "collateral commitment height missing");
 
         public static ConsensusError InvalidCollateralAmountCommitmentTooNew => new ConsensusError("collateral-commitment-too-new", "collateral commitment too new");
+
+        public static ConsensusError InvalidCollateralAmountCommitmentTooOld => new ConsensusError("collateral-commitment-too-old", "collateral commitment too old");
     }
 }
