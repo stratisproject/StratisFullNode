@@ -184,7 +184,8 @@ namespace Stratis.Sidechains.Networks
                 PollExpiryBlocks = 50_000, // Roughly 9 days
                 GetMiningTimestampV2ActivationHeight = 3_709_000, // Monday 14 February 00:00:00 (Estimated)
                 GetMiningTimestampV2ActivationStrictHeight = 3_783_000, // Monday 28 February 07:00:00 (London Time) (Estimated)
-                ContractSerializerV2ActivationHeight = 3_386_335 // Monday 13 December 16:00:00 (Estimated)
+                ContractSerializerV2ActivationHeight = 3_386_335, // Monday 13 December 16:00:00 (Estimated)
+                Release1300ActivationHeight = 4_334_400
             };
 
             var buriedDeployments = new BuriedDeploymentsArray
@@ -197,7 +198,8 @@ namespace Stratis.Sidechains.Networks
             var bip9Deployments = new CirrusBIP9Deployments()
             {
                 // Deployment will go active once 75% of nodes are on 1.3.0.0 or later.
-                [CirrusBIP9Deployments.Release1300] = new BIP9DeploymentsParameters("Release1300", 0, DateTime.Parse("2022-3-22 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-1-1 +0").ToUnixTimestamp(), 1512 /* 75% Activation Threshold */)
+                [CirrusBIP9Deployments.Release1320] = new BIP9DeploymentsParameters("Release1320", CirrusBIP9Deployments.FlagBitRelease1320, DateTime.Parse("2022-6-15 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-1-1 +0").ToUnixTimestamp(), 8100 /* 75% Activation Threshold */),
+                [CirrusBIP9Deployments.Release1324] = new BIP9DeploymentsParameters("Release1324", CirrusBIP9Deployments.FlagBitRelease1324, DateTime.Parse("2022-10-10 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-3-1 +0").ToUnixTimestamp(), 8100 /* 75% Activation Threshold */)
             };
 
             this.Consensus = new Consensus(
@@ -212,7 +214,7 @@ namespace Stratis.Sidechains.Networks
                 buriedDeployments: buriedDeployments,
                 bip9Deployments: bip9Deployments,
                 bip34Hash: new uint256("0x000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8"),
-                minerConfirmationWindow: 2016, // nPowTargetTimespan / nPowTargetSpacing
+                minerConfirmationWindow: 10800, // nPowTargetTimespan / nPowTargetSpacing
                 maxReorgLength: 240, // Heuristic. Roughly 2 * mining members
                 defaultAssumeValid: new uint256("0xbfd4a96a6c5250f18bf7c586761256fa5f8753ffa10b24160f0648a452823a95"), // 1400000
                 maxMoney: Money.Coins(100_000_000),
@@ -287,7 +289,8 @@ namespace Stratis.Sidechains.Networks
                 { 3_500_000, new CheckpointInfo(new uint256("0x1772356d6498935ab93cbd5eaf1b868c5265480edeef2b5fec133fbc21b292cb")) },
                 { 3_700_000, new CheckpointInfo(new uint256("0x16b41558dedb4945476f0212034bd148bef3cdeccdd1b55a198f8b1d6900716b")) },
                 { 3_834_160, new CheckpointInfo(new uint256("0xa0e7b27d1e642301a5b3a985dc98953858d89849e9b864de7e9b62e6856973a0")) },
-                { 4_100_000, new CheckpointInfo(new uint256("0x4f099739c22560ce27b7d5e6d30e86e7e6f52062504f0d31c25a427074de85f8")) }
+                { 4_100_000, new CheckpointInfo(new uint256("0x4f099739c22560ce27b7d5e6d30e86e7e6f52062504f0d31c25a427074de85f8")) },
+                { 4_800_000, new CheckpointInfo(new uint256("0xed81ddcdd743bdc2c74bbf16fce61082409169c45f95cfc4767d6e50e1b2833d")) }
             };
 
             this.DNSSeeds = new List<DNSSeedData>

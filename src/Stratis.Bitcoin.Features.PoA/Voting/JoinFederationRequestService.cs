@@ -102,7 +102,7 @@ namespace Stratis.Features.PoA.Voting
                 ExternalAddress = request.CollateralAddress
             };
 
-            var walletClient = new WalletClient(this.httpClientFactory, $"http://{this.counterChainSettings.CounterChainApiHost}", this.counterChainSettings.CounterChainApiPort);
+            var walletClient = new WalletClient(this.loggerFactory, this.httpClientFactory, $"http://{this.counterChainSettings.CounterChainApiHost}", this.counterChainSettings.CounterChainApiPort);
 
             try
             {

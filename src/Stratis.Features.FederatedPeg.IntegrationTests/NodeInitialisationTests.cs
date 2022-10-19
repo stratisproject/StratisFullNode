@@ -80,7 +80,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
         private void StartNodeWithMockCounterNodeAPI(CoreNode node)
         {
             var mockClient = new Mock<IBlockStoreClient>();
-            mockClient.Setup(x => x.GetVerboseAddressesBalancesDataAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+            mockClient.Setup(x => x.VerboseAddressesBalancesDataAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Bitcoin.Controllers.Models.VerboseAddressBalancesResult(100000));
 
             node.Start(() =>
