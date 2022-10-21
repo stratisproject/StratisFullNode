@@ -87,11 +87,11 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
             // Look back at least 8 federation sizes to ensure that we collect enough data on the multisig
             // members that mined.
-            var inspectionRange = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeader(conversionRequest.BlockHeight)).Count * 8;
+            var inspectionRange = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeaderByHeight(conversionRequest.BlockHeight)).Count * 8;
 
             for (int i = inspectionRange; i >= 0; i--)
             {
-                ChainedHeader chainedHeader = this.chainIndexer.GetHeader(startHeight - i);
+                ChainedHeader chainedHeader = this.chainIndexer.GetHeaderByHeight(startHeight - i);
 
                 var collateralFederationMember = this.federationHistory.GetFederationMemberForBlock(chainedHeader) as CollateralFederationMember;
                 if (collateralFederationMember == null)
@@ -158,7 +158,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             // Then find the header on the sidechain that contains the applicable commitment height.
             int sidechainTipHeight = this.chainIndexer.Tip.Height;
 
-            ChainedHeader currentHeader = this.chainIndexer.GetHeader(sidechainTipHeight);
+            ChainedHeader currentHeader = this.chainIndexer.GetHeaderByHeight(sidechainTipHeight);
 
             do
             {
@@ -226,7 +226,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
             for (int currentHeight = sidechainStartHeight; currentHeight <= sidechainEndHeight; currentHeight++)
             {
-                ChainedHeader chainedHeader = this.chainIndexer.GetHeader(currentHeight);
+                ChainedHeader chainedHeader = this.chainIndexer.GetHeaderByHeight(currentHeight);
                 if (chainedHeader.Block == null)
                     chainedHeader.Block = this.consensusManager.GetBlockData(chainedHeader.HashBlock).Block;
 

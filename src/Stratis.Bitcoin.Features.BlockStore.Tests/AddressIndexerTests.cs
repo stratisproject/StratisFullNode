@@ -48,7 +48,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             var mockingContext = new MockingContext(mockingServices);
 
             this.addressIndexer = mockingContext.GetService<IAddressIndexer>();
-            this.genesisHeader = mockingContext.GetService<ChainIndexer>().GetHeader(0);
+            this.genesisHeader = mockingContext.GetService<ChainIndexer>().GetHeaderByHeight(0);
             this.consensusManagerMock = mockingContext.GetService<Mock<IConsensusManager>>();
         }
 

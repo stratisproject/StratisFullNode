@@ -135,10 +135,10 @@ namespace Stratis.Bitcoin.IntegrationTests
                     // - Active at block 431.
 
                     var consensusLoop = stratisNode.FullNode.NodeService<IConsensusRuleEngine>() as ConsensusRuleEngine;
-                    ThresholdState[] segwitDefinedState = consensusLoop.NodeDeployments.BIP9.GetStates(stratisNode.FullNode.ChainIndexer.GetHeader(142));
-                    ThresholdState[] segwitStartedState = consensusLoop.NodeDeployments.BIP9.GetStates(stratisNode.FullNode.ChainIndexer.GetHeader(143));
-                    ThresholdState[] segwitLockedInState = consensusLoop.NodeDeployments.BIP9.GetStates(stratisNode.FullNode.ChainIndexer.GetHeader(287));
-                    ThresholdState[] segwitActiveState = consensusLoop.NodeDeployments.BIP9.GetStates(stratisNode.FullNode.ChainIndexer.GetHeader(431));
+                    ThresholdState[] segwitDefinedState = consensusLoop.NodeDeployments.BIP9.GetStates(stratisNode.FullNode.ChainIndexer.GetHeaderByHeight(142));
+                    ThresholdState[] segwitStartedState = consensusLoop.NodeDeployments.BIP9.GetStates(stratisNode.FullNode.ChainIndexer.GetHeaderByHeight(143));
+                    ThresholdState[] segwitLockedInState = consensusLoop.NodeDeployments.BIP9.GetStates(stratisNode.FullNode.ChainIndexer.GetHeaderByHeight(287));
+                    ThresholdState[] segwitActiveState = consensusLoop.NodeDeployments.BIP9.GetStates(stratisNode.FullNode.ChainIndexer.GetHeaderByHeight(431));
 
                     // Check that segwit got activated at block 431.
                     Assert.Equal(ThresholdState.Defined, segwitDefinedState.GetValue((int)BitcoinBIP9Deployments.Segwit));
@@ -246,14 +246,14 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 // Check that Segwit states got updated as expected.
                 ThresholdConditionCache cache = (stratisNode.FullNode.NodeService<IConsensusRuleEngine>() as ConsensusRuleEngine).NodeDeployments.BIP9;
-                Assert.Equal(ThresholdState.Defined, cache.GetState(stratisNode.FullNode.ChainIndexer.GetHeader(startedHeight - 1), StraxBIP9Deployments.Segwit));
-                Assert.Equal(ThresholdState.Started, cache.GetState(stratisNode.FullNode.ChainIndexer.GetHeader(startedHeight), StraxBIP9Deployments.Segwit));
-                Assert.Equal(ThresholdState.LockedIn, cache.GetState(stratisNode.FullNode.ChainIndexer.GetHeader(lockedInHeight), StraxBIP9Deployments.Segwit));
-                Assert.Equal(ThresholdState.Active, cache.GetState(stratisNode.FullNode.ChainIndexer.GetHeader(activeHeight), StraxBIP9Deployments.Segwit));
+                Assert.Equal(ThresholdState.Defined, cache.GetState(stratisNode.FullNode.ChainIndexer.GetHeaderByHeight(startedHeight - 1), StraxBIP9Deployments.Segwit));
+                Assert.Equal(ThresholdState.Started, cache.GetState(stratisNode.FullNode.ChainIndexer.GetHeaderByHeight(startedHeight), StraxBIP9Deployments.Segwit));
+                Assert.Equal(ThresholdState.LockedIn, cache.GetState(stratisNode.FullNode.ChainIndexer.GetHeaderByHeight(lockedInHeight), StraxBIP9Deployments.Segwit));
+                Assert.Equal(ThresholdState.Active, cache.GetState(stratisNode.FullNode.ChainIndexer.GetHeaderByHeight(activeHeight), StraxBIP9Deployments.Segwit));
 
                 // Verify that the block created before activation does not have the 'Witness' script flag set.
                 var rulesEngine = stratisNode.FullNode.NodeService<IConsensusRuleEngine>();
-                ChainedHeader prevHeader = stratisNode.FullNode.ChainIndexer.GetHeader(activeHeight - 1);
+                ChainedHeader prevHeader = stratisNode.FullNode.ChainIndexer.GetHeaderByHeight(activeHeight - 1);
                 DeploymentFlags flags1 = (rulesEngine as ConsensusRuleEngine).NodeDeployments.GetFlags(prevHeader);
                 Assert.Equal(0, (int)(flags1.ScriptFlags & ScriptVerify.Witness));
 
@@ -284,7 +284,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 TestBase.WaitLoop(() => stratisNode.CreateRPCClient().GetBestBlockHash() == coreNode.CreateRPCClient().GetBestBlockHash(), cancellationToken: cancellationToken);
 
                 var consensusLoop = stratisNode.FullNode.NodeService<IConsensusRuleEngine>() as ConsensusRuleEngine;
-                ThresholdState[] segwitActiveState = consensusLoop.NodeDeployments.BIP9.GetStates(stratisNode.FullNode.ChainIndexer.GetHeader(1));
+                ThresholdState[] segwitActiveState = consensusLoop.NodeDeployments.BIP9.GetStates(stratisNode.FullNode.ChainIndexer.GetHeaderByHeight(1));
 
                 // Check that segwit got activated at genesis.
                 Assert.Equal(ThresholdState.Active, segwitActiveState.GetValue((int)BitcoinBIP9Deployments.Segwit));
@@ -306,7 +306,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 List<uint256> res = miner.GenerateBlocks(new ReserveScript(script), 1, int.MaxValue);
 
                 // Retrieve mined block.
-                Block block = node.FullNode.ChainIndexer.GetHeader(res.First()).Block;
+                Block block = node.FullNode.ChainIndexer.GetHeaderByHash(res.First()).Block;
 
                 // Confirm that the mined block is Segwit-ted.
                 Script commitment = WitnessCommitmentsRule.GetWitnessCommitment(node.FullNode.Network, block);
@@ -435,7 +435,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 var script = new Key().PubKey.WitHash.ScriptPubKey;
                 var miner = node.FullNode.NodeService<IPowMining>() as PowMining;
                 List<uint256> res = miner.GenerateBlocks(new ReserveScript(script), 1, int.MaxValue);
-                Block block = node.FullNode.ChainIndexer.GetHeader(res.First()).Block;
+                Block block = node.FullNode.ChainIndexer.GetHeaderByHash(res.First()).Block;
                 Script commitment = WitnessCommitmentsRule.GetWitnessCommitment(node.FullNode.Network, block);
                 Assert.NotNull(commitment);
 
@@ -501,7 +501,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 var script = new Key().PubKey.WitHash.ScriptPubKey;
                 var miner = node.FullNode.NodeService<IPowMining>() as PowMining;
                 List<uint256> res = miner.GenerateBlocks(new ReserveScript(script), 1, int.MaxValue);
-                Block block = node.FullNode.ChainIndexer.GetHeader(res.First()).Block;
+                Block block = node.FullNode.ChainIndexer.GetHeaderByHash(res.First()).Block;
                 Script commitment = WitnessCommitmentsRule.GetWitnessCommitment(node.FullNode.Network, block);
                 Assert.NotNull(commitment);
 

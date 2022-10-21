@@ -243,7 +243,7 @@ namespace Stratis.Bitcoin.Features.PoA
         {
             lock (this.lockObject)
             {
-                ChainedHeader tip = this.lastActiveTip ?? this.chainIndexer.GetHeader(0);
+                ChainedHeader tip = this.lastActiveTip ?? this.chainIndexer.GetHeaderByHeight(0);
 
                 List<IFederationMember> federationMembers = this.GetFederationForBlock(tip);
 
@@ -274,7 +274,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
             int firstHeight = this.federationHistory.ElementAt(0).Key;
             int count = Math.Min(this.federationHistory.Count, this.chainIndexer.Tip.Height + 1 - firstHeight);
-            int pos2 = BinarySearch.BinaryFindFirst(x => this.chainIndexer.GetHeader(x).Header.Time > discardAboveTime, firstHeight, count) - firstHeight;
+            int pos2 = BinarySearch.BinaryFindFirst(x => this.chainIndexer.GetHeaderByHeight(x).Header.Time > discardAboveTime, firstHeight, count) - firstHeight;
             if (pos2 > 0)
                 this.federationHistory = new SortedDictionary<int, (List<IFederationMember>, HashSet<IFederationMember>, IFederationMember)>(this.federationHistory.Skip(pos2).ToDictionary(x => x.Key, x => x.Value));
         }

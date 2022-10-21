@@ -52,7 +52,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
 
             var chainedHeader = new ChainedHeader(header, hash, null);
             var chain = new Mock<ChainIndexer>();
-            chain.Setup(c => c.GetHeader(heightLocation)).Returns(chainedHeader);
+            chain.Setup(c => c.GetHeaderByHeight(heightLocation)).Returns(chainedHeader);
 
             var mockingContext = new MockingContext(ConsensusManagerHelper.GetMockingServices(this.network, chainIndexer: ctx => chain.Object)
                 .AddSingleton<IBlockNotification>(ctx => ctx.GetService<Mock<BlockNotification>>().Object));
@@ -62,7 +62,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
             IActionResult result = notificationController.SyncFrom(heightLocation.ToString());
 
             // Assert
-            chain.Verify(c => c.GetHeader(heightLocation), Times.Once);
+            chain.Verify(c => c.GetHeaderByHeight(heightLocation), Times.Once);
             mockingContext.GetService<Mock<BlockNotification>>().Verify(b => b.SyncFrom(hash), Times.Once);
         }
 
@@ -77,7 +77,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
 
             var chainedHeader = new ChainedHeader(this.network.Consensus.ConsensusFactory.CreateBlockHeader(), hash, null);
             var chain = new Mock<ChainIndexer>();
-            chain.Setup(c => c.GetHeader(uint256.Parse(hashLocation))).Returns(chainedHeader);
+            chain.Setup(c => c.GetHeaderByHash(uint256.Parse(hashLocation))).Returns(chainedHeader);
 
             var mockingContext = new MockingContext(ConsensusManagerHelper.GetMockingServices(this.network, chainIndexer: ctx => chain.Object)
                 .AddSingleton<IBlockNotification>(ctx => ctx.GetService<Mock<BlockNotification>>().Object));
@@ -87,7 +87,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
             IActionResult result = notificationController.SyncFrom(hashLocation);
 
             // Assert
-            chain.Verify(c => c.GetHeader(heightLocation), Times.Never);
+            chain.Verify(c => c.GetHeaderByHeight(heightLocation), Times.Never);
             mockingContext.GetService<Mock<BlockNotification>>().Verify(b => b.SyncFrom(hash), Times.Once);
         }
 
@@ -98,7 +98,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
             string hashLocation = "000000000000000000c03dbe6ee5fedb25877a12e32aa95bc1d3bd480d7a93f9";
 
             var chain = new Mock<ChainIndexer>();
-            chain.Setup(c => c.GetHeader(uint256.Parse(hashLocation))).Returns((ChainedHeader)null);
+            chain.Setup(c => c.GetHeaderByHash(uint256.Parse(hashLocation))).Returns((ChainedHeader)null);
 
             var mockingContext = new MockingContext(ConsensusManagerHelper.GetMockingServices(this.network, chainIndexer: ctx => chain.Object)
                 .AddSingleton<IBlockNotification>(ctx => ctx.GetService<Mock<BlockNotification>>().Object));
@@ -138,7 +138,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
         {
             // Set up
             var chain = new Mock<ChainIndexer>();
-            chain.Setup(c => c.GetHeader(15)).Returns((ChainedHeader)null);
+            chain.Setup(c => c.GetHeaderByHeight(15)).Returns((ChainedHeader)null);
 
             var mockingContext = new MockingContext(ConsensusManagerHelper.GetMockingServices(this.network, chainIndexer: ctx => chain.Object)
                 .AddSingleton<IBlockNotification>(ctx => ctx.GetService<Mock<BlockNotification>>().Object));

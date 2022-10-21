@@ -53,7 +53,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Controllers
             bool isHeight = int.TryParse(from, out int height);
             if (isHeight)
             {
-                ChainedHeader block = this.chainIndexer.GetHeader(height);
+                ChainedHeader block = this.chainIndexer.GetHeaderByHeight(height);
                 if (block == null)
                 {
                     return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, $"Block at height {height} was not found on the blockchain.", string.Empty);
@@ -64,7 +64,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Controllers
             else
             {
                 uint256 hashToSyncFrom = uint256.Parse(from);
-                ChainedHeader block = this.chainIndexer.GetHeader(hashToSyncFrom);
+                ChainedHeader block = this.chainIndexer.GetHeaderByHash(hashToSyncFrom);
                 if (block == null)
                 {
                     return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, $"Block with hash {from} was not found on the blockchain.", string.Empty);

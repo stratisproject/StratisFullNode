@@ -176,10 +176,10 @@ namespace Stratis.Bitcoin.Features.Wallet
                     throw new WalletException("Can't start sync beyond end of chain");
 
                 if (walletName != null)
-                    this.walletManager.RewindWallet(walletName, this.chainIndexer.GetHeader(height - 1));
+                    this.walletManager.RewindWallet(walletName, this.chainIndexer.GetHeaderByHeight(height - 1));
                 else
                     foreach (string wallet in this.walletManager.GetWalletsNames())
-                        this.walletManager.RewindWallet(wallet, this.chainIndexer.GetHeader(height - 1));
+                        this.walletManager.RewindWallet(wallet, this.chainIndexer.GetHeaderByHeight(height - 1));
             }
         }
 

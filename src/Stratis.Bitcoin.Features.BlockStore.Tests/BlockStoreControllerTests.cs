@@ -163,7 +163,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             logger.Setup(l => l.CreateLogger(It.IsAny<string>())).Returns(Mock.Of<ILogger>);
 
             chainState.Setup(c => c.ConsensusTip)
-                .Returns(chainIndexer.GetHeader(2));
+                .Returns(chainIndexer.GetHeaderByHeight(2));
 
             var controller = new BlockStoreController(new StraxMain(), logger.Object, store.Object, chainState.Object, chainIndexer, addressIndexer.Object, utxoIndexer.Object, scriptAddressReader);
 
@@ -188,7 +188,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             logger.Setup(l => l.CreateLogger(It.IsAny<string>())).Returns(Mock.Of<ILogger>);
 
             chainState.Setup(c => c.ConsensusTip)
-                .Returns(chainIndexer.GetHeader(2));
+                .Returns(chainIndexer.GetHeaderByHeight(2));
 
             store.Setup(s => s.GetBlocks(It.IsAny<List<uint256>>())).Returns((List<uint256> hashes) => hashes.Select(h => chainIndexer[h].Block).ToList());
 
@@ -214,7 +214,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             var chain = new Mock<ChainIndexer>();
             Block block = Block.Parse(BlockAsHex, new StraxMain().Consensus.ConsensusFactory);
-            chain.Setup(c => c.GetHeader(It.IsAny<uint256>())).Returns(new ChainedHeader(block.Header, block.Header.GetHash(), 1));
+            chain.Setup(c => c.GetHeaderByHash(It.IsAny<uint256>())).Returns(new ChainedHeader(block.Header, block.Header.GetHash(), 1));
             chain.Setup(x => x.Tip).Returns(new ChainedHeader(block.Header, block.Header.GetHash(), 1));
 
             var controller = new BlockStoreController(new StraxMain(), logger.Object, store.Object, chainState.Object, chain.Object, addressIndexer.Object, utxoIndexer.Object, scriptAddressReader);

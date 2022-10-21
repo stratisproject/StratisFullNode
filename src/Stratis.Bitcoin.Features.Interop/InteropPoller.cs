@@ -1341,7 +1341,7 @@ namespace Stratis.Bitcoin.Features.Interop
             }
 
             // We are not able to simply use the entire federation member list, as only multisig nodes can be transaction originators.
-            List<IFederationMember> federation = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeader(blockHeight));
+            List<IFederationMember> federation = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeaderByHeight(blockHeight));
 
             this.logger.Info($"Federation retrieved at height '{blockHeight}', size {federation.Count} members.");
 

@@ -130,7 +130,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
                 var hashes = new List<uint256>();
                 for (int i = 0; i < 100 && (height + i) <= this.BlockRepo.TipHashAndHeight.Height; i++)
                 {
-                    ChainedHeader header = this.ChainIndexer.GetHeader(height + i);
+                    ChainedHeader header = this.ChainIndexer.GetHeaderByHeight(height + i);
                     hashes.Add(header.HashBlock);
                 }
 
@@ -147,7 +147,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
                 var buffer = new List<(ChainedHeader, Block)>();
                 for (int i = 0; i < 100 && height <= this.BlockRepo.TipHashAndHeight.Height; height++, i++)
                 {
-                    ChainedHeader header = this.ChainIndexer.GetHeader(height);
+                    ChainedHeader header = this.ChainIndexer.GetHeaderByHeight(height);
                     yield return ((header, blocks[i]));
                 }
             }

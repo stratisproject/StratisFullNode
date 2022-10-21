@@ -21,12 +21,12 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             Block block = this.network.CreateBlock();
             Transaction transaction = this.network.CreateTransaction();
             block.AddTransaction(transaction);
-            block.AddTransaction(CreateCoinStakeTransaction(this.network, new Key(), 6, this.ChainIndexer.GetHeader(5).HashBlock));
+            block.AddTransaction(CreateCoinStakeTransaction(this.network, new Key(), 6, this.ChainIndexer.GetHeaderByHeight(5).HashBlock));
             block.Header.Time = 18276127; // Since the coinstake no longer contains the time field we have to directly set it on the block for this test
             this.ruleContext.ValidationContext = new ValidationContext()
             {
                 BlockToValidate = block,
-                ChainedHeaderToValidate = this.ChainIndexer.GetHeader(4)
+                ChainedHeaderToValidate = this.ChainIndexer.GetHeaderByHeight(4)
             };
 
             var target = new Target(0x1f111115);
@@ -34,7 +34,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
 
             this.stakeValidator.Setup(s => s.GetNextTargetRequired(
                 this.stakeChain.Object,
-                this.ChainIndexer.GetHeader(3),
+                this.ChainIndexer.GetHeaderByHeight(3),
                 this.network.Consensus,
                 true))
                 .Returns(target)
@@ -48,7 +48,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             Assert.Equal(uint256.Zero, (this.ruleContext as PosRuleContext).BlockStake.StakeModifierV2);
             Assert.Equal(uint256.Zero, (this.ruleContext as PosRuleContext).BlockStake.HashProof);
             Assert.Equal((uint)18276127, (this.ruleContext as PosRuleContext).BlockStake.StakeTime);
-            Assert.Equal(this.ChainIndexer.GetHeader(5).HashBlock, (this.ruleContext as PosRuleContext).BlockStake.PrevoutStake.Hash);
+            Assert.Equal(this.ChainIndexer.GetHeaderByHeight(5).HashBlock, (this.ruleContext as PosRuleContext).BlockStake.PrevoutStake.Hash);
         }
 
         [Fact]
@@ -68,7 +68,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
 
             this.stakeValidator.Setup(s => s.GetNextTargetRequired(
                 this.stakeChain.Object,
-                this.ChainIndexer.GetHeader(1),
+                this.ChainIndexer.GetHeaderByHeight(1),
                 this.network.Consensus,
                 false))
                 .Returns(target)
@@ -95,7 +95,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             this.ruleContext.ValidationContext = new ValidationContext()
             {
                 BlockToValidate = block,
-                ChainedHeaderToValidate = this.ChainIndexer.GetHeader(4)
+                ChainedHeaderToValidate = this.ChainIndexer.GetHeaderByHeight(4)
             };
 
             ConsensusErrorException exception = await Assert.ThrowsAsync<ConsensusErrorException>(() => this.consensusRules.RegisterRule<CheckDifficultyHybridRule>().RunAsync(this.ruleContext));

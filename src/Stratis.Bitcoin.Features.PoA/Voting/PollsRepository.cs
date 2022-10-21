@@ -281,7 +281,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         // Check to see if the polls repo tip exists in chain.
                         // The node could have been rewound so we need to rebuild the repo from that point.
                         this.CurrentTip = this.dBreezeSerializer.Deserialize<HashHeightPair>(rowTip.Value);
-                        ChainedHeader chainedHeaderTip = this.chainIndexer.GetHeader(this.CurrentTip.Hash);
+                        ChainedHeader chainedHeaderTip = this.chainIndexer.GetHeaderByHash(this.CurrentTip.Hash);
                         if (chainedHeaderTip != null)
                         {
                             this.highestPollId = (polls.Count > 0) ? polls.Max(p => p.Id) : -1;
@@ -297,11 +297,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         int maxGoodHeight = -1;
                         foreach (Poll poll in polls)
                         {
-                            if (poll.PollStartBlockData.Height > maxGoodHeight && this.chainIndexer.GetHeader(poll.PollStartBlockData.Hash) != null)
+                            if (poll.PollStartBlockData.Height > maxGoodHeight && this.chainIndexer.GetHeaderByHash(poll.PollStartBlockData.Hash) != null)
                                 maxGoodHeight = poll.PollStartBlockData.Height;
-                            if (poll.PollExecutedBlockData?.Height > maxGoodHeight && this.chainIndexer.GetHeader(poll.PollExecutedBlockData.Hash) != null)
+                            if (poll.PollExecutedBlockData?.Height > maxGoodHeight && this.chainIndexer.GetHeaderByHash(poll.PollExecutedBlockData.Hash) != null)
                                 maxGoodHeight = poll.PollExecutedBlockData.Height;
-                            if (poll.PollVotedInFavorBlockData?.Height > maxGoodHeight && this.chainIndexer.GetHeader(poll.PollVotedInFavorBlockData.Hash) != null)
+                            if (poll.PollVotedInFavorBlockData?.Height > maxGoodHeight && this.chainIndexer.GetHeaderByHash(poll.PollVotedInFavorBlockData.Hash) != null)
                                 maxGoodHeight = poll.PollVotedInFavorBlockData.Height;
                         }
 
@@ -314,7 +314,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             return;
                         }
 
-                        this.CurrentTip = new HashHeightPair(this.chainIndexer.GetHeader(maxGoodHeight));
+                        this.CurrentTip = new HashHeightPair(this.chainIndexer.GetHeaderByHeight(maxGoodHeight));
 
                         this.logger.LogInformation("Common block found at height {0}; the repo will be rebuilt from there.", this.CurrentTip.Height);
 

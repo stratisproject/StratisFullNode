@@ -372,7 +372,7 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
             if (this.ChainIndexer == null)
                 return null;
 
-            BlockHeader blockHeader = this.ChainIndexer.GetHeader(uint256.Parse(hash))?.Header;
+            BlockHeader blockHeader = this.ChainIndexer.GetHeaderByHash(uint256.Parse(hash))?.Header;
 
             if (blockHeader == null)
                 return null;
@@ -456,7 +456,7 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
             uint256 blockId = uint256.Parse(blockHash);
 
             // Does the block exist.
-            ChainedHeader chainedHeader = this.ChainIndexer.GetHeader(blockId);
+            ChainedHeader chainedHeader = this.ChainIndexer.GetHeaderByHash(blockId);
 
             if (chainedHeader == null)
                 return null;
@@ -610,7 +610,7 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
 
             uint256 blockid = this.blockStore?.GetBlockIdByTransactionId(trxid);
             if (blockid != null)
-                block = this.ChainIndexer?.GetHeader(blockid);
+                block = this.ChainIndexer?.GetHeaderByHash(blockid);
 
             return block;
         }

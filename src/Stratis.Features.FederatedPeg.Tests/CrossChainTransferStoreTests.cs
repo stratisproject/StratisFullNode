@@ -489,7 +489,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 // Clone chain
                 for (int i = 1; i <= this.ChainIndexer.Height; i++)
                 {
-                    ChainedHeader header = this.ChainIndexer.GetHeader(i);
+                    ChainedHeader header = this.ChainIndexer.GetHeaderByHeight(i);
                     Block block = this.blockDict[header.HashBlock];
                     testInstanceTwo.AppendBlock(block);
                 }

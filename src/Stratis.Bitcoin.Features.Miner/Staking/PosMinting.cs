@@ -473,7 +473,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
                 if ((utxo == null) || (utxo.Value < this.MinimumStakingCoinValue))
                     continue;
 
-                uint256 hashBlock = this.chainIndexer.GetHeader((int)coinSet.Coins.Height)?.HashBlock;
+                uint256 hashBlock = this.chainIndexer.GetHeaderByHeight((int)coinSet.Coins.Height)?.HashBlock;
                 if (hashBlock == null)
                     continue;
 
@@ -1053,7 +1053,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
         /// </returns>
         private async Task<int> GetDepthInMainChainAsync(UtxoStakeDescription utxoStakeDescription)
         {
-            ChainedHeader chainedBlock = this.chainIndexer.GetHeader(utxoStakeDescription.HashBlock);
+            ChainedHeader chainedBlock = this.chainIndexer.GetHeaderByHash(utxoStakeDescription.HashBlock);
 
             if (chainedBlock == null)
                 return await this.mempoolLock.ReadAsync(() => this.mempool.Exists(utxoStakeDescription.UtxoSet.OutPoint.Hash) ? 0 : -1).ConfigureAwait(false);

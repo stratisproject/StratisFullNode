@@ -182,7 +182,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
         private Block GetMaturedBlock(int applicableHeight)
         {
-            ChainedHeader chainedHeader = this.chainIndexer.GetHeader(applicableHeight);
+            ChainedHeader chainedHeader = this.chainIndexer.GetHeaderByHeight(applicableHeight);
 
             Block maturedBlock = chainedHeader.Block;
             if (maturedBlock == null)

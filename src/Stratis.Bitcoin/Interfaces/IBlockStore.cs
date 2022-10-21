@@ -51,7 +51,7 @@ namespace Stratis.Bitcoin.Interfaces
                 var hashes = new List<uint256>();
                 for (int i = 0; i < batchSize; i++)
                 {
-                    ChainedHeader header = chainIndexer.GetHeader(height + i);
+                    ChainedHeader header = chainIndexer.GetHeaderByHeight(height + i);
                     if (header == null)
                         break;
 
@@ -70,7 +70,7 @@ namespace Stratis.Bitcoin.Interfaces
 
                 for (int i = 0; i < blocks.Count && !(cancellationToken?.IsCancellationRequested ?? false); height++, i++)
                 {
-                    ChainedHeader header = chainIndexer.GetHeader(height);
+                    ChainedHeader header = chainIndexer.GetHeaderByHeight(height);
                     yield return ((header, blocks[i]));
                 }
             }

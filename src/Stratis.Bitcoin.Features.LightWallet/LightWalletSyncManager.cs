@@ -90,7 +90,7 @@ namespace Stratis.Bitcoin.Features.LightWallet
             }
             else
             {
-                this.walletTip = this.chainIndexer.GetHeader(this.walletManager.WalletTipHash);
+                this.walletTip = this.chainIndexer.GetHeaderByHash(this.walletManager.WalletTipHash);
             }
 
             this.transactionAddedSubscription = this.signals.Subscribe<TransactionAddedToMemoryPoolEvent>(this.OnTransactionAdded);
@@ -131,7 +131,7 @@ namespace Stratis.Bitcoin.Features.LightWallet
         {
             Guard.NotNull(block, nameof(block));
 
-            ChainedHeader newTip = this.chainIndexer.GetHeader(block.GetHash());
+            ChainedHeader newTip = this.chainIndexer.GetHeaderByHash(block.GetHash());
             if (newTip == null)
             {
                 this.logger.LogTrace("(-)[NEW_TIP_REORG]");
@@ -144,7 +144,7 @@ namespace Stratis.Bitcoin.Features.LightWallet
             {
                 // If previous block does not match there might have
                 // been a reorg, check if the wallet is still on the main chain.
-                ChainedHeader inBestChain = this.chainIndexer.GetHeader(this.walletTip.HashBlock);
+                ChainedHeader inBestChain = this.chainIndexer.GetHeaderByHash(this.walletTip.HashBlock);
                 if (inBestChain == null)
                 {
                     // The current wallet hash was not found on the main chain.
@@ -152,7 +152,7 @@ namespace Stratis.Bitcoin.Features.LightWallet
                     ChainedHeader fork = this.walletTip;
 
                     // We walk back the chained block object to find the fork.
-                    while (this.chainIndexer.GetHeader(fork.HashBlock) == null)
+                    while (this.chainIndexer.GetHeaderByHash(fork.HashBlock) == null)
                         fork = fork.Previous;
 
                     this.logger.LogInformation("Reorg detected, going back from '{0}' to '{1}'.", this.walletTip, fork);
@@ -333,7 +333,7 @@ namespace Stratis.Bitcoin.Features.LightWallet
         private void StartSync(int height)
         {
             // TODO add support for the case where there is a reorg, like in the initialize method
-            ChainedHeader chainedHeader = this.chainIndexer.GetHeader(height);
+            ChainedHeader chainedHeader = this.chainIndexer.GetHeaderByHeight(height);
             this.walletTip = this.walletManager.WalletCommonTip(chainedHeader ?? throw new WalletException("Invalid block height"));
             this.blockNotification.SyncFrom(chainedHeader.HashBlock);
         }

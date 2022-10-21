@@ -26,11 +26,11 @@ namespace Stratis.Bitcoin.Tests.Common
                 throw new ArgumentNullException("header");
 
             chainedHeader = null;
-            ChainedHeader prev = chainIndexer.GetHeader(header.HashPrevBlock);
+            ChainedHeader prev = chainIndexer.GetHeaderByHash(header.HashPrevBlock);
             if (prev == null)
                 return false;
 
-            chainedHeader = new ChainedHeader(header, header.GetHash(), chainIndexer.GetHeader(header.HashPrevBlock));
+            chainedHeader = new ChainedHeader(header, header.GetHash(), chainIndexer.GetHeaderByHash(header.HashPrevBlock));
             chainIndexer.SetTip(chainedHeader);
             return true;
         }
@@ -144,7 +144,7 @@ namespace Stratis.Bitcoin.Tests.Common
 
             for (int i = 0; i < chainIndexer.Tip.Height + 1; i++)
             {
-                ChainedHeader block = chainIndexer.GetHeader(i);
+                ChainedHeader block = chainIndexer.GetHeaderByHeight(i);
                 stream.ReadWrite(block.HashBlock.AsBitcoinSerializable());
                 stream.ReadWrite(block.Header);
             }

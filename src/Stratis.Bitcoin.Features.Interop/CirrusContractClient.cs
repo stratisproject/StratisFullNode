@@ -362,7 +362,7 @@ namespace Stratis.Bitcoin.Features.Interop
             if (blockHeight == 0 || blockHeight == -1)
                 return (0, string.Empty);
 
-            ChainedHeader header = this.chainIndexer.GetHeader(blockHeight);
+            ChainedHeader header = this.chainIndexer.GetHeaderByHeight(blockHeight);
 
             int confirmationCount = this.chainIndexer.Height - header.Height;
 

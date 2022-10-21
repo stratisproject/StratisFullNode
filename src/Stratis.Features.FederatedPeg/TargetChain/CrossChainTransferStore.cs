@@ -115,7 +115,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.dBreezeSerializer = dBreezeSerializer;
             this.lockObj = new object();
             this.logger = LogManager.GetCurrentClassLogger();
-            this.TipHashAndHeight = this.chainIndexer.GetHeader(0);
+            this.TipHashAndHeight = this.chainIndexer.GetHeaderByHeight(0);
             this.NextMatureDepositHeight = 1;
             this.cancellation = new CancellationTokenSource();
             this.settings = settings;
@@ -873,7 +873,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             }
 
             // If the Federation Wallet's tip is not on chain, rewind.
-            if (this.chainIndexer.GetHeader(tipToChase.Hash) == null)
+            if (this.chainIndexer.GetHeaderByHash(tipToChase.Hash) == null)
             {
                 var blocks = this.federationWalletManager.GetWallet().BlockLocator.ToList();
                 ChainedHeader fork = this.chainIndexer.FindFork(new BlockLocator { Blocks = blocks });
@@ -887,10 +887,10 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             // If the CCTS's tip is higher than the federation wallet's tip 
             // OR
             // the CCTS's tip is not on chain, then rewind.
-            if (this.TipHashAndHeight.Height > tipToChase.Height || this.chainIndexer.GetHeader(this.TipHashAndHeight.HashBlock)?.Height != this.TipHashAndHeight.Height)
+            if (this.TipHashAndHeight.Height > tipToChase.Height || this.chainIndexer.GetHeaderByHash(this.TipHashAndHeight.HashBlock)?.Height != this.TipHashAndHeight.Height)
             {
                 // We are ahead of the current chain or on the wrong chain.
-                ChainedHeader fork = this.chainIndexer.FindFork(this.TipHashAndHeight.GetLocator()) ?? this.chainIndexer.GetHeader(0);
+                ChainedHeader fork = this.chainIndexer.FindFork(this.TipHashAndHeight.GetLocator()) ?? this.chainIndexer.GetHeaderByHeight(0);
 
                 // Must not exceed wallet height otherwise transaction validations may fail.
                 while (fork.Height > tipToChase.Height)
@@ -964,7 +964,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 HashHeightPair federationWalletTip = this.federationWalletManager.LastBlockSyncedHashHeight();
 
                 // Check if the federation wallet's tip is on chain, if not exit.
-                if (this.chainIndexer.GetHeader(federationWalletTip.Hash) == null)
+                if (this.chainIndexer.GetHeaderByHash(federationWalletTip.Hash) == null)
                 {
                     this.logger.LogDebug("Synchronization failed as the federation wallet tip is not on chain; {0}='{1}', {2}='{3}'", nameof(this.chainIndexer.Tip), this.chainIndexer.Tip, nameof(federationWalletTip), federationWalletTip);
                     this.logger.LogTrace("(-)[FED_WALLET_TIP_NOT_ONCHAIN]:false");
@@ -1040,7 +1040,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             HashHeightPair federationWalletTip = this.federationWalletManager.LastBlockSyncedHashHeight();
 
-            if (this.chainIndexer.GetHeader(federationWalletTip.Hash) == null)
+            if (this.chainIndexer.GetHeaderByHash(federationWalletTip.Hash) == null)
             {
                 // If the federation tip is found to be not on chain, we need to throw an
                 // exception to ensure that we exit the synchronization process.
@@ -1052,7 +1052,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             foreach (ChainedHeader header in this.chainIndexer.EnumerateToTip(this.TipHashAndHeight.HashBlock).Skip(1))
             {
-                if (this.chainIndexer.GetHeader(header.HashBlock) == null)
+                if (this.chainIndexer.GetHeaderByHash(header.HashBlock) == null)
                     break;
 
                 if (header.Height > federationWalletTip.Height)
@@ -1098,7 +1098,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 blockLocator.Blocks = new List<uint256> { this.network.GenesisHash };
             }
 
-            this.TipHashAndHeight = this.chainIndexer.GetHeader(blockLocator.Blocks[0]) ?? this.chainIndexer.FindFork(blockLocator);
+            this.TipHashAndHeight = this.chainIndexer.GetHeaderByHash(blockLocator.Blocks[0]) ?? this.chainIndexer.FindFork(blockLocator);
             return this.TipHashAndHeight;
         }
 

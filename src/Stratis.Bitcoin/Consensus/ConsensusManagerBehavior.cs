@@ -664,7 +664,7 @@ namespace Stratis.Bitcoin.Consensus
             bool blockHashAnnounced = false;
             foreach (InventoryVector inventoryVector in inventory)
             {
-                if ((inventoryVector.Type == InventoryType.MSG_BLOCK) && (this.ChainIndexer.GetHeader(inventoryVector.Hash) == null))
+                if ((inventoryVector.Type == InventoryType.MSG_BLOCK) && (this.ChainIndexer.GetHeaderByHash(inventoryVector.Hash) == null))
                 {
                     blockHashAnnounced = true;
                     break;

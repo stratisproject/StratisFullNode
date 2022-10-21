@@ -24,7 +24,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
 
                 TestHelper.MineBlocks(stratisNodeSync, 2); // coinbase maturity = 0 for this network
 
-                var block = stratisNodeSync.FullNode.BlockStore().GetBlock(stratisNodeSync.FullNode.ChainIndexer.GetHeader(1).HashBlock);
+                var block = stratisNodeSync.FullNode.BlockStore().GetBlock(stratisNodeSync.FullNode.ChainIndexer.GetHeaderByHeight(1).HashBlock);
                 var prevTrx = block.Transactions.First();
                 var dest = new BitcoinSecret(new Key(), stratisNodeSync.FullNode.Network);
 
@@ -51,7 +51,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
 
                 TestHelper.MineBlocks(stratisNodeSync, 2); // coinbase maturity = 0 for this network
 
-                var block = stratisNodeSync.FullNode.BlockStore().GetBlock(stratisNodeSync.FullNode.ChainIndexer.GetHeader(1).HashBlock);
+                var block = stratisNodeSync.FullNode.BlockStore().GetBlock(stratisNodeSync.FullNode.ChainIndexer.GetHeaderByHeight(1).HashBlock);
                 var prevTrx = block.Transactions.First();
                 var dest = new BitcoinSecret(new Key(), stratisNodeSync.FullNode.Network);
 

@@ -365,12 +365,12 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
             if (block == null)
             {
-                ChainedHeader chainedHeader = this.chainIndexer.GetHeader(blockHash);
+                ChainedHeader chainedHeader = this.chainIndexer.GetHeaderByHash(blockHash);
                 if (chainedHeader != null && chainedHeader.Height <= this.blockRepository.TipHashAndHeight.Height)
                 {
                     // The block we were looking for occurs at a height that would be present in the block repository.
                     // If the block repository tip is on the consensus chain then the block should have been present.
-                    if (this.chainIndexer.GetHeader(this.blockRepository.TipHashAndHeight.Hash) != null)
+                    if (this.chainIndexer.GetHeaderByHash(this.blockRepository.TipHashAndHeight.Hash) != null)
                     {
                         this.logger.LogError("The block repository is missing some blocks that should be present given the advertised tip.");
                         this.logger.LogInformation("You will have to re-sync your node to correct this issue.");
@@ -416,7 +416,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
         /// <returns>The store tip set by this method.</returns>
         private ChainedHeader RecoverStoreTip()
         {
-            ChainedHeader blockStoreTip = this.chainIndexer.GetHeader(this.blockRepository.TipHashAndHeight.Hash);
+            ChainedHeader blockStoreTip = this.chainIndexer.GetHeaderByHash(this.blockRepository.TipHashAndHeight.Hash);
             if (blockStoreTip != null)
                 return blockStoreTip;
 

@@ -632,7 +632,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                                 if (chainedHeader?.Header == null)
                                 {
-                                    chainedHeader = this.chainIndexer.GetHeader(poll.PollStartBlockData.Hash);
+                                    chainedHeader = this.chainIndexer.GetHeaderByHash(poll.PollStartBlockData.Hash);
                                     if (chainedHeader == null)
                                     {
                                         this.logger.LogWarning("Couldn't retrieve header for block at height-hash: {0}-{1}.", poll.PollStartBlockData.Height, poll.PollStartBlockData.Hash?.ToString());
@@ -778,7 +778,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         public ChainedHeader GetPollsRepositoryTip()
         {
-            return (this.PollsRepository.CurrentTip == null) ? null : this.chainIndexer.GetHeader(this.PollsRepository.CurrentTip.Hash);
+            return (this.PollsRepository.CurrentTip == null) ? null : this.chainIndexer.GetHeaderByHash(this.PollsRepository.CurrentTip.Hash);
         }
 
         public List<IFederationMember> GetFederationAtPollsRepositoryTip(ChainedHeader repoTip)
@@ -841,7 +841,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 var headers = new List<ChainedHeader>();
                 for (int height = (repoTip?.Height ?? 0) + 1; height <= newTip.Height; height++)
                 {
-                    ChainedHeader header = this.chainIndexer.GetHeader(height);
+                    ChainedHeader header = this.chainIndexer.GetHeaderByHeight(height);
                     headers.Add(header);
                 }
 

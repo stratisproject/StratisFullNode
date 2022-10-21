@@ -56,7 +56,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 // Arrange.
                 CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Listener).Start();
 
-                ChainedHeader header = node.FullNode.ChainIndexer.GetHeader(3);
+                ChainedHeader header = node.FullNode.ChainIndexer.GetHeaderByHeight(3);
                 Block fetchBlock = node.FullNode.NodeService<IBlockStore>().GetBlock(header.HashBlock);
                 string blockHash = header.HashBlock.ToString();
                 // Transaction included in block at height 3.
@@ -87,7 +87,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 // Arrange.
                 CoreNode sendingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
 
-                ChainedHeader header = sendingNode.FullNode.ChainIndexer.GetHeader(3);
+                ChainedHeader header = sendingNode.FullNode.ChainIndexer.GetHeaderByHeight(3);
                 Block fetchBlock = sendingNode.FullNode.NodeService<IBlockStore>().GetBlock(header.HashBlock);
                 string blockHash = header.HashBlock.ToString();
 
@@ -137,7 +137,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 // Arrange.
                 CoreNode sendingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
 
-                ChainedHeader header = sendingNode.FullNode.ChainIndexer.GetHeader(145);
+                ChainedHeader header = sendingNode.FullNode.ChainIndexer.GetHeaderByHeight(145);
                 Block fetchBlock = sendingNode.FullNode.NodeService<IBlockStore>().GetBlock(header.HashBlock);
                 string blockHash = header.HashBlock.ToString();
 

@@ -1328,7 +1328,7 @@ namespace Stratis.Bitcoin.Consensus
                 var headerHashes = new List<uint256>();
                 for (int batchIndex = 0; batchIndex < batchSize; batchIndex++)
                 {
-                    ChainedHeader currentHeader = this.chainIndexer.GetHeader(height + batchIndex);
+                    ChainedHeader currentHeader = this.chainIndexer.GetHeaderByHeight(height + batchIndex);
                     if (currentHeader == null)
                         break;
 

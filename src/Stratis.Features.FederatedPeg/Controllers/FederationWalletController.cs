@@ -198,7 +198,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             if (!this.ModelState.IsValid)
                 return ModelStateErrors.BuildErrorResponse(this.ModelState);
 
-            ChainedHeader block = this.chainIndexer.GetHeader(uint256.Parse(model.Hash));
+            ChainedHeader block = this.chainIndexer.GetHeaderByHash(uint256.Parse(model.Hash));
 
             if (block == null)
             {
@@ -292,7 +292,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
                 {
                     // From the list of removed transactions, check which one is the oldest and retrieve the block right before that time.
                     DateTimeOffset earliestDate = result.Min(r => r.creationTime);
-                    ChainedHeader chainedHeader = this.chainIndexer.GetHeader(this.chainIndexer.GetHeightAtTime(earliestDate.DateTime));
+                    ChainedHeader chainedHeader = this.chainIndexer.GetHeaderByHeight(this.chainIndexer.GetHeightAtTime(earliestDate.DateTime));
 
                     // Update the wallet and save it to the file system.
                     FederationWallet federationWallet = this.federationWalletManager.GetWallet();

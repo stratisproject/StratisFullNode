@@ -198,7 +198,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
             BlockTemplate blockTemplate = this.CreateBlockTemplate(this.fixture.Block1);
 
             Block callbackBlock = null;
-            this.chainIndexer.SetTip(this.chainIndexer.GetHeader(0));
+            this.chainIndexer.SetTip(this.chainIndexer.GetHeaderByHeight(0));
 
             this.consensusManager.Setup(c => c.BlockMinedAsync(It.IsAny<Block>(), false))
                 .Callback<Block, bool>((block, val) => { callbackBlock = block; })
@@ -219,7 +219,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
         public void GenerateBlocks_SingleBlock_MaxTriesReached_StopsGeneratingBlocks_ReturnsEmptyList()
         {
             BlockTemplate blockTemplate = this.CreateBlockTemplate(this.fixture.Block1);
-            this.chainIndexer.SetTip(this.chainIndexer.GetHeader(0));
+            this.chainIndexer.SetTip(this.chainIndexer.GetHeaderByHeight(0));
             var chainedHeader = new ChainedHeader(blockTemplate.Block.Header, blockTemplate.Block.GetHash(), this.chainIndexer.Tip);
 
             this.consensusManager.Setup(c => c.BlockMinedAsync(It.IsAny<Block>(), false)).ReturnsAsync(chainedHeader);
@@ -272,7 +272,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
 
             BlockTemplate blockTemplate2 = this.CreateBlockTemplate(this.fixture.Block2);
 
-            this.chainIndexer.SetTip(this.chainIndexer.GetHeader(0));
+            this.chainIndexer.SetTip(this.chainIndexer.GetHeaderByHeight(0));
 
             int attempts = 0;
 
@@ -316,7 +316,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
         {
             BlockTemplate block1 = this.CreateBlockTemplate(this.fixture.Block1);
 
-            this.chainIndexer.SetTip(this.chainIndexer.GetHeader(0));
+            this.chainIndexer.SetTip(this.chainIndexer.GetHeaderByHeight(0));
 
             var chainedHeader = new ChainedHeader(block1.Block.Header, block1.Block.GetHash(), this.chainIndexer.Tip);
 

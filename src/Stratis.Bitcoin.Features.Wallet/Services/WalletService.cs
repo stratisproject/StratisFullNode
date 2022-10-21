@@ -388,7 +388,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
                     // Initiate the scan one day ahead of wallet creation.
                     // If the creation time is DateTime.MinValue, don't remove one day as that throws an exception.
-                    ChainedHeader chainedHeader = this.chainIndexer.GetHeader(this.chainIndexer.GetHeightAtTime(wallet.CreationTime.DateTime != DateTime.MinValue ? wallet.CreationTime.DateTime.AddDays(-1) : wallet.CreationTime.DateTime));
+                    ChainedHeader chainedHeader = this.chainIndexer.GetHeaderByHeight(this.chainIndexer.GetHeightAtTime(wallet.CreationTime.DateTime != DateTime.MinValue ? wallet.CreationTime.DateTime.AddDays(-1) : wallet.CreationTime.DateTime));
 
                     // Save the updated wallet to the file system.
                     this.walletManager.SaveWallet(wallet.Name);

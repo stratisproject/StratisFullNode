@@ -21,7 +21,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             var rule = this.CreateRule<StratisHeaderVersionRule>();
 
             int MinimalHeaderVersion = 7;
-            this.ruleContext.ValidationContext.ChainedHeaderToValidate = this.ChainIndexer.GetHeader(1);
+            this.ruleContext.ValidationContext.ChainedHeaderToValidate = this.ChainIndexer.GetHeaderByHeight(1);
             this.ruleContext.ValidationContext.ChainedHeaderToValidate.Header.Version = MinimalHeaderVersion - 1;
 
             ConsensusErrorException exception = Assert.Throws<ConsensusErrorException>(() => rule.Run(this.ruleContext));
@@ -40,7 +40,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             this.ruleContext.ValidationContext.BlockToValidate = this.network.Consensus.ConsensusFactory.CreateBlock();
             this.ruleContext.ValidationContext.BlockToValidate.Transactions.Add(this.network.CreateTransaction());
             this.ruleContext.ValidationContext.BlockToValidate.Transactions.Add(this.network.CreateTransaction());
-            this.ruleContext.ValidationContext.ChainedHeaderToValidate = this.ChainIndexer.GetHeader(3);
+            this.ruleContext.ValidationContext.ChainedHeaderToValidate = this.ChainIndexer.GetHeaderByHeight(3);
 
             ConsensusErrorException exception = await Assert.ThrowsAsync<ConsensusErrorException>(() => rule.RunAsync(this.ruleContext));
 
@@ -63,7 +63,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             this.ruleContext.ValidationContext.BlockToValidate.Transactions[1].Outputs.Add(new TxOut(Money.Zero, new Script()));
             this.ruleContext.ValidationContext.BlockToValidate.Transactions[1].Outputs.Add(new TxOut(Money.Zero, new Script()));
 
-            this.ruleContext.ValidationContext.ChainedHeaderToValidate = this.ChainIndexer.GetHeader(3);
+            this.ruleContext.ValidationContext.ChainedHeaderToValidate = this.ChainIndexer.GetHeaderByHeight(3);
 
             this.network.Consensus.LastPOWBlock = 12500;
             this.ruleContext.ValidationContext.ChainedHeaderToValidate.Header.Time = this.ruleContext.ValidationContext.BlockToValidate.Header.Time + MaxFutureDriftAfterHardFork;
@@ -91,7 +91,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             this.ruleContext.ValidationContext.BlockToValidate.Transactions[1].Outputs.Add(new TxOut(Money.Zero, new Script()));
             this.ruleContext.ValidationContext.BlockToValidate.Transactions[1].Outputs.Add(new TxOut(Money.Zero, new Script()));
 
-            this.ruleContext.ValidationContext.ChainedHeaderToValidate = this.ChainIndexer.GetHeader(3);
+            this.ruleContext.ValidationContext.ChainedHeaderToValidate = this.ChainIndexer.GetHeaderByHeight(3);
             this.network.Consensus.LastPOWBlock = 12500;
             this.ruleContext.ValidationContext.ChainedHeaderToValidate.Header.Time = this.ruleContext.ValidationContext.BlockToValidate.Header.Time + MaxFutureDriftAfterHardFork;
 
@@ -113,7 +113,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             this.ruleContext.ValidationContext.BlockToValidate.Transactions.Add(this.network.CreateTransaction());
             this.ruleContext.ValidationContext.BlockToValidate.Transactions.Add(this.network.CreateTransaction());
 
-            this.ruleContext.ValidationContext.ChainedHeaderToValidate = this.ChainIndexer.GetHeader(3);
+            this.ruleContext.ValidationContext.ChainedHeaderToValidate = this.ChainIndexer.GetHeaderByHeight(3);
             this.network.Consensus.LastPOWBlock = 12500;
 
             // time same as previous block.
@@ -136,7 +136,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             this.ruleContext.ValidationContext.BlockToValidate.Transactions.Add(this.network.CreateTransaction());
             this.ruleContext.ValidationContext.BlockToValidate.Transactions.Add(this.network.CreateTransaction());
 
-            this.ruleContext.ValidationContext.ChainedHeaderToValidate = this.ChainIndexer.GetHeader(3);
+            this.ruleContext.ValidationContext.ChainedHeaderToValidate = this.ChainIndexer.GetHeaderByHeight(3);
             this.network.Consensus.LastPOWBlock = 12500;
 
             // time after previous block.

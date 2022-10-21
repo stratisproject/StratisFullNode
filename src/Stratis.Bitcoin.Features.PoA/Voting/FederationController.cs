@@ -215,7 +215,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             try
             {
-                ChainedHeader chainedHeader = this.chainIndexer.GetHeader(blockHeight);
+                ChainedHeader chainedHeader = this.chainIndexer.GetHeaderByHeight(blockHeight);
                 if (chainedHeader == null)
                     return ErrorHelpers.BuildErrorResponse(HttpStatusCode.NotFound, "The block was not found at this time.", string.Empty);
 
@@ -245,7 +245,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             try
             {
-                ChainedHeader chainedHeader = this.chainIndexer.GetHeader(blockHeight);
+                ChainedHeader chainedHeader = this.chainIndexer.GetHeaderByHeight(blockHeight);
                 List<IFederationMember> federationMembers = this.federationHistory.GetFederationForBlock(chainedHeader);
                 List<PubKey> federationPubKeys = new List<PubKey>();
 

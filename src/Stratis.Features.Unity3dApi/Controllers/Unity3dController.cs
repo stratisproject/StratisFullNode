@@ -236,7 +236,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
                 this.logger.LogDebug("GetBlockHeader {0}", hash);
 
                 BlockHeaderModel model = null;
-                BlockHeader blockHeader = this.chainIndexer?.GetHeader(uint256.Parse(hash))?.Header;
+                BlockHeader blockHeader = this.chainIndexer?.GetHeaderByHash(uint256.Parse(hash))?.Header;
                 if (blockHeader != null)
                 {
                     model = new BlockHeaderModel(blockHeader);
@@ -396,7 +396,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
             {
                 uint256 blockId = uint256.Parse(query.Hash);
 
-                ChainedHeader chainedHeader = this.chainIndexer.GetHeader(blockId);
+                ChainedHeader chainedHeader = this.chainIndexer.GetHeaderByHash(blockId);
 
                 if (chainedHeader == null)
                     return null;

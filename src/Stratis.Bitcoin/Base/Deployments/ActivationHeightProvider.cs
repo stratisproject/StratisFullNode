@@ -62,7 +62,7 @@ namespace Stratis.Bitcoin.Base.Deployments
             if (expectedLockedInHeight > 0)
                 return this.IsLockedInAtHeight(expectedLockedInHeight);
 
-            ThresholdState state = this.cache.GetState(this.chainIndexer.GetHeader(height).Previous, this.deployment);
+            ThresholdState state = this.cache.GetState(this.chainIndexer.GetHeaderByHeight(height).Previous, this.deployment);
             return state == ThresholdState.Active;
         }
 
@@ -72,7 +72,7 @@ namespace Stratis.Bitcoin.Base.Deployments
         /// <returns><c>true</c> if the deployment is locked in (or active) and <c>false</c> otherwise.</returns>
         public bool IsLockedInAtHeight(int height)
         {
-            ThresholdState state = this.cache.GetState(this.chainIndexer.GetHeader(height).Previous, this.deployment);
+            ThresholdState state = this.cache.GetState(this.chainIndexer.GetHeaderByHeight(height).Previous, this.deployment);
             return state == ThresholdState.LockedIn || state == ThresholdState.Active;
         }
     }

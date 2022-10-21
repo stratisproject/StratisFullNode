@@ -250,7 +250,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
             // If there are unresolvable spending details then re-sync from that point onwards.
             if (firstMissingTransactionHeight <= this.LastBlockSyncedHashHeight().Height)
             {
-                ChainedHeader fork = this.chainIndexer.GetHeader(Math.Min(firstMissingTransactionHeight - 1, this.chainIndexer.Height));
+                ChainedHeader fork = this.chainIndexer.GetHeaderByHeight(Math.Min(firstMissingTransactionHeight - 1, this.chainIndexer.Height));
 
                 this.RemoveBlocks(fork);
             }

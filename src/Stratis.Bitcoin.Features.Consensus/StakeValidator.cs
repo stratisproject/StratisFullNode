@@ -267,7 +267,7 @@ namespace Stratis.Bitcoin.Features.Consensus
                 ConsensusErrors.ReadTxPrevFailed.Throw();
             }
 
-            ChainedHeader prevBlock = this.chainIndexer.GetHeader(this.coinView.GetTipHash().Hash);
+            ChainedHeader prevBlock = this.chainIndexer.GetHeaderByHash(this.coinView.GetTipHash().Hash);
             if (prevBlock == null)
             {
                 this.logger.LogTrace("(-)[REORG]");
