@@ -148,6 +148,10 @@ namespace Stratis.Bitcoin.Tests.Consensus
 
             this.consensusRules.SetupRulesEngineParent();
 
+            // Setup finalized block info to not return null.
+            const int finalizedBlockHeight = 0;
+            this.FinalizedBlockMock.Setup(m => m.GetFinalizedBlockInfo()).Returns(new HashHeightPair(uint256.One, finalizedBlockHeight));
+
             var tree = new ChainedHeaderTree(this.Network, this.loggerFactory, this.HeaderValidator.Object, this.checkpoints.Object,
                 this.ChainState.Object, this.FinalizedBlockMock.Object, this.ConsensusSettings, this.hashStore, new ChainWorkComparer());
 

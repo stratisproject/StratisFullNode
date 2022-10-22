@@ -80,6 +80,12 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <summary>
         /// Initializes a new instance of the wallet.
         /// </summary>
+        /// <param name="name">The name of the wallet.</param>
+        /// <param name="encryptedSeed">The encrypted seed of the wallet.</param>
+        /// <param name="chainCode">The chain code of the wallet.</param>
+        /// <param name="creationTime">The creation time of the wallet.</param>
+        /// <param name="lastBlockSynced">The last block synced by the wallet/</param>
+        /// <param name="walletRepository">The repository to which he wallet is bound (if any), otherwise <c>null</c>.</param>
         public Wallet(string name, string encryptedSeed = null, byte[] chainCode = null, DateTimeOffset? creationTime = null, ChainedHeader lastBlockSynced = null, IWalletRepository walletRepository = null)
             : this(walletRepository)
         {
@@ -184,6 +190,9 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <summary>
         /// Gets all the transactions in the wallet.
         /// </summary>
+        /// <param name="transactionTime">The time of the transaction specified in <paramref name="spendingTransactionId"/>.</param>
+        /// <param name="spendingTransactionId">The optional id of a specific transaction to return, otherwise <c>null</c>.</param>
+        /// <param name="accountFilter">A function taking an account as input and returning a boolean flag to indicate whether the transactions from the account should be included.</param>
         /// <returns>A list of all the transactions in the wallet.</returns>
         public IEnumerable<TransactionData> GetAllTransactions(DateTimeOffset? transactionTime = null, uint256 spendingTransactionId = null, Func<HdAccount, bool> accountFilter = null)
         {

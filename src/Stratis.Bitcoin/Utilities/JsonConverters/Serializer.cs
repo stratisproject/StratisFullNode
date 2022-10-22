@@ -9,7 +9,7 @@ namespace Stratis.Bitcoin.Utilities.JsonConverters
     /// </summary>
     public class Serializer
     {
-        public static void RegisterFrontConverters(JsonSerializerSettings settings, Network network = null)
+        public static void RegisterFrontConverters(JsonSerializerSettings settings, Network network = null, bool allowOverrideContractResolver = true)
         {
             settings.Converters.Add(new MoneyJsonConverter());
             settings.Converters.Add(new KeyJsonConverter());
@@ -27,7 +27,8 @@ namespace Stratis.Bitcoin.Utilities.JsonConverters
             settings.Converters.Add(new LockTimeJsonConverter());
             settings.Converters.Add(new BitcoinStringJsonConverter(network));
 
-            settings.ContractResolver = new CamelCasePropertyNamesContractResolver();
+            if (allowOverrideContractResolver)
+                settings.ContractResolver = new CamelCasePropertyNamesContractResolver();
         }
 
         public static T ToObject<T>(string data, Network network = null)

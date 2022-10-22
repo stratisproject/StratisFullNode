@@ -57,13 +57,15 @@ namespace Stratis.CirrusMinerD
                         throw new ArgumentException($"Gateway node needs to be started specifying either a {SidechainArgument} or a {MainchainArgument} argument");
 
                     fullNode = isMainchainNode ? BuildStraxNode(args) : BuildCirrusMiningNode(args);
-
-                    // set the console window title to identify which node this is (for clarity when running Strax and Cirrus on the same machine)
-                    Console.Title = isMainchainNode ? $"Strax Full Node {fullNode.Network.NetworkType}" : $"Cirrus Full Node {fullNode.Network.NetworkType}";
                 }
 
                 if (fullNode != null)
+                {
+                    // Set the console window title to identify which node this is (for clarity when running Strax and Cirrus on the same machine).
+                    Console.Title = isMainchainNode ? $"Strax Full Node {fullNode.Network.NetworkType}" : $"Cirrus Full Node {fullNode.Network.NetworkType}";
+
                     await fullNode.RunAsync();
+                }
             }
             catch (Exception ex)
             {
@@ -148,6 +150,8 @@ namespace Stratis.CirrusMinerD
         /// <summary>
         /// Returns a standard Stratis node. Just like StratisD.
         /// </summary>
+        /// <param name="args">The command-line arguments.</param>
+        /// <returns>See <see cref="IFullNode"/>.</returns>
         private static IFullNode BuildStraxNode(string[] args)
         {
             // TODO: Hardcode -addressindex for better user experience

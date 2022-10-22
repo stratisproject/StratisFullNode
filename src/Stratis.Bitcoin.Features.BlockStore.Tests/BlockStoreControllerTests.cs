@@ -68,9 +68,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             IActionResult response = controller.GetBlock(new SearchByHashRequest() { Hash = new uint256(1).ToString(), OutputJson = true });
 
-            response.Should().BeOfType<OkObjectResult>();
-            var result = (OkObjectResult)response;
-            result.StatusCode.Should().Be((int)HttpStatusCode.OK);
+            response.Should().BeOfType<NotFoundObjectResult>();
+            var result = (NotFoundObjectResult)response;
+            result.StatusCode.Should().Be((int)HttpStatusCode.NotFound);
             result.Value.Should().Be("Block not found");
         }
 

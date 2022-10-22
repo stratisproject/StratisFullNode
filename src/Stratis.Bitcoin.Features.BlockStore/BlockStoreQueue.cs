@@ -54,6 +54,8 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
         private readonly IInitialBlockDownloadState initialBlockDownloadState;
 
+#pragma warning disable SA1648
+
         /// <inheritdoc cref="ILogger"/>
         private readonly ILogger logger;
         private readonly IBlockStoreQueueFlushCondition blockStoreQueueFlushCondition;
@@ -69,6 +71,8 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
         /// <inheritdoc cref="IBlockRepository"/>
         private readonly IBlockRepository blockRepository;
+
+#pragma warning restore SA1648
 
         private readonly IAsyncProvider asyncProvider;
 
@@ -399,6 +403,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
         }
 
         /// <summary>Sets the internal store tip and exposes the store tip to other components through the chain state.</summary>
+        /// <param name="newTip">The new store tip to set.</param>
         private void SetStoreTip(ChainedHeader newTip)
         {
             this.storeTip = newTip;
@@ -408,6 +413,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
         /// <summary>
         /// Sets block store tip to the last block that exists both in the repository and in the <see cref="ChainIndexer"/>.
         /// </summary>
+        /// <returns>The store tip set by this method.</returns>
         private ChainedHeader RecoverStoreTip()
         {
             ChainedHeader blockStoreTip = this.chainIndexer.GetHeader(this.blockRepository.TipHashAndHeight.Hash);
@@ -496,6 +502,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
         /// Dequeues the blocks continuously and saves them to the database when max batch size is reached or timer ran out.
         /// </summary>
         /// <remarks>Batch is always saved on shutdown.</remarks>
+        /// <returns>The asynchronous task.</returns>
         private async Task DequeueBlocksContinuouslyAsync()
         {
             Task<ChainedHeaderBlock> dequeueTask = null;

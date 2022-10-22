@@ -50,12 +50,18 @@ namespace Stratis.Bitcoin.Tests.BlockPulling
         }
 
         /// <summary>Creates a peer with extended puller behavior.</summary>
+        /// <param name="mockedBehavior">The <see cref="ExtendedBlockPullerBehavior"/>.</param>
+        /// <param name="notSupportedVersion">Iff <c>true</c> overrides the version with <see cref="ProtocolVersion.NOBLKS_VERSION_START"/>.</param>
+        /// <returns>The <see cref="INetworkPeer"/>.</returns>
         public INetworkPeer CreatePeer(out ExtendedBlockPullerBehavior mockedBehavior, bool notSupportedVersion = false)
         {
             return this.CreatePeerMock(out mockedBehavior, notSupportedVersion).Object;
         }
 
         /// <summary>Creates a peer with extended puller behavior.</summary>
+        /// <param name="mockedBehavior">The <see cref="ExtendedBlockPullerBehavior"/>.</param>
+        /// <param name="notSupportedVersion">Iff <c>true</c> overrides the version with <see cref="ProtocolVersion.NOBLKS_VERSION_START"/>.</param>
+        /// <returns>The mocked <see cref="INetworkPeer"/>.</returns>
         public Mock<INetworkPeer> CreatePeerMock(out ExtendedBlockPullerBehavior mockedBehavior, bool notSupportedVersion = false)
         {
             var peer = new Mock<INetworkPeer>();
@@ -100,6 +106,8 @@ namespace Stratis.Bitcoin.Tests.BlockPulling
         }
 
         /// <summary>Creates a new block with mocked serialized size.</summary>
+        /// <param name="size">The value for <see cref="Block.BlockSize"/>.</param>
+        /// <returns>The <see cref="Block"/>.</returns>
         public Block GenerateBlock(long size)
         {
             Block block = new StraxMain().Consensus.ConsensusFactory.CreateBlock();

@@ -37,6 +37,13 @@ namespace Stratis.Features.Diagnostic.PeerDiagnostic
         /// <summary>Holds a list of event subscriptions.</summary>
         private readonly List<SubscriptionToken> eventSubscriptions;
 
+        /// <summary>
+        /// Class instance constructor.
+        /// </summary>
+        /// <param name="asyncProvider">See <see cref="IAsyncProvider"/>.</param>
+        /// <param name="signals">See <see cref="ISignals"/>.</param>
+        /// <param name="diagnosticSettings">See <see cref="DiagnosticSettings"/>.</param>
+        /// <param name="nodeLifetime">See <see cref="INodeLifetime"/>.</param>
         public PeerStatisticsCollector(IAsyncProvider asyncProvider, ISignals signals, DiagnosticSettings diagnosticSettings, INodeLifetime nodeLifetime)
         {
             this.asyncProvider = asyncProvider;
@@ -50,6 +57,9 @@ namespace Stratis.Features.Diagnostic.PeerDiagnostic
             this.lockStartStopCollecting = new object();
         }
 
+        /// <summary>
+        /// Initializes a class instance.
+        /// </summary>
         public void Initialize()
         {
             this.Enabled = this.diagnosticSettings.PeersStatisticsCollectorEnabled;
@@ -116,7 +126,9 @@ namespace Stratis.Features.Diagnostic.PeerDiagnostic
             return statistics;
         }
 
-
+        /// <summary>
+        /// Starts collecting peer statistics.
+        /// </summary>
         public void StartCollecting()
         {
             lock (this.lockStartStopCollecting)
@@ -138,6 +150,9 @@ namespace Stratis.Features.Diagnostic.PeerDiagnostic
             }
         }
 
+        /// <summary>
+        /// Stops collecting peer statistics.
+        /// </summary>
         public void StopCollecting()
         {
             lock (this.lockStartStopCollecting)
@@ -155,11 +170,18 @@ namespace Stratis.Features.Diagnostic.PeerDiagnostic
             }
         }
 
+        /// <summary>
+        /// Gets peer statistics.
+        /// </summary>
+        /// <returns>A list of <see cref="PeerStatistics"/> entries.</returns>
         internal List<PeerStatistics> GetStatistics()
         {
             return this.peersStatistics.Values.ToList();
         }
 
+        /// <summary>
+        /// Disposes a class instance.
+        /// </summary>
         public void Dispose()
         {
             this.StopCollecting();

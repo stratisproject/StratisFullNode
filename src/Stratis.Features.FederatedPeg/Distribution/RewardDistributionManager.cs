@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.PoA;
+using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Wallet;
 using Stratis.Features.PoA.Collateral;
 
@@ -19,6 +21,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
         private const int DefaultEpoch = 240;
 
         private readonly ChainIndexer chainIndexer;
+        private readonly IConversionRequestRepository conversionRequestRepository;
         private readonly IConsensusManager consensusManager;
         private readonly CollateralHeightCommitmentEncoder encoder;
         private readonly int epoch;
@@ -37,10 +40,16 @@ namespace Stratis.Features.FederatedPeg.Distribution
         // We pay no attention to whether a miner has been kicked since the last distribution or not.
         // If they produced an accepted block, they get their reward.
 
-        public RewardDistributionManager(Network network, ChainIndexer chainIndexer, IConsensusManager consensusManager, IFederationHistory federationHistory)
+        public RewardDistributionManager(
+            Network network,
+            ChainIndexer chainIndexer,
+            IConversionRequestRepository conversionRequestRepository,
+            IConsensusManager consensusManager,
+            IFederationHistory federationHistory)
         {
             this.network = network;
             this.chainIndexer = chainIndexer;
+            this.conversionRequestRepository = conversionRequestRepository;
             this.consensusManager = consensusManager;
             this.logger = LogManager.GetCurrentClassLogger();
             this.federationHistory = federationHistory;
@@ -60,23 +69,25 @@ namespace Stratis.Features.FederatedPeg.Distribution
             }
         }
 
-        public List<Recipient> DistributeToMultisigNodes(int blockHeight, Money fee)
+        /// <inheritdoc />
+        public List<Recipient> DistributeToMultisigNodes(uint256 depositId, Money fee)
         {
-            // Retrieve the federation at the given block height.
-            List<IFederationMember> federation = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeader(blockHeight));
-
             var multiSigMinerScripts = new List<Script>();
 
-            // Start checking if a multisig member mined a block at the current tip less max reorg blocks.
-            var startHeight = this.chainIndexer.Tip.Height - this.epoch;
+            // If we are distributing a fee to the multisig we need look at the height that the deposit or burn was received on Cirrus.
+            // For Strax to wStrax transfers and SRC20 to ERC20 the deposit id will match the conversion request id.
+            ConversionRequest conversionRequest = this.conversionRequestRepository.Get(depositId.ToString());
+
+            // Start checking if a multisig member mined a block at the conversion deposit block height tip less epoch window blocks.
+            var startHeight = conversionRequest.BlockHeight - this.epochWindow;
 
             // Inspect the round of blocks equal to the federation size
             // and determine if a multisig member mined the block.
             // If so add the list of multisig members to pay.
 
-            // Look back at least 4 federation sizes to ensure that we collect enough data on the multisig
+            // Look back at least 8 federation sizes to ensure that we collect enough data on the multisig
             // members that mined.
-            var inspectionRange = federation.Count * 4;
+            var inspectionRange = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeader(conversionRequest.BlockHeight)).Count * 8;
 
             for (int i = inspectionRange; i >= 0; i--)
             {
@@ -109,7 +120,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
                     multiSigMinerScripts.Add(minerScript);
             }
 
-            this.logger.Info("Fee reward to multisig node at main chain height {0} will distribute {1} STRAX between {2} multisig mining keys.", blockHeight, fee, multiSigMinerScripts.Count);
+            this.logger.LogInformation($"Fee reward to multisig; Conversion deposit height {conversionRequest.BlockHeight}; fee {fee}; keys {multiSigMinerScripts.Count}; start height {startHeight}; inspection range {inspectionRange}");
 
             Money feeReward = fee / multiSigMinerScripts.Count;
 
@@ -124,12 +135,12 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
                     multiSigRecipients.Add(new Recipient() { Amount = feeReward, ScriptPubKey = p2pkh });
 
-                    this.logger.Debug($"Paying multisig member '{pubKey}' {feeReward} STRAX.");
+                    this.logger.LogDebug($"Paying multisig member '{pubKey}' {feeReward} STRAX.");
                 }
                 else
                 {
                     multiSigRecipients.Add(new Recipient() { Amount = feeReward, ScriptPubKey = multiSigMinerScript });
-                    this.logger.Debug($"Paying multisig member '{multiSigMinerScript.ToHex()}' (hex) {feeReward} STRAX.");
+                    this.logger.LogDebug($"Paying multisig member '{multiSigMinerScript.ToHex()}' (hex) {feeReward} STRAX.");
                 }
 
             }
@@ -142,7 +153,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
         {
             // First determine the main chain blockheight of the recorded deposit less max reorg * 2 (epoch window)
             var applicableMainChainDepositHeight = heightOfRecordedDistributionDeposit - this.epochWindow;
-            this.logger.Trace("{0} : {1}", nameof(applicableMainChainDepositHeight), applicableMainChainDepositHeight);
+            this.logger.LogTrace("{0} : {1}", nameof(applicableMainChainDepositHeight), applicableMainChainDepositHeight);
 
             // Then find the header on the sidechain that contains the applicable commitment height.
             int sidechainTipHeight = this.chainIndexer.Tip.Height;
@@ -174,7 +185,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
                 if (commitmentHeightToCheck != null)
                 {
-                    this.logger.Trace("{0} : {1}={2}", currentHeader, nameof(commitmentHeightToCheck), commitmentHeightToCheck);
+                    this.logger.LogTrace("{0} : {1}={2}", currentHeader, nameof(commitmentHeightToCheck), commitmentHeightToCheck);
 
                     if (commitmentHeightToCheck <= applicableMainChainDepositHeight)
                         break;
@@ -187,7 +198,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             // Get the set of miners (more specifically, the scriptPubKeys they generated blocks with) to distribute rewards to.
             // Based on the computed 'common block height' we define the distribution epoch:
             int sidechainStartHeight = currentHeader.Height;
-            this.logger.Trace("Initial {0} : {1}", nameof(sidechainStartHeight), sidechainStartHeight);
+            this.logger.LogTrace("Initial {0} : {1}", nameof(sidechainStartHeight), sidechainStartHeight);
 
             // This is a special case which will not be the case on the live network.
             if (sidechainStartHeight < this.epoch)
@@ -197,7 +208,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             if (sidechainStartHeight > this.epoch)
                 sidechainStartHeight -= this.epoch;
 
-            this.logger.Trace("Adjusted {0} : {1}", nameof(sidechainStartHeight), sidechainStartHeight);
+            this.logger.LogTrace("Adjusted {0} : {1}", nameof(sidechainStartHeight), sidechainStartHeight);
 
             // Ensure that the dictionary is cleared on every run.
             // As this is a static class, new instances of this dictionary will
@@ -237,7 +248,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
                     totalBlocks++;
                 }
                 else
-                    this.logger.Trace("A block was mined with an empty script at height '{0}' (the miner probably did not have a wallet at the time.", currentHeight);
+                    this.logger.LogTrace("A block was mined with an empty script at height '{0}' (the miner probably did not have a wallet at the time.", currentHeight);
             }
 
             /*
@@ -291,7 +302,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             this.logger.LogDebug(recipientLog.ToString());
             */
 
-            this.logger.Info("Reward distribution at main chain height {0} will distribute {1} STRAX between {2} mining keys.", heightOfRecordedDistributionDeposit, totalReward, recipients.Count);
+            this.logger.LogInformation("Reward distribution at main chain height {0} will distribute {1} STRAX between {2} mining keys.", heightOfRecordedDistributionDeposit, totalReward, recipients.Count);
 
             return recipients;
         }

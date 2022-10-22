@@ -111,8 +111,8 @@ namespace Stratis.SmartContracts.Core.Tests.Receipts
         /// <summary>
         /// Serializes a receipt without including the method name. For backwards compatibility testing.
         /// </summary>
-        /// <param name="receipt"></param>
-        /// <returns></returns>
+        /// <param name="receipt">See <see cref="Receipt"/>.</param>
+        /// <returns>A byte array which is the serialized receipt.</returns>
         public byte[] ToStorageBytesRlp_NoMethodName(Receipt receipt)
         {
             IList<byte[]> encodedLogs = receipt.Logs.Select(x => RLP.EncodeElement(x.ToBytesRlp())).ToList();
@@ -136,9 +136,11 @@ namespace Stratis.SmartContracts.Core.Tests.Receipts
         }
 
         /// <summary>
-        /// Ensures 2 receipts and all their properties are equal.
+        /// Ensures that two receipts and all their properties are equal.
         /// </summary>
-        public static void TestStorageReceiptEquality(Receipt receipt1, Receipt receipt2)
+        /// <param name="receipt1">The first receipt to compare.</param>
+        /// <param name="receipt2">The second receipt to compare.</param>
+        internal static void TestStorageReceiptEquality(Receipt receipt1, Receipt receipt2)
         {
             Assert.Equal(receipt1.PostState, receipt2.PostState);
             Assert.Equal(receipt1.GasUsed, receipt2.GasUsed);

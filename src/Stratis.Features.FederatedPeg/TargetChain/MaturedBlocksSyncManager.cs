@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Interfaces;
@@ -16,6 +18,7 @@ using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
 using Stratis.Features.FederatedPeg.SourceChain;
 using Stratis.Features.FederatedPeg.Wallet;
+using Stratis.Features.PoA.Collateral.CounterChain;
 
 namespace Stratis.Features.FederatedPeg.TargetChain
 {
@@ -28,27 +31,39 @@ namespace Stratis.Features.FederatedPeg.TargetChain
     public interface IMaturedBlocksSyncManager : IDisposable
     {
         /// <summary>Starts requesting blocks from another chain.</summary>
+        /// <returns>The asynchronous task.</returns>
         Task StartAsync();
+
+        /// <summary>
+        /// Inject a deposit that that distributes a fee to all the multisig nodes for submitting a interop transfer.
+        /// </summary>
+        /// <param name="deposit">The deposit that will be injected into the <see cref="CrossChainTransferStore"/> that distributes a fee to all the multisig nodes
+        /// for submitting a interop transfer. This is currently used for SRC20 to ERC20 transfers.</param>
+        void AddInterOpFeeDeposit(IDeposit deposit);
     }
 
     /// <inheritdoc cref="IMaturedBlocksSyncManager"/>
     public class MaturedBlocksSyncManager : IMaturedBlocksSyncManager
     {
+        private const string Release1320DeploymentNameLower = "release1320";
         private readonly IAsyncProvider asyncProvider;
         private readonly ICrossChainTransferStore crossChainTransferStore;
         private readonly IFederationGatewayClient federationGatewayClient;
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly IFederationWalletManager federationWalletManager;
         private readonly IInitialBlockDownloadState initialBlockDownloadState;
+        private readonly object lockObject;
         private readonly ILogger logger;
         private readonly INodeLifetime nodeLifetime;
         private readonly IConversionRequestRepository conversionRequestRepository;
+        private readonly ICounterChainSettings counterChainSettings;
+        private readonly IHttpClientFactory httpClientFactory;
         private readonly ChainIndexer chainIndexer;
         private readonly IExternalApiPoller externalApiPoller;
         private readonly IConversionRequestFeeService conversionRequestFeeService;
         private readonly Network network;
         private readonly IFederationManager federationManager;
-
+        private int mainChainActivationHeight;
         private IAsyncLoop requestDepositsTask;
 
         /// <summary>When we are fully synced we stop asking for more blocks for this amount of time.</summary>
@@ -57,6 +72,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <summary>Delay between initialization and first request to other node.</summary>
         /// <remarks>Needed to give other node some time to start before bombing it with requests.</remarks>
         private const int InitializationDelaySeconds = 10;
+
+        /// <summary>
+        /// This list of interop fee deposits that will be distributed to the multisig nodes.
+        /// </summary>
+        private readonly List<IDeposit> interOpFeeDeposits = new List<IDeposit>();
 
         public MaturedBlocksSyncManager(
             IAsyncProvider asyncProvider,
@@ -71,7 +91,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             IFederatedPegSettings federatedPegSettings,
             IFederationManager federationManager = null,
             IExternalApiPoller externalApiPoller = null,
-            IConversionRequestFeeService conversionRequestFeeService = null)
+            IConversionRequestFeeService conversionRequestFeeService = null,
+            ICounterChainSettings counterChainSettings = null,
+            IHttpClientFactory httpClientFactory = null)
         {
             this.asyncProvider = asyncProvider;
             this.chainIndexer = chainIndexer;
@@ -83,12 +105,16 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.initialBlockDownloadState = initialBlockDownloadState;
             this.nodeLifetime = nodeLifetime;
             this.conversionRequestRepository = conversionRequestRepository;
+            this.counterChainSettings = counterChainSettings;
+            this.httpClientFactory = httpClientFactory;
             this.chainIndexer = chainIndexer;
             this.externalApiPoller = externalApiPoller;
             this.conversionRequestFeeService = conversionRequestFeeService;
             this.network = network;
             this.federationManager = federationManager;
+            this.mainChainActivationHeight = int.MaxValue;
 
+            this.lockObject = new object();
             this.logger = LogManager.GetCurrentClassLogger();
         }
 
@@ -113,6 +139,23 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             repeatEvery: TimeSpan.FromSeconds(RefreshDelaySeconds));
         }
 
+        /// <inheritdoc />
+        public void AddInterOpFeeDeposit(IDeposit deposit)
+        {
+            lock (this.lockObject)
+            {
+                if (this.interOpFeeDeposits.Any(d => d.Id == deposit.Id))
+                {
+                    this.logger.LogDebug($"Interop fee deposit '{deposit.Id}' is already queued to be processed.");
+                    return;
+                }
+
+                this.logger.LogDebug($"Adding deposit '{deposit.Id}' for {deposit.Amount} as a fee for the multisig.");
+
+                this.interOpFeeDeposits.Add(deposit);
+            }
+        }
+
         /// <summary>Asks for blocks from another gateway node and then processes them.</summary>
         /// <returns><c>true</c> if delay between next time we should ask for blocks is required; <c>false</c> otherwise.</returns>
         protected async Task<bool> SyncDepositsAsync()
@@ -120,37 +163,37 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             // First ensure that the federation wallet is active.
             if (!this.federationWalletManager.IsFederationWalletActive())
             {
-                this.logger.Info("The CCTS will start processing deposits once the federation wallet has been activated.");
+                this.logger.LogInformation("The CCTS will start processing deposits once the federation wallet has been activated.");
                 return true;
             }
 
             // Then ensure that the node is out of IBD.
             if (this.initialBlockDownloadState.IsInitialBlockDownload())
             {
-                this.logger.Info("The CCTS will start processing deposits once the node is out of IBD.");
+                this.logger.LogInformation("The CCTS will start processing deposits once the node is out of IBD.");
                 return true;
             }
 
             // Then ensure that the federation wallet is synced with the chain.
             if (!this.federationWalletManager.IsSyncedWithChain())
             {
-                this.logger.Info($"The CCTS will start processing deposits once the federation wallet is synced with the chain; height {this.federationWalletManager.WalletTipHeight}");
+                this.logger.LogInformation($"The CCTS will start processing deposits once the federation wallet is synced with the chain; height {this.federationWalletManager.WalletTipHeight}");
                 return true;
             }
 
-            this.logger.Info($"Requesting deposits from counterchain node.");
+            this.logger.LogInformation($"Requesting deposits from counterchain node.");
 
             SerializableResult<List<MaturedBlockDepositsModel>> matureBlockDeposits = await this.federationGatewayClient.GetMaturedBlockDepositsAsync(this.crossChainTransferStore.NextMatureDepositHeight, this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
 
             if (matureBlockDeposits == null)
             {
-                this.logger.Debug("Failed to fetch normal deposits from counter chain node; {0} didn't respond.", this.federationGatewayClient.EndpointUrl);
+                this.logger.LogDebug("Failed to fetch normal deposits from counter chain node; {0} didn't respond.", this.federationGatewayClient.EndpointUrl);
                 return true;
             }
 
             if (matureBlockDeposits.Value == null)
             {
-                this.logger.Debug("Failed to fetch normal deposits from counter chain node; {0} didn't reply with any deposits; Message: {1}", this.federationGatewayClient.EndpointUrl, matureBlockDeposits.Message ?? "none");
+                this.logger.LogDebug("Failed to fetch normal deposits from counter chain node; {0} didn't reply with any deposits; Message: {1}", this.federationGatewayClient.EndpointUrl, matureBlockDeposits.Message ?? "none");
                 return true;
             }
 
@@ -162,7 +205,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             // "Value"'s count will be 0 if we are using NewtonSoft's serializer, null if using .Net Core 3's serializer.
             if (matureBlockDeposits.Value.Count == 0)
             {
-                this.logger.Debug("Considering ourselves fully synced since no blocks were received.");
+                this.logger.LogDebug("Considering ourselves fully synced since no blocks were received.");
 
                 // If we've received nothing we assume we are at the tip and should flush.
                 // Same mechanic as with syncing headers protocol.
@@ -171,7 +214,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 return true;
             }
 
-            this.logger.Info("Processing {0} matured blocks.", matureBlockDeposits.Value.Count);
+            this.logger.LogInformation("Processing {0} matured blocks.", matureBlockDeposits.Value.Count);
 
             // Filter out conversion transactions & also log what we've received for diagnostic purposes.
             foreach (MaturedBlockDepositsModel maturedBlockDeposit in matureBlockDeposits.Value)
@@ -179,7 +222,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 var tempDepositList = new List<IDeposit>();
 
                 if (maturedBlockDeposit.Deposits.Count > 0)
-                    this.logger.Debug("Matured deposit count for block {0} height {1}: {2}.", maturedBlockDeposit.BlockInfo.BlockHash, maturedBlockDeposit.BlockInfo.BlockHeight, maturedBlockDeposit.Deposits.Count);
+                    this.logger.LogDebug("Matured deposit count for block {0} height {1}: {2}.", maturedBlockDeposit.BlockInfo.BlockHash, maturedBlockDeposit.BlockInfo.BlockHeight, maturedBlockDeposit.Deposits.Count);
 
                 foreach (IDeposit potentialConversionTransaction in maturedBlockDeposit.Deposits)
                 {
@@ -194,24 +237,24 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     if (this.federatedPegSettings.IsMainChain)
                     {
-                        this.logger.Warn("Conversion transactions do not get actioned by the main chain.");
+                        this.logger.LogWarning("Conversion transactions do not get actioned by the main chain.");
                         continue;
                     }
 
                     var interFluxV2MainChainActivationHeight = ((PoAConsensusOptions)this.network.Consensus.Options).InterFluxV2MainChainActivationHeight;
                     if (interFluxV2MainChainActivationHeight != 0 && maturedBlockDeposit.BlockInfo.BlockHeight < interFluxV2MainChainActivationHeight)
                     {
-                        this.logger.Warn("Conversion transactions '{0}' will not be processed below the main chain activation height of {1}.", potentialConversionTransaction.Id, interFluxV2MainChainActivationHeight);
+                        this.logger.LogWarning("Conversion transactions '{0}' will not be processed below the main chain activation height of {1}.", potentialConversionTransaction.Id, interFluxV2MainChainActivationHeight);
                         continue;
                     }
 
-                    this.logger.Info("Conversion transaction '{0}' received.", potentialConversionTransaction.Id);
+                    this.logger.LogInformation("Conversion transaction '{0}' received.", potentialConversionTransaction.Id);
 
                     ChainedHeader applicableHeader = null;
                     bool conversionExists = false;
                     if (this.conversionRequestRepository.Get(potentialConversionTransaction.Id.ToString()) != null)
                     {
-                        this.logger.Warn("Conversion transaction '{0}' already exists, ignoring.", potentialConversionTransaction.Id);
+                        this.logger.LogWarning("Conversion transaction '{0}' already exists, ignoring.", potentialConversionTransaction.Id);
                         conversionExists = true;
                     }
                     else
@@ -228,19 +271,19 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         (interopConversionRequestFee != null && interopConversionRequestFee.State != InteropFeeState.AgreeanceConcluded))
                     {
                         interopConversionRequestFee.Amount = ConversionRequestFeeService.FallBackFee;
-                        this.logger.Warn($"A dynamic fee for conversion request '{potentialConversionTransaction.Id}' could not be determined, using a fixed fee of {ConversionRequestFeeService.FallBackFee} STRAX.");
+                        this.logger.LogWarning($"A dynamic fee for conversion request '{potentialConversionTransaction.Id}' could not be determined, using a fixed fee of {ConversionRequestFeeService.FallBackFee} STRAX.");
                     }
 
                     if (Money.Satoshis(interopConversionRequestFee.Amount) >= potentialConversionTransaction.Amount)
                     {
-                        this.logger.Warn("Conversion transaction '{0}' is no longer large enough to cover the fee.", potentialConversionTransaction.Id);
+                        this.logger.LogWarning("Conversion transaction '{0}' is no longer large enough to cover the fee.", potentialConversionTransaction.Id);
                         continue;
                     }
 
                     // We insert the fee distribution as a deposit to be processed, albeit with a special address.
                     // Deposits with this address as their destination will be distributed between the multisig members.
                     // Note that it will be actioned immediately as a matured deposit.
-                    this.logger.Info("Adding conversion fee distribution for transaction '{0}' to deposit list.", potentialConversionTransaction.Id);
+                    this.logger.LogInformation("Adding conversion fee distribution for transaction '{0}' to deposit list.", potentialConversionTransaction.Id);
 
                     // Instead of being a conversion deposit, the fee distribution is translated to its non-conversion equivalent.
                     DepositRetrievalType depositType = DepositRetrievalType.Small;
@@ -268,7 +311,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     if (!conversionExists)
                     {
-                        this.logger.Debug("Adding conversion request for transaction '{0}' to repository.", potentialConversionTransaction.Id);
+                        this.logger.LogDebug("Adding conversion request for transaction '{0}' to repository.", potentialConversionTransaction.Id);
 
                         this.conversionRequestRepository.Save(new ConversionRequest()
                         {
@@ -292,7 +335,23 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                 foreach (IDeposit deposit in maturedBlockDeposit.Deposits)
                 {
-                    this.logger.Debug("Deposit matured: {0}", deposit.ToString());
+                    this.logger.LogDebug("Deposit matured: {0}", deposit.ToString());
+                }
+            }
+
+            lock (this.lockObject)
+            {
+                // Add any fee related deposits relating to the multsig nodes
+                if (this.interOpFeeDeposits.Any())
+                {
+                    this.logger.LogDebug($"Adding {this.interOpFeeDeposits.Count} interflux fee deposits.");
+
+                    MaturedBlockDepositsModel tempModelList = matureBlockDeposits.Value.OrderByDescending(d => d.BlockInfo.BlockHeight).First();
+                    List<IDeposit> tempDepositList = tempModelList.Deposits.ToList();
+                    tempDepositList.AddRange(this.interOpFeeDeposits);
+                    tempModelList.Deposits = tempDepositList.AsReadOnly().OrderBy(x => x.Id, Comparer<uint256>.Create(DeterministicCoinOrdering.CompareUint256)).ToList();
+
+                    this.interOpFeeDeposits.Clear();
                 }
             }
 
@@ -316,7 +375,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             bool found = false;
 
-            this.logger.Debug($"Finding applicable header for deposit with block time '{maturedBlockDeposit.BlockInfo.BlockTime}'; chain tip '{this.chainIndexer.Tip}'.");
+            this.logger.LogDebug($"Finding applicable header for deposit with block time '{maturedBlockDeposit.BlockInfo.BlockTime}'; chain tip '{this.chainIndexer.Tip}'.");
 
             while (true)
             {
@@ -333,9 +392,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             }
 
             if (!found)
-                this.logger.Warn("Unable to determine timestamp for conversion transaction '{0}', ignoring.", potentialConversionTransaction.Id);
+                this.logger.LogWarning("Unable to determine timestamp for conversion transaction '{0}', ignoring.", potentialConversionTransaction.Id);
 
-            this.logger.Debug($"Applicable header selected '{chainedHeader}'");
+            this.logger.LogDebug($"Applicable header selected '{chainedHeader}'");
 
             return found;
         }

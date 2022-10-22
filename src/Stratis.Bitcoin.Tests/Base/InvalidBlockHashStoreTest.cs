@@ -68,7 +68,7 @@ namespace Stratis.Bitcoin.Tests.Base
             allHashes.AddRange(hashesBannedTemporarily2);
 
             foreach (uint256 hash in allHashes)
-                Assert.True(invalidBlockHashStore.IsInvalid(hash));
+                Assert.True(invalidBlockHashStore.IsInvalid(hash, out _));
 
             // Wait 5 seconds and then check if hashes from first temporary group are no longer banned and all others still are.
             Thread.Sleep(5000);
@@ -77,7 +77,7 @@ namespace Stratis.Bitcoin.Tests.Base
             {
                 uint num = hash.GetLow32();
                 bool isSecondGroup = (0x10 <= num) && (num < 0x20);
-                Assert.Equal(!isSecondGroup, invalidBlockHashStore.IsInvalid(hash));
+                Assert.Equal(!isSecondGroup, invalidBlockHashStore.IsInvalid(hash, out _));
             }
         }
 
@@ -121,7 +121,7 @@ namespace Stratis.Bitcoin.Tests.Base
             allHashes.AddRange(hashesBannedTemporarily1);
 
             foreach (uint256 hash in allHashes)
-                Assert.True(invalidBlockHashStore.IsInvalid(hash));
+                Assert.True(invalidBlockHashStore.IsInvalid(hash, out _));
 
             // Add two more hashes that will be banned.
             var hashesBannedTemporarily2 = new uint256[]
@@ -134,8 +134,8 @@ namespace Stratis.Bitcoin.Tests.Base
                 invalidBlockHashStore.MarkInvalid(hash, DateTime.UtcNow.AddMilliseconds(rng.Next(20000, 50000)));
 
             // As the capacity is just 10, the first two hashes should no longer be banned at this point.
-            Assert.False(invalidBlockHashStore.IsInvalid(hashesBannedPermanently[0]));
-            Assert.False(invalidBlockHashStore.IsInvalid(hashesBannedPermanently[1]));
+            Assert.False(invalidBlockHashStore.IsInvalid(hashesBannedPermanently[0], out _));
+            Assert.False(invalidBlockHashStore.IsInvalid(hashesBannedPermanently[1], out _));
 
             // And all other hashes are still banned.
             var allBannedHashes = new List<uint256>();
@@ -145,7 +145,7 @@ namespace Stratis.Bitcoin.Tests.Base
             allBannedHashes.AddRange(hashesBannedTemporarily2);
 
             foreach (uint256 hash in allBannedHashes)
-                Assert.True(invalidBlockHashStore.IsInvalid(hash));
+                Assert.True(invalidBlockHashStore.IsInvalid(hash, out _));
         }
 
         /// <summary>
@@ -201,19 +201,19 @@ namespace Stratis.Bitcoin.Tests.Base
             allBannedHashes.AddRange(hashesBannedPermanently2);
 
             foreach (uint256 hash in hashesBannedPermanently1)
-                Assert.False(invalidBlockHashStore.IsInvalid(hash));
+                Assert.False(invalidBlockHashStore.IsInvalid(hash, out _));
 
             foreach (uint256 hash in allBannedHashes)
-                Assert.True(invalidBlockHashStore.IsInvalid(hash));
+                Assert.True(invalidBlockHashStore.IsInvalid(hash, out _));
 
             // Now we wait 5 seconds and touch the first four temporarily banned hashes,
             // which should remove them from the dictionary.
             Thread.Sleep(5000);
 
-            Assert.False(invalidBlockHashStore.IsInvalid(hashesBannedTemporarily[0]));
-            Assert.False(invalidBlockHashStore.IsInvalid(hashesBannedTemporarily[1]));
-            Assert.False(invalidBlockHashStore.IsInvalid(hashesBannedTemporarily[2]));
-            Assert.False(invalidBlockHashStore.IsInvalid(hashesBannedTemporarily[3]));
+            Assert.False(invalidBlockHashStore.IsInvalid(hashesBannedTemporarily[0], out _));
+            Assert.False(invalidBlockHashStore.IsInvalid(hashesBannedTemporarily[1], out _));
+            Assert.False(invalidBlockHashStore.IsInvalid(hashesBannedTemporarily[2], out _));
+            Assert.False(invalidBlockHashStore.IsInvalid(hashesBannedTemporarily[3], out _));
 
             // Then we add a new hash, which should remove the four hashes from the circular array as well.
             invalidBlockHashStore.MarkInvalid(uint256.Parse("0000000000000000000000000000000000000000000000000000000000000031"));
@@ -246,14 +246,14 @@ namespace Stratis.Bitcoin.Tests.Base
 
             // Check all hashes are banned now.
             foreach (uint256 hash in hashesBannedTemporarily)
-                Assert.True(invalidBlockHashStore.IsInvalid(hash));
+                Assert.True(invalidBlockHashStore.IsInvalid(hash, out _));
 
             // Wait 5 seconds and touch all the entries, so they are removed from the store's dictionary.
             Thread.Sleep(5000);
 
             // Check all hashes are no longer banned.
             foreach (uint256 hash in hashesBannedTemporarily)
-                Assert.False(invalidBlockHashStore.IsInvalid(hash));
+                Assert.False(invalidBlockHashStore.IsInvalid(hash, out _));
 
             // Add a new hash, which should remove all the other entries from the store's circular array as well.
             uint256 lastHash = uint256.Parse("0000000000000000000000000000000000000000000000000000000000000031");
@@ -261,14 +261,14 @@ namespace Stratis.Bitcoin.Tests.Base
 
             // Check all removed hashes are no longer banned.
             foreach (uint256 hash in hashesBannedTemporarily)
-                Assert.False(invalidBlockHashStore.IsInvalid(hash));
+                Assert.False(invalidBlockHashStore.IsInvalid(hash, out _));
 
             // Check the number of entries is now 1.
             var orderedHashList = invalidBlockHashStore.GetMemberValue("orderedHashList") as CircularArray<uint256>;
             Assert.Equal(1, orderedHashList.Count);
 
             // Check the last entry is banned.
-            Assert.True(invalidBlockHashStore.IsInvalid(lastHash));
+            Assert.True(invalidBlockHashStore.IsInvalid(lastHash, out _));
         }
     }
 }

@@ -4,8 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.PoA.Models;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 
@@ -30,8 +31,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             VotingManager votingManager,
             Network network,
             IFederationHistory federationHistory,
-            IPoAMiner poAMiner,
-            ReconstructFederationService reconstructFederationService)
+            ReconstructFederationService reconstructFederationService,
+            IPoAMiner poAMiner = null)
         {
             this.chainIndexer = chainIndexer;
             this.federationManager = federationManager;
@@ -45,7 +46,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>
-        /// Signals the node to rebuild the federation via cleabning and rebuilding executed polls.
+        /// Signals the node to rebuild the federation via cleaning and rebuilding executed polls.
         /// This will be done via writing a flag to the .conf file so that on startup it be executed.
         /// </summary>
         /// <returns>See response codes</returns>
@@ -65,7 +66,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -91,6 +92,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 {
                     PubKey = this.federationManager.CurrentFederationKey.PubKey.ToHex()
                 };
+
+                if (this.federationManager.GetCurrentFederationMember() is CollateralFederationMember collateralFederationMember)
+                {
+                    federationMemberModel.CollateralAddress = collateralFederationMember.CollateralMainchainAddress;
+                    federationMemberModel.CollateralAmount = collateralFederationMember.CollateralAmount.ToUnit(MoneyUnit.BTC);
+                    federationMemberModel.IsMultiSig = collateralFederationMember.IsMultisigMember;
+                }
 
                 ChainedHeader chainTip = this.chainIndexer.Tip;
                 federationMemberModel.FederationSize = this.federationHistory.GetFederationForBlock(chainTip).Count;
@@ -126,12 +134,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         federationMemberModel.PollWillFinishInBlocks = 0;
                     else
                         federationMemberModel.PollWillFinishInBlocks = (poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength) - chainTip.Height;
-                }
 
-                // Has the poll executed?
-                poll = this.votingManager.GetExecutedPolls().MemberPolls().OrderByDescending(p => p.PollExecutedBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == this.federationManager.CurrentFederationKey.PubKey);
-                if (poll != null)
-                    federationMemberModel.PollExecutedBlockHeight = poll.PollExecutedBlockData.Height;
+                    // Has the poll executed?
+                    federationMemberModel.PollExecutedBlockHeight = poll.PollExecutedBlockData?.Height;
+                }
 
                 federationMemberModel.RewardEstimatePerBlock = 9d / this.federationManager.GetFederationMembers().Count;
 
@@ -141,7 +147,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -168,20 +174,28 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 ConcurrentDictionary<IFederationMember, uint> activeTimes = this.federationHistory.GetFederationMembersByLastActiveTime();
                 foreach (IFederationMember federationMember in federationMembers)
                 {
-                    federationMemberModels.Add(new FederationMemberModel()
+                    var model = new FederationMemberModel()
                     {
                         PubKey = federationMember.PubKey.ToHex(),
-                        CollateralAmount = (federationMember as CollateralFederationMember).CollateralAmount.ToUnit(MoneyUnit.BTC),
                         LastActiveTime = new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(activeTimes.FirstOrDefault(a => a.Key.PubKey == federationMember.PubKey).Value),
                         PeriodOfInActivity = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(activeTimes.FirstOrDefault(a => a.Key.PubKey == federationMember.PubKey).Value)
-                    });
+                    };
+
+                    if (federationMember is CollateralFederationMember collateralFederationMember)
+                    {
+                        model.CollateralAddress = collateralFederationMember.CollateralMainchainAddress;
+                        model.CollateralAmount = (federationMember as CollateralFederationMember).CollateralAmount.ToUnit(MoneyUnit.BTC);
+                        model.IsMultiSig = collateralFederationMember.IsMultisigMember;
+                    }
+
+                    federationMemberModels.Add(model);
                 }
 
                 return Json(federationMemberModels);
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -202,13 +216,16 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             try
             {
                 ChainedHeader chainedHeader = this.chainIndexer.GetHeader(blockHeight);
+                if (chainedHeader == null)
+                    return ErrorHelpers.BuildErrorResponse(HttpStatusCode.NotFound, "The block was not found at this time.", string.Empty);
+
                 PubKey pubKey = this.federationHistory.GetFederationMemberForBlock(chainedHeader)?.PubKey;
 
                 return Json(pubKey);
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -241,7 +258,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }

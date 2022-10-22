@@ -62,11 +62,13 @@ namespace Stratis.CirrusPegD
 
                 IFullNode node = isMainchainNode ? GetMainchainFullNode(args) : GetSidechainFullNode(args);
 
-                // set the console window title to identify which node this is (for clarity when running Strax and Cirrus on the same machine)
-                Console.Title = isMainchainNode ? $"Strax Full Node {node.Network.NetworkType}" : $"Cirrus Full Node {node.Network.NetworkType}";
-
                 if (node != null)
+                {
+                    // Set the console window title to identify which node this is (for clarity when running Strax and Cirrus on the same machine).
+                    Console.Title = isMainchainNode ? $"Strax Full Node {node.Network.NetworkType}" : $"Cirrus Full Node {node.Network.NetworkType}";
+
                     await node.RunAsync();
+                }
             }
             catch (Exception ex)
             {

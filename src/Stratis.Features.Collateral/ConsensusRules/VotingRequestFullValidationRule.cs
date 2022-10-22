@@ -30,6 +30,8 @@ namespace Stratis.Features.Collateral.ConsensusRules
         }
 
         /// <summary>Checks that any voting requests that are present can be decoded and prohibits re-use of collateral addresses.</summary>
+        /// <param name="context">See <see cref="RuleContext"/>.</param>
+        /// <returns>The asynchronous task.</returns>
         public override Task RunAsync(RuleContext context)
         {
             if (this.ibdState.IsInitialBlockDownload())
@@ -78,7 +80,7 @@ namespace Stratis.Features.Collateral.ConsensusRules
                 Script script = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(request.CollateralMainchainAddress);
                 string collateralAddress = script.GetDestinationAddress(this.counterChainNetwork).ToString();
                 CollateralFederationMember owner = this.federationManager.CollateralAddressOwner(this.votingManager, VoteKey.AddFederationMember, collateralAddress);
-                if (owner != null)
+                if (owner != null && owner.PubKey != request.PubKey)
                 {
                     this.Logger.LogTrace("(-)[INVALID_COLLATERAL_REUSE]");
                     PoAConsensusErrors.VotingRequestInvalidCollateralReuse.Throw();

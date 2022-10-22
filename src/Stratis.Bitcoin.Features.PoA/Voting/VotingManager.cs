@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using ConcurrentCollections;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
+using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.EventBus;
@@ -46,6 +47,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private IIdleFederationMembersKicker idleFederationMembersKicker;
         private readonly INodeLifetime nodeLifetime;
+        private readonly NodeDeployments nodeDeployments;
 
         /// <summary>In-memory collection of pending polls.</summary>
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
@@ -74,7 +76,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             Network network,
             ChainIndexer chainIndexer,
             IBlockRepository blockRepository = null,
-            INodeLifetime nodeLifetime = null)
+            INodeLifetime nodeLifetime = null,
+            NodeDeployments nodeDeployments = null)
         {
             this.federationManager = Guard.NotNull(federationManager, nameof(federationManager));
             this.pollResultExecutor = Guard.NotNull(pollResultExecutor, nameof(pollResultExecutor));
@@ -84,7 +87,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.locker = new object();
             this.votingDataEncoder = new VotingDataEncoder();
             this.scheduledVotingData = new List<VotingData>();
-            this.PollsRepository = new PollsRepository(dataFolder, dBreezeSerializer, chainIndexer);
+            this.PollsRepository = new PollsRepository(chainIndexer, dataFolder, dBreezeSerializer, network as PoANetwork);
 
             this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
@@ -95,6 +98,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.blockRepository = blockRepository;
             this.chainIndexer = chainIndexer;
             this.nodeLifetime = nodeLifetime;
+            this.nodeDeployments = nodeDeployments;
 
             this.isInitialized = false;
         }
@@ -105,8 +109,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.idleFederationMembersKicker = idleFederationMembersKicker;
 
             this.PollsRepository.Initialize();
-
-            this.PollsRepository.WithTransaction(transaction => this.polls = new PollsCollection(this.PollsRepository.GetAllPolls(transaction)));
+            this.PollsRepository.WithTransaction(transaction => this.polls = new PollsCollection(this.network as PoANetwork, this.PollsRepository.GetAllPolls(transaction)));
 
             this.blockConnectedSubscription = this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
             this.blockDisconnectedSubscription = this.signals.Subscribe<BlockDisconnected>(this.OnBlockDisconnected);
@@ -115,10 +118,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             this.isInitialized = true;
 
-            this.logger.Debug("VotingManager initialized.");
+            this.logger.LogDebug("VotingManager initialized.");
         }
 
         /// <summary>Schedules a vote for the next time when the block will be mined.</summary>
+        /// <param name="votingData">See <see cref="VotingData"/>.</param>
         /// <exception cref="InvalidOperationException">Thrown in case caller is not a federation member.</exception>
         public void ScheduleVote(VotingData votingData)
         {
@@ -126,7 +130,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             if (!this.federationManager.IsFederationMember)
             {
-                this.logger.Trace("(-)[NOT_FED_MEMBER]");
+                this.logger.LogTrace("(-)[NOT_FED_MEMBER]");
                 throw new InvalidOperationException("Not a federation member!");
             }
 
@@ -138,10 +142,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 this.SanitizeScheduledPollsLocked();
             }
 
-            this.logger.Debug("Vote was scheduled with key: {0}.", votingData.Key);
+            if (votingData.Key == VoteKey.AddFederationMember || votingData.Key == VoteKey.KickFederationMember)
+                this.logger.LogDebug($"{votingData.Key} vote scheduled for member '{this.GetMemberVotedOn(votingData).PubKey}'.");
+            else
+                this.logger.LogDebug($"{votingData.Key} vote scheduled.");
         }
 
         /// <summary>Provides a copy of scheduled voting data.</summary>
+        /// <returns>A list of <see cref="VotingData"/>.</returns>
         public List<VotingData> GetScheduledVotes()
         {
             this.EnsureInitialized();
@@ -155,6 +163,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>Provides scheduled voting data and removes all items that were provided.</summary>
+        /// <returns>A list of <see cref="VotingData"/>.</returns>
         /// <remarks>Used by miner.</remarks>
         public List<VotingData> GetAndCleanScheduledVotes()
         {
@@ -169,7 +178,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 this.scheduledVotingData = new List<VotingData>();
 
                 if (votingData.Count > 0)
-                    this.logger.Debug("{0} scheduled votes were taken.", votingData.Count);
+                    this.logger.LogDebug("{0} scheduled votes were taken.", votingData.Count);
 
                 return votingData;
             }
@@ -188,15 +197,31 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 bool IsTooOldToVoteOn(Poll poll) => poll.IsPending && (this.chainIndexer.Tip.Height - poll.PollStartBlockData.Height) >= this.poaConsensusOptions.PollExpiryBlocks;
 
-                bool IsValid(VotingData currentScheduledData)
+                bool ShouldNotExistYet(Poll poll) => poll.IsPending && (this.chainIndexer.Tip.Height - poll.PollStartBlockData.Height) < 0;
+
+                bool IsValid(VotingData votingData)
                 {
-                    // Remove scheduled voting data that can be found in pending polls.
-                    if (pendingPolls.Any(x => x.VotingData == currentScheduledData && IsTooOldToVoteOn(x)))
+                    // Remove scheduled voting data that relate to too-old pending polls or rewound blocks.
+                    if (pendingPolls.Any(x => x.VotingData == votingData && (ShouldNotExistYet(x) || IsTooOldToVoteOn(x))))
+                    {
+                        if (votingData.Key == VoteKey.AddFederationMember || votingData.Key == VoteKey.KickFederationMember)
+                            this.logger.LogDebug($"Removing {votingData.Key} scheduled vote for member '{this.GetMemberVotedOn(votingData).PubKey}'.");
+                        else
+                            this.logger.LogDebug($"Removing {votingData.Key} scheduled vote.");
+
                         return false;
+                    }
 
                     // Remove scheduled voting data that can be found in finished polls that were not yet executed.
-                    if (approvedPolls.Any(x => x.VotingData == currentScheduledData))
+                    if (approvedPolls.Any(x => x.VotingData == votingData))
+                    {
+                        if (votingData.Key == VoteKey.AddFederationMember || votingData.Key == VoteKey.KickFederationMember)
+                            this.logger.LogDebug($"Removing {votingData.Key} scheduled vote for member '{this.GetMemberVotedOn(votingData).PubKey}' from approved polls.");
+                        else
+                            this.logger.LogDebug($"Removing {votingData.Key} scheduled vote.");
+
                         return false;
+                    }
 
                     return true;
                 }
@@ -206,6 +231,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>Provides a collection of polls that are currently active.</summary>
+        /// <returns>A list of <see cref="Poll"/> items.</returns>
         public List<Poll> GetPendingPolls()
         {
             this.EnsureInitialized();
@@ -218,6 +244,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>Provides a collection of polls that are approved but not executed yet.</summary>
+        /// <returns>A list of <see cref="Poll"/> items.</returns>
         public List<Poll> GetApprovedPolls()
         {
             this.EnsureInitialized();
@@ -229,6 +256,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>Provides a collection of polls that are approved and their results applied.</summary>
+        /// <returns>A list of <see cref="Poll"/> items.</returns>
         public List<Poll> GetExecutedPolls()
         {
             this.EnsureInitialized();
@@ -240,6 +268,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>Provides a collection of polls that are expired.</summary>
+        /// <returns>A list of <see cref="Poll"/> items.</returns>
         public List<Poll> GetExpiredPolls()
         {
             this.EnsureInitialized();
@@ -251,34 +280,40 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>
-        /// Tells us whether we have already voted to boot a federation member.
+        /// Tells us whether we have already voted on this federation member.
         /// </summary>
-        public bool AlreadyVotingFor(VoteKey voteKey, byte[] federationMemberBytes)
+        /// <param name="voteKey">See <see cref="VoteKey"/>.</param>
+        /// <param name="federationMemberBytes">The bytes to compare <see cref="VotingData.Data"/> against.</param>
+        /// <param name="checkScheduledPolls">Determines whether the scheduled polls will be checked.</param>
+        /// <returns><c>True</c> if we have already voted or <c>false</c> otherwise.</returns>
+        public bool AlreadyVotingFor(VoteKey voteKey, byte[] federationMemberBytes, bool checkScheduledPolls = true)
         {
-            List<Poll> approvedPolls = this.GetApprovedPolls();
-
-            if (approvedPolls.Any(x => !x.IsExecuted &&
-                  x.VotingData.Key == voteKey && x.VotingData.Data.SequenceEqual(federationMemberBytes) &&
-                  x.PubKeysHexVotedInFavor.Any(v => v.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex())))
+            if (this.federationManager.CurrentFederationKey != null)
             {
-                // We've already voted in a finished poll that's only awaiting execution.
-                return true;
+                List<Poll> approvedPolls = this.GetApprovedPolls();
+
+                if (approvedPolls.Any(x => !x.IsExecuted &&
+                      x.VotingData.Key == voteKey && x.VotingData.Data.SequenceEqual(federationMemberBytes) &&
+                      x.PubKeysHexVotedInFavor.Any(v => v.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex())))
+                {
+                    // We've already voted in a finished poll that's only awaiting execution.
+                    return true;
+                }
+
+                List<Poll> pendingPolls = this.GetPendingPolls();
+
+                if (pendingPolls.Any(x => x.VotingData.Key == voteKey &&
+                                           x.VotingData.Data.SequenceEqual(federationMemberBytes) &&
+                                           x.PubKeysHexVotedInFavor.Any(v => v.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex())))
+                {
+                    // We've already voted in a pending poll.
+                    return true;
+                }
             }
-
-            List<Poll> pendingPolls = this.GetPendingPolls();
-
-            if (pendingPolls.Any(x => x.VotingData.Key == voteKey &&
-                                       x.VotingData.Data.SequenceEqual(federationMemberBytes) &&
-                                       x.PubKeysHexVotedInFavor.Any(v => v.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex())))
-            {
-                // We've already voted in a pending poll.
-                return true;
-            }
-
 
             List<VotingData> scheduledVotes = this.GetScheduledVotes();
 
-            if (scheduledVotes.Any(x => x.Key == voteKey && x.Data.SequenceEqual(federationMemberBytes)))
+            if (checkScheduledPolls && scheduledVotes.Any(x => x.Key == voteKey && x.Data.SequenceEqual(federationMemberBytes)))
             {
                 // We have the vote queued to be put out next time we mine a block.
                 return true;
@@ -287,7 +322,34 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return false;
         }
 
-        public bool IsFederationMember(PubKey pubKey)
+        public Poll CreatePendingPoll(DBreeze.Transactions.Transaction transaction, VotingData votingData, ChainedHeader chainedHeader, List<Vote> pubKeysVotedInFavor = null)
+        {
+            Poll poll = null;
+
+            // Ensures that highestPollId can't be changed before the poll is committed.
+            this.PollsRepository.Synchronous(() =>
+            {
+                poll = new Poll()
+                {
+                    Id = this.PollsRepository.GetHighestPollId() + 1,
+                    PollVotedInFavorBlockData = null,
+                    PollExecutedBlockData = null,
+                    PollStartBlockData = new HashHeightPair(chainedHeader),
+                    VotingData = votingData,
+                    PubKeysHexVotedInFavor = pubKeysVotedInFavor ?? new List<Vote>() { }
+                };
+
+                this.polls.Add(poll);
+
+                this.PollsRepository.AddPolls(transaction, poll);
+
+                this.logger.LogInformation("New poll was created: '{0}'.", poll);
+            });
+
+            return poll;
+        }
+
+        public bool IsMemberOfFederation(PubKey pubKey)
         {
             return this.federationManager.GetFederationMembers().Any(fm => fm.PubKey == pubKey);
         }
@@ -307,7 +369,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     {
                         if (federationMember is CollateralFederationMember colMember2 && federation.IsCollateralAddressRegistered(colMember2.CollateralMainchainAddress))
                         {
-                            this.logger.Debug("Not adding member '{0}' with duplicate collateral address '{1}'.", federationMember.PubKey.ToHex(), colMember2.CollateralMainchainAddress);
+                            this.logger.LogDebug("Not adding member '{0}' with duplicate collateral address '{1}'.", federationMember.PubKey.ToHex(), colMember2.CollateralMainchainAddress);
                             continue;
                         }
 
@@ -405,7 +467,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                                 {
                                     if (modifiedFederation.IsCollateralAddressRegistered(collateralFederationMember.CollateralMainchainAddress))
                                     {
-                                        this.logger.Debug("Not adding member '{0}' with duplicate collateral address '{1}'.", collateralFederationMember.PubKey.ToHex(), collateralFederationMember.CollateralMainchainAddress);
+                                        this.logger.LogDebug("Not adding member '{0}' with duplicate collateral address '{1}'.", collateralFederationMember.PubKey.ToHex(), collateralFederationMember.CollateralMainchainAddress);
                                         continue;
                                     }
 
@@ -455,14 +517,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return this.federationManager.IsMultisigMember(member.PubKey);
         }
 
-        private bool IsPollExpiredAt(Poll poll, ChainedHeader chainedHeader)
-        {
-            if (chainedHeader == null)
-                return false;
-
-            return Math.Max(poll.PollStartBlockData.Height + this.poaConsensusOptions.PollExpiryBlocks, this.poaConsensusOptions.Release1100ActivationHeight) <= chainedHeader.Height;
-        }
-
         private void ProcessBlock(DBreeze.Transactions.Transaction transaction, ChainedHeaderBlock chBlock)
         {
             long flagFall = DateTime.Now.Ticks;
@@ -471,32 +525,32 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 lock (this.locker)
                 {
+                    this.signals.Publish(new VotingManagerProcessBlock(chBlock, transaction));
+
                     bool pollsRepositoryModified = false;
 
-                    foreach (Poll poll in this.GetPendingPolls().Where(x => this.IsPollExpiredAt(x, chBlock.ChainedHeader)).ToList())
+                    foreach (Poll poll in this.polls.GetPollsToExecuteOrExpire(chBlock.ChainedHeader.Height))
                     {
-                        this.logger.Debug("Expiring poll '{0}'.", poll);
+                        if (!poll.IsApproved)
+                        {
+                            this.logger.LogDebug("Expiring poll '{0}'.", poll);
 
-                        // Flag the poll as expired. The "PollVotedInFavorBlockData" will always be null at this point due to the "GetPendingPolls" filter above.
-                        // The value of the hash is not significant but we set it to a non-zero value to prevent the field from being de-serialized as null.
-                        poll.IsExpired = true;
-                        this.polls.OnPendingStatusChanged(poll);
-                        this.PollsRepository.UpdatePoll(transaction, poll);
-                        pollsRepositoryModified = true;
-                    }
+                            // Flag the poll as expired. The "PollVotedInFavorBlockData" will always be null at this point due to the "GetPendingPolls" filter above.
+                            // The value of the hash is not significant but we set it to a non-zero value to prevent the field from being de-serialized as null.
+                            this.polls.AdjustPoll(poll, poll => poll.IsExpired = true);
+                            this.PollsRepository.UpdatePoll(transaction, poll);
+                            pollsRepositoryModified = true;
+                        }
+                        else
+                        {
+                            this.logger.LogDebug("Applying poll '{0}'.", poll);
+                            this.pollResultExecutor.ApplyChange(poll.VotingData);
 
-                    foreach (Poll poll in this.GetApprovedPolls())
-                    {
-                        if (poll.IsExpired || chBlock.ChainedHeader.Height != (poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength))
-                            continue;
+                            this.polls.AdjustPoll(poll, poll => poll.PollExecutedBlockData = new HashHeightPair(chBlock.ChainedHeader));
+                            this.PollsRepository.UpdatePoll(transaction, poll);
 
-                        this.logger.Debug("Applying poll '{0}'.", poll);
-                        this.pollResultExecutor.ApplyChange(poll.VotingData);
-
-                        poll.PollExecutedBlockData = new HashHeightPair(chBlock.ChainedHeader);
-                        this.PollsRepository.UpdatePoll(transaction, poll);
-
-                        pollsRepositoryModified = true;
+                            pollsRepositoryModified = true;
+                        }
                     }
 
                     if (this.federationManager.GetMultisigMinersApplicabilityHeight() == chBlock.ChainedHeader.Height)
@@ -507,14 +561,15 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     if (rawVotingData == null)
                     {
                         this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader);
+                        this.logger.LogTrace($"'{chBlock.ChainedHeader}' does not contain any voting data.");
                         return;
                     }
 
                     IFederationMember member = this.federationHistory.GetFederationMemberForBlock(chBlock.ChainedHeader);
                     if (member == null)
                     {
-                        this.logger.Error("The block was mined by a non-federation-member!");
-                        this.logger.Trace("(-)[ALIEN_BLOCK]");
+                        this.logger.LogError("The block was mined by a non-federation-member!");
+                        this.logger.LogTrace("(-)[ALIEN_BLOCK]");
 
                         this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader);
                         return;
@@ -526,7 +581,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                     List<VotingData> votingDataList = this.votingDataEncoder.Decode(rawVotingData);
 
-                    this.logger.Debug("Applying {0} voting data items included in a block by '{1}'.", votingDataList.Count, fedMemberKeyHex);
+                    this.logger.LogDebug("Applying {0} voting data items included in a block by '{1}'.", votingDataList.Count, fedMemberKeyHex);
 
                     lock (this.locker)
                     {
@@ -547,26 +602,16 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                             if (poll == null)
                             {
-                                // Ensures that highestPollId can't be changed before the poll is committed.
-                                this.PollsRepository.Synchronous(() =>
+                                // The JoinFederationRequestMonitor is now responsible for creating "add member" polls.
+                                // Hence, if the poll does not exist then this is not a valid vote.
+                                if (data.Key == VoteKey.AddFederationMember)
                                 {
-                                    poll = new Poll()
-                                    {
-                                        Id = this.PollsRepository.GetHighestPollId() + 1,
-                                        PollVotedInFavorBlockData = null,
-                                        PollExecutedBlockData = null,
-                                        PollStartBlockData = new HashHeightPair(chBlock.ChainedHeader),
-                                        VotingData = data,
-                                        PubKeysHexVotedInFavor = new List<Vote>() { new Vote() { PubKey = fedMemberKeyHex, Height = chBlock.ChainedHeader.Height } }
-                                    };
+                                    if (chBlock.ChainedHeader.Height >= this.poaConsensusOptions.Release1300ActivationHeight)
+                                        continue;
+                                }
 
-                                    this.polls.Add(poll);
-
-                                    this.PollsRepository.AddPolls(transaction, poll);
-                                    pollsRepositoryModified = true;
-
-                                    this.logger.Debug("New poll was created: '{0}'.", poll);
-                                });
+                                poll = CreatePendingPoll(transaction, data, chBlock.ChainedHeader, new List<Vote>() { new Vote() { PubKey = fedMemberKeyHex, Height = chBlock.ChainedHeader.Height } });
+                                pollsRepositoryModified = true;
                             }
                             else if (!poll.PubKeysHexVotedInFavor.Any(v => v.PubKey == fedMemberKeyHex))
                             {
@@ -574,11 +619,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                                 this.PollsRepository.UpdatePoll(transaction, poll);
                                 pollsRepositoryModified = true;
 
-                                this.logger.Debug("Voted on existing poll: '{0}'.", poll);
+                                this.logger.LogDebug("Voted on existing poll: '{0}'.", poll);
                             }
                             else
                             {
-                                this.logger.Debug("Fed member '{0}' already voted for this poll. Ignoring his vote. Poll: '{1}'.", fedMemberKeyHex, poll);
+                                this.logger.LogDebug("Fed member '{0}' already voted for this poll. Ignoring his vote. Poll: '{1}'.", fedMemberKeyHex, poll);
                             }
 
                             List<IFederationMember> modifiedFederation = this.federationManager.GetFederationMembers();
@@ -595,7 +640,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                                     chainedHeader = this.chainIndexer.GetHeader(poll.PollStartBlockData.Hash);
                                     if (chainedHeader == null)
                                     {
-                                        this.logger.Warn("Couldn't retrieve header for block at height-hash: {0}-{1}.", poll.PollStartBlockData.Height, poll.PollStartBlockData.Hash?.ToString());
+                                        this.logger.LogWarning("Couldn't retrieve header for block at height-hash: {0}-{1}.", poll.PollStartBlockData.Height, poll.PollStartBlockData.Hash?.ToString());
 
                                         Guard.NotNull(chainedHeader, nameof(chainedHeader));
                                         Guard.NotNull(chainedHeader.Header, nameof(chainedHeader.Header));
@@ -617,14 +662,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                             int requiredVotesCount = (fedMembersHex.Count / 2) + 1;
 
-                            this.logger.Debug("Fed members count: {0}, valid votes count: {1}, required votes count: {2}.", fedMembersHex.Count, validVotesCount, requiredVotesCount);
+                            this.logger.LogDebug("Fed members count: {0}, valid votes count: {1}, required votes count: {2}.", fedMembersHex.Count, validVotesCount, requiredVotesCount);
 
                             if (validVotesCount < requiredVotesCount)
                                 continue;
 
-                            poll.PollVotedInFavorBlockData = new HashHeightPair(chBlock.ChainedHeader);
-                            this.polls.OnPendingStatusChanged(poll);
-
+                            this.polls.AdjustPoll(poll, poll => poll.PollVotedInFavorBlockData = new HashHeightPair(chBlock.ChainedHeader));
                             this.PollsRepository.UpdatePoll(transaction, poll);
                             pollsRepositoryModified = true;
                         }
@@ -635,7 +678,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
             catch (Exception ex)
             {
-                this.logger.Error(ex, ex.ToString());
+                this.logger.LogError(ex, ex.ToString());
                 throw;
             }
             finally
@@ -655,21 +698,20 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 foreach (Poll poll in this.polls.Where(x => !x.IsPending && x.PollExecutedBlockData?.Hash == chBlock.ChainedHeader.HashBlock).ToList())
                 {
-                    this.logger.Debug("Reverting poll execution '{0}'.", poll);
+                    this.logger.LogDebug("Reverting poll execution '{0}'.", poll);
                     this.pollResultExecutor.RevertChange(poll.VotingData);
 
-                    poll.PollExecutedBlockData = null;
+                    this.polls.AdjustPoll(poll, poll => poll.PollExecutedBlockData = null);
                     this.PollsRepository.UpdatePoll(transaction, poll);
                     pollsRepositoryModified = true;
                 }
 
-                foreach (Poll poll in this.polls.Where(x => x.IsExpired && !IsPollExpiredAt(x, chBlock.ChainedHeader.Previous)).ToList())
+                foreach (Poll poll in this.polls.Where(x => x.IsExpired && !PollsRepository.IsPollExpiredAt(x, chBlock.ChainedHeader.Height - 1, this.network as PoANetwork)).ToList())
                 {
-                    this.logger.Debug("Reverting poll expiry '{0}'.", poll);
+                    this.logger.LogDebug("Reverting poll expiry '{0}'.", poll);
 
                     // Revert back to null as this field would have been when the poll was expired.
-                    poll.IsExpired = false;
-                    this.polls.OnPendingStatusChanged(poll);
+                    this.polls.AdjustPoll(poll, poll => poll.IsExpired = false);
                     this.PollsRepository.UpdatePoll(transaction, poll);
                     pollsRepositoryModified = true;
                 }
@@ -682,7 +724,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             if (rawVotingData == null)
             {
-                this.logger.Trace("(-)[NO_VOTING_DATA]");
+                this.logger.LogTrace("(-)[NO_VOTING_DATA]");
 
                 this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader.Previous);
                 return;
@@ -704,16 +746,18 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     // Otherwise, get the most recent poll. There could currently be unlimited of these, though they're harmless.
                     if (targetPoll == null)
                     {
-                        targetPoll = this.polls.Last(x => x.VotingData == votingData);
+                        targetPoll = this.polls.LastOrDefault(x => x.VotingData == votingData);
+
+                        // Maybe was an ignored vote, so it may have not created a poll.
+                        if (targetPoll == null)
+                            continue;
                     }
 
-                    this.logger.Debug("Reverting poll voting in favor: '{0}'.", targetPoll);
+                    this.logger.LogDebug("Reverting poll voting in favor: '{0}'.", targetPoll);
 
                     if (targetPoll.PollVotedInFavorBlockData == new HashHeightPair(chBlock.ChainedHeader))
                     {
-                        targetPoll.PollVotedInFavorBlockData = null;
-                        this.polls.OnPendingStatusChanged(targetPoll);
-
+                        this.polls.AdjustPoll(targetPoll, poll => poll.PollVotedInFavorBlockData = null);
                         this.PollsRepository.UpdatePoll(transaction, targetPoll);
                         pollsRepositoryModified = true;
                     }
@@ -725,14 +769,20 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     {
                         targetPoll.PubKeysHexVotedInFavor.RemoveAt(voteIndex);
 
-                        if (targetPoll.PubKeysHexVotedInFavor.Count == 0)
-                        {
-                            this.polls.Remove(targetPoll);
-                            this.PollsRepository.RemovePolls(transaction, targetPoll.Id);
-                            pollsRepositoryModified = true;
+                        this.PollsRepository.UpdatePoll(transaction, targetPoll);
+                        pollsRepositoryModified = true;
+                    }
+                }
 
-                            this.logger.Debug("Poll with Id {0} was removed.", targetPoll.Id);
-                        }
+                foreach (Poll targetPoll in GetPendingPolls())
+                {
+                    if (targetPoll.PollStartBlockData.Height >= chBlock.ChainedHeader.Height)
+                    {
+                        this.polls.Remove(targetPoll);
+                        this.PollsRepository.RemovePolls(transaction, targetPoll.Id);
+                        pollsRepositoryModified = true;
+
+                        this.logger.LogDebug("Poll with Id {0} was removed.", targetPoll.Id);
                     }
                 }
 
@@ -811,38 +861,51 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 if (headers.Count > 0)
                 {
-                    this.PollsRepository.WithTransaction(transaction =>
+                    DBreeze.Transactions.Transaction currentTransaction = this.PollsRepository.GetTransaction();
+
+                    int i = 0;
+                    foreach (Block block in this.blockRepository.EnumerateBatch(headers))
                     {
-                        int i = 0;
-                        foreach (Block block in this.blockRepository.EnumerateBatch(headers))
+                        if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
                         {
-                            if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
-                            {
-                                this.logger.Trace("(-)[NODE_DISPOSED]");
-                                this.PollsRepository.SaveCurrentTip(transaction);
-                                transaction.Commit();
+                            this.logger.LogTrace("(-)[NODE_DISPOSED]");
+                            this.PollsRepository.SaveCurrentTip(currentTransaction);
+                            currentTransaction.Commit();
+                            currentTransaction.Dispose();
 
-                                bSuccess = false;
-                                return;
-                            }
-
-                            ChainedHeader header = headers[i++];
-                            this.ProcessBlock(transaction, new ChainedHeaderBlock(block, header));
-
-                            if (header.Height % 10000 == 0)
-                            {
-                                var progress = (int)((decimal)header.Height / this.chainIndexer.Tip.Height * 100);
-                                var progressString = $"Synchronizing voting data at height {header.Height} / {this.chainIndexer.Tip.Height} ({progress} %).";
-
-                                this.logger.Info(progressString);
-                                this.signals.Publish(new FullNodeEvent() { Message = progressString, State = FullNodeState.Initializing.ToString() });
-                            }
+                            bSuccess = false;
+                            return;
                         }
 
-                        this.PollsRepository.SaveCurrentTip(transaction);
+                        ChainedHeader header = headers[i++];
 
-                        transaction.Commit();
-                    });
+                        this.ProcessBlock(currentTransaction, new ChainedHeaderBlock(block, header));
+
+                        if (header.Height % 10000 == 0)
+                        {
+                            var progress = (int)((decimal)header.Height / this.chainIndexer.Tip.Height * 100);
+                            var progressString = $"Synchronizing voting data at height {header.Height} / {this.chainIndexer.Tip.Height} ({progress} %).";
+
+                            this.logger.LogInformation(progressString);
+                            this.signals.Publish(new FullNodeEvent() { Message = progressString, State = FullNodeState.Initializing.ToString() });
+
+                            this.PollsRepository.SaveCurrentTip(currentTransaction);
+
+                            currentTransaction.Commit();
+                            currentTransaction.Dispose();
+
+                            currentTransaction = this.PollsRepository.GetTransaction();
+                        }
+                    }
+
+                    // If we ended the synchronization at say block 10100, the current transaction would still be open and
+                    // thus we need to commit and dispose of it.
+                    // If we ended at block 10000, then the current transaction would have been committed and
+                    // disposed and re-opened.
+                    this.PollsRepository.SaveCurrentTip(currentTransaction);
+
+                    currentTransaction.Commit();
+                    currentTransaction.Dispose();
                 }
             });
 

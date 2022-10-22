@@ -4,10 +4,11 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.PoA;
@@ -32,8 +33,9 @@ namespace Stratis.Features.FederatedPeg.Controllers
         public const string FederationMemberIpRemove = "member/ip/remove";
         public const string FederationMemberIpReplace = "member/ip/replace";
         public const string GetTransferByDepositIdEndpoint = "transfer";
-        public const string GetTransfersPartialEndpoint = "transfer/pending";
-        public const string GetTransfersFullySignedEndpoint = "transfer/fullysigned";
+        public const string GetTransfersPartialEndpoint = "transfers/pending";
+        public const string GetTransfersFullySignedEndpoint = "transfers/fullysigned";
+        public const string GetTransfersSuspendedEndpoint = "transfers/suspended";
         public const string VerifyPartialTransactionEndpoint = "transfer/verify";
     }
 
@@ -112,9 +114,32 @@ namespace Stratis.Features.FederatedPeg.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception thrown calling /api/FederationGateway/{0}: {1}.", FederationGatewayRouteEndPoint.GetMaturedBlockDeposits, e.Message);
+                this.logger.LogError("Exception thrown calling /api/FederationGateway/{0}: {1}.", FederationGatewayRouteEndPoint.GetMaturedBlockDeposits, e.Message);
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, $"Could not re-sync matured block deposits: {e.Message}", e.ToString());
             }
+        }
+
+        [Route(FederationGatewayRouteEndPoint.GetTransfersSuspendedEndpoint)]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult GetTransfersSuspended([FromQuery(Name = "depositId")] string depositId = "", [FromQuery(Name = "transactionId")] string transactionId = "")
+        {
+            ICrossChainTransfer[] transfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Suspended }, false, false).ToArray();
+
+            CrossChainTransferModel[] transactions = transfers
+                .Where(t => ((string.IsNullOrEmpty(depositId) && string.IsNullOrEmpty(transactionId)) || (t.DepositTransactionId.ToString().StartsWith(depositId) && (t.PartialTransaction == null || t.PartialTransaction.GetHash().ToString().StartsWith(transactionId)))))
+                .Select(t => new CrossChainTransferModel()
+                {
+                    DepositAmount = t.DepositAmount,
+                    DepositId = t.DepositTransactionId,
+                    DepositHeight = t.DepositHeight,
+                    Transaction = new TransactionVerboseModel(t.PartialTransaction, this.network),
+                    TransferStatus = t.Status.ToString(),
+                }).ToArray();
+
+            return this.Json(transactions);
         }
 
         [Route(FederationGatewayRouteEndPoint.GetTransfersPartialEndpoint)]
@@ -242,7 +267,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception thrown calling /api/FederationGateway/{0}: {1}.", FederationGatewayRouteEndPoint.GetFederationMemberInfo, e.Message);
+                this.logger.LogError("Exception thrown calling /api/FederationGateway/{0}: {1}.", FederationGatewayRouteEndPoint.GetFederationMemberInfo, e.Message);
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -285,7 +310,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception thrown calling /api/FederationGateway/{0}: {1}.", FederationGatewayRouteEndPoint.GetFederationInfo, e.Message);
+                this.logger.LogError("Exception thrown calling /api/FederationGateway/{0}: {1}.", FederationGatewayRouteEndPoint.GetFederationInfo, e.Message);
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -318,7 +343,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception thrown calling /api/FederationGateway/{0}: {1}.", FederationGatewayRouteEndPoint.FederationMemberIpAdd, e.Message);
+                this.logger.LogError("Exception thrown calling /api/FederationGateway/{0}: {1}.", FederationGatewayRouteEndPoint.FederationMemberIpAdd, e.Message);
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -351,7 +376,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception thrown calling /api/FederationGateway/{0}: {1}.", FederationGatewayRouteEndPoint.FederationMemberIpRemove, e.Message);
+                this.logger.LogError("Exception thrown calling /api/FederationGateway/{0}: {1}.", FederationGatewayRouteEndPoint.FederationMemberIpRemove, e.Message);
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -391,7 +416,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception thrown calling /api/FederationGateway/{0}: {1}.", FederationGatewayRouteEndPoint.FederationMemberIpReplace, e.Message);
+                this.logger.LogError("Exception thrown calling /api/FederationGateway/{0}: {1}.", FederationGatewayRouteEndPoint.FederationMemberIpReplace, e.Message);
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -421,16 +446,13 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [HttpDelete]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult DeleteSuspendedTransfers()
+        public IActionResult DeleteSuspendedTransfers([FromBody] DeleteSuspendedTransferModel model)
         {
-            if (this.network.IsTest() || this.network.IsRegTest())
-            {
-                var result = this.crossChainTransferStore.DeleteSuspendedTransfers();
-                return this.Json($"{result} suspended transfers has been removed.");
-            }
+            (bool result, string message) deleteResult = this.crossChainTransferStore.DeleteSuspendedTransfer(new uint256(model.DepositId));
+            if (deleteResult.result)
+                return Ok($"'{model.DepositId}' was deleted.");
 
-            return this.Json($"Deleting suspended transfers is only available on test networks.");
+            return BadRequest(deleteResult.message);
         }
     }
 }

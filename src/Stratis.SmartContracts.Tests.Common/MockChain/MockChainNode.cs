@@ -269,7 +269,8 @@ namespace Stratis.SmartContracts.Tests.Common.MockChain
             ulong gasPrice = SmartContractMempoolValidator.MinGasPrice,
             decimal feeAmount = 0.01M,
             string sender = null,
-            List<OutpointRequest> outpoints = null)
+            List<OutpointRequest> outpoints = null,
+            List<RecipientModel> recipients = null)
         {
             var request = new BuildCallContractTransactionRequest
             {
@@ -284,7 +285,8 @@ namespace Stratis.SmartContracts.Tests.Common.MockChain
                 Password = this.Password,
                 Sender = sender ?? this.MinerAddress.Address,
                 WalletName = this.WalletName,
-                Outpoints = outpoints
+                Outpoints = outpoints,
+                Recipients = recipients
             };
 
             var response = (JsonResult)this.smartContractsController.BuildAndSendCallSmartContractTransactionAsync(request).GetAwaiter().GetResult();
@@ -292,7 +294,7 @@ namespace Stratis.SmartContracts.Tests.Common.MockChain
             return (BuildCallContractTransactionResponse)response.Value;
         }
 
-        public ILocalExecutionResult CallContractMethodLocally(
+        public LocalExecutionResponse CallContractMethodLocally(
             string methodName,
             string contractAddress,
             decimal amount,
@@ -312,7 +314,7 @@ namespace Stratis.SmartContracts.Tests.Common.MockChain
                 Sender = sender ?? this.MinerAddress.Address
             };
             JsonResult response = (JsonResult)this.smartContractsController.LocalCallSmartContractTransaction(request);
-            return (ILocalExecutionResult)response.Value;
+            return (LocalExecutionResponse)response.Value;
         }
 
         /// <summary>

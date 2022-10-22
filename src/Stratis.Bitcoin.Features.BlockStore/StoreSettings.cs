@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.BlockStore
@@ -35,6 +36,9 @@ namespace Stratis.Bitcoin.Features.BlockStore
         /// <summary><c>true</c> to maintain a full addresses index.</summary>
         public bool AddressIndex { get; set; }
 
+        /// <summary>How many balance changes per address should be accumulated before compaction happens. Compaction compacts half of the balance changes.</summary>
+        public int AddressIndexerCompactionThreshold { get; set; }
+
         /// <summary>Calculates minimum amount of blocks we need to keep during pruning.</summary>
         private int GetMinPruningAmount()
         {
@@ -56,7 +60,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
         {
             Guard.NotNull(nodeSettings, nameof(nodeSettings));
 
-            this.logger = nodeSettings.LoggerFactory.CreateLogger(typeof(StoreSettings).FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
 
             TextFileConfiguration config = nodeSettings.ConfigReader;
 
@@ -73,6 +77,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
             this.ReIndex = config.GetOrDefault<bool>("reindex", false, this.logger);
             this.ReIndexChain = config.GetOrDefault<bool>("reindex-chain", false, this.logger);
             this.AddressIndex = config.GetOrDefault<bool>("addressindex", false, this.logger);
+            this.AddressIndexerCompactionThreshold = config.GetOrDefault<int>("compactionthreshold", 8000, this.logger);
 
             if (this.PruningEnabled && this.TxIndex)
                 throw new ConfigurationException("Prune mode is incompatible with -txindex");
@@ -90,8 +95,10 @@ namespace Stratis.Bitcoin.Features.BlockStore
             builder.AppendLine($"-reindex=<0 or 1>              Rebuild store with tx index from block data files on disk.");
             builder.AppendLine($"-reindex-chain=<0 or 1>        Rebuild the coindb from block data files on disk.");
             builder.AppendLine($"-addressindex=<0 or 1>         Enable to maintain a full address index.");
+            builder.AppendLine($"-compactionthreshold=<integer value>         Specify address indexer compaction threshold.");
 
-            NodeSettings.Default(network).Logger.LogInformation(builder.ToString());
+            var logger = NodeSettings.Default(network).LoggerFactory.CreateLogger(typeof(StoreSettings).FullName);
+            logger.LogInformation(builder.ToString());
         }
 
         /// <summary>

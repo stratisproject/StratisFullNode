@@ -7,6 +7,7 @@ using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
 using Stratis.Bitcoin.Features.Interop.Payloads;
+using Stratis.Bitcoin.Features.Interop.Settings;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
@@ -21,17 +22,22 @@ namespace Stratis.Bitcoin.Features.Interop
     /// </summary>
     public sealed class InteropFeature : FullNodeFeature
     {
+        private readonly ChainIndexer chainIndexer;
+        private readonly ICirrusContractClient cirrusClient;
         private readonly IConnectionManager connectionManager;
         private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
         private readonly IConversionRequestFeeService conversionRequestFeeService;
         private readonly IConversionRequestRepository conversionRequestRepository;
         private readonly IETHCompatibleClientProvider ethClientProvider;
         private readonly IFederationManager federationManager;
+        private readonly InteropMonitor interopMonitor;
         private readonly InteropPoller interopPoller;
         private readonly InteropSettings interopSettings;
         private readonly Network network;
 
         public InteropFeature(
+            ChainIndexer chainIndexer,
+            ICirrusContractClient cirrusClient,
             IConnectionManager connectionManager,
             IConversionRequestCoordinationService conversionRequestCoordinationService,
             IConversionRequestFeeService conversionRequestFeeService,
@@ -39,16 +45,20 @@ namespace Stratis.Bitcoin.Features.Interop
             IETHCompatibleClientProvider ethCompatibleClientProvider,
             IFederationManager federationManager,
             IFullNode fullNode,
+            InteropMonitor interopMonitor,
             InteropPoller interopPoller,
             InteropSettings interopSettings,
             Network network)
         {
+            this.cirrusClient = cirrusClient;
+            this.chainIndexer = chainIndexer;
             this.connectionManager = connectionManager;
             this.conversionRequestCoordinationService = conversionRequestCoordinationService;
             this.conversionRequestFeeService = conversionRequestFeeService;
             this.conversionRequestRepository = conversionRequestRepository;
             this.ethClientProvider = ethCompatibleClientProvider;
             this.federationManager = federationManager;
+            this.interopMonitor = interopMonitor;
             this.interopPoller = interopPoller;
             this.interopSettings = interopSettings;
             this.network = network;
@@ -57,6 +67,7 @@ namespace Stratis.Bitcoin.Features.Interop
             payloadProvider.AddPayload(typeof(ConversionRequestPayload));
             payloadProvider.AddPayload(typeof(FeeProposalPayload));
             payloadProvider.AddPayload(typeof(FeeAgreePayload));
+            payloadProvider.AddPayload(typeof(ConversionRequestStatePayload));
         }
 
         /// <inheritdoc/>
@@ -64,12 +75,14 @@ namespace Stratis.Bitcoin.Features.Interop
         {
             // For now as only ethereum is supported we need set this to the quorum amount in the eth settings class.
             // Refactor this to a base.
+            this.conversionRequestCoordinationService.RegisterConversionRequestQuorum(this.interopSettings.GetSettingsByChain(Wallet.DestinationChain.CIRRUS).MultisigWalletQuorum);
             this.conversionRequestCoordinationService.RegisterConversionRequestQuorum(this.interopSettings.GetSettingsByChain(Wallet.DestinationChain.ETH).MultisigWalletQuorum);
 
             this.interopPoller?.InitializeAsync();
+            this.interopMonitor?.Initialize();
 
             NetworkPeerConnectionParameters networkPeerConnectionParameters = this.connectionManager.Parameters;
-            networkPeerConnectionParameters.TemplateBehaviors.Add(new InteropBehavior(this.network, this.conversionRequestCoordinationService, this.conversionRequestFeeService, this.conversionRequestRepository, this.ethClientProvider, this.federationManager));
+            networkPeerConnectionParameters.TemplateBehaviors.Add(new InteropBehavior(this.network, this.chainIndexer, this.cirrusClient, this.conversionRequestCoordinationService, this.conversionRequestFeeService, this.conversionRequestRepository, this.ethClientProvider, this.federationManager));
 
             return Task.CompletedTask;
         }
@@ -99,6 +112,8 @@ namespace Stratis.Bitcoin.Features.Interop
                     .AddSingleton<IETHClient, ETHClient.ETHClient>()
                     .AddSingleton<IBNBClient, BNBClient>()
                     .AddSingleton<IETHCompatibleClientProvider, ETHCompatibleClientProvider>()
+                    .AddSingleton<ICirrusContractClient, CirrusContractClient>()
+                    .AddSingleton<InteropMonitor>()
                     .AddSingleton<InteropPoller>()
                     ));
 

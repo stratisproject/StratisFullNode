@@ -1,8 +1,9 @@
 ﻿using System;
 using System.IO;
 using DBreeze.Utils;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.PoA;
 
 namespace Stratis.Bitcoin.PoA.Features.Voting
@@ -18,7 +19,9 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
             this.logger = LogManager.GetCurrentClassLogger();
         }
 
-        /// <summary>Encodes voting request data.</summary>
+        /// <summary>Encodes voting request data as an array of bytes.</summary>
+        /// <param name="votingRequestData">See <see cref="JoinFederationRequest"/>.</param>
+        /// <returns>An array of bytes encoding the voting request.</returns>
         public byte[] Encode(JoinFederationRequest votingRequestData)
         {
             using (var memoryStream = new MemoryStream())
@@ -32,8 +35,10 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
             }
         }
 
-        /// <summary>Decodes the voting request.</summary>
+        /// <summary>Decodes a voting request that had previously been encoded as an array of bytes.</summary>
         /// <exception cref="PoAConsensusErrors.VotingDataInvalidFormat">Thrown in case voting data format is invalid.</exception>
+        /// <param name="votingRequestDataBytes">An array of bytes encoding the voting request.</param>
+        /// <returns>The <see cref="JoinFederationRequest"/>.</returns>
         public JoinFederationRequest Decode(byte[] votingRequestDataBytes)
         {
             try
@@ -55,7 +60,7 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
 
                     if (deserializeStream.ProcessedBytes != votingRequestDataBytes.Length)
                     {
-                        this.logger.Trace("(-)[INVALID_SIZE]");
+                        this.logger.LogTrace("(-)[INVALID_SIZE]");
                         PoAConsensusErrors.VotingRequestInvalidFormat.Throw();
                     }
 
@@ -64,8 +69,8 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
             }
             catch (Exception e)
             {
-                this.logger.Debug("Exception during deserialization: '{0}'.", e.ToString());
-                this.logger.Trace("(-)[DESERIALIZING_EXCEPTION]");
+                this.logger.LogDebug("Exception during deserialization: '{0}'.", e.ToString());
+                this.logger.LogTrace("(-)[DESERIALIZING_EXCEPTION]");
 
                 PoAConsensusErrors.VotingRequestInvalidFormat.Throw();
                 return null;

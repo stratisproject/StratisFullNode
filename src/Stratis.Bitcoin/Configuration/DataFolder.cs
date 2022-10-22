@@ -37,6 +37,7 @@ namespace Stratis.Bitcoin.Configuration
             this.KeyValueRepositoryPath = Path.Combine(databasePath, "common");
             this.InteropRepositoryPath = Path.Combine(rootPath, "interop");
             this.InteropFeeRepositoryPath = Path.Combine(rootPath, "interopfee");
+            this.InteropReplenishmentRepositoryPath = Path.Combine(rootPath, "interopreplenishment");
             this.ConversionRepositoryPath = Path.Combine(rootPath, "conversion");
             this.BlockPath = Path.Combine(databasePath, "blocks");
             this.PollsPath = Path.Combine(rootPath, "polls");
@@ -72,6 +73,8 @@ namespace Stratis.Bitcoin.Configuration
         public string InteropRepositoryPath { get; internal set; }
 
         public string InteropFeeRepositoryPath { get; internal set; }
+
+        public string InteropReplenishmentRepositoryPath { get; internal set; }
 
         public string ConversionRepositoryPath { get; internal set; }
 
@@ -125,7 +128,7 @@ namespace Stratis.Bitcoin.Configuration
         /// </summary>
         public void DeleteChainDirectories()
         {
-            var dirsForDeletion = new string[] { BlockPath, ChainPath, CoindbPath, KeyValueRepositoryPath, SmartContractStatePath, ProvenBlockHeaderPath };
+            var dirsForDeletion = new string[] { this.BlockPath, this.ChainPath, this.CoindbPath, this.KeyValueRepositoryPath, this.SmartContractStatePath, this.ProvenBlockHeaderPath };
 
             foreach (var dir in dirsForDeletion.Select(dir => new DirectoryInfo(dir)))
             {

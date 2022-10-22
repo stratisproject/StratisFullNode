@@ -4,9 +4,11 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NLog;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Base.Deployments;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
@@ -27,13 +29,23 @@ namespace Stratis.Features.Collateral
         /// <summary>Checks if given federation member fulfills the collateral requirement.</summary>
         /// <param name="federationMember">The federation member whose collateral will be checked.</param>
         /// <param name="heightToCheckAt">Counter chain height at which collateral should be checked.</param>
-        bool CheckCollateral(IFederationMember federationMember, int heightToCheckAt);
+        /// <param name="localChainHeight">Used for BIP 9 activation.</param>
+        /// <returns><c>True</c> if the collateral requirement is fulfilled and <c>false</c> otherwise.</returns>
+        bool CheckCollateral(IFederationMember federationMember, int heightToCheckAt, int localChainHeight);
+
+        Task UpdateCollateralInfoAsync(CancellationToken cancellation);
 
         int GetCounterChainConsensusHeight();
     }
 
     public class CollateralChecker : ICollateralChecker
     {
+        /// <summary>
+        /// The number of Strax blocks the collateral should remain above the threshold to be suiable for mining a block.
+        /// </summary>
+        /// <remarks>This value is added to the maxReorgLength of 240 for a confirmnation period of 500 in total.</remarks>
+        private const int collateralMaturationPeriod = 260;
+
         private readonly IBlockStoreClient blockStoreClient;
 
         private readonly IFederationManager federationManager;
@@ -65,12 +77,14 @@ namespace Stratis.Features.Collateral
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
         private int counterChainConsensusTipHeight;
 
+        private readonly NodeDeployments nodeDeployments;
+
         private Task updateCollateralContinuouslyTask;
 
         private bool collateralUpdated;
 
         public CollateralChecker(IHttpClientFactory httpClientFactory, ICounterChainSettings settings, IFederationManager federationManager,
-            ISignals signals, Network network, IAsyncProvider asyncProvider, INodeLifetime nodeLifetime)
+            ISignals signals, Network network, IAsyncProvider asyncProvider, INodeLifetime nodeLifetime, NodeDeployments nodeDeployments)
         {
             this.federationManager = federationManager;
             this.signals = signals;
@@ -82,6 +96,7 @@ namespace Stratis.Features.Collateral
             this.balancesDataByAddress = new Dictionary<string, AddressIndexerData>();
             this.logger = LogManager.GetCurrentClassLogger();
             this.blockStoreClient = new BlockStoreClient(httpClientFactory, $"http://{settings.CounterChainApiHost}", settings.CounterChainApiPort);
+            this.nodeDeployments = nodeDeployments;
         }
 
         public async Task InitializeAsync()
@@ -92,7 +107,7 @@ namespace Stratis.Features.Collateral
             foreach (CollateralFederationMember federationMember in this.federationManager.GetFederationMembers()
                 .Cast<CollateralFederationMember>().Where(x => x.CollateralAmount != null && x.CollateralAmount > 0))
             {
-                this.logger.Info("Initializing federation member {0} with amount {1}.", federationMember.CollateralMainchainAddress, federationMember.CollateralAmount);
+                this.logger.LogInformation("Initializing federation member {0} with amount {1}.", federationMember.CollateralMainchainAddress, federationMember.CollateralAmount);
                 this.balancesDataByAddress.Add(federationMember.CollateralMainchainAddress, null);
             }
 
@@ -103,7 +118,7 @@ namespace Stratis.Features.Collateral
                 if (this.collateralUpdated)
                     break;
 
-                this.logger.Warn("Node initialization will not continue until the gateway node responds.");
+                this.logger.LogWarning("Node initialization will not continue until the gateway node responds.");
                 await this.DelayCollateralCheckAsync().ConfigureAwait(false);
             }
 
@@ -123,6 +138,7 @@ namespace Stratis.Features.Collateral
         }
 
         /// <summary>Continuously updates info about money deposited to fed member's addresses.</summary>
+        /// <returns>The asynchronous task.</returns>
         private async Task UpdateCollateralInfoContinuouslyAsync()
         {
             while (!this.cancellationSource.IsCancellationRequested)
@@ -136,6 +152,7 @@ namespace Stratis.Features.Collateral
         /// <summary>
         /// Delay checking the federation member's collateral with <see cref="CollateralUpdateIntervalSeconds"/> seconds.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         private async Task DelayCollateralCheckAsync()
         {
             try
@@ -144,11 +161,11 @@ namespace Stratis.Features.Collateral
             }
             catch (OperationCanceledException)
             {
-                this.logger.Trace("(-)[CANCELLED]");
+                this.logger.LogTrace("(-)[CANCELLED]");
             }
         }
 
-        private async Task UpdateCollateralInfoAsync(CancellationToken cancellation)
+        public async Task UpdateCollateralInfoAsync(CancellationToken cancellation)
         {
             List<string> addressesToCheck;
 
@@ -159,33 +176,33 @@ namespace Stratis.Features.Collateral
 
             if (addressesToCheck.Count == 0)
             {
-                this.logger.Info("None of the federation members has a collateral requirement configured.");
+                this.logger.LogInformation("None of the federation members has a collateral requirement configured.");
             }
 
-            this.logger.Debug("Addresses to check {0}.", addressesToCheck.Count);
+            this.logger.LogDebug("Addresses to check {0}.", addressesToCheck.Count);
 
-            VerboseAddressBalancesResult verboseAddressBalanceResult = await this.blockStoreClient.GetVerboseAddressesBalancesDataAsync(addressesToCheck, cancellation).ConfigureAwait(false);
+            VerboseAddressBalancesResult verboseAddressBalanceResult = await this.blockStoreClient.VerboseAddressesBalancesDataAsync(addressesToCheck, cancellation).ConfigureAwait(false);
 
             if (verboseAddressBalanceResult == null)
             {
-                this.logger.Warn("Failed to update collateral, please ensure that the mainnet gateway node is running and it's API feature is enabled.");
-                this.logger.Trace("(-)[CALL_RETURNED_NULL_RESULT]:false");
+                this.logger.LogWarning("Failed to update collateral, please ensure that the mainnet gateway node is running and it's API feature is enabled.");
+                this.logger.LogTrace("(-)[CALL_RETURNED_NULL_RESULT]:false");
                 return;
             }
 
             if (!string.IsNullOrEmpty(verboseAddressBalanceResult.Reason))
             {
-                this.logger.Warn("Failed to fetch address balances from the counter chain node : {0}", verboseAddressBalanceResult.Reason);
-                this.logger.Trace("(-)[FAILED]:{0}", verboseAddressBalanceResult.Reason);
+                this.logger.LogWarning("Failed to fetch address balances from the counter chain node : {0}", verboseAddressBalanceResult.Reason);
+                this.logger.LogTrace("(-)[FAILED]:{0}", verboseAddressBalanceResult.Reason);
                 return;
             }
 
-            this.logger.Debug("Addresses received {0}.", verboseAddressBalanceResult.BalancesData.Count);
+            this.logger.LogDebug("Addresses received {0}.", verboseAddressBalanceResult.BalancesData.Count);
 
             if (verboseAddressBalanceResult.BalancesData.Count != addressesToCheck.Count)
             {
-                this.logger.Debug("Expected {0} data entries but received {1}.", addressesToCheck.Count, verboseAddressBalanceResult.BalancesData.Count);
-                this.logger.Trace("(-)[CALL_RETURNED_INCONSISTENT_DATA]:false");
+                this.logger.LogDebug("Expected {0} data entries but received {1}.", addressesToCheck.Count, verboseAddressBalanceResult.BalancesData.Count);
+                this.logger.LogTrace("(-)[CALL_RETURNED_INCONSISTENT_DATA]:false");
                 return;
             }
 
@@ -193,7 +210,7 @@ namespace Stratis.Features.Collateral
             {
                 foreach (AddressIndexerData balanceData in verboseAddressBalanceResult.BalancesData)
                 {
-                    this.logger.Debug("Updating federation member address {0}.", balanceData.Address);
+                    this.logger.LogDebug("Updating federation member address {0}.", balanceData.Address);
                     this.balancesDataByAddress[balanceData.Address] = balanceData;
                 }
 
@@ -204,11 +221,11 @@ namespace Stratis.Features.Collateral
         }
 
         /// <inheritdoc />
-        public bool CheckCollateral(IFederationMember federationMember, int heightToCheckAt)
+        public bool CheckCollateral(IFederationMember federationMember, int heightToCheckAt, int localChainHeight)
         {
             if (!this.collateralUpdated)
             {
-                this.logger.Debug("(-)[NOT_INITIALIZED]");
+                this.logger.LogDebug("(-)[NOT_INITIALIZED]");
                 throw new Exception("Component is not initialized!");
             }
 
@@ -216,7 +233,7 @@ namespace Stratis.Features.Collateral
 
             if (member == null)
             {
-                this.logger.Debug("(-)[WRONG_TYPE]");
+                this.logger.LogDebug("(-)[WRONG_TYPE]");
                 throw new ArgumentException($"{nameof(federationMember)} should be of type: {nameof(CollateralFederationMember)}.");
             }
 
@@ -224,14 +241,14 @@ namespace Stratis.Features.Collateral
             {
                 if (heightToCheckAt > this.counterChainConsensusTipHeight - this.maxReorgLength)
                 {
-                    this.logger.Debug("(-)[HEIGHTTOCHECK_HIGHER_THAN_COUNTER_TIP_LESS_MAXREORG]:{0}={1}, {2}={3}:false", nameof(heightToCheckAt), heightToCheckAt, nameof(this.counterChainConsensusTipHeight), this.counterChainConsensusTipHeight);
+                    this.logger.LogDebug("(-)[HEIGHTTOCHECK_HIGHER_THAN_COUNTER_TIP_LESS_MAXREORG]:{0}={1}, {2}={3}:false", nameof(heightToCheckAt), heightToCheckAt, nameof(this.counterChainConsensusTipHeight), this.counterChainConsensusTipHeight);
                     return false;
                 }
             }
 
             if ((member.CollateralAmount == null) || (member.CollateralAmount == 0))
             {
-                this.logger.Debug("(-)[NO_COLLATERAL_REQUIREMENT]:true");
+                this.logger.LogDebug("(-)[NO_COLLATERAL_REQUIREMENT]:true");
                 return true;
             }
 
@@ -242,15 +259,40 @@ namespace Stratis.Features.Collateral
                 if (balanceData == null)
                 {
                     // No data. Assume collateral is 0. It's ok if there is no collateral set for that fed member.
-                    this.logger.Debug("(-)[NO_DATA]:{0}={1}", nameof(this.balancesDataByAddress.Count), this.balancesDataByAddress.Count);
+                    this.logger.LogDebug("(-)[NO_DATA]:{0}={1}", nameof(this.balancesDataByAddress.Count), this.balancesDataByAddress.Count);
                     return 0 >= member.CollateralAmount;
                 }
 
                 long balance = balanceData.BalanceChanges.Where(x => x.BalanceChangedHeight <= heightToCheckAt).CalculateBalance();
 
-                this.logger.Info("Calculated balance for '{0}' at {1} is {2}, collateral requirement is {3}.", member.CollateralMainchainAddress, heightToCheckAt, Money.Satoshis(balance).ToUnit(MoneyUnit.BTC), member.CollateralAmount);
+                if (balance < member.CollateralAmount.Satoshi)
+                {
+                    this.logger.LogWarning($"The balance for {member.CollateralMainchainAddress} at block {heightToCheckAt} is { Money.Satoshis(balance).ToUnit(MoneyUnit.BTC)} which is below the requirement of {member.CollateralAmount}.");
+                    return false;
+                }
 
-                return balance >= member.CollateralAmount.Satoshi;
+                int release1320ActivationHeight = 0;
+                if (this.nodeDeployments?.BIP9.ArraySize > 0  /* Not NoBIP9Deployments */)
+                    release1320ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[0 /* Release1320 */].ActivationHeight;
+
+                // Legacy behavior before activation.
+                if (localChainHeight < release1320ActivationHeight)
+                    return true;
+
+                // If the balance requirement is met, ensure the minimum balance is maintained for the full validity window.
+                int startHeight = heightToCheckAt - collateralMaturationPeriod;
+                long minBalance = balanceData.BalanceChanges.Where(x => x.BalanceChangedHeight <= heightToCheckAt).CalculateMinBalance(startHeight);
+
+                if (minBalance < member.CollateralAmount.Satoshi)
+                {
+                    this.logger.LogWarning("The collateral has to remain above {0} for {1} Strax blocks before a block can be mined.",
+                        Money.Satoshis(member.CollateralAmount.Satoshi).ToUnit(MoneyUnit.BTC), collateralMaturationPeriod + this.maxReorgLength);
+                    return false;
+                }
+
+                this.logger.LogInformation($"The balance for {member.CollateralMainchainAddress} at block {heightToCheckAt} is { Money.Satoshis(balance).ToUnit(MoneyUnit.BTC)} which meets the requirement of {member.CollateralAmount}.");
+
+                return true;
             }
         }
 
@@ -260,15 +302,15 @@ namespace Stratis.Features.Collateral
             {
                 if (fedMemberKicked.KickedMember is CollateralFederationMember collateralFederationMember)
                 {
-                    this.logger.Debug("Removing federation member '{0}' with collateral address '{1}'.", collateralFederationMember.PubKey, collateralFederationMember.CollateralMainchainAddress);
+                    this.logger.LogDebug("Removing federation member '{0}' with collateral address '{1}'.", collateralFederationMember.PubKey, collateralFederationMember.CollateralMainchainAddress);
                     if (!string.IsNullOrEmpty(collateralFederationMember.CollateralMainchainAddress))
                         this.balancesDataByAddress.Remove(collateralFederationMember.CollateralMainchainAddress);
                     else
-                        this.logger.Debug("(-)[NO_COLLATERAL_ADDRESS]:{0}='{1}'", nameof(fedMemberKicked.KickedMember.PubKey), fedMemberKicked.KickedMember.PubKey);
+                        this.logger.LogDebug("(-)[NO_COLLATERAL_ADDRESS]:{0}='{1}'", nameof(fedMemberKicked.KickedMember.PubKey), fedMemberKicked.KickedMember.PubKey);
                 }
                 else
                 {
-                    this.logger.Error("(-)[NOT_A_COLLATERAL_MEMBER]:{0}='{1}'", nameof(fedMemberKicked.KickedMember.PubKey), fedMemberKicked.KickedMember.PubKey);
+                    this.logger.LogError("(-)[NOT_A_COLLATERAL_MEMBER]:{0}='{1}'", nameof(fedMemberKicked.KickedMember.PubKey), fedMemberKicked.KickedMember.PubKey);
                 }
             }
         }
@@ -281,19 +323,19 @@ namespace Stratis.Features.Collateral
                 {
                     if (string.IsNullOrEmpty(collateralFederationMember.CollateralMainchainAddress))
                     {
-                        this.logger.Debug("(-)[NO_COLLATERAL_ADDRESS]:{0}='{1}'", nameof(fedMemberAdded.AddedMember.PubKey), fedMemberAdded.AddedMember.PubKey);
+                        this.logger.LogDebug("(-)[NO_COLLATERAL_ADDRESS]:{0}='{1}'", nameof(fedMemberAdded.AddedMember.PubKey), fedMemberAdded.AddedMember.PubKey);
                         return;
                     }
 
                     if (!this.balancesDataByAddress.ContainsKey(collateralFederationMember.CollateralMainchainAddress))
                     {
-                        this.logger.Debug("Adding federation member '{0}' with collateral address '{1}'.", collateralFederationMember.PubKey, collateralFederationMember.CollateralMainchainAddress);
+                        this.logger.LogDebug("Adding federation member '{0}' with collateral address '{1}'.", collateralFederationMember.PubKey, collateralFederationMember.CollateralMainchainAddress);
                         this.balancesDataByAddress.Add(collateralFederationMember.CollateralMainchainAddress, null);
                     }
                 }
                 else
                 {
-                    this.logger.Error("(-)[NOT_A_COLLATERAL_MEMBER]:{0}='{1}'", nameof(fedMemberAdded.AddedMember.PubKey), fedMemberAdded.AddedMember.PubKey);
+                    this.logger.LogError("(-)[NOT_A_COLLATERAL_MEMBER]:{0}='{1}'", nameof(fedMemberAdded.AddedMember.PubKey), fedMemberAdded.AddedMember.PubKey);
                 }
             }
         }

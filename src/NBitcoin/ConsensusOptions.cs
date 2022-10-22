@@ -13,7 +13,7 @@ namespace NBitcoin
         /// </summary>
         public const int SerializeTransactionNoWitness = 0x40000000;
 
-        /// <summary>Maximum size for a block in bytes. </summary>
+        /// <summary>Maximum size for a block in bytes.</summary>
         public uint MaxBlockBaseSize { get; set; }
 
         /// <summary>The maximum allowed weight for a block, see BIP 141 (network rule)</summary>
@@ -143,6 +143,11 @@ namespace NBitcoin
         /// Maximum merkle proof serialized size in bytes.
         /// </summary>
         public const int MaxMerkleProofSerializedSize = 512;
+
+        /// <summary>
+        /// The height at which release 1.3.0.0 activated on the side chain.
+        /// </summary>
+        public int Release1300ActivationHeight { get; set; }
 
         /// <summary>
         /// Initializes the default values.

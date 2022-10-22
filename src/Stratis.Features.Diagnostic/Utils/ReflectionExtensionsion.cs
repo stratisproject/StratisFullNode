@@ -3,6 +3,9 @@ using System.Reflection;
 
 namespace Stratis.Features.Diagnostic.Utils
 {
+    /// <summary>
+    /// Provides an extension with methods to access private properties.
+    /// </summary>
     internal static class ReflectionExtension
     {
         /// <summary>

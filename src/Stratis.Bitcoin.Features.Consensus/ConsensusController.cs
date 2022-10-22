@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -82,6 +83,47 @@ namespace Stratis.Bitcoin.Features.Consensus
             }
         }
 
+
+        /// <summary>
+        /// Gets information about locked in or active deployments.
+        /// </summary>
+        /// <returns>A <see cref="JsonResult"/> object derived from a list of
+        /// <see cref="ThresholdActivationModel"/> objects - one per locked in or active deployment.
+        /// Returns an <see cref="ErrorResult"/> if the method fails.</returns>
+        /// <response code="200">Returns the list of locked in or active deployments.</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route("api/[controller]/lockedindeployments")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult LockedInDeployments()
+        {
+            try
+            {
+                ConsensusRuleEngine ruleEngine = this.ConsensusManager.ConsensusRules as ConsensusRuleEngine;
+
+                // Ensure threshold conditions cached.
+                ThresholdState[] thresholdStates = ruleEngine.NodeDeployments.BIP9.GetStates(this.ChainState.ConsensusTip.Previous);
+
+                int[] activationHeights = ruleEngine.NodeDeployments.BIP9.ActivationHeightProviders.Select(p => p.ActivationHeight).ToArray();
+
+                List<ThresholdStateModel> metrics = ruleEngine.NodeDeployments.BIP9.GetThresholdStateMetrics(this.ChainState.ConsensusTip.Previous, thresholdStates, activationHeights);
+
+                return this.Json(metrics.Select(m => new ThresholdActivationModel() { 
+                    ActivationHeight = m.SinceHeight, 
+                    DeploymentIndex = m.DeploymentIndex, 
+                    DeploymentName = m.DeploymentName, 
+                    Votes = m.Votes,
+                    LockedInHeight = m.SinceHeight - ruleEngine.Network.Consensus.MinerConfirmationWindow,
+                    LockedInTimestamp = this.ChainIndexer[m.SinceHeight - ruleEngine.Network.Consensus.MinerConfirmationWindow].Header.Time}).ToArray());
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
         /// <summary>
         /// Gets the hash of the block at the consensus tip.
         /// </summary>
@@ -152,6 +194,34 @@ namespace Stratis.Bitcoin.Features.Consensus
             catch (Exception e)
             {
                 this.logger.LogTrace("(-)[EXCEPTION]");
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Returns the current tip of consensus.
+        /// </summary>
+        /// <returns>Json formatted <see cref="uint256"/> hash and height of the block at the consensus tip. Returns <see cref="IActionResult"/> formatted error if fails.</returns>
+        /// <response code="200">Returns the tip hash and height.</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route("api/[controller]/tip")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult ConsensusTip()
+        {
+            try
+            {
+                if (this.ConsensusManager.Tip == null)
+                    return this.Json("Consensus is not initialized.");
+
+                var tip = this.ConsensusManager.Tip;
+
+                return this.Json(new { TipHash = tip.HashBlock, TipHeight = tip.Height });
+            }
+            catch (Exception e)
+            {
                 this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }

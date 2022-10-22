@@ -30,7 +30,11 @@ namespace Stratis.Bitcoin.Tests.Common
             throw new Exception();
         }
 
-        /// <summary>Gets private constant member of specified type.</summary>
+        /// <summary>Gets a static private constant member of specified type.</summary>
+        /// <param name="type">The type containing the static private constant.</param>
+        /// <param name="constantName">The name of the static private constant.</param>
+        /// <typeparam name="T">The type of the static private constant.</typeparam>
+        /// <returns>The value of the static private constant.</returns>
         public static T GetPrivateConstantValue<T>(this Type type, string constantName)
         {
             T value = type
@@ -71,6 +75,11 @@ namespace Stratis.Bitcoin.Tests.Common
         }
 
         /// <summary>Calls private method using reflection.</summary>
+        /// <param name="obj">The object containing the method to invoke.</param>
+        /// <param name="methodName">The name of the method to invoke.</param>
+        /// <param name="args">The arguments to be passed to <see cref="MethodInfo.Invoke" "/>.</param>
+        /// <typeparam name="T">The type of the object containing the method to invoke.</typeparam>
+        /// <returns>An object containing the return value of the invoked method, or null in the case of a constructor.</returns>
         public static object InvokeMethod<T>(this T obj, string methodName, params object[] args)
         {
             Type type = typeof(T);
@@ -119,6 +128,19 @@ namespace Stratis.Bitcoin.Tests.Common
         {
             FieldInfo variable = obj.GetType().GetField(variableName, BindingFlags.NonPublic| BindingFlags.Instance);
             variable.SetValue(obj, value);
+        }
+
+        /// <summary>
+        /// Using reflection, calls a private method passing along the supplied parameters.
+        /// </summary>
+        /// <param name="obj">Object from where the Property Value is set</param>
+        /// <param name="methodName">Name of the method.</param>
+        /// <param name="parameters">Parameters for the method.</param>
+        /// <returns>The method return value.</returns>
+        public static object CallPrivateMethod(this object obj, string methodName, params object[] parameters)
+        {
+            MethodInfo methodInfo = obj.GetType().GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Instance);
+            return methodInfo.Invoke(obj, parameters);
         }
 
         [System.Diagnostics.DebuggerHidden]

@@ -526,7 +526,7 @@ namespace Stratis.Bitcoin.Tests.Controllers
             Assert.Single(errorResponse.Errors);
             ErrorModel error = errorResponse.Errors[0];
             Assert.Equal(400, error.Status);
-            Assert.StartsWith("System.NotImplementedException", error.Description);
+            Assert.StartsWith("Binary serialization is not", error.Description);
         }
 
         [Fact]
@@ -555,10 +555,7 @@ namespace Stratis.Bitcoin.Tests.Controllers
             string hash = new uint256(2562).ToString();
             bool isJsonFormat = true;
 
-            var json = (JsonResult)this.controller.GetBlockHeader(hash, isJsonFormat);
-            var resultModel = (BlockHeaderModel)json.Value;
-
-            Assert.Null(resultModel);
+            Assert.IsType<NotFoundObjectResult>(this.controller.GetBlockHeader(hash, isJsonFormat));
         }
 
         [Fact]

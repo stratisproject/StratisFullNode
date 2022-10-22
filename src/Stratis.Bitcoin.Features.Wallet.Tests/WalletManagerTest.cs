@@ -1432,7 +1432,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             HdAddress spentAddressResult = wallet.AccountsRoot.ElementAt(0).Accounts.ElementAt(0).ExternalAddresses.ElementAt(0);
             Assert.Single(spendingAddress.Transactions);
             Assert.Equal(transaction.GetHash(), spentAddressResult.Transactions.ElementAt(0).SpendingDetails.TransactionId);
-            Assert.True(spentAddressResult.Transactions.ElementAt(0).SpendingDetails.Payments.Any(p => p.DestinationScriptPubKey == transaction.Outputs[1].ScriptPubKey && p.Amount == transaction.Outputs[1].Value));
+            Assert.Contains(spentAddressResult.Transactions.ElementAt(0).SpendingDetails.Payments, p => p.DestinationScriptPubKey == transaction.Outputs[1].ScriptPubKey && p.Amount == transaction.Outputs[1].Value);
 
             Assert.Single(wallet.AccountsRoot.ElementAt(0).Accounts.ElementAt(0).ExternalAddresses.ElementAt(1).Transactions);
             TransactionData destinationAddressResult = wallet.AccountsRoot.ElementAt(0).Accounts.ElementAt(0).ExternalAddresses.ElementAt(1).Transactions.ElementAt(0);
@@ -1494,7 +1494,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             HdAddress spentAddressResult = wallet.AccountsRoot.ElementAt(0).Accounts.ElementAt(0).ExternalAddresses.ElementAt(0);
             Assert.Single(spendingAddress.Transactions);
             Assert.Equal(transaction.GetHash(), spentAddressResult.Transactions.ElementAt(0).SpendingDetails.TransactionId);
-            Assert.True(spentAddressResult.Transactions.ElementAt(0).SpendingDetails.Payments.Any(p => p.DestinationScriptPubKey == transaction.Outputs[1].ScriptPubKey && p.Amount == transaction.Outputs[1].Value));
+            Assert.Contains(spentAddressResult.Transactions.ElementAt(0).SpendingDetails.Payments, p => p.DestinationScriptPubKey == transaction.Outputs[1].ScriptPubKey && p.Amount == transaction.Outputs[1].Value);
 
             Assert.Single(wallet.AccountsRoot.ElementAt(0).Accounts.ElementAt(0).ExternalAddresses.ElementAt(1).Transactions);
             TransactionData destinationAddressResult = wallet.AccountsRoot.ElementAt(0).Accounts.ElementAt(0).ExternalAddresses.ElementAt(1).Transactions.ElementAt(0);
@@ -1668,7 +1668,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             HdAddress spentAddressResult = wallet.AccountsRoot.ElementAt(0).Accounts.ElementAt(0).ExternalAddresses.ElementAt(0);
             Assert.Single(spendingAddress.Transactions);
             Assert.Equal(transaction.GetHash(), spentAddressResult.Transactions.ElementAt(0).SpendingDetails.TransactionId);
-            Assert.True(spentAddressResult.Transactions.ElementAt(0).SpendingDetails.Payments.Any(p => p.DestinationScriptPubKey == transaction.Outputs[1].ScriptPubKey && p.Amount == transaction.Outputs[1].Value));
+            Assert.Contains(spentAddressResult.Transactions.ElementAt(0).SpendingDetails.Payments, p => p.DestinationScriptPubKey == transaction.Outputs[1].ScriptPubKey && p.Amount == transaction.Outputs[1].Value);
 
             Assert.Single(wallet.AccountsRoot.ElementAt(0).Accounts.ElementAt(0).InternalAddresses.ElementAt(0).Transactions);
             TransactionData changeAddressResult = wallet.AccountsRoot.ElementAt(0).Accounts.ElementAt(0).InternalAddresses.ElementAt(0).Transactions.ElementAt(0);
@@ -1731,7 +1731,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             HdAddress spentAddressResult = wallet.AccountsRoot.ElementAt(0).Accounts.ElementAt(0).ExternalAddresses.ElementAt(0);
             Assert.Single(spendingAddress.Transactions);
             Assert.Equal(transaction.GetHash(), spentAddressResult.Transactions.ElementAt(0).SpendingDetails.TransactionId);
-            Assert.True(spentAddressResult.Transactions.ElementAt(0).SpendingDetails.Payments.Any(p => p.DestinationScriptPubKey == transaction.Outputs[1].ScriptPubKey && p.Amount == transaction.Outputs[1].Value));
+            Assert.Contains(spentAddressResult.Transactions.ElementAt(0).SpendingDetails.Payments, p => p.DestinationScriptPubKey == transaction.Outputs[1].ScriptPubKey && p.Amount == transaction.Outputs[1].Value);
             Assert.Equal(blockHeight - 1, spentAddressResult.Transactions.ElementAt(0).BlockHeight);
 
             Assert.Single(wallet.AccountsRoot.ElementAt(0).Accounts.ElementAt(0).ExternalAddresses.ElementAt(1).Transactions);
@@ -1798,7 +1798,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             HdAddress spentAddressResult = wallet.AccountsRoot.ElementAt(0).Accounts.ElementAt(0).ExternalAddresses.ElementAt(0);
             Assert.Single(spendingAddress.Transactions);
             Assert.Equal(transaction.GetHash(), spentAddressResult.Transactions.ElementAt(0).SpendingDetails.TransactionId);
-            Assert.True(spentAddressResult.Transactions.ElementAt(0).SpendingDetails.Payments.Any(p => p.DestinationScriptPubKey == transaction.Outputs[1].ScriptPubKey && p.Amount == transaction.Outputs[1].Value));
+            Assert.Contains(spentAddressResult.Transactions.ElementAt(0).SpendingDetails.Payments, p => p.DestinationScriptPubKey == transaction.Outputs[1].ScriptPubKey && p.Amount == transaction.Outputs[1].Value);
             Assert.Equal(chainInfo.block.GetHash(), spentAddressResult.Transactions.ElementAt(0).BlockHash);
 
             Assert.Single(wallet.AccountsRoot.ElementAt(0).Accounts.ElementAt(0).ExternalAddresses.ElementAt(1).Transactions);
@@ -1816,12 +1816,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             Assert.Equal(transaction.Outputs[0].ScriptPubKey, changeAddressResult.ScriptPubKey);
         }
 
+        /*
         /// <summary>
         /// TODO: [SENDTRANSACTION] Conceptual changes had been introduced to tx sending.
         /// <para>
         /// These tests don't make sense anymore, it must be either removed or refactored.
         /// </para>
         /// </summary>
+        */
         //[Fact(Skip = "See TODO")]
         //public void SendTransactionWithoutMempoolValidatorProcessesTransactionAndBroadcastsTransactionToConnectionManagerNodes()
         //{
@@ -1929,12 +1931,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         //}
         //}
 
+        /*
         /// <summary>
         /// TODO: [SENDTRANSACTION] Conceptual changes had been introduced to tx sending.
         /// <para>
         /// These tests don't make sense anymore, it must be either removed or refactored.
         /// </para>
         /// </summary>
+        */
         //[Fact(Skip = "See TODO")]
         //public void SendTransactionWithMempoolValidatorWithAcceptToMemoryPoolSuccessProcessesTransaction()
         //{
@@ -2045,12 +2049,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         //}
         //}
 
+        /*
         /// <summary>
         /// TODO: [SENDTRANSACTION] Conceptual changes had been introduced to tx sending.
         /// <para>
         /// These tests don't make sense anymore, it must be either removed or refactored.
         /// </para>
         /// </summary>
+        */
         //[Fact(Skip = "See TODO")]
         //public void SendTransactionWithMempoolValidatorWithAcceptToMemoryPoolFailedDoesNotProcessesTransaction()
         //{
@@ -2147,8 +2153,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         //        Assert.Equal(0, payloads.Count);
         //    }
         //}
-        //}
-
+        //}        
         private void AdvanceWalletTipToChainTip(IWalletRepository walletRepository, ChainIndexer concurrentchain)
         {
             var block0 = this.Network.CreateBlock();
@@ -2314,7 +2319,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             HdAddress spentAddressResult = wallet.AccountsRoot.ElementAt(0).Accounts.ElementAt(0).ExternalAddresses.ElementAt(0);
             Assert.Single(spendingAddress.Transactions);
             Assert.Equal(transaction.GetHash(), spentAddressResult.Transactions.ElementAt(0).SpendingDetails.TransactionId);
-            Assert.True(spentAddressResult.Transactions.ElementAt(0).SpendingDetails.Payments.Any(p => p.DestinationScriptPubKey == transaction.Outputs[1].ScriptPubKey && p.Amount == transaction.Outputs[1].Value));
+            Assert.Contains(spentAddressResult.Transactions.ElementAt(0).SpendingDetails.Payments, p => p.DestinationScriptPubKey == transaction.Outputs[1].ScriptPubKey && p.Amount == transaction.Outputs[1].Value);
 
             Assert.Single(wallet.AccountsRoot.ElementAt(0).Accounts.ElementAt(0).ExternalAddresses.ElementAt(1).Transactions);
             TransactionData destinationAddressResult = wallet.AccountsRoot.ElementAt(0).Accounts.ElementAt(0).ExternalAddresses.ElementAt(1).Transactions.ElementAt(0);

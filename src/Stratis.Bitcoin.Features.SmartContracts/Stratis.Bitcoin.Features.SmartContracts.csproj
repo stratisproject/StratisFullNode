@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>    
-    <Version>1.1.0.0</Version>
+    <Version>1.4.0.0</Version>
     <Authors>Stratis Group Ltd.</Authors>
     <PackageId>Stratis.Features.SmartContracts</PackageId>
     <Product>Stratis.Features.SmartContracts</Product>
@@ -10,6 +10,7 @@
 
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DocumentationFile>bin\Debug\netcoreapp3.1\Stratis.Bitcoin.Features.SmartContracts.xml</DocumentationFile>
+    <NoWarn>1701;1702;1591;1572;1573</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CSharpFunctionalExtensions" Version="1.10.0" />
@@ -28,6 +29,15 @@
     <ProjectReference Include="..\Stratis.Bitcoin.Features.PoA\Stratis.Bitcoin.Features.PoA.csproj" />
     <ProjectReference Include="..\Stratis.SmartContracts.Core\Stratis.SmartContracts.Core.csproj" />
     <ProjectReference Include="..\Stratis.SmartContracts.CLR\Stratis.SmartContracts.CLR.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="CirrusMainContracts3834160.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="CirrusTestContracts3219570.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

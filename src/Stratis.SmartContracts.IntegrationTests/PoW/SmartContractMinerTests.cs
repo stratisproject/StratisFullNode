@@ -67,7 +67,6 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
                 testContext.consensusManager,
                 DateTimeProvider.Default,
                 testContext.ExecutorFactory,
-                new LoggerFactory(),
                 testContext.mempool,
                 testContext.mempoolLock,
                 new MinerSettings(testContext.NodeSettings),
@@ -143,7 +142,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
             public uint256 hash;
             public TestMemPoolEntryHelper entry;
             public ChainIndexer ChainIndexer;
-            public ConsensusManager consensusManager;
+            public IConsensusManager consensusManager;
             public ConsensusRuleEngine consensusRules;
             public TxMempool mempool;
             public MempoolSchedulerLock mempoolLock;
@@ -256,12 +255,14 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
                         this.cachedCoinView,
                         chainState,
                         new InvalidBlockHashStore(dateTimeProvider),
-                        new NodeStats(dateTimeProvider, NodeSettings.Default(network), new Mock<IVersionProvider>().Object),
+                        new NodeStats(dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object),
                         asyncProvider,
                         consensusRulesContainer)
                     .SetupRulesEngineParent();
 
-                this.consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network, chainState: chainState, inMemoryCoinView: inMemoryCoinView, chainIndexer: this.ChainIndexer, consensusRules: this.consensusRules);
+                var finalizedBlockInfoRepository = new FinalizedBlockInfoRepository(new HashHeightPair());
+
+                this.consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network, chainState: chainState, inMemoryCoinView: inMemoryCoinView, chainIndexer: this.ChainIndexer, consensusRules: this.consensusRules, finalizedBlockInfoRepository: finalizedBlockInfoRepository);
 
                 await this.consensusManager.InitializeAsync(chainState.BlockStoreTip);
 
@@ -327,8 +328,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
                 this.keyEncodingStrategy = BasicKeyEncodingStrategy.Default;
 
                 this.Folder = TestBase.AssureEmptyDir(Path.Combine(AppContext.BaseDirectory, "TestCase", callingMethod)).FullName;
-                var engine = new DBreezeEngine(Path.Combine(this.Folder, "contracts"));
-                var byteStore = new DBreezeByteStore(engine, "ContractState1");
+                var byteStore = new DBreezeByteStore(Path.Combine(this.Folder, "contracts"), "ContractState1");
                 byteStore.Empty();
                 ISource<byte[], byte[]> stateDB = new NoDeleteSource<byte[], byte[]>(byteStore);
 
@@ -340,13 +340,13 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
 
                 this.AddressGenerator = new AddressGenerator();
                 this.assemblyLoader = new ContractAssemblyLoader();
-                this.callDataSerializer = new CallDataSerializer(new ContractPrimitiveSerializer(this.network));
+                this.callDataSerializer = new CallDataSerializer(new ContractPrimitiveSerializerV2(this.network));
                 this.moduleDefinitionReader = new ContractModuleDefinitionReader();
                 this.contractCache = new ContractAssemblyCache();
                 this.reflectionVirtualMachine = new ReflectionVirtualMachine(this.validator, this.loggerFactory, this.assemblyLoader, this.moduleDefinitionReader, this.contractCache);
                 this.stateProcessor = new StateProcessor(this.reflectionVirtualMachine, this.AddressGenerator);
                 this.internalTxExecutorFactory = new InternalExecutorFactory(this.loggerFactory, this.stateProcessor);
-                this.primitiveSerializer = new ContractPrimitiveSerializer(this.network);
+                this.primitiveSerializer = new ContractPrimitiveSerializerV2(this.network);
                 this.serializer = new Serializer(this.primitiveSerializer);
                 this.smartContractStateFactory = new SmartContractStateFactory(this.primitiveSerializer, this.internalTxExecutorFactory, this.serializer);
                 this.stateFactory = new StateFactory(this.smartContractStateFactory);
@@ -357,6 +357,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
         /// <summary>
         /// Tests creation of a simple token contract
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task SmartContracts_CreateTokenContract_Async()
         {
@@ -384,6 +385,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
         /// <summary>
         /// Try and spend outputs we don't own
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task SmartContracts_TrySpendingFundsThatArentOurs_Async()
         {
@@ -446,6 +448,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
         /// <summary>
         /// Test that contracts correctly send funds to one person
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task SmartContracts_TransferFundsToSingleRecipient_Async()
         {
@@ -498,6 +501,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
         /// <summary>
         /// Send funds with create
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task SmartContracts_CreateWithFunds_Success_Async()
         {
@@ -524,6 +528,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
         /// <summary>
         /// Test that contract correctly send funds to 2 people inside one contract call
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task SmartContracts_TransferFundsToMultipleRecipients_Async()
         {
@@ -578,6 +583,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
         /// <summary>
         /// Tests that contracts manage their UTXOs correctly when not sending funds or receiving funds.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task SmartContracts_SendValue_NoTransfers_Async()
         {
@@ -608,6 +614,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
         /// <summary>
         /// Tests that contracts manage their UTXOs correctly when not sending funds or receiving funds.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task SmartContracts_NoTransfers_Async()
         {
@@ -652,6 +659,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
         /// <summary>
         /// Should deploy 2 contracts, and then send funds from one to the other and end up with correct balances for all.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task SmartContracts_TransferToP2PKH_Async()
         {
@@ -688,6 +696,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
         /// <summary>
         /// Should deploy 2 contracts, and then send funds from one to the other and end up with correct balances for all.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task SmartContracts_TransferBetweenContracts_Async()
         {
@@ -745,6 +754,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
         /// <summary>
         /// Should deploy 2 contracts, invoke a method on one, get the value from it, and persist it
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task SmartContracts_InvokeContract_Async()
         {
@@ -837,8 +847,9 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
         /// <summary>
         /// Can execute a smart contract transaction referencing a P2PKH that's in the same block, above it.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
-        public async Task SmartContract_ReferencingInputInSameBlock()
+        public async Task SmartContract_ReferencingInputInSameBlock_Async()
         {
             TestContext context = new TestContext();
             await context.InitializeAsync();
@@ -874,6 +885,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
         /// <summary>
         /// Should send funds to another contract, causing the contract's ReceiveHandler function to be invoked.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         [Fact]
         public async Task SmartContracts_TransferFunds_Invokes_Receive_Async()
         {
@@ -912,7 +924,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
             byte[] receiveInvoked = context.StateRoot.GetStorageValue(receiveContractAddress2, Encoding.UTF8.GetBytes("ReceiveInvoked"));
             byte[] fundsReceived = context.StateRoot.GetStorageValue(receiveContractAddress2, Encoding.UTF8.GetBytes("ReceivedFunds"));
 
-            var serializer = new ContractPrimitiveSerializer(context.network);
+            var serializer = new ContractPrimitiveSerializerV2(context.network);
 
             Assert.NotNull(receiveInvoked);
             Assert.NotNull(fundsReceived);

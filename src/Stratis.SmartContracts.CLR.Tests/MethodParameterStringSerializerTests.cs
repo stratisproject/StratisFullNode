@@ -70,8 +70,10 @@ namespace Stratis.SmartContracts.CLR.Tests
             yield return new object[] { true }; // MethodParameterDataType.Bool
             yield return new object[] { (byte)1 }; // MethodParameterDataType.Byte
             yield return new object[] { Encoding.UTF8.GetBytes("test") }; // MethodParameterDataType.ByteArray
+            yield return new object[] { new byte[0] }; // MethodParameterDataType.ByteArray
             yield return new object[] { 's' }; // MethodParameterDataType.Char
             yield return new object[] { "test" }; // MethodParameterDataType.String
+            yield return new object[] { "" }; // MethodParameterDataType.String
             yield return new object[] { (uint)36 }; // MethodParameterDataType.UInt
             yield return new object[] { (ulong)29 }; // MethodParameterDataType.ULong
             yield return new object[] { new uint160("0x0000000000000000000000000000000000000001").ToBase58Address(Network) }; // MethodParameterDataType.Address

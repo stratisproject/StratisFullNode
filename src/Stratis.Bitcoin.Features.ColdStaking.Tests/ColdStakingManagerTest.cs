@@ -145,7 +145,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             Assert.Single(spendingAddress.Transactions);
             Assert.Equal(transaction.GetHash(), spentAddressResult.Transactions.ElementAt(0).SpendingDetails.TransactionId);
             Assert.Equal(2, transaction.Outputs.Count);
-            Assert.True(spentAddressResult.Transactions.ElementAt(0).SpendingDetails.Payments.Any(p => p.DestinationScriptPubKey == transaction.Outputs[1].ScriptPubKey && p.Amount == transaction.Outputs[1].Value));
+            Assert.Contains(spentAddressResult.Transactions.ElementAt(0).SpendingDetails.Payments, p => p.DestinationScriptPubKey == transaction.Outputs[1].ScriptPubKey && p.Amount == transaction.Outputs[1].Value);
 
             Assert.Single(wallet.AccountsRoot.ElementAt(0).Accounts.ElementAt(0).InternalAddresses.ElementAt(0).Transactions);
             TransactionData changeAddressResult = wallet.AccountsRoot.ElementAt(0).Accounts.ElementAt(0).InternalAddresses.ElementAt(0).Transactions.ElementAt(0);
