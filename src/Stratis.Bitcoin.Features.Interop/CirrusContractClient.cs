@@ -78,6 +78,7 @@ namespace Stratis.Bitcoin.Features.Interop
         /// Retrieves the number of confirmations a given multisig transactionId has. This is retrieved by invoking the Confirmations method of the multisig contract.
         /// </summary>
         /// <param name="transactionId">The integer multisig contract transaction identifier to retrieve the number of multisig confirmations for.</param>
+        /// <param name="blockHeight">The block height at which to get the confirmation count.</param>
         /// <returns>The number of confirmations.</returns>
         /// <remarks>This does not relate to the number of elapsed blocks.</remarks>
         Task<int> GetMultisigConfirmationCountAsync(BigInteger transactionId, ulong blockHeight);
