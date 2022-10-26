@@ -11,6 +11,7 @@ using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Interfaces;
+using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.Extensions;
 using TracerAttributes;
@@ -133,14 +134,12 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         private DateTime lastCacheFlushTime;
         private readonly Network network;
         private readonly IDateTimeProvider dateTimeProvider;
-        private IConsensusManager consensusManager;
         private readonly CancellationTokenSource cancellationToken;
         private readonly ConsensusSettings consensusSettings;
-        private readonly bool addressIndexingEnabled;
         private readonly ChainIndexer chainIndexer;
+        private readonly bool addressIndexingEnabled;
         private CachePerformanceSnapshot latestPerformanceSnapShot;
         private IScriptAddressReader scriptAddressReader;
-        private IConsensusRuleEngine consensusRuleEngine;
 
         private readonly Random random;
 
@@ -183,23 +182,20 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             lock (this.lockobj)
             {
                 HashHeightPair coinViewTip = this.GetTipHash();
-                if (this.chainIndexer[coinViewTip.Hash] != null)
+                if (coinViewTip.Hash == this.chainIndexer.Tip.HashBlock)
                     return;
 
                 Flush();
 
-                bool GetValidRewindData(int height)
+                ChainedHeader fork = this.chainIndexer[coinViewTip.Hash];
+                if (fork == null)
                 {
-                    var rewindData = GetRewindData(height);
-                    return rewindData != null && this.chainIndexer[rewindData.PreviousBlockHash?.Hash] != null;
+                    // Determine the last usable height.
+                    int height = BinarySearch.BinaryFindFirst(h => (h > this.chainIndexer.Height) || this.GetRewindData(h).PreviousBlockHash.Hash != this.chainIndexer[h].Previous.HashBlock, 0, coinViewTip.Height + 1) - 1;
+                    fork = this.chainIndexer[(height < 0) ? coinViewTip.Height : height];
                 }
 
-                // Determine the last usable height.
-                int height = BinarySearch.BinaryFindFirst(h => !GetValidRewindData(h), 1, this.chainIndexer.Height + 1) - 2;
-
-                ChainedHeader fork = this.chainIndexer[height];
-
-                while (coinViewTip.Height > fork.Height)
+                while (coinViewTip.Height != fork.Height)
                 {
                     if ((coinViewTip.Height % 100) == 0)
                         this.logger.LogInformation("Rewinding coin view from '{0}' to {1}.", coinViewTip, fork);
@@ -208,83 +204,72 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     // The node will complete loading before connecting to peers so the chain will never know that a reorg happened.
                     coinViewTip = this.coindb.Rewind(new HashHeightPair(fork));
                 };
-
-                this.blockHash = null;
-                this.innerBlockHash = null;
-            }
-        }
-
-        public void CatchUp()
-        {
-            lock (this.lockobj)
-            {
-                HashHeightPair coinViewTip = this.coindb.GetTipHash();
-
-                // If the coin view is behind the block store then catch up from the block store.
-                if (coinViewTip.Height < this.chainIndexer.Height)
-                {
-                    try
-                    {
-                        var loadCoinViewRule = this.consensusRuleEngine.GetRule<LoadCoinviewRule>();
-                        var saveCoinViewRule = this.consensusRuleEngine.GetRule<SaveCoinviewRule>();
-                        var coinViewRule = this.consensusRuleEngine.GetRule<CoinViewRule>();
-                        var deploymentsRule = this.consensusRuleEngine.GetRule<SetActivationDeploymentsFullValidationRule>();
-
-                        foreach (var chb in this.consensusManager.GetBlocksAfterBlock(this.chainIndexer[coinViewTip.Hash], 1000, this.cancellationToken))
-                        {
-                            if (chb == null)
-                                break;
-
-                            (Block block, ChainedHeader chainedHeader) = (chb.Block, chb.ChainedHeader);
-
-                            if (block == null)
-                                break;
-
-                            if ((chainedHeader.Height % 10000) == 0)
-                            {
-                                this.Flush(true);
-                                this.logger.LogInformation("Rebuilding coin view from '{0}' to {1}.", chainedHeader, this.chainIndexer.Tip);
-                            }
-
-                            var utxoRuleContext = this.consensusRuleEngine.CreateRuleContext(new ValidationContext() { ChainedHeaderToValidate = chainedHeader, BlockToValidate = block });
-                            utxoRuleContext.SkipValidation = true;
-
-                            // Set context flags.
-                            deploymentsRule.RunAsync(utxoRuleContext).ConfigureAwait(false).GetAwaiter().GetResult();
-
-                            // Loads the coins spent by this block into utxoRuleContext.UnspentOutputSet.
-                            loadCoinViewRule.RunAsync(utxoRuleContext).ConfigureAwait(false).GetAwaiter().GetResult();
-
-                            // Spends the coins.
-                            coinViewRule.RunAsync(utxoRuleContext).ConfigureAwait(false).GetAwaiter().GetResult();
-
-                            // Saves the changes to the coinview.
-                            saveCoinViewRule.RunAsync(utxoRuleContext).ConfigureAwait(false).GetAwaiter().GetResult();
-                        }
-                    }
-                    finally
-                    {
-                        this.Flush(true);
-
-                        if (this.cancellationToken.IsCancellationRequested)
-                        {
-                            this.logger.LogDebug("Rebuilding cancelled due to application stopping.");
-                            throw new OperationCanceledException();
-                        }
-                    }
-                }
             }
         }
 
         public void Initialize(IConsensusManager consensusManager)
         {
-            this.consensusManager = consensusManager;
-            this.consensusRuleEngine = consensusManager.ConsensusRules;
+            ChainedHeader chainTip = this.chainIndexer.Tip;
 
             this.coindb.Initialize(this.addressIndexingEnabled);
 
             Sync();
-            CatchUp();
+
+            HashHeightPair coinViewTip = this.coindb.GetTipHash();
+
+            // If the coin view is behind the block store then catch up from the block store.
+            if (coinViewTip.Height < chainTip.Height)
+            {
+                try
+                {
+                    IConsensusRuleEngine consensusRuleEngine = consensusManager.ConsensusRules;
+
+                    var loadCoinViewRule = consensusRuleEngine.GetRule<LoadCoinviewRule>();
+                    var saveCoinViewRule = consensusRuleEngine.GetRule<SaveCoinviewRule>();
+                    var coinViewRule = consensusRuleEngine.GetRule<CoinViewRule>();
+                    var deploymentsRule = consensusRuleEngine.GetRule<SetActivationDeploymentsFullValidationRule>();
+
+                    foreach (ChainedHeaderBlock chb in consensusManager.GetBlocksAfterBlock(this.chainIndexer[coinViewTip.Hash], 1000, this.cancellationToken))
+                    {
+                        ChainedHeader chainedHeader = chb.ChainedHeader;
+                        Block block = chb.Block;
+
+                        if (block == null)
+                            break;
+
+                        if ((chainedHeader.Height % 10000) == 0)
+                        {
+                            this.Flush(true);
+                            this.logger.LogInformation("Rebuilding coin view from '{0}' to {1}.", chainedHeader, chainTip);
+                        }
+
+                        var utxoRuleContext = consensusRuleEngine.CreateRuleContext(new ValidationContext() { ChainedHeaderToValidate = chainedHeader, BlockToValidate = block });
+                        utxoRuleContext.SkipValidation = true;
+
+                        // Set context flags.
+                        deploymentsRule.RunAsync(utxoRuleContext).ConfigureAwait(false).GetAwaiter().GetResult();
+
+                        // Loads the coins spent by this block into utxoRuleContext.UnspentOutputSet.
+                        loadCoinViewRule.RunAsync(utxoRuleContext).ConfigureAwait(false).GetAwaiter().GetResult();
+
+                        // Spends the coins.
+                        coinViewRule.RunAsync(utxoRuleContext).ConfigureAwait(false).GetAwaiter().GetResult();
+
+                        // Saves the changes to the coinview.
+                        saveCoinViewRule.RunAsync(utxoRuleContext).ConfigureAwait(false).GetAwaiter().GetResult();
+                    }
+                }
+                finally
+                {
+                    this.Flush(true);
+
+                    if (this.cancellationToken.IsCancellationRequested)
+                    {
+                        this.logger.LogDebug("Rebuilding cancelled due to application stopping.");
+                        throw new OperationCanceledException();
+                    }
+                }
+            }
 
             this.logger.LogInformation("Coin view initialized at '{0}'.", this.coindb.GetTipHash());
         }
@@ -503,8 +488,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
                 this.logger.LogDebug("Flushing {0} items.", modify.Count);
 
-                if (modify.Count != 0 || this.cacheBalancesByDestination.Count != 0 || this.cachedRewindData.Count != 0)
-                    this.coindb.SaveChanges(modify, this.cacheBalancesByDestination, this.innerBlockHash, this.blockHash, this.cachedRewindData.Select(c => c.Value).ToList());
+                this.coindb.SaveChanges(modify, this.cacheBalancesByDestination, this.innerBlockHash, this.blockHash, this.cachedRewindData.Select(c => c.Value).ToList());
 
                 // All the cached utxos are now on disk so we can clear the cached entry list.
                 this.cachedUtxoItems.Clear();
@@ -820,40 +804,37 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         public IEnumerable<(uint, long)> GetBalance(TxDestination txDestination)
         {
-            lock (this.lockobj)
+            IEnumerable<(uint, long)> CachedBalances()
             {
-                IEnumerable<(uint, long)> CachedBalances()
+                if (this.cacheBalancesByDestination.TryGetValue(txDestination, out Dictionary<uint, long> itemsByHeight))
                 {
-                    if (this.cacheBalancesByDestination.TryGetValue(txDestination, out Dictionary<uint, long> itemsByHeight))
-                    {
-                        long balance = 0;
+                    long balance = 0;
 
-                        foreach (uint height in itemsByHeight.Keys.OrderBy(k => k))
-                        {
-                            balance += itemsByHeight[height];
-                            yield return (height, balance);
-                        }
+                    foreach (uint height in itemsByHeight.Keys.OrderBy(k => k))
+                    {
+                        balance += itemsByHeight[height];
+                        yield return (height, balance);
                     }
                 }
-
-                bool first = true;
-                foreach ((uint height, long satoshis) in this.coindb.GetBalance(txDestination))
-                {
-                    if (first)
-                    {
-                        first = false;
-
-                        foreach ((uint height2, long satoshis2) in CachedBalances().Reverse())
-                            yield return (height2, satoshis2 + satoshis);
-                    }
-
-                    yield return (height, satoshis);
-                }
-
-                if (first)
-                    foreach ((uint height2, long satoshis2) in CachedBalances().Reverse())
-                        yield return (height2, satoshis2);
             }
+
+            bool first = true;
+            foreach ((uint height, long satoshis) in this.coindb.GetBalance(txDestination))
+            {
+                if (first)
+                {
+                    first = false;
+
+                    foreach ((uint height2, long satoshis2) in CachedBalances().Reverse())
+                        yield return (height2, satoshis2 + satoshis);
+                }
+
+                yield return (height, satoshis);
+            }
+
+            if (first)
+                foreach ((uint height2, long satoshis2) in CachedBalances().Reverse())
+                    yield return (height2, satoshis2);
         }
     }
 }

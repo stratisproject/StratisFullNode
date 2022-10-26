@@ -46,11 +46,6 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         void Sync();
 
         /// <summary>
-        /// Brings the coinview in sync with the chain.
-        /// </summary>
-        void CatchUp();
-
-        /// <summary>
         /// Obtains information about unspent outputs.
         /// </summary>
         /// <param name="utxos">Transaction identifiers for which to retrieve information about unspent outputs.</param>

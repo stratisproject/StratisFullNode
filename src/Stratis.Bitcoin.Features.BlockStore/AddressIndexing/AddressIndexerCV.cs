@@ -75,7 +75,6 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         private ChainedHeader GetTip()
         {
             this.coinView.Sync();
-            this.coinView.CatchUp();
 
             return this.chainIndexer[this.coinView.GetTipHash().Hash];
         }
