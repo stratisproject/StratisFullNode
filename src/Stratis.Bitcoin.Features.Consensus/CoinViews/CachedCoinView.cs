@@ -188,11 +188,12 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 Flush();
 
                 ChainedHeader fork = this.chainIndexer[coinViewTip.Hash];
-                if (fork == null)
+                if (fork == null || fork.Height > this.chainIndexer.Height)
                 {
-                    // Determine the last usable height.
-                    int height = BinarySearch.BinaryFindFirst(h => (h > this.chainIndexer.Height) || this.GetRewindData(h).PreviousBlockHash.Hash != this.chainIndexer[h].Previous.HashBlock, 0, coinViewTip.Height + 1) - 1;
-                    fork = this.chainIndexer[(height < 0) ? coinViewTip.Height : height];
+                    // The coinview tip is above the chain height or on a fork.
+                    // Determine the first unusable height by finding the first rewind data that is not on the consensus chain.
+                    int unusableHeight = BinarySearch.BinaryFindFirst(h => (h > this.chainIndexer.Height) || (this.GetRewindData(h).PreviousBlockHash.Hash != this.chainIndexer[h].Previous.HashBlock), 1, coinViewTip.Height);
+                    fork = this.chainIndexer[unusableHeight - 1];
                 }
 
                 while (coinViewTip.Height != fork.Height)
