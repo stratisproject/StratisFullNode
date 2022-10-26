@@ -296,7 +296,7 @@ namespace Stratis.Bitcoin.Base
             // node shutdown unexpectedly and the finalized block info needs to be reset.
             this.finalizedBlockInfoRepository.Initialize(this.chainIndexer.Tip);
 
-            this.consensusRules.Initialize(this.chainIndexer.Tip);
+            this.consensusRules.Initialize(this.chainIndexer.Tip, this.consensusManager);
 
             await this.consensusManager.InitializeAsync(this.chainIndexer.Tip).ConfigureAwait(false);
 

@@ -14,10 +14,8 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// <summary>
         /// Initializes the coin view.
         /// </summary>
-        /// <param name="chainTip">The chain tip.</param>
-        /// <param name="chainIndexer">The chain indexer.</param>
-        /// <param name="consensusRuleEngine">The consensus rule engine.</param>
-        void Initialize(ChainedHeader chainTip, ChainIndexer chainIndexer, IConsensusRuleEngine consensusRuleEngine);
+        /// <param name="consensusManager">The consensus manager.</param>
+        void Initialize(IConsensusManager consensusManager);
 
         /// <summary>
         /// Retrieves the block hash of the current tip of the coinview.
@@ -46,7 +44,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// Brings the coinview back on-chain if a re-org occurred.
         /// </summary>
         /// <param name="chainIndexer">The current consensus chain.</param>
-        void Sync(ChainIndexer chainIndexer);
+        void Sync();
 
         /// <summary>
         /// Obtains information about unspent outputs.

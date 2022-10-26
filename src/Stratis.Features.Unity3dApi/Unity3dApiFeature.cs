@@ -43,7 +43,7 @@ namespace Stratis.Features.Unity3dApi
             Unity3dApiSettings apiSettings,
             ILoggerFactory loggerFactory,
             ICertificateStore certificateStore,
-            INFTTransferIndexer NFTTransferIndexer)
+            INFTTransferIndexer NFTTransferIndexer = null /* Only available for Cirrus */)
         {
             this.fullNodeBuilder = fullNodeBuilder;
             this.fullNode = fullNode;
@@ -128,7 +128,7 @@ namespace Stratis.Features.Unity3dApi
                 this.webHost = null;
             }
 
-            this.NFTTransferIndexer.Dispose();
+            this.NFTTransferIndexer?.Dispose();
         }
     }
 
@@ -137,7 +137,7 @@ namespace Stratis.Features.Unity3dApi
     /// </summary>
     public static class Unity3dApiFeatureExtension
     {
-        public static IFullNodeBuilder UseUnity3dApi(this IFullNodeBuilder fullNodeBuilder)
+        public static IFullNodeBuilder UseUnity3dApi(this IFullNodeBuilder fullNodeBuilder, bool isCirrus)
         {
             fullNodeBuilder.ConfigureFeature(features =>
             {
@@ -148,7 +148,9 @@ namespace Stratis.Features.Unity3dApi
                     services.AddSingleton(fullNodeBuilder);
                     services.AddSingleton<Unity3dApiSettings>();
                     services.AddSingleton<ICertificateStore, CertificateStore>();
-                    services.AddSingleton<INFTTransferIndexer, NFTTransferIndexer>();
+
+                    if (isCirrus)
+                        services.AddSingleton<INFTTransferIndexer, NFTTransferIndexer>();
 
                     // Controller
                     services.AddTransient<Unity3dController>();
