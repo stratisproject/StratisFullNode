@@ -116,7 +116,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                 yield return new AddressBalanceChange()
                 {
                     BalanceChangedHeight = addressBalanceChanges[i - 1].BalanceChangedHeight,
-                    Deposited = addressBalanceChanges[i - 1].Satoshi < addressBalanceChanges[i].Satoshi,
+                    Deposited = addressBalanceChanges[i - 1].Satoshi >= addressBalanceChanges[i].Satoshi,
                     Satoshi = Math.Abs(addressBalanceChanges[i - 1].Satoshi - addressBalanceChanges[i].Satoshi)
                 };
             }
