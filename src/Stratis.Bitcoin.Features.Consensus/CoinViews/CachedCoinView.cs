@@ -231,6 +231,9 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
                     foreach (ChainedHeaderBlock chb in consensusManager.GetBlocksAfterBlock(this.chainIndexer[coinViewTip.Hash], 1000, this.cancellationToken))
                     {
+                        if (chb == null)
+                            break;
+
                         ChainedHeader chainedHeader = chb.ChainedHeader;
                         Block block = chb.Block;
 
