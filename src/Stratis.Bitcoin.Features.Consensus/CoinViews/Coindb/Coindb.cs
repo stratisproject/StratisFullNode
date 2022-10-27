@@ -273,6 +273,9 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         public void SaveChanges(IList<UnspentOutput> unspentOutputs, Dictionary<TxDestination, Dictionary<uint, long>> balanceUpdates, HashHeightPair oldBlockHash, HashHeightPair nextBlockHash, List<RewindData> rewindDataList = null)
         {
+            if (unspentOutputs.Count == 0 && balanceUpdates.Count == 0 && rewindDataList.Count == 0)
+                return;
+
             int insertedEntities = 0;
 
             using (var batch = this.coinDb.GetReadWriteBatch(coinsTable, rewindTable, blockTable))
