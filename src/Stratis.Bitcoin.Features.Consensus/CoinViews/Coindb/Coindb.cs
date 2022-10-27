@@ -50,17 +50,11 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         public Coindb(Network network, DataFolder dataFolder, IDateTimeProvider dateTimeProvider,
             INodeStats nodeStats, DBreezeSerializer dBreezeSerializer)
-            : this(network, dataFolder.CoindbPath, dateTimeProvider, nodeStats, dBreezeSerializer)
-        {
-        }
-
-        public Coindb(Network network, string dataFolder, IDateTimeProvider dateTimeProvider,
-            INodeStats nodeStats, DBreezeSerializer dBreezeSerializer)
         {
             Guard.NotNull(network, nameof(network));
-            Guard.NotEmpty(dataFolder, nameof(dataFolder));
+            Guard.NotNull(dataFolder, nameof(dataFolder));
 
-            this.dataFolder = dataFolder;
+            this.dataFolder = dataFolder.CoindbPath;
             this.dBreezeSerializer = dBreezeSerializer;
             this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
@@ -70,6 +64,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 400);
         }
 
+        /// <inheritdoc />
         public void Initialize()
         {
             // Open a connection to a new DB and create if not found
@@ -156,6 +151,8 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         {
             this.logger.LogInformation("Checking coin database integrity...");
 
+            this.EndiannessFix();
+
             if (this.GetTipHash() == null)
             {
                 this.logger.LogInformation($"Rebuilding coin database that has no tip information.");
@@ -211,9 +208,12 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         public void SaveChanges(IList<UnspentOutput> unspentOutputs, HashHeightPair oldBlockHash, HashHeightPair nextBlockHash, List<RewindData> rewindDataList = null)
         {
+            if (unspentOutputs.Count == 0 && rewindDataList.Count == 0)
+                return;
+
             int insertedEntities = 0;
 
-            using (var batch = this.coinDb.GetWriteBatch(coinsTable, rewindTable, blockTable))
+            using (var batch = this.coinDb.GetReadWriteBatch(coinsTable, rewindTable, blockTable))
             {
                 using (new StopwatchDisposable(o => this.performanceCounter.AddInsertTime(o)))
                 {
@@ -290,6 +290,20 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             }
         }
 
+        private bool TryGetCoins(ReadWriteBatch readWriteBatch, byte[] key, out Coins coins)
+        {
+            byte[] row2 = readWriteBatch.Get(coinsTable, key);
+            if (row2 == null)
+            {
+                coins = null;
+                return false;
+            }
+
+            coins = this.dBreezeSerializer.Deserialize<Coins>(row2);
+
+            return true;
+        }
+
         public HashHeightPair Rewind(HashHeightPair target)
         {
             HashHeightPair current = this.GetTipHash();
@@ -300,23 +314,32 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         {
             HashHeightPair res = null;
 
-            using (var batch = this.coinDb.GetWriteBatch(coinsTable, rewindTable, blockTable))
+            using (var batch = this.coinDb.GetReadWriteBatch(coinsTable, rewindTable, blockTable))
             {
                 for (int height = startHeight; height > (target?.Height ?? (startHeight - 1)) && height > (startHeight - MaxRewindBatchSize); height--)
                 {
-                    byte[] row = this.coinDb.Get(rewindTable, BitConverter.GetBytes(height).Reverse().ToArray());
+                    byte[] rowKey = BitConverter.GetBytes(height).Reverse().ToArray();
+                    byte[] row = this.coinDb.Get(rewindTable, rowKey);
 
                     if (row == null)
                         throw new InvalidOperationException($"No rewind data found for block at height {height}.");
 
-                    batch.Delete(rewindTable, BitConverter.GetBytes(height));
+                    batch.Delete(rewindTable, rowKey);
 
                     var rewindData = this.dBreezeSerializer.Deserialize<RewindData>(row);
 
                     foreach (OutPoint outPoint in rewindData.OutputsToRemove)
                     {
-                        this.logger.LogDebug("Outputs of outpoint '{0}' will be removed.", outPoint);
-                        batch.Delete(coinsTable, outPoint.ToBytes());
+                        byte[] key = outPoint.ToBytes();
+                        if (this.TryGetCoins(batch, key, out Coins coins))
+                        {
+                            this.logger.LogDebug("Outputs of outpoint '{0}' will be removed.", outPoint);
+                            batch.Delete(coinsTable, key);
+                        }
+                        else
+                        {
+                            throw new InvalidOperationException(string.Format("Outputs of outpoint '{0}' were not found when attempting removal.", outPoint));
+                        }
                     }
 
                     foreach (RewindDataOutput rewindDataOutput in rewindData.OutputsToRestore)
