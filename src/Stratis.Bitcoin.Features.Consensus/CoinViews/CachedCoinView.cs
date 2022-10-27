@@ -135,6 +135,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         private readonly Network network;
         private readonly IDateTimeProvider dateTimeProvider;
         private readonly CancellationTokenSource cancellationToken;
+        private IConsensusManager consensusManager;
         private readonly ConsensusSettings consensusSettings;
         private readonly ChainIndexer chainIndexer;
         private readonly bool addressIndexingEnabled;
@@ -187,35 +188,34 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
                 Flush();
 
-                ChainedHeader fork = this.chainIndexer[coinViewTip.Hash];
-                if (fork == null || fork.Height > this.chainIndexer.Height)
+                if (coinViewTip.Height > this.chainIndexer.Height || this.chainIndexer[coinViewTip.Hash] == null)
                 {
                     // The coinview tip is above the chain height or on a fork.
                     // Determine the first unusable height by finding the first rewind data that is not on the consensus chain.
-                    int unusableHeight = BinarySearch.BinaryFindFirst(h => (h > this.chainIndexer.Height) || (this.GetRewindData(h).PreviousBlockHash.Hash != this.chainIndexer[h].Previous.HashBlock), 1, coinViewTip.Height);
-                    fork = this.chainIndexer[unusableHeight - 1];
+                    int unusableHeight = BinarySearch.BinaryFindFirst(h => (h > this.chainIndexer.Height) || (this.GetRewindData(h)?.PreviousBlockHash.Hash != this.chainIndexer[h].Previous.HashBlock), 2, coinViewTip.Height - 1);
+                    ChainedHeader fork = this.chainIndexer[unusableHeight - 2];
+
+                    while (coinViewTip.Height != fork.Height)
+                    {
+                        if ((coinViewTip.Height % 100) == 0)
+                            this.logger.LogInformation("Rewinding coin view from '{0}' to {1}.", coinViewTip, fork);
+
+                        // If the block store was initialized behind the coin view's tip, rewind it to on or before it's tip.
+                        // The node will complete loading before connecting to peers so the chain will never know that a reorg happened.
+                        coinViewTip = this.coindb.Rewind(new HashHeightPair(fork));
+                    };
+
+                    this.blockHash = coinViewTip;
+                    this.innerBlockHash = this.blockHash;
                 }
 
-                while (coinViewTip.Height != fork.Height)
-                {
-                    if ((coinViewTip.Height % 100) == 0)
-                        this.logger.LogInformation("Rewinding coin view from '{0}' to {1}.", coinViewTip, fork);
-
-                    // If the block store was initialized behind the coin view's tip, rewind it to on or before it's tip.
-                    // The node will complete loading before connecting to peers so the chain will never know that a reorg happened.
-                    coinViewTip = this.coindb.Rewind(new HashHeightPair(fork));
-                };
+                CatchUp();
             }
         }
 
-        public void Initialize(IConsensusManager consensusManager)
+        private void CatchUp()
         {
             ChainedHeader chainTip = this.chainIndexer.Tip;
-
-            this.coindb.Initialize(this.addressIndexingEnabled);
-
-            Sync();
-
             HashHeightPair coinViewTip = this.coindb.GetTipHash();
 
             // If the coin view is behind the block store then catch up from the block store.
@@ -223,14 +223,14 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             {
                 try
                 {
-                    IConsensusRuleEngine consensusRuleEngine = consensusManager.ConsensusRules;
+                    IConsensusRuleEngine consensusRuleEngine = this.consensusManager.ConsensusRules;
 
                     var loadCoinViewRule = consensusRuleEngine.GetRule<LoadCoinviewRule>();
                     var saveCoinViewRule = consensusRuleEngine.GetRule<SaveCoinviewRule>();
                     var coinViewRule = consensusRuleEngine.GetRule<CoinViewRule>();
                     var deploymentsRule = consensusRuleEngine.GetRule<SetActivationDeploymentsFullValidationRule>();
 
-                    foreach (ChainedHeaderBlock chb in consensusManager.GetBlocksAfterBlock(this.chainIndexer[coinViewTip.Hash], 1000, this.cancellationToken))
+                    foreach (ChainedHeaderBlock chb in this.consensusManager.GetBlocksAfterBlock(this.chainIndexer[coinViewTip.Hash], 1000, this.cancellationToken))
                     {
                         if (chb == null)
                             break;
@@ -260,7 +260,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                         coinViewRule.RunAsync(utxoRuleContext).ConfigureAwait(false).GetAwaiter().GetResult();
 
                         // Saves the changes to the coinview.
-                        saveCoinViewRule.RunAsync(utxoRuleContext).ConfigureAwait(false).GetAwaiter().GetResult();
+                        saveCoinViewRule.RunAsync(utxoRuleContext).ConfigureAwait(false).GetAwaiter().GetResult(); 
                     }
                 }
                 finally
@@ -274,6 +274,15 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     }
                 }
             }
+        }
+
+        public void Initialize(IConsensusManager consensusManager)
+        {
+            this.consensusManager = consensusManager;
+
+            this.coindb.Initialize(this.addressIndexingEnabled);
+
+            Sync();
 
             this.logger.LogInformation("Coin view initialized at '{0}'.", this.coindb.GetTipHash());
         }
