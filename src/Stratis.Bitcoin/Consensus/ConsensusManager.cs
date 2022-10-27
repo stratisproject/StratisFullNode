@@ -1299,6 +1299,7 @@ namespace Stratis.Bitcoin.Consensus
 
                 for (int i = 0; i < blocks.Length; i++)
                 {
+                    // Create the chained header block from the chain indexer if required so that the block can still be picked up from the block store.
                     ChainedHeaderBlock chainedHeaderBlock = blocks[i] ?? new ChainedHeaderBlock(null, this.chainIndexer[blockHashes[i]]);
                     chainedHeaderBlocks[blockHashes[i]] = chainedHeaderBlock;
                 }
