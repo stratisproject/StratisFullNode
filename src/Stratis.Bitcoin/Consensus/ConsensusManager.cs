@@ -1299,16 +1299,8 @@ namespace Stratis.Bitcoin.Consensus
 
                 for (int i = 0; i < blocks.Length; i++)
                 {
-                    if (blocks[i] != null)
-                    {
-                        ChainedHeaderBlock chainedHeaderBlock = blocks[i];
-                        chainedHeaderBlocks[blockHashes[i]] = chainedHeaderBlock;
-                    }
-                    else
-                    {
-                        ChainedHeaderBlock chainedHeaderBlock = new ChainedHeaderBlock(null, this.chainIndexer[blockHashes[i]]);
-                        chainedHeaderBlocks[blockHashes[i]] = chainedHeaderBlock;
-                    }
+                    ChainedHeaderBlock chainedHeaderBlock = blocks[i] ?? new ChainedHeaderBlock(null, this.chainIndexer[blockHashes[i]]);
+                    chainedHeaderBlocks[blockHashes[i]] = chainedHeaderBlock;
                 }
             }
 
