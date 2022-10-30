@@ -232,12 +232,11 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
                     foreach (ChainedHeaderBlock chb in this.consensusManager.GetBlocksAfterBlock(this.chainIndexer[coinViewTip.Hash], 1000, this.cancellationToken))
                     {
-                        if (chb == null)
+                        ChainedHeader chainedHeader = chb?.ChainedHeader;
+                        if (chainedHeader == null)
                             break;
 
-                        ChainedHeader chainedHeader = chb.ChainedHeader;
                         Block block = chb.Block;
-
                         if (block == null)
                             break;
 
@@ -511,7 +510,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 this.cachedRewindData.Clear();
                 this.rewindDataSizeBytes = 0;
                 this.dirtyCacheCount = 0;
-                this.innerBlockHash = this.blockHash;                
+                this.innerBlockHash = this.blockHash;
                 this.lastCacheFlushTime = this.dateTimeProvider.GetUtcNow();
             }
         }

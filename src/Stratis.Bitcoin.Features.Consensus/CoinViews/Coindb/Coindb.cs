@@ -63,17 +63,11 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         public Coindb(Network network, DataFolder dataFolder, IDateTimeProvider dateTimeProvider,
             INodeStats nodeStats, DBreezeSerializer dBreezeSerializer, IScriptAddressReader scriptAddressReader)
-            : this(network, dataFolder.CoindbPath, dateTimeProvider, nodeStats, dBreezeSerializer, scriptAddressReader)
-        {
-        }
-
-        public Coindb(Network network, string dataFolder, IDateTimeProvider dateTimeProvider,
-            INodeStats nodeStats, DBreezeSerializer dBreezeSerializer, IScriptAddressReader scriptAddressReader)
         {
             Guard.NotNull(network, nameof(network));
-            Guard.NotEmpty(dataFolder, nameof(dataFolder));
+            Guard.NotNull(dataFolder, nameof(dataFolder));
 
-            this.dataFolder = dataFolder;
+            this.dataFolder = dataFolder.CoindbPath;
             this.dBreezeSerializer = dBreezeSerializer;
             this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
@@ -92,8 +86,6 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             this.coinDb.Open(this.dataFolder);
 
             this.BalanceIndexingEnabled = balanceIndexingEnabled;
-
-            EndiannessFix();
 
             EnsureCoinDatabaseIntegrity();
 
