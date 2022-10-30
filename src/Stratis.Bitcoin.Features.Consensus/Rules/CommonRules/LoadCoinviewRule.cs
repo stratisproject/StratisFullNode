@@ -25,7 +25,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
             // unless the coinview threshold is reached.
             this.Logger.LogDebug("Saving coinview changes.");
             var utxoRuleContext = context as UtxoRuleContext;
-            this.PowParent.UtxoSet.Sync();
             this.PowParent.UtxoSet.SaveChanges(utxoRuleContext.UnspentOutputSet.GetCoins(), new HashHeightPair(oldBlock), new HashHeightPair(nextBlock));
 
             return Task.CompletedTask;
@@ -67,7 +66,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         {
             // Check that the current block has not been reorged.
             // Catching a reorg at this point will not require a rewind.
-            if (context.ValidationContext.BlockToValidate.Header.HashPrevBlock != this.PowParent.UtxoSet.GetTipHash().Hash)
+            if (context.ValidationContext.ChainedHeaderToValidate.Previous.HashBlock != this.PowParent.UtxoSet.GetTipHash().Hash)
             {
                 this.Logger.LogDebug("Reorganization detected.");
                 ConsensusErrors.InvalidPrevTip.Throw();
