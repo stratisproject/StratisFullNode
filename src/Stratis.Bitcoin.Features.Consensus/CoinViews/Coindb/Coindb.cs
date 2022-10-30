@@ -71,8 +71,6 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             this.coinDb = new T();
             this.coinDb.Open(this.dataFolder);
 
-            EndiannessFix();
-
             EnsureCoinDatabaseIntegrity();
 
             Block genesis = this.network.GetGenesis();
