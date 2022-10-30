@@ -165,8 +165,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             this.consensusManagerMock.Setup(x => x.GetBlocksAfterBlock(It.IsAny<ChainedHeader>(), It.IsAny<int>(), It.IsAny<CancellationTokenSource>())).Returns((ChainedHeader header, int size, CancellationTokenSource token) =>
             {
-                return headers.Select(h => GetChainedHeaderBlock(h.HashBlock)).ToArray();
-
+                return headers.Where(h => h.Height > header.Height).Select(h => GetChainedHeaderBlock(h.HashBlock)).ToArray();
             });
 
             this.consensusManagerMock.Setup(x => x.ConsensusRules).Returns(this.consensusRuleEngine);
