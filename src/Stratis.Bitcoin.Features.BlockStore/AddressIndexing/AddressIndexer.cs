@@ -297,7 +297,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                 if (prefetchedBlock != null && prefetchedBlock.ChainedHeader == nextHeader)
                     blockToProcess = prefetchedBlock.Block;
                 else
-                    blockToProcess = this.consensusManager.GetBlockData(nextHeader.HashBlock).Block;
+                    blockToProcess = this.consensusManager.GetBlockData(nextHeader.HashBlock)?.Block;
 
                 if (blockToProcess == null)
                 {
