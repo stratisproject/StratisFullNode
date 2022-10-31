@@ -46,11 +46,6 @@ namespace Stratis.Bitcoin.Tests.Consensus
         }
 
         /// <inheritdoc />
-        public void CatchUp()
-        {
-        }
-
-        /// <inheritdoc />
         public HashHeightPair GetTipHash()
         {
             return this.tipHash;
