@@ -285,6 +285,11 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                         throw new InvalidOperationException("Invalid oldBlockHash");
                     }
 
+                    if (this.BalanceIndexingEnabled)
+                    {
+                        this.AdjustBalance(batch, balanceUpdates);
+                    }
+
                     // Here we'll add items to be inserted in a second pass.
                     List<UnspentOutput> toInsert = new List<UnspentOutput>();
 
