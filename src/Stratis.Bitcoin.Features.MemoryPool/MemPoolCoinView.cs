@@ -60,11 +60,6 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         {
         }
 
-        /// <inheritdoc />
-        public void CatchUp()
-        {
-        }
-
         public IEnumerable<(uint height, long satoshis)> GetBalance(TxDestination txDestination)
         {
             throw new NotImplementedException();

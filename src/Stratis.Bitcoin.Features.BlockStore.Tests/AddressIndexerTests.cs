@@ -198,7 +198,6 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             });
 
             this.consensusManagerMock.Setup(x => x.Tip).Returns(() => headersFork.Last());
-
             TestBase.WaitLoop(() => this.addressIndexer.IndexerTip == headersFork.Last());
 
             Assert.Equal(70_000, this.addressIndexer.GetAddressBalances(new[] { address1 }).Balances.First().Balance.Satoshi);

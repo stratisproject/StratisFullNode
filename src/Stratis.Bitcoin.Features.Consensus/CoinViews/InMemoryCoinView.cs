@@ -53,11 +53,6 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         }
 
         /// <inheritdoc />
-        public void CatchUp()
-        {
-        }
-
-        /// <inheritdoc />
         public HashHeightPair GetTipHash()
         {
             return this.tipHash;
