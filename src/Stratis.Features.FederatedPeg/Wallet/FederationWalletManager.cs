@@ -10,9 +10,11 @@ using NBitcoin.Policy;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
+using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Interfaces;
+using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Controllers;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -99,6 +101,8 @@ namespace Stratis.Features.FederatedPeg.Wallet
 
         private readonly IBlockStore blockStore;
 
+        private readonly ISignals signals;
+
         /// <summary>Indicates whether the federation is active.</summary>
         private bool isFederationActive;
 
@@ -138,7 +142,8 @@ namespace Stratis.Features.FederatedPeg.Wallet
             IDateTimeProvider dateTimeProvider,
             IFederatedPegSettings federatedPegSettings,
             IWithdrawalExtractor withdrawalExtractor,
-            IBlockStore blockStore) : base()
+            IBlockStore blockStore,
+            ISignals signals) : base()
         {
             Guard.NotNull(network, nameof(network));
             Guard.NotNull(chainIndexer, nameof(chainIndexer));
@@ -164,6 +169,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
             this.withdrawalExtractor = withdrawalExtractor;
             this.isFederationActive = false;
             this.blockStore = blockStore;
+            this.signals = signals;
 
             nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
             nodeStats.RegisterStats(this.AddInlineStats, StatsType.Inline, this.GetType().Name, 800);
@@ -1355,6 +1361,8 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 benchLog.AppendLine("".PadRight(133, '='));
                 benchLog.AppendLine();
             }
+
+            this.signals.Publish(new FederationWalletStatusEvent(ConfirmedAmount, UnConfirmedAmount));
         }
     }
 }
