@@ -41,7 +41,7 @@ namespace Stratis.Bitcoin.Database
         /// <param name="table">The table that will be updated.</param>
         /// <param name="key">The table key that identifies the value to be updated.</param>
         /// <param name="value">The value to be written to the table.</param>
-        /// <returns>This class for fluent operations.</returns>
+        /// <returns>This interface for fluent operations.</returns>
         public IDbBatch Put(byte table, byte[] key, byte[] value)
         {
             this.cache[new byte[] { table }.Concat(key).ToArray()] = value;

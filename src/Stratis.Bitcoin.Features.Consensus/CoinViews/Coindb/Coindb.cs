@@ -63,17 +63,11 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         public Coindb(Network network, DataFolder dataFolder, IDateTimeProvider dateTimeProvider,
             INodeStats nodeStats, DBreezeSerializer dBreezeSerializer, IScriptAddressReader scriptAddressReader)
-            : this(network, dataFolder.CoindbPath, dateTimeProvider, nodeStats, dBreezeSerializer, scriptAddressReader)
-        {
-        }
-
-        public Coindb(Network network, string dataFolder, IDateTimeProvider dateTimeProvider,
-            INodeStats nodeStats, DBreezeSerializer dBreezeSerializer, IScriptAddressReader scriptAddressReader)
         {
             Guard.NotNull(network, nameof(network));
-            Guard.NotEmpty(dataFolder, nameof(dataFolder));
+            Guard.NotNull(dataFolder, nameof(dataFolder));
 
-            this.dataFolder = dataFolder;
+            this.dataFolder = dataFolder.CoindbPath;
             this.dBreezeSerializer = dBreezeSerializer;
             this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
@@ -92,8 +86,6 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             this.coinDb.Open(this.dataFolder);
 
             this.BalanceIndexingEnabled = balanceIndexingEnabled;
-
-            EndiannessFix();
 
             EnsureCoinDatabaseIntegrity();
 
@@ -271,16 +263,18 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             return res;
         }
 
-        public void SaveChanges(IList<UnspentOutput> unspentOutputs, Dictionary<TxDestination, Dictionary<uint, long>> balanceUpdates, HashHeightPair oldBlockHash, HashHeightPair nextBlockHash, List<RewindData> rewindDataList = null)
+        public void SaveChanges(IList<UnspentOutput> unspentOutputs, Dictionary<TxDestination, Dictionary<uint, long>> balanceUpdates, HashHeightPair oldBlockHash, HashHeightPair nextBlockHash, List<RewindData> rewindDataList)
         {
-            if (unspentOutputs.Count == 0 && balanceUpdates.Count == 0 && rewindDataList.Count == 0)
-                return;
-
             int insertedEntities = 0;
 
             using (var batch = this.coinDb.GetReadWriteBatch(coinsTable, rewindTable, blockTable))
             {
-                this.AdjustBalance(batch, balanceUpdates);
+                if (unspentOutputs.Count == 0 && rewindDataList.Count == 0)
+                {
+                    this.SetBlockHash(batch, nextBlockHash);
+                    batch.Write();
+                    return;
+                }
 
                 using (new StopwatchDisposable(o => this.performanceCounter.AddInsertTime(o)))
                 {
@@ -317,16 +311,13 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                         batch.Put(coinsTable, coin.OutPoint.ToBytes(), this.dBreezeSerializer.Serialize(coin.Coins));
                     }
 
-                    if (rewindDataList != null)
+                    foreach (RewindData rewindData in rewindDataList)
                     {
-                        foreach (RewindData rewindData in rewindDataList)
-                        {
-                            var nextRewindIndex = rewindData.PreviousBlockHash.Height + 1;
+                        var nextRewindIndex = rewindData.PreviousBlockHash.Height + 1;
 
-                            this.logger.LogDebug("Rewind state #{0} created.", nextRewindIndex);
+                        this.logger.LogDebug("Rewind state #{0} created.", nextRewindIndex);
 
-                            batch.Put(rewindTable, BitConverter.GetBytes(nextRewindIndex).Reverse().ToArray(), this.dBreezeSerializer.Serialize(rewindData));
-                        }
+                        batch.Put(rewindTable, BitConverter.GetBytes(nextRewindIndex).Reverse().ToArray(), this.dBreezeSerializer.Serialize(rewindData));
                     }
 
                     insertedEntities += unspentOutputs.Count;

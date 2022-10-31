@@ -39,8 +39,6 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
         private readonly Network network;
 
-        private readonly ICoinView coinView;
-
         private readonly IConsensusRuleEngine consensusRuleEngine;
 
         private readonly ChainedHeader genesisHeader;
@@ -79,7 +77,6 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             rulesContainer.FullValidationRules.Add(Activator.CreateInstance(typeof(SetActivationDeploymentsFullValidationRule)) as FullValidationConsensusRule);
 
             this.consensusManagerMock = mockingContext.GetService<Mock<IConsensusManager>>();
-            this.coinView = mockingContext.GetService<ICoinView>();
             this.consensusRuleEngine = mockingContext.GetService<IConsensusRuleEngine>();
         }
 
@@ -156,6 +153,11 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
                 return new ChainedHeaderBlock(new Block(), header);
             }
 
+            this.consensusManagerMock.Setup(x => x.GetBlockData(It.IsAny<uint256>())).Returns((uint256 hash) =>
+            {
+                return GetChainedHeaderBlock(hash);
+            });
+
             this.consensusManagerMock.Setup(x => x.GetBlockData(It.IsAny<List<uint256>>())).Returns((List<uint256> hashes) =>
             {
                 return hashes.Select(h => GetChainedHeaderBlock(h)).ToArray();
@@ -163,9 +165,10 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             this.consensusManagerMock.Setup(x => x.GetBlocksAfterBlock(It.IsAny<ChainedHeader>(), It.IsAny<int>(), It.IsAny<CancellationTokenSource>())).Returns((ChainedHeader header, int size, CancellationTokenSource token) =>
             {
-                return headers.Select(h => GetChainedHeaderBlock(h.HashBlock)).ToArray();
-
+                return headers.Where(h => h.Height > header.Height).Select(h => GetChainedHeaderBlock(h.HashBlock)).ToArray();
             });
+
+            this.consensusManagerMock.Setup(x => x.ConsensusRules).Returns(this.consensusRuleEngine);
 
             this.consensusRuleEngine.Initialize(headers.Last(), this.consensusManagerMock.Object);
             this.addressIndexer.Initialize();
