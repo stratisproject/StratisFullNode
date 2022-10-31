@@ -97,66 +97,72 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         public AddressBalancesResult GetAddressBalances(string[] addresses, int minConfirmations = 0)
         {
-            int cutOff = this.consensusManager.Tip.Height - minConfirmations;
-
-            return new AddressBalancesResult()
+            lock (this.lockObject)
             {
-                Balances = addresses
-                    .Select(address => (address, destination: AddressToDestination(address)))
-                    .Select(t => new AddressBalanceResult()
-                    {
-                        Address = t.address,
-                        Balance = (t.destination == null) ? 0 : new Money(this.coinView.GetBalance(t.destination).First(b => b.height <= cutOff).satoshis),
+                int cutOff = this.consensusManager.Tip.Height - minConfirmations;
 
-                    }).ToList()
-            };
+                return new AddressBalancesResult()
+                {
+                    Balances = addresses
+                        .Select(address => (address, destination: AddressToDestination(address)))
+                        .Select(t => new AddressBalanceResult()
+                        {
+                            Address = t.address,
+                            Balance = (t.destination == null) ? 0 : new Money(this.coinView.GetBalance(t.destination).First(b => b.height <= cutOff).satoshis),
+
+                        }).ToList()
+                };
+            }
         }
 
         public LastBalanceDecreaseTransactionModel GetLastBalanceDecreaseTransaction(string address)
         {
-            TxDestination txDestination = AddressToDestination(address);
-
-            AddressBalanceChange lastDecrease = GetChanges(txDestination).FirstOrDefault(b => !b.Deposited);
-            if (lastDecrease == null)
-                return null;
-
-            int lastBalanceHeight = lastDecrease.BalanceChangedHeight;
-
-            ChainedHeader header = this.chainIndexer.GetHeader(lastBalanceHeight);
-
-            if (header == null)
-                return null;
-
-            Block block = this.consensusManager.GetBlockData(header.HashBlock).Block;
-
-            if (block == null)
-                return null;
-
-            // Get the UTXO snapshot as of one block lower than the last balance change, so that we are definitely able to look up the inputs of each transaction in the next block.
-            ReconstructedCoinviewContext utxos = this.utxoIndexer.GetCoinviewAtHeight(lastBalanceHeight - 1);
-
-            Transaction foundTransaction = null;
-
-            foreach (Transaction transaction in block.Transactions)
+            lock (this.lockObject)
             {
-                if (transaction.IsCoinBase)
-                    continue;
+                TxDestination txDestination = AddressToDestination(address);
 
-                foreach (TxIn txIn in transaction.Inputs)
+                AddressBalanceChange lastDecrease = GetChanges(txDestination).FirstOrDefault(b => !b.Deposited);
+                if (lastDecrease == null)
+                    return null;
+
+                int lastBalanceHeight = lastDecrease.BalanceChangedHeight;
+
+                ChainedHeader header = this.chainIndexer.GetHeader(lastBalanceHeight);
+
+                if (header == null)
+                    return null;
+
+                Block block = this.consensusManager.GetBlockData(header.HashBlock).Block;
+
+                if (block == null)
+                    return null;
+
+                // Get the UTXO snapshot as of one block lower than the last balance change, so that we are definitely able to look up the inputs of each transaction in the next block.
+                ReconstructedCoinviewContext utxos = this.utxoIndexer.GetCoinviewAtHeight(lastBalanceHeight - 1);
+
+                Transaction foundTransaction = null;
+
+                foreach (Transaction transaction in block.Transactions)
                 {
-                    Transaction prevTx = utxos.Transactions[txIn.PrevOut.Hash];
+                    if (transaction.IsCoinBase)
+                        continue;
 
-                    foreach (TxOut txOut in prevTx.Outputs)
+                    foreach (TxIn txIn in transaction.Inputs)
                     {
-                        if (this.scriptAddressReader.GetAddressFromScriptPubKey(this.network, txOut.ScriptPubKey) == address)
+                        Transaction prevTx = utxos.Transactions[txIn.PrevOut.Hash];
+
+                        foreach (TxOut txOut in prevTx.Outputs)
                         {
-                            foundTransaction = transaction;
+                            if (this.scriptAddressReader.GetAddressFromScriptPubKey(this.network, txOut.ScriptPubKey) == address)
+                            {
+                                foundTransaction = transaction;
+                            }
                         }
                     }
                 }
-            }
 
-            return foundTransaction == null ? null : new LastBalanceDecreaseTransactionModel() { BlockHeight = lastBalanceHeight, Transaction = new TransactionVerboseModel(foundTransaction, this.network) };
+                return foundTransaction == null ? null : new LastBalanceDecreaseTransactionModel() { BlockHeight = lastBalanceHeight, Transaction = new TransactionVerboseModel(foundTransaction, this.network) };
+            }
         }
 
         private IEnumerable<AddressBalanceChange> ToDiff(IEnumerable<AddressBalanceChange> addressBalanceChanges)
@@ -200,19 +206,22 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         /// <inheritdoc/>
         public VerboseAddressBalancesResult GetAddressIndexerState(string[] addresses)
         {
-            // If the containing feature is not initialized then wait a bit.
-            this.InitializingFeature?.WaitInitialized();
-
-            return new VerboseAddressBalancesResult(this.IndexerTip.Height)
+            lock (this.lockObject)
             {
-                BalancesData = addresses
-                .Select(address => (address, destination: AddressToDestination(address)))
-                .Select(t => new AddressIndexerData()
+                // If the containing feature is not initialized then wait a bit.
+                this.InitializingFeature?.WaitInitialized();
+
+                return new VerboseAddressBalancesResult(this.IndexerTip.Height)
                 {
-                    Address = t.address,
-                    BalanceChanges = (t.destination == null) ? new List<AddressBalanceChange>() : GetChanges(t.destination).Reverse().ToList() // ToDiff result
-                }).ToList()
-            };
+                    BalancesData = addresses
+                    .Select(address => (address, destination: AddressToDestination(address)))
+                    .Select(t => new AddressIndexerData()
+                    {
+                        Address = t.address,
+                        BalanceChanges = (t.destination == null) ? new List<AddressBalanceChange>() : GetChanges(t.destination).Reverse().ToList() // ToDiff result
+                    }).ToList()
+                };
+            }
         }
 
         public void Dispose()
