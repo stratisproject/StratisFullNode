@@ -349,28 +349,55 @@ namespace Stratis.Bitcoin.Features.Wallet
         }
 
         /// <inheritdoc />
-        public string RetrievePrivateKey(string password, string walletName, string address)
+        public string RetrievePrivateKey(string walletName, string address, string password = null)
         {
-            Guard.NotEmpty(password, nameof(password));
             Guard.NotEmpty(walletName, nameof(walletName));
             Guard.NotEmpty(address, nameof(address));
 
             Wallet wallet = this.GetWallet(walletName);
+            HdAddress hdAddress = null;
 
             // Locate the address based on its base58 string representation.
-            // Check external addresses first.
-            HdAddress hdAddress = this.WalletRepository.GetAccounts(wallet).SelectMany(a => this.WalletRepository.GetAccountAddresses(
-                new WalletAccountReference(walletName, a.Name), 0, int.MaxValue)).Select(a => a).FirstOrDefault(addr => addr.Address.ToString() == address);
-
-            // Then check change addresses if needed.
-            if (hdAddress == null)
+            foreach (HdAccount account in this.WalletRepository.GetAccounts(wallet))
             {
-                hdAddress = this.WalletRepository.GetAccounts(wallet).SelectMany(a => this.WalletRepository.GetAccountAddresses(
-                    new WalletAccountReference(walletName, a.Name), 1, int.MaxValue)).Select(a => a).FirstOrDefault(addr => addr.Address.ToString() == address);
+                var walletAccountReference = new WalletAccountReference(walletName, account.Name);
+
+                // Check external addresses first.
+                hdAddress = this.WalletRepository.GetAccountAddresses(walletAccountReference, 0, int.MaxValue).FirstOrDefault(addr => addr.Address.ToString() == address);
+
+                if (hdAddress != null)
+                {
+                    break;
+                }
+
+                // Then check change addresses if needed.
+                hdAddress = this.WalletRepository.GetAccountAddresses(walletAccountReference, 1, int.MaxValue).FirstOrDefault(addr => addr.Address.ToString() == address);
+
+                if (hdAddress != null)
+                {
+                    break;
+                }
             }
 
-            ISecret privateKey = wallet.GetExtendedPrivateKeyForAddress(password, hdAddress).PrivateKey.GetWif(this.network);
-            return privateKey.ToString();
+            if (hdAddress == null)
+                throw new SecurityException("The address does not exist in the wallet.");
+
+            Key walletPrivateKey;
+            string cacheKey = wallet.EncryptedSeed;
+            
+            if (this.privateKeyCache.TryGetValue(cacheKey, out SecureString secretValue))
+            {
+                walletPrivateKey = wallet.Network.CreateBitcoinSecret(secretValue.FromSecureString()).PrivateKey;
+            }
+            else
+            {
+                walletPrivateKey = Key.Parse(wallet.EncryptedSeed, password, wallet.Network);
+            }
+
+            ISecret addressExtendedPrivateKey = HdOperations.GetExtendedPrivateKey(walletPrivateKey, wallet.ChainCode, hdAddress.HdPath, wallet.Network);
+            ISecret addressPrivateKey = addressExtendedPrivateKey.PrivateKey.GetWif(this.network);
+
+            return addressPrivateKey.ToString();
         }
 
         /// <inheritdoc />
