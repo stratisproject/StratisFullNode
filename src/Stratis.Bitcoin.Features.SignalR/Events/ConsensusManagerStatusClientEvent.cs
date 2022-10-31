@@ -1,25 +1,24 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.EventBus.CoreEvents;
 
 namespace Stratis.Bitcoin.Features.SignalR.Events
 {
-    public class ConsensusManagerStatusClientEvent : IClientEvent
+    public class FederationWalletStatusClientEvent : IClientEvent
     {
-        public bool IsIbd { get; set; }
-        public int? HeaderHeight { get; set; }
-        public Type NodeEventType { get; } = typeof(ConsensusManagerStatusEvent);
+        public string ConfirmedBalance { get; set; }
+        public string UnconfirmedBalance { get; set; }
+        public Type NodeEventType { get; } = typeof(FederationWalletStatusEvent);
 
         public void BuildFrom(EventBase @event)
         {
-            if (@event is ConsensusManagerStatusEvent consensusManagerStatusEvent)
+            if (@event is FederationWalletStatusEvent federationWalletStatusEvent)
             {
-                this.IsIbd = consensusManagerStatusEvent.IsIbd;
-                this.HeaderHeight = consensusManagerStatusEvent.HeaderHeight;
+                this.ConfirmedBalance = federationWalletStatusEvent.ConfirmedBalance.ToString();
+                this.UnconfirmedBalance = federationWalletStatusEvent.UnconfirmedBalance.ToString();
                 return;
             }
+
             throw new NotImplementedException();
         }
     }
