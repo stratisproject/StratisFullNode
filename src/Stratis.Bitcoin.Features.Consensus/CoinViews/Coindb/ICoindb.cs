@@ -33,7 +33,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// <param name="oldBlockHash">Block hash of the current tip of the coinview.</param>
         /// <param name="nextBlockHash">Block hash of the tip of the coinview after the change is applied.</param>
         /// <param name="rewindDataList">List of rewind data items to be persisted.</param>
-        void SaveChanges(IList<UnspentOutput> unspentOutputs, HashHeightPair oldBlockHash, HashHeightPair nextBlockHash, List<RewindData> rewindDataList = null);
+        void SaveChanges(IList<UnspentOutput> unspentOutputs, HashHeightPair oldBlockHash, HashHeightPair nextBlockHash, List<RewindData> rewindDataList);
 
         /// <summary>
         /// Obtains information about unspent outputs.
