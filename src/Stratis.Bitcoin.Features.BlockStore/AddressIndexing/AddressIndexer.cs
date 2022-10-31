@@ -97,6 +97,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         public AddressBalancesResult GetAddressBalances(string[] addresses, int minConfirmations = 0)
         {
+            int cutOff = this.consensusManager.Tip.Height - minConfirmations;
+
             return new AddressBalancesResult()
             {
                 Balances = addresses
@@ -104,7 +106,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                     .Select(t => new AddressBalanceResult()
                     {
                         Address = t.address,
-                        Balance = (t.destination == null) ? 0 : new Money(this.coinView.GetBalance(t.destination).First().satoshis),
+                        Balance = (t.destination == null) ? 0 : new Money(this.coinView.GetBalance(t.destination).First(b => b.height <= cutOff).satoshis),
 
                     }).ToList()
             };
