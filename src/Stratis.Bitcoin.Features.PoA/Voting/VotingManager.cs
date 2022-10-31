@@ -100,8 +100,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.nodeDeployments = nodeDeployments;
 
             // Avoid hiding the above "Assert" errors by doing this last.
-            // Otherwise we will just see database file in-use error when this
-            // constructor is called on dispose.
+            // Otherwise we will just see database file in-use error when this constructor is called on dispose.
             this.PollsRepository = new PollsRepository(chainIndexer, dataFolder, dBreezeSerializer, network as PoANetwork);
 
             this.isInitialized = false;
