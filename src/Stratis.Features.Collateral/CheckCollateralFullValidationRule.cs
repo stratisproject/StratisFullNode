@@ -62,7 +62,7 @@ namespace Stratis.Features.Collateral
 
             // TODO: Both this and CollateralPoAMiner are using this chain's MaxReorg instead of the Counter chain's MaxReorg. Beware: fixing requires fork.
             int counterChainHeight = this.collateralChecker.GetCounterChainConsensusHeight();
-            int maxReorgLength = AddressIndexerCV.GetMaxReorgOrFallbackMaxReorg(this.network);
+            int maxReorgLength = AddressIndexer.GetMaxReorgOrFallbackMaxReorg(this.network);
 
             // Check if commitment height is less than `mainchain consensus tip height - MaxReorg`.
             if (commitmentHeight > counterChainHeight - maxReorgLength)

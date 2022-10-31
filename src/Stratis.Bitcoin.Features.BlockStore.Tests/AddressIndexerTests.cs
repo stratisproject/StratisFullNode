@@ -63,7 +63,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
                 .AddSingleton<ICoinView, CachedCoinView>()
                 .AddSingleton(this.chainIndexer)
                 .AddSingleton<IDateTimeProvider, DateTimeProvider>()
-                .AddSingleton<IAddressIndexer, AddressIndexerCV>();
+                .AddSingleton<IAddressIndexer, AddressIndexer>();
             
             var mockingContext = new MockingContext(mockingServices);
 
@@ -416,13 +416,13 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
         {
             var btc = new BitcoinMain();
 
-            int maxReorgBtc = AddressIndexerCV.GetMaxReorgOrFallbackMaxReorg(btc);
+            int maxReorgBtc = AddressIndexer.GetMaxReorgOrFallbackMaxReorg(btc);
 
-            Assert.Equal(maxReorgBtc, AddressIndexerCV.FallBackMaxReorg);
+            Assert.Equal(maxReorgBtc, AddressIndexer.FallBackMaxReorg);
 
             var stratis = new StraxMain();
 
-            int maxReorgStratis = AddressIndexerCV.GetMaxReorgOrFallbackMaxReorg(stratis);
+            int maxReorgStratis = AddressIndexer.GetMaxReorgOrFallbackMaxReorg(stratis);
 
             Assert.Equal(maxReorgStratis, (int)stratis.Consensus.MaxReorgLength);
         }

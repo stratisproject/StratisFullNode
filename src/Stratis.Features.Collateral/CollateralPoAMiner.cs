@@ -63,15 +63,15 @@ namespace Stratis.Features.Collateral
             base.FillBlockTemplate(blockTemplate, out dropTemplate);
 
             int counterChainHeight = this.collateralChecker.GetCounterChainConsensusHeight();
-            int maxReorgLength = AddressIndexerCV.GetMaxReorgOrFallbackMaxReorg(this.network);
+            int maxReorgLength = AddressIndexer.GetMaxReorgOrFallbackMaxReorg(this.network);
 
-            int commitmentHeight = counterChainHeight - maxReorgLength - AddressIndexerCV.SyncBuffer;
+            int commitmentHeight = counterChainHeight - maxReorgLength - AddressIndexer.SyncBuffer;
 
             if (commitmentHeight <= 0)
             {
                 dropTemplate = true;
                 if (counterChainHeight != 0)
-                    this.logger.LogWarning("Counter chain should first advance at least at {0}! Block can't be produced.", maxReorgLength + AddressIndexerCV.SyncBuffer);
+                    this.logger.LogWarning("Counter chain should first advance at least at {0}! Block can't be produced.", maxReorgLength + AddressIndexer.SyncBuffer);
 
                 this.logger.LogTrace("(-)[LOW_COMMITMENT_HEIGHT]");
                 return;

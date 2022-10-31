@@ -34,7 +34,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         LastBalanceDecreaseTransactionModel GetLastBalanceDecreaseTransaction(string address);
     }
 
-    public class AddressIndexerCV : IAddressIndexer
+    public class AddressIndexer : IAddressIndexer
     {
         private readonly Network network;
         private readonly ICoinView coinView;
@@ -54,7 +54,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         /// </summary>
         public const int SyncBuffer = 50;
 
-        public AddressIndexerCV(Network network, ChainIndexer chainIndexer, IScriptAddressReader scriptAddressReader, ICoinView coinView)
+        public AddressIndexer(Network network, ChainIndexer chainIndexer, IScriptAddressReader scriptAddressReader, ICoinView coinView)
         {
             this.network = network;
             this.coinView = coinView;
