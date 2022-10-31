@@ -355,28 +355,17 @@ namespace Stratis.Bitcoin.Features.Wallet
             Guard.NotEmpty(address, nameof(address));
 
             Wallet wallet = this.GetWallet(walletName);
-            HdAddress hdAddress = null;
 
             // Locate the address based on its base58 string representation.
-            foreach (HdAccount account in this.WalletRepository.GetAccounts(wallet))
+            // Check external addresses first.
+            HdAddress hdAddress = this.WalletRepository.GetAccounts(wallet).SelectMany(a => this.WalletRepository.GetAccountAddresses(
+                new WalletAccountReference(walletName, a.Name), 0, int.MaxValue)).Select(a => a).FirstOrDefault(addr => addr.Address.ToString() == address);
+
+            // Then check change addresses if needed.
+            if (hdAddress == null)
             {
-                var walletAccountReference = new WalletAccountReference(walletName, account.Name);
-
-                // Check external addresses first.
-                hdAddress = this.WalletRepository.GetAccountAddresses(walletAccountReference, 0, int.MaxValue).FirstOrDefault(addr => addr.Address.ToString() == address);
-
-                if (hdAddress != null)
-                {
-                    break;
-                }
-
-                // Then check change addresses if needed.
-                hdAddress = this.WalletRepository.GetAccountAddresses(walletAccountReference, 1, int.MaxValue).FirstOrDefault(addr => addr.Address.ToString() == address);
-
-                if (hdAddress != null)
-                {
-                    break;
-                }
+                hdAddress = this.WalletRepository.GetAccounts(wallet).SelectMany(a => this.WalletRepository.GetAccountAddresses(
+                    new WalletAccountReference(walletName, a.Name), 1, int.MaxValue)).Select(a => a).FirstOrDefault(addr => addr.Address.ToString() == address);
             }
 
             if (hdAddress == null)
