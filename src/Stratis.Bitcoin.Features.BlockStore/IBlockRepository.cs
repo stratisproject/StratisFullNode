@@ -62,8 +62,5 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
         /// <summary>Hash and height of the repository's tip.</summary>
         HashHeightPair TipHashAndHeight { get; }
-
-        /// <summary> Indicates that the node should store all transaction data in the database.</summary>
-        bool TxIndex { get; }
     }
 }

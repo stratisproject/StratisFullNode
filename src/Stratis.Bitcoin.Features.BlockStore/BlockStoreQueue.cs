@@ -100,6 +100,8 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
         private Exception saveAsyncLoopException;
 
+        public bool TxIndex => this.blockRepository.TxIndex;
+
         public BlockStoreQueue(
             ChainIndexer chainIndexer,
             IChainState chainState,

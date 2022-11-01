@@ -37,6 +37,9 @@ namespace Stratis.Bitcoin.Interfaces
         Block GetBlock(uint256 blockHash);
 
         List<Block> GetBlocks(List<uint256> blockHashes);
+
+        /// <summary> Indicates that the node should store all transaction data in the database.</summary>
+        bool TxIndex { get; }
     }
 
     /// <summary>
