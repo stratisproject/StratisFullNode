@@ -70,6 +70,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         private readonly IAsyncProvider asyncProvider;
 
         private readonly IScriptAddressReader scriptAddressReader;
+        private readonly IBlockStore blockStore;
 
         private readonly TimeSpan flushChangesInterval;
 
@@ -159,6 +160,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             this.dateTimeProvider = dateTimeProvider;
             this.utxoIndexer = utxoIndexer;
             this.scriptAddressReader = new ScriptAddressReader();
+            this.blockStore = blockStore;
             this.signals = signals;
 
             this.lockObject = new object();
@@ -714,7 +716,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                 return null;
 
             // Get the UTXO snapshot as of one block lower than the last balance change, so that we are definitely able to look up the inputs of each transaction in the next block.
-            ReconstructedCoinviewContext utxos = this.utxoIndexer.GetCoinviewAtHeight(lastBalanceHeight - 1);
+            ReconstructedCoinviewContext utxos = this.blockStore.TxIndex ? null : this.utxoIndexer.GetCoinviewAtHeight(lastBalanceHeight - 1);
 
             Transaction foundTransaction = null;
 
@@ -725,7 +727,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
                 foreach (TxIn txIn in transaction.Inputs)
                 {
-                    Transaction prevTx = utxos.Transactions[txIn.PrevOut.Hash];
+                    Transaction prevTx = utxos?.Transactions[txIn.PrevOut.Hash] ?? this.blockStore.GetTransactionById(txIn.PrevOut.Hash);
 
                     foreach (TxOut txOut in prevTx.Outputs)
                     {
