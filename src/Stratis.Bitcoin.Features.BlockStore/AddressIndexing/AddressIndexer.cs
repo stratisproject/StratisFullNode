@@ -42,6 +42,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         private readonly IUtxoIndexer utxoIndexer;
         private readonly IConsensusManager consensusManager;
         private readonly IScriptAddressReader scriptAddressReader;
+        private readonly IBlockStore blockStore;
         private readonly object lockObject;
 
         public ChainedHeader IndexerTip => GetTip();
@@ -65,6 +66,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             this.scriptAddressReader = scriptAddressReader;
             this.consensusManager = consensusManager;
             this.utxoIndexer = utxoIndexer;
+            this.blockStore = blockStore;
+
             this.lockObject = new object();
         }
 
@@ -137,8 +140,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                 if (block == null)
                     return null;
 
-                // Get the UTXO snapshot as of one block lower than the last balance change, so that we are definitely able to look up the inputs of each transaction in the next block.
-                ReconstructedCoinviewContext utxos = this.utxoIndexer.GetCoinviewAtHeight(lastBalanceHeight - 1);
+            // Get the UTXO snapshot as of one block lower than the last balance change, so that we are definitely able to look up the inputs of each transaction in the next block.
+            ReconstructedCoinviewContext utxos = this.blockStore.TxIndex ? null : this.utxoIndexer.GetCoinviewAtHeight(lastBalanceHeight - 1);
 
                 Transaction foundTransaction = null;
 
@@ -147,9 +150,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                     if (transaction.IsCoinBase)
                         continue;
 
-                    foreach (TxIn txIn in transaction.Inputs)
-                    {
-                        Transaction prevTx = utxos.Transactions[txIn.PrevOut.Hash];
+                foreach (TxIn txIn in transaction.Inputs)
+                {
+                    Transaction prevTx = utxos?.Transactions[txIn.PrevOut.Hash] ?? this.blockStore.GetTransactionById(txIn.PrevOut.Hash);
 
                         foreach (TxOut txOut in prevTx.Outputs)
                         {
