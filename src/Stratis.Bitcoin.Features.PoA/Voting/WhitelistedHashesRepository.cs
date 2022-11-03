@@ -19,12 +19,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         // Dictionary of hash histories. Even list entries are additions and odd entries are removals.
         private Dictionary<uint256, int[]> whitelistedHashes;
 
-        public WhitelistedHashesRepository(ILoggerFactory loggerFactory, PoAConsensusOptions poaConsensusOptions)
+        public WhitelistedHashesRepository(ILoggerFactory loggerFactory, Network network)
         {
             this.locker = new object();
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
-            this.poaConsensusOptions = poaConsensusOptions;
+            this.poaConsensusOptions = network.Consensus.Options as PoAConsensusOptions;
         }
 
         private void GetWhitelistedHashesFromExecutedPolls(VotingManager votingManager)
