@@ -42,7 +42,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     {
                         this.AddHash(hash, poll.PollExecutedBlockData.Height);
                     }
-                    else if (poll.VotingData.Key == VoteKey.KickFederationMember)
+                    else if (poll.VotingData.Key == VoteKey.RemoveHash)
                     {
                         this.RemoveHash(hash, poll.PollExecutedBlockData.Height);
                     }
