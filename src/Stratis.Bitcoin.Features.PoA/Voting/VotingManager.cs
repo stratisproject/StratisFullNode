@@ -547,7 +547,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         else
                         {
                             this.logger.LogDebug("Applying poll '{0}'.", poll);
-                            this.pollResultExecutor.ApplyChange(poll.VotingData);
+                            this.pollResultExecutor.ApplyChange(poll.VotingData, chBlock.ChainedHeader.Height);
 
                             this.polls.AdjustPoll(poll, poll => poll.PollExecutedBlockData = new HashHeightPair(chBlock.ChainedHeader));
                             transaction.UpdatePoll(poll);
@@ -694,7 +694,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 foreach (Poll poll in this.polls.Where(x => !x.IsPending && x.PollExecutedBlockData?.Hash == chBlock.ChainedHeader.HashBlock).ToList())
                 {
                     this.logger.LogDebug("Reverting poll execution '{0}'.", poll);
-                    this.pollResultExecutor.RevertChange(poll.VotingData);
+                    this.pollResultExecutor.RevertChange(poll.VotingData, chBlock.ChainedHeader.Height);
 
                     this.polls.AdjustPoll(poll, poll => poll.PollExecutedBlockData = null);
                     transaction.UpdatePoll(poll);
