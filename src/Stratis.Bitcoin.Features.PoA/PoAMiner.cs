@@ -14,11 +14,13 @@ using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Validators;
 using Stratis.Bitcoin.Features.Miner;
+using Stratis.Bitcoin.Features.PoA.Events;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Mining;
+using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 using TracerAttributes;
 
@@ -104,12 +106,13 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private Script walletScriptPubKey;
 
+        private readonly ISignals signals;
+
         public PoAMiner(
             IConsensusManager consensusManager,
             IDateTimeProvider dateTimeProvider,
             Network network,
             INodeLifetime nodeLifetime,
-            ILoggerFactory loggerFactory,
             IInitialBlockDownloadState ibdState,
             BlockDefinition blockDefinition,
             ISlotsManager slotsManager,
@@ -124,6 +127,7 @@ namespace Stratis.Bitcoin.Features.PoA
             PoASettings poAMinerSettings,
             IAsyncProvider asyncProvider,
             IIdleFederationMembersKicker idleFederationMembersKicker,
+            ISignals signals,
             NodeSettings nodeSettings)
         {
             this.consensusManager = consensusManager;
@@ -144,12 +148,13 @@ namespace Stratis.Bitcoin.Features.PoA
             this.idleFederationMembersKicker = idleFederationMembersKicker;
             this.nodeLifetime = nodeLifetime;
 
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
             this.cancellation = CancellationTokenSource.CreateLinkedTokenSource(new[] { nodeLifetime.ApplicationStopping });
             this.votingDataEncoder = new VotingDataEncoder();
             this.nodeSettings = nodeSettings;
 
             this.miningStatistics = new MiningStatisticsModel();
+            this.signals = signals;
 
             nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
         }
@@ -299,6 +304,11 @@ namespace Stratis.Bitcoin.Features.PoA
 
             this.miningStatistics.MinerHits = hitCount;
 
+            if (this.signals != null)
+            {
+                this.signals.Publish(new MiningStatisticsEvent(this.miningStatistics, maxDepth));
+            }
+
             log.Append("...");
             log.AppendLine();
             log.AppendLine($"Miner hits".PadRight(LoggingConfiguration.ColumnLength) + $": {hitCount} of {maxDepth}({(((float)hitCount / (float)maxDepth)).ToString("P2")})");
@@ -425,7 +435,7 @@ namespace Stratis.Bitcoin.Features.PoA
                     this.logger.LogWarning("This node is no longer a federation member!");
 
                     throw new OperationCanceledException();
-                }                
+                }
 
                 await Task.Delay(TimeSpan.FromMilliseconds(100), this.cancellation.Token).ConfigureAwait(false);
             }
@@ -562,7 +572,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
             if (scheduledVotes.Count == 0)
             {
-                this.logger.LogTrace("(-)[NO_DATA]");
+                this.logger.LogDebug("There are no votes to add to this block.");
                 return;
             }
 
@@ -574,6 +584,14 @@ namespace Stratis.Bitcoin.Features.PoA
             var votingOutputScript = new Script(OpcodeType.OP_RETURN, Op.GetPushOp(votingData.ToArray()));
 
             blockTemplate.Block.Transactions[0].AddOutput(Money.Zero, votingOutputScript);
+
+            foreach (VotingData scheduledVote in scheduledVotes)
+            {
+                if (scheduledVote.Key == VoteKey.AddFederationMember || scheduledVote.Key == VoteKey.KickFederationMember)
+                    this.logger.LogDebug($"{scheduledVote.Key} vote added to block for member '{this.votingManager.GetMemberVotedOn(scheduledVote).PubKey}'.");
+                else
+                    this.logger.LogDebug($"{scheduledVote.Key} vote added to block.");
+            }
         }
 
         [NoTrace]

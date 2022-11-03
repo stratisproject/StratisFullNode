@@ -3,6 +3,7 @@ using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Base.Deployments;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
@@ -50,7 +51,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
             IConsensusManager consensusManager,
             IDateTimeProvider dateTimeProvider,
             IContractExecutorFactory executorFactory,
-            ILoggerFactory loggerFactory,
             ITxMempool mempool,
             MempoolSchedulerLock mempoolLock,
             MinerSettings minerSettings,
@@ -60,11 +60,11 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
             IStakeValidator stakeValidator,
             IStateRepositoryRoot stateRoot,
             NodeDeployments nodeDeployments)
-            : base(consensusManager, dateTimeProvider, loggerFactory, mempool, mempoolLock, minerSettings, network, nodeDeployments)
+            : base(consensusManager, dateTimeProvider, mempool, mempoolLock, minerSettings, network, nodeDeployments)
         {
             this.coinView = coinView;
             this.executorFactory = executorFactory;
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
             this.senderRetriever = senderRetriever;
             this.stakeChain = stakeChain;
             this.stakeValidator = stakeValidator;
@@ -134,7 +134,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
             base.OnBuild(chainTip, scriptPubKey);
 
             this.coinbase.Outputs.AddRange(this.refundOutputs);
-            
+
             return this.BlockTemplate;
         }
 
@@ -197,7 +197,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
                 result.Logs.ToArray()
             );
             this.receipts.Add(receipt);
-            
+
             return result;
         }
     }

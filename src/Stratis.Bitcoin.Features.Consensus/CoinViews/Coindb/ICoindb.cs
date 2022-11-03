@@ -10,8 +10,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
     public interface ICoindb
     {
         /// <summary> Initialize the coin database.</summary>
-        /// <param name="chainTip">The current chain's tip.</param>
-        void Initialize(ChainedHeader chainTip);
+        void Initialize();
 
         /// <summary>
         /// Retrieves the block hash of the current tip of the coinview.
@@ -34,7 +33,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// <param name="oldBlockHash">Block hash of the current tip of the coinview.</param>
         /// <param name="nextBlockHash">Block hash of the tip of the coinview after the change is applied.</param>
         /// <param name="rewindDataList">List of rewind data items to be persisted.</param>
-        void SaveChanges(IList<UnspentOutput> unspentOutputs, HashHeightPair oldBlockHash, HashHeightPair nextBlockHash, List<RewindData> rewindDataList = null);
+        void SaveChanges(IList<UnspentOutput> unspentOutputs, HashHeightPair oldBlockHash, HashHeightPair nextBlockHash, List<RewindData> rewindDataList);
 
         /// <summary>
         /// Obtains information about unspent outputs.
@@ -80,8 +79,16 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
     public interface IStakedb : ICoindb
     {
+        /// <summary>
+        /// Persists unsaved POS blocks information to the database.
+        /// </summary>
+        /// <param name="stakeEntries">List of POS block information to be examined and persists if unsaved.</param>
         void PutStake(IEnumerable<StakeItem> stakeEntries);
 
+        /// <summary>
+        /// Retrieves POS blocks information from the database.
+        /// </summary>
+        /// <param name="blocklist">List of partially initialized POS block information that is to be fully initialized with the values from the database.</param>
         void GetStake(IEnumerable<StakeItem> blocklist);
     }
 }

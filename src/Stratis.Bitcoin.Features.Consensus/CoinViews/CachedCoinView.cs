@@ -2,11 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders;
+using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
+using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.Extensions;
 using TracerAttributes;
@@ -124,34 +128,35 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         private long rewindDataSizeBytes;
         private DateTime lastCacheFlushTime;
         private readonly Network network;
-        private readonly ICheckpoints checkpoints;
         private readonly IDateTimeProvider dateTimeProvider;
+        private readonly CancellationTokenSource cancellationToken;
+        private IConsensusManager consensusManager;
         private readonly ConsensusSettings consensusSettings;
+        private readonly ChainIndexer chainIndexer;
         private CachePerformanceSnapshot latestPerformanceSnapShot;
-        private int lastCheckpointHeight;
 
         private readonly Random random;
 
-        public CachedCoinView(Network network, ICheckpoints checkpoints, ICoindb coindb, IDateTimeProvider dateTimeProvider, ILoggerFactory loggerFactory, INodeStats nodeStats, ConsensusSettings consensusSettings, StakeChainStore stakeChainStore = null, IRewindDataIndexCache rewindDataIndexCache = null)
+        public CachedCoinView(Network network, ICoindb coindb, IDateTimeProvider dateTimeProvider, ILoggerFactory loggerFactory, INodeStats nodeStats, ConsensusSettings consensusSettings, ChainIndexer chainIndexer,
+            StakeChainStore stakeChainStore = null, IRewindDataIndexCache rewindDataIndexCache = null, INodeLifetime nodeLifetime = null, NodeSettings nodeSettings = null)
         {
             Guard.NotNull(coindb, nameof(CachedCoinView.coindb));
 
             this.coindb = coindb;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;
-            this.checkpoints = checkpoints;
             this.dateTimeProvider = dateTimeProvider;
             this.consensusSettings = consensusSettings;
+            this.chainIndexer = chainIndexer;
             this.stakeChainStore = stakeChainStore;
             this.rewindDataIndexCache = rewindDataIndexCache;
+            this.cancellationToken = (nodeLifetime == null) ? new CancellationTokenSource() : CancellationTokenSource.CreateLinkedTokenSource(nodeLifetime.ApplicationStopping);
             this.lockobj = new object();
             this.cachedUtxoItems = new Dictionary<OutPoint, CacheItem>();
             this.performanceCounter = new CachePerformanceCounter(this.dateTimeProvider);
             this.lastCacheFlushTime = this.dateTimeProvider.GetUtcNow();
             this.cachedRewindData = new Dictionary<int, RewindData>();
             this.random = new Random();
-
-            this.lastCheckpointHeight = this.checkpoints.GetLastCheckpointHeight();
 
             this.MaxCacheSizeBytes = consensusSettings.MaxCoindbCacheInMB * 1024 * 1024;
             this.CacheFlushTimeIntervalSeconds = consensusSettings.CoindbIbdFlushMin * 60;
@@ -160,17 +165,131 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 300);
         }
 
+        /// <summary>
+        /// Remain on-chain.
+        /// </summary>
+        public void Sync()
+        {
+            lock (this.lockobj)
+            {
+                HashHeightPair coinViewTip = this.GetTipHash();
+                if (coinViewTip.Hash == this.chainIndexer.Tip.HashBlock)
+                    return;
+
+                Flush();
+
+                if (coinViewTip.Height > this.chainIndexer.Height || this.chainIndexer[coinViewTip.Hash] == null)
+                {
+                    // The coinview tip is above the chain height or on a fork.
+                    // Determine the first unusable height by finding the first rewind data that is not on the consensus chain.
+                    int unusableHeight = BinarySearch.BinaryFindFirst(h => (h > this.chainIndexer.Height) || (this.GetRewindData(h)?.PreviousBlockHash.Hash != this.chainIndexer[h].Previous.HashBlock), 2, coinViewTip.Height - 1);
+                    ChainedHeader fork = this.chainIndexer[unusableHeight - 2];
+
+                    while (coinViewTip.Height != fork.Height)
+                    {
+                        if ((coinViewTip.Height % 100) == 0)
+                            this.logger.LogInformation("Rewinding coin view from '{0}' to {1}.", coinViewTip, fork);
+
+                        // If the block store was initialized behind the coin view's tip, rewind it to on or before it's tip.
+                        // The node will complete loading before connecting to peers so the chain will never know that a reorg happened.
+                        coinViewTip = this.coindb.Rewind(new HashHeightPair(fork));
+                    };
+
+                    this.blockHash = coinViewTip;
+                    this.innerBlockHash = this.blockHash;
+                }
+
+                CatchUp();
+            }
+        }
+
+        private void CatchUp()
+        {
+            ChainedHeader chainTip = this.chainIndexer.Tip;
+            HashHeightPair coinViewTip = this.coindb.GetTipHash();
+
+            // If the coin view is behind the block store then catch up from the block store.
+            if (coinViewTip.Height < chainTip.Height)
+            {
+                try
+                {
+                    IConsensusRuleEngine consensusRuleEngine = this.consensusManager.ConsensusRules;
+
+                    var loadCoinViewRule = consensusRuleEngine.GetRule<LoadCoinviewRule>();
+                    var saveCoinViewRule = consensusRuleEngine.GetRule<SaveCoinviewRule>();
+                    var coinViewRule = consensusRuleEngine.GetRule<CoinViewRule>();
+                    var deploymentsRule = consensusRuleEngine.GetRule<SetActivationDeploymentsFullValidationRule>();
+
+                    foreach (ChainedHeaderBlock chb in this.consensusManager.GetBlocksAfterBlock(this.chainIndexer[coinViewTip.Hash], 1000, this.cancellationToken))
+                    {
+                        ChainedHeader chainedHeader = chb?.ChainedHeader;
+                        if (chainedHeader == null)
+                            break;
+
+                        Block block = chb.Block;
+                        if (block == null)
+                            break;
+
+                        if ((chainedHeader.Height % 10000) == 0)
+                        {
+                            this.Flush(true);
+                            this.logger.LogInformation("Rebuilding coin view from '{0}' to {1}.", chainedHeader, chainTip);
+                        }
+
+                        var utxoRuleContext = consensusRuleEngine.CreateRuleContext(new ValidationContext() { ChainedHeaderToValidate = chainedHeader, BlockToValidate = block });
+                        utxoRuleContext.SkipValidation = true;
+
+                        // Set context flags.
+                        deploymentsRule.RunAsync(utxoRuleContext).ConfigureAwait(false).GetAwaiter().GetResult();
+
+                        // Loads the coins spent by this block into utxoRuleContext.UnspentOutputSet.
+                        loadCoinViewRule.RunAsync(utxoRuleContext).ConfigureAwait(false).GetAwaiter().GetResult();
+
+                        // Spends the coins.
+                        coinViewRule.RunAsync(utxoRuleContext).ConfigureAwait(false).GetAwaiter().GetResult();
+
+                        // Saves the changes to the coinview.
+                        saveCoinViewRule.RunAsync(utxoRuleContext).ConfigureAwait(false).GetAwaiter().GetResult(); 
+                    }
+                }
+                finally
+                {
+                    this.Flush(true);
+
+                    if (this.cancellationToken.IsCancellationRequested)
+                    {
+                        this.logger.LogDebug("Rebuilding cancelled due to application stopping.");
+                        throw new OperationCanceledException();
+                    }
+                }
+            }
+        }
+
+        public void Initialize(IConsensusManager consensusManager)
+        {
+            this.consensusManager = consensusManager;
+
+            this.coindb.Initialize();
+
+            Sync();
+
+            this.logger.LogInformation("Coin view initialized at '{0}'.", this.coindb.GetTipHash());
+        }
+
         public HashHeightPair GetTipHash()
         {
-            if (this.blockHash == null)
+            lock (this.lockobj)
             {
-                HashHeightPair response = this.coindb.GetTipHash();
+                if (this.blockHash == null)
+                {
+                    HashHeightPair response = this.coindb.GetTipHash();
 
-                this.innerBlockHash = response;
-                this.blockHash = this.innerBlockHash;
+                    this.innerBlockHash = response;
+                    this.blockHash = this.innerBlockHash;
+                }
+
+                return this.blockHash;
             }
-
-            return this.blockHash;
         }
 
         /// <inheritdoc />
@@ -316,44 +435,44 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// </remarks>
         public void Flush(bool force = true)
         {
-            if (!force)
-            {
-                // Check if periodic flush is required.
-                // Ideally this will flush less frequent and always be behind 
-                // blockstore which is currently set to 17 sec.
-
-                DateTime now = this.dateTimeProvider.GetUtcNow();
-                bool flushTimeLimit = (now - this.lastCacheFlushTime).TotalSeconds >= this.CacheFlushTimeIntervalSeconds;
-
-                // The size of the cache was reached and most likely TryEvictCacheLocked didn't work
-                // so the cahces is pulledted with flushable items, then we flush anyway.
-
-                long totalBytes = this.cacheSizeBytes + this.rewindDataSizeBytes;
-                bool flushSizeLimit = totalBytes > this.MaxCacheSizeBytes;
-
-                if (!flushTimeLimit && !flushSizeLimit)
-                {
-                    return;
-                }
-
-                this.logger.LogDebug("Flushing, reasons flushTimeLimit={0} flushSizeLimit={1}.", flushTimeLimit, flushSizeLimit);
-            }
-
-            // Before flushing the coinview persist the stake store
-            // the stake store depends on the last block hash
-            // to be stored after the stake store is persisted.
-            if (this.stakeChainStore != null)
-                this.stakeChainStore.Flush(true);
-
-            // Before flushing the coinview persist the rewind data index store as well.
-            if (this.rewindDataIndexCache != null)
-                this.rewindDataIndexCache.SaveAndEvict(this.blockHash.Height, null);
-
-            if (this.innerBlockHash == null)
-                this.innerBlockHash = this.coindb.GetTipHash();
-
             lock (this.lockobj)
             {
+                if (!force)
+                {
+                    // Check if periodic flush is required.
+                    // Ideally this will flush less frequent and always be behind 
+                    // blockstore which is currently set to 17 sec.
+
+                    DateTime now = this.dateTimeProvider.GetUtcNow();
+                    bool flushTimeLimit = (now - this.lastCacheFlushTime).TotalSeconds >= this.CacheFlushTimeIntervalSeconds;
+
+                    // The size of the cache was reached and most likely TryEvictCacheLocked didn't work
+                    // so the cahces is pulledted with flushable items, then we flush anyway.
+
+                    long totalBytes = this.cacheSizeBytes + this.rewindDataSizeBytes;
+                    bool flushSizeLimit = totalBytes > this.MaxCacheSizeBytes;
+
+                    if (!flushTimeLimit && !flushSizeLimit)
+                    {
+                        return;
+                    }
+
+                    this.logger.LogDebug("Flushing, reasons flushTimeLimit={0} flushSizeLimit={1}.", flushTimeLimit, flushSizeLimit);
+                }
+
+                // Before flushing the coinview persist the stake store
+                // the stake store depends on the last block hash
+                // to be stored after the stake store is persisted.
+                if (this.stakeChainStore != null)
+                    this.stakeChainStore.Flush(true);
+
+                // Before flushing the coinview persist the rewind data index store as well.
+                if (this.rewindDataIndexCache != null)
+                    this.rewindDataIndexCache.SaveAndEvict(this.blockHash.Height, null);
+
+                if (this.innerBlockHash == null)
+                    this.innerBlockHash = this.coindb.GetTipHash();
+
                 if (this.innerBlockHash == null)
                 {
                     this.logger.LogTrace("(-)[NULL_INNER_TIP]");
@@ -381,9 +500,8 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 this.rewindDataSizeBytes = 0;
                 this.dirtyCacheCount = 0;
                 this.innerBlockHash = this.blockHash;
+                this.lastCacheFlushTime = this.dateTimeProvider.GetUtcNow();
             }
-
-            this.lastCacheFlushTime = this.dateTimeProvider.GetUtcNow();
         }
 
         /// <inheritdoc />
@@ -572,16 +690,16 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         public HashHeightPair Rewind(HashHeightPair target = null)
         {
-            if (this.innerBlockHash == null)
-            {
-                this.innerBlockHash = this.coindb.GetTipHash();
-            }
-
-            // Flush the entire cache before rewinding
-            this.Flush(true);
-
             lock (this.lockobj)
             {
+                if (this.innerBlockHash == null)
+                {
+                    this.innerBlockHash = this.coindb.GetTipHash();
+                }
+
+                // Flush the entire cache before rewinding
+                this.Flush(true);
+
                 HashHeightPair hash = this.coindb.Rewind(target);
 
                 foreach (KeyValuePair<OutPoint, CacheItem> cachedUtxoItem in this.cachedUtxoItems)
@@ -611,10 +729,13 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// <inheritdoc />
         public RewindData GetRewindData(int height)
         {
-            if (this.cachedRewindData.TryGetValue(height, out RewindData existingRewindData))
-                return existingRewindData;
+            lock (this.lockobj)
+            {
+                if (this.cachedRewindData.TryGetValue(height, out RewindData existingRewindData))
+                    return existingRewindData;
 
-            return this.coindb.GetRewindData(height);
+                return this.coindb.GetRewindData(height);
+            }
         }
 
         [NoTrace]

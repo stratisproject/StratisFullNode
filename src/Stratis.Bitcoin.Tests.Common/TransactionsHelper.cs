@@ -47,6 +47,9 @@ namespace Stratis.Bitcoin.Tests.Common
         }
 
         /// <summary>Creates invalid PoW block with coinbase transaction.</summary>
+        /// <param name="network">The network.</param>
+        /// <param name="tip">Identifies the tip (previous block and height).</param>
+        /// <returns><see cref="Block"/>.</returns>
         public static Block CreateDummyBlockWithTransaction(Network network, ChainedHeader tip)
         {
             Block block = network.Consensus.ConsensusFactory.CreateBlock();

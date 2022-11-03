@@ -394,7 +394,7 @@ namespace Stratis.Bitcoin.Features.RPC.Tests.Controller
         }
 
         [Fact]
-        public async Task GetTxOutProof_TransactionInSameSpecifiedBlock_ReturnsProof()
+        public async Task GetTxOutProof_TransactionInSameSpecifiedBlock_ReturnsProofAsync()
         {
             ChainedHeader block = this.chain.GetHeader(2);
             Transaction tx = block.Block.Transactions.First();

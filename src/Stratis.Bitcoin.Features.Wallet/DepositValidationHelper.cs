@@ -55,7 +55,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             // First check cross chain transfers from the STRAX to Cirrus network or vice versa.
             if (!opReturnDataReader.TryGetTargetAddress(transaction, out targetAddress))
             {
-                // Else try and validate the destination adress by the destination chain.
+                // Else try and validate the destination address by the destination chain.
                 byte[] opReturnBytes = OpReturnDataReader.SelectBytesContentFromOpReturn(transaction).FirstOrDefault();
 
                 if (opReturnBytes != null && InterFluxOpReturnEncoder.TryDecode(opReturnBytes, out int destinationChain, out targetAddress))

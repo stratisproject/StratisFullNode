@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using NBitcoin;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.Consensus.CoinViews
@@ -10,6 +11,12 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
     /// </summary>
     public interface ICoinView
     {
+        /// <summary>
+        /// Initializes the coin view.
+        /// </summary>
+        /// <param name="consensusManager">The consensus manager.</param>
+        void Initialize(IConsensusManager consensusManager);
+
         /// <summary>
         /// Retrieves the block hash of the current tip of the coinview.
         /// </summary>
@@ -32,6 +39,12 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// <param name="nextBlockHash">Block hash of the tip of the coinview after the change is applied.</param>
         /// <param name="rewindDataList">List of rewind data items to be persisted. This should only be used when calling <see cref="DBreezeCoinView.SaveChanges" />.</param>
         void SaveChanges(IList<UnspentOutput> unspentOutputs, HashHeightPair oldBlockHash, HashHeightPair nextBlockHash, List<RewindData> rewindDataList = null);
+
+        /// <summary>
+        /// Brings the coinview back on-chain if a re-org occurred.
+        /// </summary>
+        /// <param name="chainIndexer">The current consensus chain.</param>
+        void Sync();
 
         /// <summary>
         /// Obtains information about unspent outputs.

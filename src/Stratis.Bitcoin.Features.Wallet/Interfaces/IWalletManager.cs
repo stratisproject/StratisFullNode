@@ -71,6 +71,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         IEnumerable<UnspentOutputReference> GetSpendableTransactionsInAccount(WalletAccountReference walletAccountReference, int confirmations = 0);
 
         /// <summary>
+        /// Lists all transactions from the account specified in <see cref="WalletAccountReference"/>.
+        /// </summary>
+        /// <returns>A collection of transactions.</returns>
+        IEnumerable<TransactionData> GetAllTransactionsInWallet(string walletName, Func<HdAccount, bool> accountFilter);
+
+        /// <summary>
         /// Creates a wallet and persist it as a file on the local system.
         /// </summary>
         /// <param name="password">The password used to encrypt sensitive info.</param>
@@ -83,11 +89,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// <summary>
         /// Gets the private key associated with an address in the wallet.
         /// </summary>
-        /// <param name="password">The user's password.</param>
         /// <param name="walletName">The name of the wallet.</param>
         /// <param name="address">Address to extract the private key of.</param>
+        /// <param name="password">The user's password.</param>
         /// <returns>The private key associated with the given address, in WIF representation.</returns>
-        string RetrievePrivateKey(string password, string walletName, string address);
+        string RetrievePrivateKey(string walletName, string address, string password = null);
 
         /// <summary>
         /// Signs a string message.

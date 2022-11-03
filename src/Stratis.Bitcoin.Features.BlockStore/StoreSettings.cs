@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.BlockStore
@@ -59,7 +60,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
         {
             Guard.NotNull(nodeSettings, nameof(nodeSettings));
 
-            this.logger = nodeSettings.LoggerFactory.CreateLogger(typeof(StoreSettings).FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
 
             TextFileConfiguration config = nodeSettings.ConfigReader;
 
@@ -96,7 +97,8 @@ namespace Stratis.Bitcoin.Features.BlockStore
             builder.AppendLine($"-addressindex=<0 or 1>         Enable to maintain a full address index.");
             builder.AppendLine($"-compactionthreshold=<integer value>         Specify address indexer compaction threshold.");
 
-            NodeSettings.Default(network).Logger.LogInformation(builder.ToString());
+            var logger = NodeSettings.Default(network).LoggerFactory.CreateLogger(typeof(StoreSettings).FullName);
+            logger.LogInformation(builder.ToString());
         }
 
         /// <summary>

@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities;
 using NBitcoin;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Controllers.Models;
@@ -29,6 +30,7 @@ using Stratis.Bitcoin.IntegrationTests.Common.TestNetworks;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Tests.Common.TestFramework;
+using Stratis.Bitcoin.Utilities.JsonConverters;
 using Xunit.Abstractions;
 
 namespace Stratis.Bitcoin.IntegrationTests.API
@@ -186,9 +188,9 @@ namespace Stratis.Bitcoin.IntegrationTests.API
             TestHelper.MineBlocks(this.firstStratisPowApiNode, this.maturity);
         }
 
-        private async Task a_real_transaction()
+        private void a_real_transaction()
         {
-            await this.SendTransaction(await this.BuildTransaction());
+            this.SendTransactionAsync(this.BuildTransactionAsync().GetAwaiter().GetResult()).GetAwaiter().GetResult();
         }
 
         private void the_block_with_the_transaction_is_mined()
@@ -419,13 +421,13 @@ namespace Stratis.Bitcoin.IntegrationTests.API
         {
             var commands = JsonDataSerializer.Instance.Deserialize<List<RpcCommandModel>>(this.responseText);
 
-            commands.Count.Should().Be(37);
+            commands.Count.Should().Be(40);
         }
 
         private void status_information_is_returned()
         {
             var statusNode = this.firstStratisPowApiNode.FullNode;
-            var statusResponse = JsonDataSerializer.Instance.Deserialize<StatusModel>(this.responseText);
+            var statusResponse = JsonConvert.DeserializeObject<StatusModel>(this.responseText, new JsonSerializerSettings() { Converters = new List<JsonConverter>() { { new DateTimeToUnixTimeConverter() } } });
             statusResponse.Agent.Should().Contain(statusNode.Settings.Agent);
             statusResponse.Version.Should().Be(statusNode.Version.ToString());
             statusResponse.Network.Should().Be(statusNode.Network.Name);
@@ -528,7 +530,7 @@ namespace Stratis.Bitcoin.IntegrationTests.API
             }
         }
 
-        private async Task SendTransaction(IActionResult transactionResult)
+        private async Task SendTransactionAsync(IActionResult transactionResult)
         {
             var walletTransactionModel = (WalletBuildTransactionModel)(transactionResult as JsonResult)?.Value;
             this.transaction = this.firstStratisPowApiNode.FullNode.Network.CreateTransaction(walletTransactionModel.Hex);
@@ -536,7 +538,7 @@ namespace Stratis.Bitcoin.IntegrationTests.API
                 .SendTransactionAsync(new SendTransactionRequest(walletTransactionModel.Hex));
         }
 
-        private async Task<IActionResult> BuildTransaction()
+        private async Task<IActionResult> BuildTransactionAsync()
         {
             IActionResult transactionResult = await this.firstStratisPowApiNode.FullNode
                 .NodeController<WalletController>()

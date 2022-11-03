@@ -74,7 +74,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         private readonly INFTTransferIndexer NFTTransferIndexer;
 
         public Unity3dController(ILoggerFactory loggerFactory, IAddressIndexer addressIndexer,
-            IBlockStore blockStore, IChainState chainState, Network network, ICoinView coinView, WalletController walletController, ChainIndexer chainIndexer, INFTTransferIndexer NFTTransferIndexer,
+            IBlockStore blockStore, IChainState chainState, Network network, ICoinView coinView, WalletController walletController, ChainIndexer chainIndexer, INFTTransferIndexer NFTTransferIndexer = null,
             IStakeChain stakeChain = null,
             IContractPrimitiveSerializer primitiveSerializer = null, IStateRepositoryRoot stateRoot = null, IContractAssemblyCache contractAssemblyCache = null,
             IReceiptRepository receiptRepository = null, ISmartContractTransactionService smartContractTransactionService = null, ILocalExecutor localExecutor = null)
@@ -582,29 +582,6 @@ namespace Stratis.Features.Unity3dApi.Controllers
             return Task.FromResult(result);
         }
 
-        [Route("watch-nft-contract")]
-        [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        public void WatchNFTContract([FromQuery] string contractAddress)
-        {
-            this.NFTTransferIndexer.WatchNFTContract(contractAddress);
-        }
-
-        [Route("watch-nft-contracts")]
-        [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        public IActionResult WatchNFTContracts([FromBody] List<string> contractAddresses)
-        {
-            foreach (string contractAddress in contractAddresses)
-            {
-                this.NFTTransferIndexer.WatchNFTContract(contractAddress);
-            }
-
-            return Ok();
-        }
-
         [Route("reindex-all-contracts")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
@@ -614,6 +591,17 @@ namespace Stratis.Features.Unity3dApi.Controllers
             this.NFTTransferIndexer.ReindexAllContracts();
 
             return Ok();
+        }
+
+        [Route("get-entire-state")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult GetEntireState()
+        {
+            List<NFTContractModel> state = this.NFTTransferIndexer.GetEntireState();
+
+            return Ok(state);
         }
 
         [Route("get-watched-nft-contracts")]

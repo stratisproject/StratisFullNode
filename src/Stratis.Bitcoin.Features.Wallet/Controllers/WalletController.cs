@@ -753,7 +753,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         {
             return await this.ExecuteAsAsync(request, cancellationToken,
                 (req, token) =>
-                    this.Json(this.walletManager.RetrievePrivateKey(request.Password, request.WalletName, request.Address)));
+                    this.Json(this.walletManager.RetrievePrivateKey(request.WalletName, request.Address, request.Password)));
         }
 
         /// <summary>

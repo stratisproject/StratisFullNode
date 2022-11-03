@@ -6,10 +6,10 @@ using NBitcoin.Policy;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration.Logging;
-using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Interfaces;
+using Stratis.SmartContracts.CLR;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
 {
@@ -54,10 +54,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
                 .DependOn<BaseWalletFeature>()
                 .FeatureServices(services =>
                 {
-                    // Registers the ScriptAddressReader concrete type and replaces the IScriptAddressReader implementation
-                    // with SmartContractScriptAddressReader, which depends on the ScriptAddressReader concrete type.
-                    services.AddSingleton<ScriptAddressReader>();
-                    services.Replace(new ServiceDescriptor(typeof(IScriptAddressReader), typeof(SmartContractScriptAddressReader), ServiceLifetime.Singleton));
+                    // Replaces the IScriptAddressReader implementation with SmartContractScriptAddressReader, chaining to the old service implementation.
+                    services.Replace<IScriptAddressReader>((p, old) => new SmartContractScriptAddressReader(old, p.GetService<ICallDataSerializer>()), ServiceLifetime.Singleton);
 
                     services.RemoveAll(typeof(StandardTransactionPolicy));
                     services.AddSingleton<StandardTransactionPolicy, SmartContractTransactionPolicy>();

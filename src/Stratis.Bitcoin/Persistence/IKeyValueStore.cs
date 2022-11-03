@@ -30,5 +30,9 @@ namespace Stratis.Bitcoin.Persistence
         /// <typeparam name="T">The type to query.</typeparam>
         /// <returns>A list of <typeparamref name="T"/></returns>
         List<T> GetAllAsJson<T>();
+
+        /// <summary> Deletes the given key if it exists.</summary>
+        /// <param name="key">The key of the object to delete.</param>.
+        void Delete(string key);
     }
 }

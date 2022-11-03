@@ -1299,7 +1299,8 @@ namespace Stratis.Bitcoin.Consensus
 
                 for (int i = 0; i < blocks.Length; i++)
                 {
-                    ChainedHeaderBlock chainedHeaderBlock = blocks[i];
+                    // Create the chained header block from the chain indexer if required so that the block can still be picked up from the block store.
+                    ChainedHeaderBlock chainedHeaderBlock = blocks[i] ?? new ChainedHeaderBlock(null, this.chainIndexer[blockHashes[i]]);
                     chainedHeaderBlocks[blockHashes[i]] = chainedHeaderBlock;
                 }
             }
@@ -1507,6 +1508,11 @@ namespace Stratis.Bitcoin.Consensus
 
                 log.AppendLine("Tip Age".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": { TimeSpan.FromSeconds(tipAge):dd\\.hh\\:mm\\:ss} (maximum is { TimeSpan.FromSeconds(maxTipAge):dd\\.hh\\:mm\\:ss})");
                 log.AppendLine("Synced with Network".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": { (this.isIbd ? "No" : "Yes") }");
+
+                if (this.signals != null)
+                {
+                   this.signals.Publish(new ConsensusManagerStatusEvent(this.isIbd, this.HeaderTip));
+                }
 
                 string unconsumedBlocks = this.FormatBigNumber(this.chainedHeaderTree.UnconsumedBlocksCount);
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -17,6 +18,7 @@ using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
 using Stratis.Features.FederatedPeg.SourceChain;
 using Stratis.Features.FederatedPeg.Wallet;
+using Stratis.Features.PoA.Collateral.CounterChain;
 
 namespace Stratis.Features.FederatedPeg.TargetChain
 {
@@ -43,6 +45,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
     /// <inheritdoc cref="IMaturedBlocksSyncManager"/>
     public class MaturedBlocksSyncManager : IMaturedBlocksSyncManager
     {
+        private const string Release1320DeploymentNameLower = "release1320";
         private readonly IAsyncProvider asyncProvider;
         private readonly ICrossChainTransferStore crossChainTransferStore;
         private readonly IFederationGatewayClient federationGatewayClient;
@@ -53,11 +56,14 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly ILogger logger;
         private readonly INodeLifetime nodeLifetime;
         private readonly IConversionRequestRepository conversionRequestRepository;
+        private readonly ICounterChainSettings counterChainSettings;
+        private readonly IHttpClientFactory httpClientFactory;
         private readonly ChainIndexer chainIndexer;
         private readonly IExternalApiPoller externalApiPoller;
         private readonly IConversionRequestFeeService conversionRequestFeeService;
         private readonly Network network;
         private readonly IFederationManager federationManager;
+        private int mainChainActivationHeight;
         private IAsyncLoop requestDepositsTask;
 
         /// <summary>When we are fully synced we stop asking for more blocks for this amount of time.</summary>
@@ -85,7 +91,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             IFederatedPegSettings federatedPegSettings,
             IFederationManager federationManager = null,
             IExternalApiPoller externalApiPoller = null,
-            IConversionRequestFeeService conversionRequestFeeService = null)
+            IConversionRequestFeeService conversionRequestFeeService = null,
+            ICounterChainSettings counterChainSettings = null,
+            IHttpClientFactory httpClientFactory = null)
         {
             this.asyncProvider = asyncProvider;
             this.chainIndexer = chainIndexer;
@@ -97,11 +105,14 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.initialBlockDownloadState = initialBlockDownloadState;
             this.nodeLifetime = nodeLifetime;
             this.conversionRequestRepository = conversionRequestRepository;
+            this.counterChainSettings = counterChainSettings;
+            this.httpClientFactory = httpClientFactory;
             this.chainIndexer = chainIndexer;
             this.externalApiPoller = externalApiPoller;
             this.conversionRequestFeeService = conversionRequestFeeService;
             this.network = network;
             this.federationManager = federationManager;
+            this.mainChainActivationHeight = int.MaxValue;
 
             this.lockObject = new object();
             this.logger = LogManager.GetCurrentClassLogger();

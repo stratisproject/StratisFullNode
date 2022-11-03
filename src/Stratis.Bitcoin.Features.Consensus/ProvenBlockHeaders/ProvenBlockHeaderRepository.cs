@@ -5,11 +5,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using RocksDbSharp;
 using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Configuration.Logging;
+using Stratis.Bitcoin.Database;
 using Stratis.Bitcoin.Interfaces;
-using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
@@ -17,14 +15,27 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
     /// <summary>
     /// Persistent implementation of the <see cref="ProvenBlockHeader"/> DBreeze repository.
     /// </summary>
-    public sealed class RocksDbProvenBlockHeaderRepository : IProvenBlockHeaderRepository
+    public class ProvenBlockHeaderRepository<T> : IProvenBlockHeaderRepository where T : IDb, new()
     {
-        private readonly string dataFolder;
-        private readonly DBreezeSerializer dBreezeSerializer;
-        private readonly object locker;
+        /// <summary> Path the to the database.</summary>
+        private readonly string databaseFolder;
+
+        /// <summary>
+        /// Instance logger.
+        /// </summary>
         private readonly ILogger logger;
+
+        /// <summary> Access to the database.</summary>
+        private IDb db;
+
+        private readonly object locker;
+
+        /// <summary>
+        /// Specification of the network the node runs on - RegTest/TestNet/MainNet.
+        /// </summary>
         private readonly Network network;
-        private RocksDb rocksDb;
+
+        private readonly DBreezeSerializer dBreezeSerializer;
 
         /// <inheritdoc />
         public HashHeightPair TipHashHeight { get; private set; }
@@ -32,34 +43,37 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         /// <summary>
         /// Initializes a new instance of the object.
         /// </summary>
-        /// <param name="dataFolder"><see cref="LevelDbProvenBlockHeaderRepository"/> folder path to the DBreeze database files.</param>
-        /// <param name="dBreezeSerializer">The serializer to use for <see cref="IBitcoinSerializable"/> objects.</param>
         /// <param name="network">Specification of the network the node runs on - RegTest/TestNet/MainNet.</param>
-        public RocksDbProvenBlockHeaderRepository(
-            DataFolder dataFolder,
-            DBreezeSerializer dBreezeSerializer,
-            Network network)
-        : this(dataFolder.ProvenBlockHeaderPath, dBreezeSerializer, network)
+        /// <param name="folder"><see cref="LevelDbProvenBlockHeaderRepository"/> folder path to the DBreeze database files.</param>
+        /// <param name="loggerFactory">Factory to create a logger for this type.</param>
+        /// <param name="dBreezeSerializer">The serializer to use for <see cref="IBitcoinSerializable"/> objects.</param>
+        public ProvenBlockHeaderRepository(Network network, DataFolder folder, ILoggerFactory loggerFactory,
+            DBreezeSerializer dBreezeSerializer)
+        : this(network, folder.ProvenBlockHeaderPath, loggerFactory, dBreezeSerializer)
         {
         }
 
         /// <summary>
         /// Initializes a new instance of the object.
         /// </summary>
-        /// <param name="dataFolder"><see cref="LevelDbProvenBlockHeaderRepository"/> folder path to the DBreeze database files.</param>
-        /// <param name="dBreezeSerializer">The serializer to use for <see cref="IBitcoinSerializable"/> objects.</param>
         /// <param name="network">Specification of the network the node runs on - RegTest/TestNet/MainNet.</param>
-        public RocksDbProvenBlockHeaderRepository(
-            string dataFolder,
-            DBreezeSerializer dBreezeSerializer,
-            Network network)
+        /// <param name="databaseFolder"><see cref="LevelDbProvenBlockHeaderRepository"/> folder path to the DBreeze database files.</param>
+        /// <param name="loggerFactory">Factory to create a logger for this type.</param>
+        /// <param name="dBreezeSerializer">The serializer to use for <see cref="IBitcoinSerializable"/> objects.</param>
+        public ProvenBlockHeaderRepository(Network network, string databaseFolder, ILoggerFactory loggerFactory,
+            DBreezeSerializer dBreezeSerializer)
         {
+            Guard.NotNull(network, nameof(network));
+
+            this.databaseFolder = databaseFolder;
             this.dBreezeSerializer = dBreezeSerializer;
-            this.dataFolder = dataFolder;
-            Directory.CreateDirectory(dataFolder);
+
+            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+
+            Directory.CreateDirectory(databaseFolder);
 
             this.locker = new object();
-            this.logger = LogManager.GetCurrentClassLogger();
+
             this.network = network;
         }
 
@@ -68,8 +82,9 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         {
             Task task = Task.Run(() =>
             {
-                var dbOptions = new DbOptions().SetCreateIfMissing(true);
-                this.rocksDb = RocksDb.Open(dbOptions, this.dataFolder);
+                // Open a connection to a new DB and create if not found
+                this.db = new T();
+                this.db.Open(this.databaseFolder);
 
                 this.TipHashHeight = this.GetTipHash();
 
@@ -95,7 +110,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
 
                 lock (this.locker)
                 {
-                    row = this.rocksDb.Get(BlockHeaderRepositoryConstants.ProvenBlockHeaderTable, BitConverter.GetBytes(blockHeight));
+                    row = this.db.Get(BlockHeaderRepositoryConstants.ProvenBlockHeaderTable, BitConverter.GetBytes(blockHeight));
                 }
 
                 if (row != null)
@@ -139,7 +154,11 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
 
             lock (this.locker)
             {
-                this.rocksDb.Put(BlockHeaderRepositoryConstants.BlockHashHeightTable, BlockHeaderRepositoryConstants.BlockHashHeightKey, this.dBreezeSerializer.Serialize(newTip));
+                using (var batch = this.db.GetWriteBatch())
+                {
+                    batch.Put(BlockHeaderRepositoryConstants.BlockHashHeightTable, BlockHeaderRepositoryConstants.BlockHashHeightKey, this.dBreezeSerializer.Serialize(newTip));
+                    batch.Write();
+                }
             }
         }
 
@@ -149,14 +168,14 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         /// <param name="headers"> List of <see cref="ProvenBlockHeader"/> items to save.</param>
         private void InsertHeaders(SortedDictionary<int, ProvenBlockHeader> headers)
         {
-            using var batch = new WriteBatch();
+            lock (this.locker)
             {
-                foreach (KeyValuePair<int, ProvenBlockHeader> header in headers)
-                    batch.Put(BlockHeaderRepositoryConstants.ProvenBlockHeaderTable, BitConverter.GetBytes(header.Key), this.dBreezeSerializer.Serialize(header.Value));
-
-                lock (this.locker)
+                using (var batch = this.db.GetWriteBatch())
                 {
-                    this.rocksDb.Write(batch);
+                    foreach (KeyValuePair<int, ProvenBlockHeader> header in headers)
+                        batch.Put(BlockHeaderRepositoryConstants.ProvenBlockHeaderTable, BitConverter.GetBytes(header.Key), this.dBreezeSerializer.Serialize(header.Value));
+
+                    batch.Write();
                 }
             }
         }
@@ -172,7 +191,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
             byte[] row = null;
             lock (this.locker)
             {
-                row = this.rocksDb.Get(BlockHeaderRepositoryConstants.BlockHashHeightTable, BlockHeaderRepositoryConstants.BlockHashHeightKey);
+                row = this.db.Get(BlockHeaderRepositoryConstants.BlockHashHeightTable, BlockHeaderRepositoryConstants.BlockHashHeightKey);
             }
 
             if (row != null)
@@ -184,7 +203,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         /// <inheritdoc />
         public void Dispose()
         {
-            this.rocksDb.Dispose();
+            this.db?.Dispose();
         }
     }
 }
