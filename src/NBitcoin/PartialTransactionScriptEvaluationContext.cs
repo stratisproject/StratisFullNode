@@ -8,7 +8,7 @@ namespace NBitcoin
         {
         }
 
-        public override (bool success, bool isError) DetermineSignatures(int i, bool fRequireMinimal, int nKeysCount, int pbegincodehash, Script s, int hashversion, int ikey, TransactionChecker checker)
+        public override (bool success, bool isError) DetermineSignatures(ref int i, bool fRequireMinimal, ref int nKeysCount, int pbegincodehash, Script s, int hashversion, ref int ikey, TransactionChecker checker)
         {
             int nSigsCount = new CScriptNum(this._stack.Top(-i), fRequireMinimal).getint();
             if (nSigsCount < 0 || nSigsCount > nKeysCount)

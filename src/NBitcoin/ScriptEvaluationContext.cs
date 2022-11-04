@@ -1463,7 +1463,7 @@ namespace NBitcoin
                                         if(this._stack.Count < i)
                                             return SetError(ScriptError.InvalidStackOperation);
 
-                                        (bool fSuccess, bool isError) = DetermineSignatures(i, fRequireMinimal, nKeysCount, pbegincodehash,s, hashversion, ikey, checker);
+                                        (bool fSuccess, bool isError) = DetermineSignatures(ref i, fRequireMinimal, ref nKeysCount, pbegincodehash, s, hashversion, ref ikey, checker);
                                         if (isError)
                                             return false;
 
@@ -1525,7 +1525,7 @@ namespace NBitcoin
             return SetSuccess(ScriptError.OK);
         }
 
-        public virtual (bool success, bool isError) DetermineSignatures(int i, bool fRequireMinimal, int nKeysCount,int pbegincodehash,Script s, int hashversion, int ikey, TransactionChecker checker)
+        public virtual (bool success, bool isError) DetermineSignatures(ref int i, bool fRequireMinimal, ref int nKeysCount,int pbegincodehash, Script s, int hashversion, ref int ikey, TransactionChecker checker)
         {
             int nSigsCount = new CScriptNum(this._stack.Top(-i), fRequireMinimal).getint();
             if (nSigsCount < 0 || nSigsCount > nKeysCount)
