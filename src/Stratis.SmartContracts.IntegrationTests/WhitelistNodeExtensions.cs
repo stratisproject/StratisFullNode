@@ -15,7 +15,7 @@ namespace Stratis.SmartContracts.IntegrationTests
             {
                 var hasher = node.CoreNode.FullNode.NodeService<IContractCodeHashingStrategy>();
                 var hash = new uint256(hasher.Hash(code));
-                node.CoreNode.FullNode.NodeService<IWhitelistedHashesRepository>().AddHash(hash);
+                node.CoreNode.FullNode.NodeService<IWhitelistedHashesRepository>().AddHash(hash, 0);
             }
         }
 

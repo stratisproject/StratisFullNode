@@ -530,6 +530,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 lock (this.locker)
                 {
                     this.signals.Publish(new VotingManagerProcessBlock(chBlock, transaction));
+
+                    foreach (Poll poll in this.polls.GetPollsToExecuteOrExpire(chBlock.ChainedHeader.Height).OrderBy(p => p.Id))
+
                     foreach (Poll poll in this.polls.GetPollsToExecuteOrExpire(chBlock.ChainedHeader.Height))
                     {
                         if (!poll.IsApproved)
@@ -544,7 +547,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         else
                         {
                             this.logger.LogDebug("Applying poll '{0}'.", poll);
-                            this.pollResultExecutor.ApplyChange(poll.VotingData);
+                            this.pollResultExecutor.ApplyChange(poll.VotingData, chBlock.ChainedHeader.Height);
 
                             this.polls.AdjustPoll(poll, poll => poll.PollExecutedBlockData = new HashHeightPair(chBlock.ChainedHeader));
                             transaction.UpdatePoll(poll);
@@ -689,16 +692,22 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             lock (this.locker)
             {
-                foreach (Poll poll in this.polls.Where(x => !x.IsPending && x.PollExecutedBlockData?.Hash == chBlock.ChainedHeader.HashBlock).ToList())
+                foreach (Poll poll in this.polls
+                    .Where(x => !x.IsPending && x.PollExecutedBlockData?.Hash == chBlock.ChainedHeader.HashBlock)
+                    .OrderByDescending(p => p.Id)
+                    .ToList())
                 {
                     this.logger.LogDebug("Reverting poll execution '{0}'.", poll);
-                    this.pollResultExecutor.RevertChange(poll.VotingData);
+                    this.pollResultExecutor.RevertChange(poll.VotingData, chBlock.ChainedHeader.Height);
 
                     this.polls.AdjustPoll(poll, poll => poll.PollExecutedBlockData = null);
                     transaction.UpdatePoll(poll);
                 }
 
-                foreach (Poll poll in this.polls.Where(x => x.IsExpired && !PollsRepository.IsPollExpiredAt(x, chBlock.ChainedHeader.Height - 1, this.network as PoANetwork)).ToList())
+                foreach (Poll poll in this.polls
+                    .Where(x => x.IsExpired && !PollsRepository.IsPollExpiredAt(x, chBlock.ChainedHeader.Height - 1, this.network as PoANetwork))
+                    .OrderByDescending(p => p.Id)
+                    .ToList())
                 {
                     this.logger.LogDebug("Reverting poll expiry '{0}'.", poll);
 
