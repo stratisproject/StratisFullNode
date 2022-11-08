@@ -14,14 +14,54 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private readonly ILogger logger;
 
+        private readonly PoAConsensusOptions poaConsensusOptions;
+
         // Dictionary of hash histories. Even list entries are additions and odd entries are removals.
         private Dictionary<uint256, int[]> whitelistedHashes;
 
-        public WhitelistedHashesRepository(ILoggerFactory loggerFactory)
+        public WhitelistedHashesRepository(ILoggerFactory loggerFactory, Network network)
         {
             this.locker = new object();
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.poaConsensusOptions = network.Consensus.Options as PoAConsensusOptions;
+        }
+
+        public class PollComparer : IComparer<(int height, int id)>
+        {
+            public int Compare((int height, int id) poll1, (int height, int id) poll2)
+            {
+                int cmp = poll1.height.CompareTo(poll2.height);
+                if (cmp != 0)
+                    return cmp;
+
+                return poll1.id.CompareTo(poll2.id);
+            }
+        }
+
+        static PollComparer pollComparer = new PollComparer();
+
+        private void GetWhitelistedHashesFromExecutedPolls(VotingManager votingManager)
+        {
+            lock (this.locker)
+            {
+                var federation = new List<IFederationMember>(this.poaConsensusOptions.GenesisFederationMembers);
+
+                IEnumerable<Poll> executedPolls = votingManager.GetExecutedPolls().WhitelistPolls();
+                foreach (Poll poll in executedPolls.OrderBy(a => (a.PollExecutedBlockData.Height, a.Id), pollComparer))
+                {
+                    var hash = new uint256(poll.VotingData.Data);
+
+                    if (poll.VotingData.Key == VoteKey.WhitelistHash)
+                    {
+                        this.AddHash(hash, poll.PollExecutedBlockData.Height);
+                    }
+                    else if (poll.VotingData.Key == VoteKey.RemoveHash)
+                    {
+                        this.RemoveHash(hash, poll.PollExecutedBlockData.Height);
+                    }
+                }
+            }
         }
 
         public void Initialize(VotingManager votingManager)
@@ -30,7 +70,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             lock (this.locker)
             {
                 this.whitelistedHashes = new Dictionary<uint256, int[]>();
-                votingManager.GetWhitelistedHashesFromExecutedPolls(this);
+                this.GetWhitelistedHashesFromExecutedPolls(votingManager);
             }
         }
 
@@ -52,7 +92,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 // If the history is an even length then add the addition height to signify addition.
                 if ((keep % 2) == 0)
-                { 
+                {
                     // Add an even indexed entry to signify an addition.
                     history[keep] = executionHeight;
                     return;

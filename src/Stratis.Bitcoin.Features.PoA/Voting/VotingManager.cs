@@ -557,9 +557,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 {
                     this.signals.Publish(new VotingManagerProcessBlock(chBlock, transaction));
 
-                    bool pollsRepositoryModified = false;
-
-                    foreach (Poll poll in this.polls.GetPollsToExecuteOrExpire(chBlock.ChainedHeader.Height))
+                    foreach (Poll poll in this.polls.GetPollsToExecuteOrExpire(chBlock.ChainedHeader.Height).OrderBy(p => p.Id))
                     {
                         if (!poll.IsApproved)
                         {
@@ -723,16 +721,23 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             lock (this.locker)
             {
-                foreach (Poll poll in this.polls.Where(x => !x.IsPending && x.PollExecutedBlockData?.Hash == chBlock.ChainedHeader.HashBlock).ToList())
+                foreach (Poll poll in this.polls
+                    .Where(x => !x.IsPending && x.PollExecutedBlockData?.Hash == chBlock.ChainedHeader.HashBlock)
+                    .OrderByDescending(p => p.Id)
+                    .ToList())
                 {
                     this.logger.LogDebug("Reverting poll execution '{0}'.", poll);
-                    this.pollResultExecutor.RevertChange(poll.VotingData, (int)(chBlock.ChainedHeader.Height + this.network.Consensus.MaxReorgLength));
+                    if (poll.VotingData.Key != VoteKey.WhitelistHash && poll.VotingData.Key != VoteKey.RemoveHash)
+                        this.pollResultExecutor.RevertChange(poll.VotingData, chBlock.ChainedHeader.Height);
 
                     this.polls.AdjustPoll(poll, poll => poll.PollExecutedBlockData = null);
                     transaction.UpdatePoll(poll);
                 }
 
-                foreach (Poll poll in this.polls.Where(x => x.IsExpired && !PollsRepository.IsPollExpiredAt(x, chBlock.ChainedHeader.Height - 1, this.network as PoANetwork)).ToList())
+                foreach (Poll poll in this.polls
+                    .Where(x => x.IsExpired && !PollsRepository.IsPollExpiredAt(x, chBlock.ChainedHeader.Height - 1, this.network as PoANetwork))
+                    .OrderByDescending(p => p.Id)
+                    .ToList())
                 {
                     this.logger.LogDebug("Reverting poll expiry '{0}'.", poll);
 

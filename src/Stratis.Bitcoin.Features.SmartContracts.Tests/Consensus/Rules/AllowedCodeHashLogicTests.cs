@@ -32,7 +32,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.Consensus.Rules
             this.hashingStrategy.Setup(h => h.Hash(code)).Returns(hash);
             this.hashChecker.Setup(h => h.CheckHashWhitelisted(hash, 0)).Returns(true);
 
-            var tx = new ContractTxData(1, 1000, (Gas) 10000, code);
+            var tx = new ContractTxData(1, 1000, (Gas)10000, code);
 
             var sut = new AllowedCodeHashLogic(this.hashChecker.Object, this.hashingStrategy.Object);
 
