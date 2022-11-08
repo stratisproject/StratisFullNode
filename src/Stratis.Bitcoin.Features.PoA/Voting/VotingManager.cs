@@ -531,9 +531,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 {
                     this.signals.Publish(new VotingManagerProcessBlock(chBlock, transaction));
 
-                    bool pollsRepositoryModified = false;
-
-                    foreach (Poll poll in this.polls.GetPollsToExecuteOrExpire(chBlock.ChainedHeader.Height))
+                    foreach (Poll poll in this.polls.GetPollsToExecuteOrExpire(chBlock.ChainedHeader.Height).OrderBy(p => p.Id))
                     {
                         if (!poll.IsApproved)
                         {

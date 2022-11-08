@@ -27,6 +27,20 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.poaConsensusOptions = network.Consensus.Options as PoAConsensusOptions;
         }
 
+        public class PollComparer : IComparer<(int height, int id)>
+        {
+            public int Compare((int height, int id) poll1, (int height, int id) poll2)
+            {
+                int cmp = poll1.height.CompareTo(poll2.height);
+                if (cmp != 0)
+                    return cmp;
+
+                return poll1.id.CompareTo(poll2.id);
+            }
+        }
+
+        static PollComparer pollComparer = new PollComparer();
+
         private void GetWhitelistedHashesFromExecutedPolls(VotingManager votingManager)
         {
             lock (this.locker)
@@ -34,7 +48,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 var federation = new List<IFederationMember>(this.poaConsensusOptions.GenesisFederationMembers);
 
                 IEnumerable<Poll> executedPolls = votingManager.GetExecutedPolls().WhitelistPolls();
-                foreach (Poll poll in executedPolls.OrderBy(a => a.PollExecutedBlockData.Height))
+                foreach (Poll poll in executedPolls.OrderBy(a => (a.PollExecutedBlockData.Height, a.Id), pollComparer))
                 {
                     var hash = new uint256(poll.VotingData.Data);
 
