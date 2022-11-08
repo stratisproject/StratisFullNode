@@ -689,7 +689,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             lock (this.locker)
             {
-                foreach (Poll poll in this.polls.Where(x => !x.IsPending && x.PollExecutedBlockData?.Hash == chBlock.ChainedHeader.HashBlock).ToList())
+                foreach (Poll poll in this.polls
+                    .Where(x => !x.IsPending && x.PollExecutedBlockData?.Hash == chBlock.ChainedHeader.HashBlock)
+                    .OrderByDescending(p => p.Id)
+                    .ToList())
                 {
                     this.logger.LogDebug("Reverting poll execution '{0}'.", poll);
                     this.pollResultExecutor.RevertChange(poll.VotingData, chBlock.ChainedHeader.Height);
@@ -698,7 +701,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     transaction.UpdatePoll(poll);
                 }
 
-                foreach (Poll poll in this.polls.Where(x => x.IsExpired && !PollsRepository.IsPollExpiredAt(x, chBlock.ChainedHeader.Height - 1, this.network as PoANetwork)).ToList())
+                foreach (Poll poll in this.polls
+                    .Where(x => x.IsExpired && !PollsRepository.IsPollExpiredAt(x, chBlock.ChainedHeader.Height - 1, this.network as PoANetwork))
+                    .OrderByDescending(p => p.Id)
+                    .ToList())
                 {
                     this.logger.LogDebug("Reverting poll expiry '{0}'.", poll);
 
