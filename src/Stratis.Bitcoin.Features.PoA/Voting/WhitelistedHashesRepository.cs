@@ -14,6 +14,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private readonly ILogger logger;
 
+        private readonly Network network;
         private readonly PoAConsensusOptions poaConsensusOptions;
 
         // Dictionary of hash histories. Even list entries are additions and odd entries are removals.
@@ -24,6 +25,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.locker = new object();
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.network = network;
             this.poaConsensusOptions = network.Consensus.Options as PoAConsensusOptions;
         }
 
@@ -47,18 +49,19 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 var federation = new List<IFederationMember>(this.poaConsensusOptions.GenesisFederationMembers);
 
-                IEnumerable<Poll> executedPolls = votingManager.GetExecutedPolls().WhitelistPolls();
-                foreach (Poll poll in executedPolls.OrderBy(a => (a.PollExecutedBlockData.Height, a.Id), pollComparer))
+                IEnumerable<Poll> approvedPolls = votingManager.GetApprovedPolls().WhitelistPolls();
+
+                foreach (Poll poll in approvedPolls.OrderBy(a => (a.PollExecutedBlockData.Height, a.Id), pollComparer))
                 {
                     var hash = new uint256(poll.VotingData.Data);
 
                     if (poll.VotingData.Key == VoteKey.WhitelistHash)
                     {
-                        this.AddHash(hash, poll.PollExecutedBlockData.Height);
+                        this.AddHash(hash, (int)(poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength));
                     }
                     else if (poll.VotingData.Key == VoteKey.RemoveHash)
                     {
-                        this.RemoveHash(hash, poll.PollExecutedBlockData.Height);
+                        this.RemoveHash(hash, (int)(poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength));
                     }
                 }
             }
