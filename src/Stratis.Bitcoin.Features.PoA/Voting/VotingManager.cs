@@ -407,7 +407,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     {
                         whitelistedHashesRepository.AddHash(hash, poll.PollExecutedBlockData.Height);
                     }
-                    else if (poll.VotingData.Key == VoteKey.KickFederationMember)
+                    else if (poll.VotingData.Key == VoteKey.RemoveHash)
                     {
                         whitelistedHashesRepository.RemoveHash(hash, poll.PollExecutedBlockData.Height);
                     }
@@ -573,7 +573,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             this.logger.LogDebug("Applying poll '{0}'.", poll);
                             // Hash-related polls have already been applied at the "voted in favor" height.
                             if (poll.VotingData.Key != VoteKey.WhitelistHash && poll.VotingData.Key != VoteKey.RemoveHash)
-                                this.pollResultExecutor.ApplyChange(poll.VotingData, (int)(poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength));
+                                this.pollResultExecutor.ApplyChange(poll.VotingData, chBlock.ChainedHeader.Height);
 
                             this.polls.AdjustPoll(poll, poll => poll.PollExecutedBlockData = new HashHeightPair(chBlock.ChainedHeader));
                             transaction.UpdatePoll(poll);
