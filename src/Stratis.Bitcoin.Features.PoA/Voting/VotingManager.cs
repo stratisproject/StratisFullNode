@@ -392,29 +392,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
-        public void GetWhitelistedHashesFromExecutedPolls(IWhitelistedHashesRepository whitelistedHashesRepository)
-        {
-            lock (this.locker)
-            {
-                var federation = new List<IFederationMember>(this.poaConsensusOptions.GenesisFederationMembers);
-
-                IEnumerable<Poll> executedPolls = this.GetExecutedPolls().WhitelistPolls();
-                foreach (Poll poll in executedPolls.OrderBy(a => a.PollExecutedBlockData.Height))
-                {
-                    var hash = new uint256(poll.VotingData.Data);
-
-                    if (poll.VotingData.Key == VoteKey.WhitelistHash)
-                    {
-                        whitelistedHashesRepository.AddHash(hash, poll.PollExecutedBlockData.Height);
-                    }
-                    else if (poll.VotingData.Key == VoteKey.RemoveHash)
-                    {
-                        whitelistedHashesRepository.RemoveHash(hash, poll.PollExecutedBlockData.Height);
-                    }
-                }
-            }
-        }
-
         public int LastKnownFederationHeight()
         {
             return (this.PollsRepository.CurrentTip?.Height ?? 0) + (int)this.network.Consensus.MaxReorgLength - 1;
