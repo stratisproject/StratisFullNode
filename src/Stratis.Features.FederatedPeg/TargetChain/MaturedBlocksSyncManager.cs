@@ -63,7 +63,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly IConversionRequestFeeService conversionRequestFeeService;
         private readonly Network network;
         private readonly IFederationManager federationManager;
-        private int mainChainActivationHeight;
         private IAsyncLoop requestDepositsTask;
 
         /// <summary>When we are fully synced we stop asking for more blocks for this amount of time.</summary>
@@ -112,7 +111,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.conversionRequestFeeService = conversionRequestFeeService;
             this.network = network;
             this.federationManager = federationManager;
-            this.mainChainActivationHeight = int.MaxValue;
 
             this.lockObject = new object();
             this.logger = LogManager.GetCurrentClassLogger();

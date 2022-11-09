@@ -2,4 +2,7 @@
    <PropertyGroup>
       <CodeAnalysisRuleset>$(MSBuildThisFileDirectory)None.ruleset</CodeAnalysisRuleset>
    </PropertyGroup>
+   <PropertyGroup>
+      <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
+   </PropertyGroup>
 </Project>

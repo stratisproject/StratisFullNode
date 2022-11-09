@@ -107,5 +107,10 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// Pay2Multisig redeem script.
         /// </summary>
         Script MultiSigRedeemScript { get; }
+
+        /// <summary>
+        /// Enables multisig monitoring (<see cref="Monitoring.MultiSigMonitor"/>).
+        /// </summary>
+        bool EnableMultisigMonitoring { get; }
     }
 }

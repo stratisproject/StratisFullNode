@@ -121,7 +121,8 @@ namespace Stratis.Features.FederatedPeg.Tests.Wallet
                 new Mock<IDateTimeProvider>().Object,
                 federatedPegSettings.Object,
                 new Mock<IWithdrawalExtractor>().Object,
-                new Mock<IBlockRepository>().Object);
+                new Mock<IBlockRepository>().Object,
+                new Mock<ISignals>().Object);
 
             federationWalletManager.Start();
 

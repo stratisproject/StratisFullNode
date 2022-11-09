@@ -93,11 +93,11 @@ namespace Stratis.Bitcoin.Features.LightWallet
                 this.walletTip = this.chainIndexer.GetHeader(this.walletManager.WalletTipHash);
             }
 
-            this.transactionAddedSubscription = this.signals.Subscribe<TransactionAddedToMemoryPool>(this.OnTransactionAdded);
+            this.transactionAddedSubscription = this.signals.Subscribe<TransactionAddedToMemoryPoolEvent>(this.OnTransactionAdded);
             this.transactionRemovedSubscription = this.signals.Subscribe<TransactionRemovedFromMemoryPool>(this.OnTransactionRemoved);
         }
 
-        private void OnTransactionAdded(TransactionAddedToMemoryPool transactionAdded)
+        private void OnTransactionAdded(TransactionAddedToMemoryPoolEvent transactionAdded)
         {
             this.walletManager.ProcessTransaction(transactionAdded.AddedTransaction);
         }

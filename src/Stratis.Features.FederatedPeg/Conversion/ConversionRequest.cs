@@ -93,6 +93,7 @@ namespace Stratis.Features.FederatedPeg.Conversion
         /// wSTRAX burn transactions are already denominated in wei on the Ethereum chain and thus need to be converted back into satoshi when the
         /// conversion request is created.
         /// For ERC20-SRC20 transfers this amount field is the full-precision integral token amount being transferred, typically 18 decimal places for ERC20.
+        /// For ERC721-SRC721 transfers this amount field is the token identifier of the NFT.
         /// </summary>
         public uint256 Amount { get { return this.amount; } set { this.amount = value; } }
 
@@ -102,11 +103,13 @@ namespace Stratis.Features.FederatedPeg.Conversion
         public bool Processed { get { return this.processed; } set { this.processed = value; } }
 
         /// <summary>
-        /// Should the request failed, this field can be used for any error messages.
+        /// Should the request fail, this field can be used for any error messages.
         /// </summary>
         public string StatusMessage { get { return this.statusMessage; } set { this.statusMessage = value; } }
 
         public string TokenContract { get { return this.tokenContract; } set { this.tokenContract = value; } }
+
+        public string TokenUri { get { return this.tokenUri; } set { this.tokenUri = value; } }
 
         private uint256 amount;
 
@@ -136,6 +139,8 @@ namespace Stratis.Features.FederatedPeg.Conversion
 
         private string tokenContract;
 
+        private string tokenUri;
+
         public void ReadWrite(BitcoinStream stream)
         {
             stream.ReadWrite(ref this.requestId);
@@ -164,6 +169,8 @@ namespace Stratis.Features.FederatedPeg.Conversion
             {
                 this.amount = this.dummyAmount;
             }
+
+            ReadWriteNullStringField(stream, ref this.tokenUri);
         }
 
         private void ReadWriteNullStringField(BitcoinStream stream, ref string nullField)
