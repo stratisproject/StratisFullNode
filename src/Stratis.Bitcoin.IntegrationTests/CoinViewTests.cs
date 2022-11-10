@@ -10,6 +10,7 @@ using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Database;
 using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.IntegrationTests.Common;
@@ -39,23 +40,23 @@ namespace Stratis.Bitcoin.IntegrationTests
         }
 
         [Fact]
-        public void TestDBreezeSerialization()
+        public void TestDatabaseSerialization()
         {
             using (NodeContext ctx = NodeContext.Create(this))
             {
                 Block genesis = ctx.Network.GetGenesis();
                 var genesisChainedHeader = new ChainedHeader(genesis.Header, ctx.Network.GenesisHash, 0);
                 ChainedHeader chained = this.MakeNext(genesisChainedHeader, ctx.Network);
-                ctx.Coindb.SaveChanges(new UnspentOutput[] { new UnspentOutput(new OutPoint(genesis.Transactions[0], 0), new Coins(0, genesis.Transactions[0].Outputs.First(), true)) }, new HashHeightPair(genesisChainedHeader), new HashHeightPair(chained));
+                ctx.Coindb.SaveChanges(new UnspentOutput[] { new UnspentOutput(new OutPoint(genesis.Transactions[0], 0), new Coins(0, genesis.Transactions[0].Outputs.First(), true)) }, new HashHeightPair(genesisChainedHeader), new HashHeightPair(chained), new List<RewindData>());
                 Assert.NotNull(ctx.Coindb.FetchCoins(new[] { new OutPoint(genesis.Transactions[0], 0) }).UnspentOutputs.Values.FirstOrDefault().Coins);
                 Assert.Null(ctx.Coindb.FetchCoins(new[] { new OutPoint() }).UnspentOutputs.Values.FirstOrDefault().Coins);
 
                 ChainedHeader previous = chained;
                 chained = this.MakeNext(this.MakeNext(genesisChainedHeader, ctx.Network), ctx.Network);
                 chained = this.MakeNext(this.MakeNext(genesisChainedHeader, ctx.Network), ctx.Network);
-                ctx.Coindb.SaveChanges(new List<UnspentOutput>(), new HashHeightPair(previous), new HashHeightPair(chained));
+                ctx.Coindb.SaveChanges(new List<UnspentOutput>(), new HashHeightPair(previous), new HashHeightPair(chained), new List<RewindData>());
                 Assert.Equal(chained.HashBlock, ctx.Coindb.GetTipHash().Hash);
-                ctx.ReloadPersistentCoinView(chained);
+                ctx.ReloadPersistentCoinView();
                 Assert.Equal(chained.HashBlock, ctx.Coindb.GetTipHash().Hash);
                 Assert.NotNull(ctx.Coindb.FetchCoins(new[] { new OutPoint(genesis.Transactions[0], 0) }).UnspentOutputs.Values.FirstOrDefault().Coins);
                 Assert.Null(ctx.Coindb.FetchCoins(new[] { new OutPoint() }).UnspentOutputs.Values.FirstOrDefault().Coins);
@@ -72,7 +73,8 @@ namespace Stratis.Bitcoin.IntegrationTests
                 ChainedHeader chained = this.MakeNext(genesisChainedHeader, ctx.Network);
                 var dateTimeProvider = new DateTimeProvider();
 
-                var cacheCoinView = new CachedCoinView(this.network, new Checkpoints(), ctx.Coindb, dateTimeProvider, this.loggerFactory, new NodeStats(dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), new ConsensusSettings(new NodeSettings(this.network)));
+                var cacheCoinView = new CachedCoinView(this.network, ctx.Coindb, dateTimeProvider, this.loggerFactory, new NodeStats(dateTimeProvider, NodeSettings.Default(this.network), 
+                    new Mock<IVersionProvider>().Object), new ConsensusSettings(new NodeSettings(this.network)), new ChainIndexer(this.network));
 
                 cacheCoinView.SaveChanges(new UnspentOutput[] { new UnspentOutput(new OutPoint(genesis.Transactions[0], 0), new Coins(0, genesis.Transactions[0].Outputs.First(), true)) }, new HashHeightPair(genesisChainedHeader), new HashHeightPair(chained));
                 Assert.NotNull(cacheCoinView.FetchCoins(new[] { new OutPoint(genesis.Transactions[0], 0) }).UnspentOutputs.Values.FirstOrDefault().Coins);
@@ -104,7 +106,8 @@ namespace Stratis.Bitcoin.IntegrationTests
             using (NodeContext nodeContext = NodeContext.Create(this))
             {
                 var dateTimeProvider = new DateTimeProvider();
-                var cacheCoinView = new CachedCoinView(this.network, new Checkpoints(), nodeContext.Coindb, dateTimeProvider, this.loggerFactory, new NodeStats(dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), new ConsensusSettings(new NodeSettings(this.network)));
+                var cacheCoinView = new CachedCoinView(this.network, nodeContext.Coindb, dateTimeProvider, this.loggerFactory, new NodeStats(dateTimeProvider, NodeSettings.Default(this.network), 
+                    new Mock<IVersionProvider>().Object), new ConsensusSettings(new NodeSettings(this.network)), new ChainIndexer(this.network));
                 var tester = new CoinViewTester(cacheCoinView);
 
                 List<(Coins, OutPoint)> coinsA = tester.CreateCoins(5);
@@ -282,7 +285,7 @@ namespace Stratis.Bitcoin.IntegrationTests
             var chain = new ChainIndexer(this.regTest);
             var data = new DataFolder(TestBase.CreateTestDir(this));
 
-            var chainStore = new LevelDbChainStore(this.network, data, chain);
+            var chainStore = new ChainStore<LevelDb>(this.network, data, chain);
             chain[0].SetChainStore(chainStore);
 
             using (var repo = new ChainRepository(chainStore))

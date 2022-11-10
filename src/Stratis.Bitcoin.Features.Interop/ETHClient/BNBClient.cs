@@ -1,4 +1,6 @@
-﻿namespace Stratis.Bitcoin.Features.Interop.ETHClient
+﻿using Stratis.Bitcoin.Features.Interop.Settings;
+
+namespace Stratis.Bitcoin.Features.Interop.ETHClient
 {
     public interface IBNBClient : IETHClient
     {

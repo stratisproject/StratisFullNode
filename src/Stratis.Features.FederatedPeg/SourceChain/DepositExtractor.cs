@@ -6,9 +6,13 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Configuration.Logging;
+using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.Wallet;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
+using Stratis.SmartContracts;
+using Block = NBitcoin.Block;
 
 namespace Stratis.Features.FederatedPeg.SourceChain
 {
@@ -18,16 +22,18 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly Network network;
         private readonly IOpReturnDataReader opReturnDataReader;
+        private readonly IBlockStore blockStore;
         private readonly ILogger logger;
 
         private readonly List<uint256> depositsBeingProcessedWithinMaturingWindow;
 
-        public DepositExtractor(IConversionRequestRepository conversionRequestRepository, IFederatedPegSettings federatedPegSettings, Network network, IOpReturnDataReader opReturnDataReader)
+        public DepositExtractor(IConversionRequestRepository conversionRequestRepository, IFederatedPegSettings federatedPegSettings, Network network, IOpReturnDataReader opReturnDataReader, IBlockStore blockStore)
         {
             this.conversionRequestRepository = conversionRequestRepository;
             this.federatedPegSettings = federatedPegSettings;
             this.network = network;
             this.opReturnDataReader = opReturnDataReader;
+            this.blockStore = blockStore;
 
             this.depositsBeingProcessedWithinMaturingWindow = new List<uint256>();
             this.logger = LogManager.GetCurrentClassLogger();
@@ -64,7 +70,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         };
 
         /// <inheritdoc />
-        public async Task<IReadOnlyList<IDeposit>> ExtractDepositsFromBlock(Block block, int blockHeight, Dictionary<DepositRetrievalType, int> confirmationsByRetrievalType)
+        public async Task<IReadOnlyList<IDeposit>> ExtractDepositsFromBlock(Block block, int blockHeight, IRetrievalTypeConfirmations confirmationsByRetrievalType)
         {
             List<IDeposit> deposits;
 
@@ -82,7 +88,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 ((Deposit)deposit).BlockHash = block.GetHash();
             }
 
-            DepositRetrievalType[] retrievalTypes = confirmationsByRetrievalType.Keys.ToArray();
+            DepositRetrievalType[] retrievalTypes = confirmationsByRetrievalType.GetRetrievalTypes();
 
             // If it's an empty block (i.e. only the coinbase transaction is present), there's no deposits inside.
             if (block.Transactions.Count > 1)
@@ -110,18 +116,20 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         /// <param name="deposits">Add burn requests to this list of deposits.</param>
         /// <param name="inspectForDepositsAtHeight">The block height to inspect.</param>
         /// <param name="confirmationsByRetrievalType">The various retrieval types and their required confirmations.</param>
-        private void ProcessInterFluxBurnRequests(List<IDeposit> deposits, int inspectForDepositsAtHeight, Dictionary<DepositRetrievalType, int> confirmationsByRetrievalType)
+        private void ProcessInterFluxBurnRequests(List<IDeposit> deposits, int inspectForDepositsAtHeight, IRetrievalTypeConfirmations confirmationsByRetrievalType)
         {
             List<ConversionRequest> burnRequests = this.conversionRequestRepository.GetAllBurn(true);
 
             if (burnRequests == null)
                 return;
 
-            foreach (ConversionRequest burnRequest in burnRequests.Where(b => inspectForDepositsAtHeight >= b.BlockHeight))
+            // We only process burns with destination chain 'STRAX' here, as SRC20->ERC20 burns are processed separately.
+            foreach (ConversionRequest burnRequest in burnRequests.Where(b => inspectForDepositsAtHeight >= b.BlockHeight && b.DestinationChain == DestinationChain.STRAX))
             {
                 if (inspectForDepositsAtHeight == burnRequest.BlockHeight)
                 {
-                    this.logger.LogInformation($"Processing burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' for {new Money(burnRequest.Amount)} STRAX at height {inspectForDepositsAtHeight}.");
+                    // Note: the wei-to-satoshi scaling has already been performed inside the InteropPoller.
+                    this.logger.LogInformation($"Processing burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' for {burnRequest.Amount.FormatAsFractionalValue(8)} STRAX at height {inspectForDepositsAtHeight}.");
 
                     Deposit deposit = CreateDeposit(burnRequest, inspectForDepositsAtHeight);
                     if (deposit == null)
@@ -138,8 +146,8 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
                 if (inspectForDepositsAtHeight > burnRequest.BlockHeight)
                 {
-                    DepositRetrievalType retrievalType = DetermineDepositRetrievalType(Money.Satoshis(burnRequest.Amount));
-                    var requiredConfirmations = confirmationsByRetrievalType[retrievalType];
+                    DepositRetrievalType retrievalType = DetermineDepositRetrievalType(burnRequest.Amount.GetLow64());
+                    var requiredConfirmations = confirmationsByRetrievalType.GetDepositConfirmations(burnRequest.BlockHeight, retrievalType);
 
                     // If the inspection height is now equal to the burn request's processing height plus
                     // the required confirmations, set it to processed.
@@ -196,11 +204,11 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 return null;
             }
 
-            DepositRetrievalType depositRetrievalType = DetermineDepositRetrievalType(Money.Satoshis(burnRequest.Amount));
+            DepositRetrievalType depositRetrievalType = DetermineDepositRetrievalType(burnRequest.Amount.GetLow64());
             var deposit = new Deposit(
                 depositId,
                 depositRetrievalType,
-                Money.Satoshis(burnRequest.Amount),
+                Money.Satoshis(burnRequest.Amount.GetLow64()),
                 burnRequest.DestinationAddress,
                 DestinationChain.STRAX,
                 inspectForDepositsAtHeight,
@@ -216,11 +224,28 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             if (!DepositValidationHelper.TryGetDepositsToMultisig(this.network, transaction, FederatedPegSettings.CrossChainTransferMinimum, out List<TxOut> depositsToMultisig))
                 return Task.FromResult((IDeposit)null);
 
-            // If there are deposits to the multsig (i.e. cross chain transfers), try and extract and validate the address by the specfied destination chain.
+            Money amount = depositsToMultisig.Sum(o => o.Value);
+
+            // If there are deposits to the multsig (i.e. cross chain transfers), try and extract and validate the address by the specified destination chain.
+
+            // However, we need to check for distribution transactions first, as these should be processed regardless of whether the op return address is invalid.
+            // These transactions will only appear on the STRAX chain.
+            if (this.federatedPegSettings.IsMainChain)
+            {
+                foreach (TxIn input in transaction.Inputs)
+                {
+                    Transaction previousTransaction = this.blockStore.GetTransactionById(input.PrevOut.Hash);
+                    TxOut utxo = previousTransaction.Outputs[input.PrevOut.N];
+
+                    if (utxo.ScriptPubKey == StraxCoinstakeRule.CirrusRewardScript)
+                    {
+                        return Task.FromResult((IDeposit)new Deposit(transaction.GetHash(), DepositRetrievalType.Distribution, amount, this.network.CirrusRewardDummyAddress, DestinationChain.STRAX, blockHeight, blockHash));
+                    }
+                }
+            }
+
             if (!DepositValidationHelper.TryGetTarget(transaction, this.opReturnDataReader, out bool conversionTransaction, out string targetAddress, out int targetChain))
                 return Task.FromResult((IDeposit)null);
-
-            Money amount = depositsToMultisig.Sum(o => o.Value);
 
             DepositRetrievalType depositRetrievalType;
 
@@ -254,12 +279,12 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             return Task.FromResult((IDeposit)new Deposit(transaction.GetHash(), depositRetrievalType, amount, targetAddress, (DestinationChain)targetChain, blockHeight, blockHash));
         }
 
-        private DepositRetrievalType DetermineDepositRetrievalType(Money amount)
+        private DepositRetrievalType DetermineDepositRetrievalType(ulong satoshiAmount)
         {
-            if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
+            if (satoshiAmount > this.federatedPegSettings.NormalDepositThresholdAmount)
                 return DepositRetrievalType.Large;
 
-            if (amount > this.federatedPegSettings.SmallDepositThresholdAmount)
+            if (satoshiAmount > this.federatedPegSettings.SmallDepositThresholdAmount)
                 return DepositRetrievalType.Normal;
 
             return DepositRetrievalType.Small;

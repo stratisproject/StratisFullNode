@@ -42,8 +42,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.CoinViews
             this.loggerFactory = new ExtendedLoggerFactory();
             this.nodeStats = new NodeStats(this.dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object);
 
-            this.coindb = new DBreezeCoindb(this.network, this.dataFolder, this.dateTimeProvider, this.loggerFactory, this.nodeStats, new DBreezeSerializer(this.network.Consensus.ConsensusFactory));
-            this.coindb.Initialize(new ChainedHeader(this.network.GetGenesis().Header, this.network.GenesisHash, 0));
+            this.coindb = new Coindb<DBreezeDbWithCoinDbNames>(this.network, this.dataFolder, this.dateTimeProvider, this.nodeStats, new DBreezeSerializer(this.network.Consensus.ConsensusFactory));
+            this.coindb.Initialize();
 
             this.chainIndexer = new ChainIndexer(this.network);
             this.stakeChainStore = new StakeChainStore(this.network, this.chainIndexer, (IStakedb)this.coindb, this.loggerFactory);
@@ -51,7 +51,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.CoinViews
 
             this.rewindDataIndexCache = new RewindDataIndexCache(this.dateTimeProvider, this.network, new FinalizedBlockInfoRepository(new HashHeightPair()), new Checkpoints());
 
-            this.cachedCoinView = new CachedCoinView(this.network, new Checkpoints(), this.coindb, this.dateTimeProvider, this.loggerFactory, this.nodeStats, new ConsensusSettings(new NodeSettings(this.network)), this.stakeChainStore, this.rewindDataIndexCache);
+            this.cachedCoinView = new CachedCoinView(this.network, this.coindb, this.dateTimeProvider, this.loggerFactory, this.nodeStats, new ConsensusSettings(new NodeSettings(this.network)), this.chainIndexer, this.stakeChainStore, this.rewindDataIndexCache);
 
             this.rewindDataIndexCache.Initialize(this.chainIndexer.Height, this.cachedCoinView);
 

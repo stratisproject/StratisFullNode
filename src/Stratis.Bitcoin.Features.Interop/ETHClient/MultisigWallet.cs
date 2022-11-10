@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.Text;
 using System.Threading.Tasks;
 using NBitcoin.DataEncoders;
 using Nethereum.ABI.FunctionEncoding.Attributes;
@@ -128,6 +127,11 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
     public class MultisigTransactionIdentifiers
     {
         /// <summary>
+        /// The height of the block which included the transaction containing the multisig contract call (Cirrus or Ethereum).
+        /// </summary>
+        public int BlockHeight { get; internal set; }
+
+        /// <summary>
         /// The hash of the Ethereum transaction containing the multisig contract call.
         /// </summary>
         public string TransactionHash { get; set; }
@@ -136,6 +140,11 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// The related multisig contract transaction ID.
         /// </summary>
         public BigInteger TransactionId { get; set; }
+
+        /// <summary>
+        /// Any messages related to the call (this will be used primarily for minting on Cirrus).
+        /// </summary>
+        public string Message { get; set; }
     }
 
     [Function("transactions", typeof(TransactionDTO))]
@@ -237,7 +246,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         public static async Task<MultisigTransactionIdentifiers> SubmitTransactionAsync(Web3 web3, string contractAddress, string destination, BigInteger value, string data, BigInteger gas, BigInteger gasPrice)
         {
             IContractTransactionHandler<SubmitTransactionFunction> submitHandler = web3.Eth.GetContractTransactionHandler<SubmitTransactionFunction>();
-            
+
             var submitTransactionFunctionMessage = new SubmitTransactionFunction()
             {
                 Destination = destination,

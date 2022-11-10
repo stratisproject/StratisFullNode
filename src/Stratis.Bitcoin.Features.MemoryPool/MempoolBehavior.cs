@@ -152,6 +152,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// <remarks>
         /// TODO: Fix the exception handling of the async event.
         /// </remarks>
+        /// <returns>The asynchronous task.</returns>
         private async Task OnMessageReceivedAsync(INetworkPeer peer, IncomingMessage message)
         {
             try
@@ -176,6 +177,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// </summary>
         /// <param name="peer">Peer sending the message.</param>
         /// <param name="message">Incoming message.</param>
+        /// <returns>The asynchronous task.</returns>
         private async Task ProcessMessageAsync(INetworkPeer peer, IncomingMessage message)
         {
             try
@@ -212,6 +214,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// </summary>
         /// <param name="peer">Peer sending the message.</param>
         /// <param name="message">The message payload.</param>
+        /// <returns>The asynchronous task.</returns>
         private async Task SendMempoolPayloadAsync(INetworkPeer peer, MempoolPayload message)
         {
             Guard.NotNull(peer, nameof(peer));
@@ -278,6 +281,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// </summary>
         /// <param name="peer">The peer sending the message.</param>
         /// <param name="invPayload">The inventory payload in the message.</param>
+        /// <returns>The asynchronous task.</returns>
         private async Task ProcessInvAsync(INetworkPeer peer, InvPayload invPayload)
         {
             Guard.NotNull(peer, nameof(peer));
@@ -338,6 +342,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// </summary>
         /// <param name="peer">Peer sending the message.</param>
         /// <param name="getDataPayload">The payload for the message.</param>
+        /// <returns>The asynchronous task.</returns>
         private async Task ProcessGetDataAsync(INetworkPeer peer, GetDataPayload getDataPayload)
         {
             Guard.NotNull(peer, nameof(peer));
@@ -366,6 +371,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// </summary>
         /// <param name="peer">Peer sending the message.</param>
         /// <param name="transactionPayload">The payload for the message.</param>
+        /// <returns>The asynchronous task.</returns>
         private async Task ProcessTxPayloadAsync(INetworkPeer peer, TxPayload transactionPayload)
         {
             // Stop processing the transaction early if we are in blocks only mode.
@@ -448,6 +454,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// </summary>
         /// <param name="peer">Peer to send transactions to.</param>
         /// <param name="trxList">List of transactions.</param>
+        /// <returns>The asynchronous task.</returns>
         private async Task SendAsTxInventoryAsync(INetworkPeer peer, List<uint256> trxList)
         {
             var queue = new Queue<InventoryVector>(trxList.Select(s => new InventoryVector(peer.AddSupportedOptions(InventoryType.MSG_TX), s)));
@@ -520,6 +527,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// Sends transaction inventory to attached peer.
         /// This is executed on a 5 second loop when MempoolSignaled is constructed.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         public async Task SendTrickleAsync()
         {
             INetworkPeer peer = this.AttachedPeer;

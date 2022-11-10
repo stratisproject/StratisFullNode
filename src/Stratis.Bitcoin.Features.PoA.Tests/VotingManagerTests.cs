@@ -24,8 +24,8 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             this.changesApplied = new List<VotingData>();
             this.changesReverted = new List<VotingData>();
 
-            this.resultExecutorMock.Setup(x => x.ApplyChange(It.IsAny<VotingData>())).Callback((VotingData data) => this.changesApplied.Add(data));
-            this.resultExecutorMock.Setup(x => x.RevertChange(It.IsAny<VotingData>())).Callback((VotingData data) => this.changesReverted.Add(data));
+            this.resultExecutorMock.Setup(x => x.ApplyChange(It.IsAny<VotingData>(), It.IsAny<int>())).Callback((VotingData data, int _) => this.changesApplied.Add(data));
+            this.resultExecutorMock.Setup(x => x.RevertChange(It.IsAny<VotingData>(), It.IsAny<int>())).Callback((VotingData data, int _) => this.changesReverted.Add(data));
         }
 
         [Fact]
@@ -33,11 +33,18 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         {
             this.federationManager.SetPrivatePropertyValue(typeof(FederationManager), nameof(this.federationManager.IsFederationMember), true);
 
-            this.votingManager.ScheduleVote(new VotingData());
+            PubKey memberPubKey = (new Key()).PubKey;
+            var votingData = new VotingData()
+            {
+                Key = VoteKey.AddFederationMember,
+                Data = memberPubKey.ToBytes()
+            };
+
+            this.votingManager.ScheduleVote(votingData);
 
             Assert.Single(this.votingManager.GetScheduledVotes());
 
-            this.votingManager.ScheduleVote(new VotingData());
+            this.votingManager.ScheduleVote(votingData);
 
             Assert.Single(this.votingManager.GetAndCleanScheduledVotes());
 

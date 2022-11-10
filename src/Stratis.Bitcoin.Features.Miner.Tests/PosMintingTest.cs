@@ -90,7 +90,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                 .Returns(asyncLoop)
                 .Verifiable();
 
-            this.posMinting.Stake(new List<WalletSecret>() 
+            this.posMinting.Stake(new List<WalletSecret>()
             {
                 new WalletSecret()
                 {
@@ -592,7 +592,6 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
             var posBlockAssembler = new Mock<PosBlockDefinition>(
                 this.consensusManager.Object,
                 this.dateTimeProvider.Object,
-                this.LoggerFactory.Object,
                 this.txMempool.Object,
                 this.mempoolSchedulerLock,
                 this.minerSettings,

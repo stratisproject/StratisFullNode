@@ -8,11 +8,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
     {
         /// <summary>Applies effect of <see cref="VotingData"/>.</summary>
         /// <param name="data">See <see cref="VotingData"/>.</param>
-        void ApplyChange(VotingData data);
+        /// <param name="executionHeight">The height from which the change should take effect.</param>
+        void ApplyChange(VotingData data, int executionHeight);
 
         /// <summary>Reverts effect of <see cref="VotingData"/>.</summary>
         /// <param name="data">See <see cref="VotingData"/>.</param>
-        void RevertChange(VotingData data);
+        /// <param name="executionHeight">The height from which the change should take effect.</param>
+        void RevertChange(VotingData data, int executionHeight);
 
         /// <summary>Converts <see cref="VotingData"/> to a human readable format.</summary>
         /// <param name="data">See <see cref="VotingData"/>.</param>
@@ -40,7 +42,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <inheritdoc />
-        public void ApplyChange(VotingData data)
+        public void ApplyChange(VotingData data, int executionHeight)
         {
             switch (data.Key)
             {
@@ -53,17 +55,17 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     break;
 
                 case VoteKey.WhitelistHash:
-                    this.AddHash(data.Data);
+                    this.AddHash(data.Data, executionHeight);
                     break;
 
                 case VoteKey.RemoveHash:
-                    this.RemoveHash(data.Data);
+                    this.RemoveHash(data.Data, executionHeight);
                     break;
             }
         }
 
         /// <inheritdoc />
-        public void RevertChange(VotingData data)
+        public void RevertChange(VotingData data, int executionHeight)
         {
             switch (data.Key)
             {
@@ -76,11 +78,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     break;
 
                 case VoteKey.WhitelistHash:
-                    this.RemoveHash(data.Data);
+                    this.RemoveHash(data.Data, executionHeight);
                     break;
 
                 case VoteKey.RemoveHash:
-                    this.AddHash(data.Data);
+                    this.AddHash(data.Data, executionHeight);
                     break;
             }
         }
@@ -118,13 +120,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.federationManager.RemoveFederationMember(federationMember);
         }
 
-        private void AddHash(byte[] hashBytes)
+        private void AddHash(byte[] hashBytes, int executionHeight)
         {
             try
             {
                 var hash = new uint256(hashBytes);
 
-                this.whitelistedHashesRepository.AddHash(hash);
+                this.whitelistedHashesRepository.AddHash(hash, executionHeight);
             }
             catch (FormatException e)
             {
@@ -132,13 +134,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
-        private void RemoveHash(byte[] hashBytes)
+        private void RemoveHash(byte[] hashBytes, int executionHeight)
         {
             try
             {
                 var hash = new uint256(hashBytes);
 
-                this.whitelistedHashesRepository.RemoveHash(hash);
+                this.whitelistedHashesRepository.RemoveHash(hash, executionHeight);
             }
             catch (FormatException e)
             {

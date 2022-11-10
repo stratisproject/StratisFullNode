@@ -2,12 +2,15 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using NBitcoin;
 using NBitcoin.Protocol;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Database;
+using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.BlockStore.Repositories;
 using Stratis.Bitcoin.Features.ColdStaking;
 using Stratis.Bitcoin.Features.Wallet;
@@ -52,36 +55,25 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
         {
         }
     }
-
-    public class ColdStakingDestinationReader : ScriptDestinationReader, IScriptDestinationReader
-    {
-        public ColdStakingDestinationReader(IScriptAddressReader scriptAddressReader) : base(scriptAddressReader)
-        {
-        }
-
-        public override IEnumerable<TxDestination> GetDestinationFromScriptPubKey(Network network, Script redeemScript)
-        {
-            if (ColdStakingScriptTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript, out KeyId hotPubKeyHash, out KeyId coldPubKeyHash))
-            {
-                yield return hotPubKeyHash;
-                yield return coldPubKeyHash;
-            }
-            else
-            {
-                base.GetDestinationFromScriptPubKey(network, redeemScript);
-            }
-        }
-    }
-
+    
     public class BlockBase
     {
         public NodeSettings NodeSettings { get; private set; }
-        public LevelDbBlockRepository BlockRepo { get; private set; }
+        public BlockRepository<LevelDb> BlockRepo { get; private set; }
         public ChainIndexer ChainIndexer { get; private set; }
 
         internal Metrics Metrics { get; set; }
 
         public long TicksReading;
+
+        /// <summary>
+        /// Using reflection, retrieves the value of private field with this name on the supplied object. If no field is found, returns null.
+        /// </summary>
+        private object GetPrivateFieldValue(object obj, string fieldName)
+        {
+            FieldInfo field = obj.GetType().GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Instance);
+            return field?.GetValue(obj);
+        }
 
         public BlockBase(Network network, string dataDir, int blockLimit = int.MaxValue)
         {
@@ -90,19 +82,21 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
             var serializer = new DBreezeSerializer(network.Consensus.ConsensusFactory);
 
             // Build the chain from the block store.
-            this.BlockRepo = new LevelDbBlockRepository(network, this.NodeSettings.DataFolder, serializer);
+            this.BlockRepo = new BlockRepository<LevelDb>(network, this.NodeSettings.DataFolder, serializer);
             this.BlockRepo.Initialize();
 
             var prevBlock = new Dictionary<uint256, uint256>();
 
             byte[] hashBytes = uint256.Zero.ToBytes();
 
-            using (var itr = this.BlockRepo.Leveldb.GetEnumerator())
+            IDb db = (IDb)GetPrivateFieldValue(this.BlockRepo, "db");
+
+            using (var itr = db.GetIterator(BlockRepositoryConstants.BlockTableName))
             {
-                while (itr.MoveNext())
+                foreach ((byte[] key, byte[] value) in itr.GetAll())
                 {
-                    uint256 hashPrev = serializer.Deserialize<uint256>(itr.Current.Value);
-                    var hashThis = new uint256(itr.Current.Key);
+                    uint256 hashPrev = serializer.Deserialize<uint256>(value);
+                    var hashThis = new uint256(key);
                     prevBlock[hashThis] = hashPrev;
                     if (prevBlock.Count >= blockLimit)
                         break;

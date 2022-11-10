@@ -18,6 +18,7 @@ using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Consensus.Validators;
+using Stratis.Bitcoin.Database;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.P2P;
@@ -295,7 +296,7 @@ namespace Stratis.Bitcoin.Base
             // node shutdown unexpectedly and the finalized block info needs to be reset.
             this.finalizedBlockInfoRepository.Initialize(this.chainIndexer.Tip);
 
-            this.consensusRules.Initialize(this.chainIndexer.Tip);
+            this.consensusRules.Initialize(this.chainIndexer.Tip, this.consensusManager);
 
             await this.consensusManager.InitializeAsync(this.chainIndexer.Tip).ConfigureAwait(false);
 
@@ -459,14 +460,14 @@ namespace Stratis.Bitcoin.Base
 
                     if (dbType == DbType.Leveldb)
                     {
-                        chainStore = new LevelDbChainStore(fullNodeBuilder.Network, fullNodeBuilder.NodeSettings.DataFolder, chainIndexer);
-                        services.AddSingleton<IKeyValueRepository, LevelDbKeyValueRepository>();
+                        chainStore = new ChainStore<LevelDb>(fullNodeBuilder.Network, fullNodeBuilder.NodeSettings.DataFolder, chainIndexer);
+                        services.AddSingleton<IKeyValueRepository, KeyValueRepository<LevelDb>>();
                     }
 
                     if (dbType == DbType.RocksDb)
                     {
-                        chainStore = new RocksDbChainStore(fullNodeBuilder.Network, fullNodeBuilder.NodeSettings.DataFolder, chainIndexer);
-                        services.AddSingleton<IKeyValueRepository, RocksDbKeyValueRepository>();
+                        chainStore = new ChainStore<RocksDb>(fullNodeBuilder.Network, fullNodeBuilder.NodeSettings.DataFolder, chainIndexer);
+                        services.AddSingleton<IKeyValueRepository, KeyValueRepository<RocksDb>>();
                     }
 
                     chainIndexer[0].SetChainStore(chainStore);

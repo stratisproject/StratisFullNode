@@ -55,7 +55,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             // First check cross chain transfers from the STRAX to Cirrus network or vice versa.
             if (!opReturnDataReader.TryGetTargetAddress(transaction, out targetAddress))
             {
-                // Else try and validate the destination adress by the destination chain.
+                // Else try and validate the destination address by the destination chain.
                 byte[] opReturnBytes = OpReturnDataReader.SelectBytesContentFromOpReturn(transaction).FirstOrDefault();
 
                 if (opReturnBytes != null && InterFluxOpReturnEncoder.TryDecode(opReturnBytes, out int destinationChain, out targetAddress))
@@ -108,13 +108,12 @@ namespace Stratis.Bitcoin.Features.Wallet
             if (!TryGetTarget(transaction, opReturnDataReader, out _, out _, out _))
             {
                 throw new FeatureException(HttpStatusCode.BadRequest, "No valid target address.",
-                    $"The cross-chain transfer transaction contains no valid target address for the target network.");
+                    $"The cross-chain transfer transaction does not contain a valid target address for the target network.");
             }
 
             return true;
         }
     }
-
 
     /// <summary>
     /// When running on Strax its difficult to get the correct Cirrus network class due to circular references.

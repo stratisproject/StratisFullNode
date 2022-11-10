@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using LevelDB;
 using NBitcoin;
+using Stratis.Bitcoin.Database;
 using Stratis.Bitcoin.Features.BlockStore.Repositories;
 using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Tests.Common.Logging;
@@ -537,7 +538,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
         private IBlockRepository SetupRepository(Network main, string dataFolder)
         {
             var dBreezeSerializer = new DBreezeSerializer(main.Consensus.ConsensusFactory);
-            var repository = new LevelDbBlockRepository(main, dataFolder, dBreezeSerializer);
+            var repository = new BlockRepository<LevelDb>(main, dataFolder, dBreezeSerializer);
             repository.Initialize();
             return repository;
         }
