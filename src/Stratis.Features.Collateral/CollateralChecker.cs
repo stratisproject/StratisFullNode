@@ -33,6 +33,8 @@ namespace Stratis.Features.Collateral
         /// <returns><c>True</c> if the collateral requirement is fulfilled and <c>false</c> otherwise.</returns>
         bool CheckCollateral(IFederationMember federationMember, int heightToCheckAt, int localChainHeight);
 
+        Task UpdateCollateralInfoAsync(CancellationToken cancellation);
+
         int GetCounterChainConsensusHeight();
     }
 
@@ -163,7 +165,7 @@ namespace Stratis.Features.Collateral
             }
         }
 
-        private async Task UpdateCollateralInfoAsync(CancellationToken cancellation)
+        public async Task UpdateCollateralInfoAsync(CancellationToken cancellation)
         {
             List<string> addressesToCheck;
 

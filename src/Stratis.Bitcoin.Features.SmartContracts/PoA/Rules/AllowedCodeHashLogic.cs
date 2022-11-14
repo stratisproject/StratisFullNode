@@ -27,7 +27,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA.Rules
 
             byte[] hashedCode = this.hashingStrategy.Hash(txData.ContractExecutionCode);
 
-            if (!this.whitelistedHashChecker.CheckHashWhitelisted(hashedCode))
+            if (!this.whitelistedHashChecker.CheckHashWhitelisted(hashedCode, blockHeight))
             {
                 ThrowInvalidCode();
             }

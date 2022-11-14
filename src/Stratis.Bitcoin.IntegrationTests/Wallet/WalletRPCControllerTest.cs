@@ -30,6 +30,67 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
         }
 
         [Fact]
+        public async Task DumpPrivKeyForExistingAddressAsync()
+        {
+            using (NodeBuilder builder = NodeBuilder.Create(this))
+            {
+                CoreNode node = builder.CreateStratisPosNode(this.network).WithWallet().Start();
+
+                RPCClient rpc = node.CreateRPCClient();
+
+                BitcoinAddress address = await rpc.GetNewAddressAsync();
+
+                string apiPrivateKeyWif = await $"http://localhost:{node.ApiPort}/api"
+                    .AppendPathSegment("Wallet/privatekey")
+                    .PostJsonAsync(new RetrievePrivateKeyModel() { Address = address.ToString(), Password = node.WalletPassword, WalletName = node.WalletName })
+                    .ReceiveJson<string>();
+
+                await rpc.WalletPassphraseAsync(node.WalletPassword, 3600);
+
+                BitcoinSecret rpcPrivateKey = await rpc.DumpPrivKeyAsync(address);
+
+                string rpcPrivateKeyWif = rpcPrivateKey.ToWif();
+
+                Assert.Equal(apiPrivateKeyWif, rpcPrivateKeyWif);
+            }
+        }
+
+        [Fact]
+        public async Task DumpPrivKeyResultGivesCorrectPubkey()
+        {
+            using (NodeBuilder builder = NodeBuilder.Create(this))
+            {
+                CoreNode node = builder.CreateStratisPosNode(this.network).WithWallet().Start();
+
+                RPCClient rpc = node.CreateRPCClient();
+
+                BitcoinAddress address = await rpc.GetNewAddressAsync();
+
+                string apiPubkey = await $"http://localhost:{node.ApiPort}/api"
+                    .AppendPathSegment("Wallet/pubkey")
+                    .PostJsonAsync(new PubKeyRequest() { ExternalAddress = address.ToString(), WalletName = node.WalletName })
+                    .ReceiveJson<string>();
+
+                string apiPrivateKeyWif = await $"http://localhost:{node.ApiPort}/api"
+                    .AppendPathSegment("Wallet/privatekey")
+                    .PostJsonAsync(new RetrievePrivateKeyModel() { Address = address.ToString(), Password = node.WalletPassword, WalletName = node.WalletName })
+                    .ReceiveJson<string>();
+
+                string apiPubkeyFromWif = this.network.Parse<BitcoinSecret>(apiPrivateKeyWif).PubKey.ToHex();
+
+                Assert.Equal(apiPubkey, apiPubkeyFromWif);
+
+                await rpc.WalletPassphraseAsync(node.WalletPassword, 3600);
+
+                BitcoinSecret rpcPrivateKey = await rpc.DumpPrivKeyAsync(address);
+
+                string rpcPubkeyHex = rpcPrivateKey.PubKey.ToHex();
+
+                Assert.Equal(apiPubkey, rpcPubkeyHex);
+            }
+        }
+
+        [Fact]
         public void GetTransactionDoesntExistInWalletOrBlock()
         {
             string txId = "f13effbbfc1b3d556dbfa25129e09209c9c57ed2737457f5080b78984a8c8554";
