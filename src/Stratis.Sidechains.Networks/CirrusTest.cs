@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using NBitcoin.Protocol;
@@ -127,18 +128,20 @@ namespace Stratis.Sidechains.Networks
                 federationMemberMaxIdleTimeSeconds: 60 * 30 // 30 minutes
             )
             {
-                InterFluxV2MainChainActivationHeight = 500_000,
                 EnforceMinProtocolVersionAtBlockHeight = 505900, // setting the value to zero makes the functionality inactive
                 EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
-                VotingManagerV2ActivationHeight = 1_999_500,
-                Release1100ActivationHeight = 2_796_000,
-                PollExpiryBlocks = 450,
-                GetMiningTimestampV2ActivationHeight = 3_000_000, // 15 January 2022
-                GetMiningTimestampV2ActivationStrictHeight = 3_121_500, // 17 January 2022
-                ContractSerializerV2ActivationHeight = 2_842_681,
-                Release1300ActivationHeight = 3_280_032,
-                Release1400ActivationHeight = 4_074_250,
+                PollExpiryBlocks = 450
             };
+
+            var activationHeights = consensusOptions.ActivationHeights;
+            activationHeights[(int)PoAActivationHeights.InterFluxV2MainChain] = 500_000;
+            activationHeights[(int)PoAActivationHeights.VotingManagerV2] = 1_999_500;
+            activationHeights[(int)PoAActivationHeights.ContractSerializerV2] = 2_842_681;
+            activationHeights[(int)PoAActivationHeights.Release1100] = 2_796_000;
+            activationHeights[(int)PoAActivationHeights.GetMiningTimestampV2] = 3_000_000; // 15 January 2022
+            activationHeights[(int)PoAActivationHeights.GetMiningTimestampV2Strict] = 3_121_500; // 17 January 2022
+            activationHeights[(int)PoAActivationHeights.Release1300] = 3_280_032;
+            activationHeights[(int)PoAActivationHeights.Release1400] = 4_074_250;
 
             var buriedDeployments = new BuriedDeploymentsArray
             {
@@ -150,8 +153,8 @@ namespace Stratis.Sidechains.Networks
             var bip9Deployments = new CirrusBIP9Deployments()
             {
                 // Deployment will go active once 75% of nodes are on 1.3.0.0 or later.
-                [CirrusBIP9Deployments.Release1320] = new BIP9DeploymentsParameters("Release1320", CirrusBIP9Deployments.FlagBitRelease1320, DateTime.Parse("2022-6-15 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-1-1 +0").ToUnixTimestamp(), BIP9DeploymentsParameters.DefaultRegTestThreshold),
-                [CirrusBIP9Deployments.Release1324] = new BIP9DeploymentsParameters("Release1324", CirrusBIP9Deployments.FlagBitRelease1324, DateTime.Parse("2022-10-10 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-3-1 +0").ToUnixTimestamp(), BIP9DeploymentsParameters.DefaultRegTestThreshold)
+                // Example:
+                // [CirrusBIP9Deployments.Release1324] = new BIP9DeploymentsParameters("Release1324", CirrusBIP9Deployments.FlagBitRelease1324, DateTime.Parse("2022-10-10 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-3-1 +0").ToUnixTimestamp(), BIP9DeploymentsParameters.DefaultRegTestThreshold)
             };
 
             this.Consensus = new Consensus(

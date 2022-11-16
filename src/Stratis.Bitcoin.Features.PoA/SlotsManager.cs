@@ -73,7 +73,7 @@ namespace Stratis.Bitcoin.Features.PoA
             The miner that mined the last block may no longer exist when the next block is about to be mined. As such
             we may need to look a bit further back to find a "reference miner" that still occurs in the latest federation.
             */
-            if (tip.Height < this.consensusOptions.GetMiningTimestampV2ActivationHeight)
+            if (tip.Height < this.consensusOptions.ActivationHeights[(int)PoAActivationHeights.GetMiningTimestampV2])
                 return GetMiningTimestampLegacy(tip, currentTime, currentMiner);
 
             List<IFederationMember> federationMembers = this.federationHistory.GetFederationForBlock(tip, 1);

@@ -1,9 +1,78 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using NBitcoin;
 
 namespace Stratis.Bitcoin.Features.PoA
 {
+    public enum PoAActivationHeights
+    {
+        /// <summary>
+        /// This is the height on the main chain at which the dynamic fees paid to the multsig for interop conversion requests will activate.
+        /// </summary>
+        InterFluxV2MainChain,
+
+        /// <summary>
+        /// The height at which a federation members will be resolved via the <see cref="FederationHistory"/> class.
+        /// <para>
+        /// A poll was incorrectly executed at block 1476880 because the legacy GetFederationMemberForTimestamp incorrectly
+        /// derived a federation member for a mined block.
+        /// </para>
+        /// <para>
+        /// After this block height, federation member votes will derived using the <see cref="FederationHistory.GetFederationMemberForBlock(ChainedHeader)"/>
+        /// method which resolves the pubkey from the signature directly.
+        /// </para>
+        /// </summary>
+        VotingManagerV2,
+
+        /// <summary>
+        /// Defines when V2 of the contract serializer will be used.
+        /// I.e if tip <= ContractSerializerV2ActivationHeight, V1 will be used.
+        /// </summary>
+        ContractSerializerV2,
+
+        /// <summary>
+        /// Logic related to release 1.1.0.0 will activate at this height, this includes Poll Expiry and the Join Federation Voting Request consensus rule.
+        /// </summary>
+        Release1100,
+
+        /// <summary>
+        /// The height at which inituitive mining slots become active.
+        /// Legacy mining slots are determined by mining_slot = block_height % number_of_federation_members.
+        /// Once the specified height is reached there should no longer be a shift in mining slots when new federation members are added/removed.
+        /// </summary>
+        GetMiningTimestampV2,
+
+        /// <summary>
+        /// The height at which inituitive mining slots are enfored without any lenience.
+        /// Currently errors are sometimes suppressed if a federation change occurred.
+        /// </summary>
+        GetMiningTimestampV2Strict,
+
+        /// <summary>
+        /// The height at which Release 1.3.0.0 became BIP activated.
+        /// </summary>
+        Release1300,
+
+        /// <summary>
+        /// The height at which Release 1.3.2.0 became BIP activated.
+        /// </summary>
+        Release1320,
+
+        /// <summary>
+        /// The height at which Release 1.3.2.4 became BIP activated.
+        /// </summary>
+        Release1324,
+
+        /// <summary>
+        /// The height at which Release 1.4.0.0 became active.
+        /// <para>
+        /// This was primarily used for activating ScriptPubkey sorting for paying multisig recipients.
+        /// </para>
+        /// </summary>
+        Release1400
+    }
+
     public class PoAConsensusOptions : ConsensusOptions
     {
         /// <summary>Public keys and other federation members related information at the start of the chain.</summary>
@@ -36,65 +105,13 @@ namespace Stratis.Bitcoin.Features.PoA
         public uint? FederationMemberActivationTime { get; set; }
 
         /// <summary>
-        /// The height at which a federation members will be resolved via the <see cref="FederationHistory"/> class.
-        /// <para>
-        /// A poll was incorrectly executed at block 1476880 because the legacy GetFederationMemberForTimestamp incorrectly
-        /// derived a federation member for a mined block.
-        /// </para>
-        /// <para>
-        /// After this block height, federation member votes will derived using the <see cref="FederationHistory.GetFederationMemberForBlock(ChainedHeader)"/>
-        /// method which resolves the pubkey from the signature directly.
-        /// </para>
-        /// </summary>
-        public int VotingManagerV2ActivationHeight { get; set; }
-
-        /// <summary>
-        /// This is the height on the main chain at which the dynamic fees paid to the multsig for interop conversion requests will activate.
-        /// </summary>
-        public int InterFluxV2MainChainActivationHeight { get; set; }
-
-        /// <summary>
-        /// The height at which Release 1.3.0.0 became BIP activated.
-        /// </summary>
-        public int Release1300ActivationHeight { get; set; }
-
-        /// <summary>
-        /// The height at which Release 1.4.0.0 became active.
-        /// <para>
-        /// This was primarily used for activating ScriptPubkey sorting for paying multisig recipients.
-        /// </para>
-        /// </summary>
-        public int Release1400ActivationHeight { get; set; }
-
-        /// <summary>
-        /// The height at which inituitive mining slots become active.
-        /// Legacy mining slots are determined by mining_slot = block_height % number_of_federation_members.
-        /// Once the specified height is reached there should no longer be a shift in mining slots when new federation members are added/removed.
-        /// </summary>
-        public int GetMiningTimestampV2ActivationHeight { get; set; }
-
-        /// <summary>
-        /// The height at which inituitive mining slots are enfored without any lenience.
-        /// Currently errors are sometimes suppressed if a federation change occurred.
-        /// </summary>
-        public int GetMiningTimestampV2ActivationStrictHeight { get; set; }
-
-        /// <summary>
-        /// Logic related to release 1.1.0.0 will activate at this height, this includes Poll Expiry and the Join Federation Voting Request consensus rule.
-        /// </summary>
-        public int Release1100ActivationHeight { get; set; }
-
-        /// <summary>
         /// Polls are expired once the tip reaches a block this far beyond the poll start block.
         /// I.e. if (Math.Max(startblock + PollExpiryBlocks, PollExpiryActivationHeight) <= tip) (See IsPollExpiredAt)
         /// </summary>
         public int PollExpiryBlocks { get; set; }
 
-        /// <summary>
-        /// Defines when V2 of the contract serializer will be used.
-        /// I.e if tip <= ContractSerializerV2ActivationHeight, V1 will be used.
-        /// </summary>
-        public int ContractSerializerV2ActivationHeight { get; set; }
+
+        public int[] ActivationHeights { get; set; }
 
         /// <summary>Initializes values for networks that use block size rules.</summary>
         /// <param name="maxBlockBaseSize">See <see cref="ConsensusOptions.MaxBlockBaseSize"/>.</param>
@@ -125,7 +142,8 @@ namespace Stratis.Bitcoin.Features.PoA
             this.VotingEnabled = votingEnabled;
             this.AutoKickIdleMembers = autoKickIdleMembers;
             this.FederationMemberMaxIdleTimeSeconds = federationMemberMaxIdleTimeSeconds;
-            this.InterFluxV2MainChainActivationHeight = 0;
+            this.ActivationHeights = new int[((int[])typeof(PoAActivationHeights).GetEnumValues()).Max() + 1];
+            this.ActivationHeights[(int)PoAActivationHeights.InterFluxV2MainChain] = 0;
 
             if (this.AutoKickIdleMembers && !this.VotingEnabled)
                 throw new ArgumentException("Voting should be enabled for automatic kicking to work.");

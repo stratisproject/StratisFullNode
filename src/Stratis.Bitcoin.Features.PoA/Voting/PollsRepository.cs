@@ -378,7 +378,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private static int GetPollExpiryHeight(Poll poll, PoANetwork network)
         {
-            return Math.Max(poll.PollStartBlockData.Height + network.ConsensusOptions.PollExpiryBlocks, network.ConsensusOptions.Release1100ActivationHeight);
+            return Math.Max(poll.PollStartBlockData.Height + network.ConsensusOptions.PollExpiryBlocks, network.ConsensusOptions.ActivationHeights[(int)PoAActivationHeights.Release1100]);
         }
 
         public static int GetPollExpiryOrExecutionHeight(Poll poll, PoANetwork network)

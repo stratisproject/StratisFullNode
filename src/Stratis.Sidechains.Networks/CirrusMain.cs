@@ -178,16 +178,20 @@ namespace Stratis.Sidechains.Networks
                 EnforceMinProtocolVersionAtBlockHeight = 384675, // setting the value to zero makes the functionality inactive
                 EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
                 FederationMemberActivationTime = 1605862800, // Friday, November 20, 2020 9:00:00 AM
-                InterFluxV2MainChainActivationHeight = 460_000,
-                VotingManagerV2ActivationHeight = 1_683_000, // Tuesday, 12 January 2021 9:00:00 AM (Estimated)
-                Release1100ActivationHeight = 3_426_950, // Monday, 20 December 2021 10:00:00 AM (Estimated)
                 PollExpiryBlocks = 50_000, // Roughly 9 days
-                GetMiningTimestampV2ActivationHeight = 3_709_000, // Monday 14 February 00:00:00 (Estimated)
-                GetMiningTimestampV2ActivationStrictHeight = 3_783_000, // Monday 28 February 07:00:00 (London Time) (Estimated)
-                ContractSerializerV2ActivationHeight = 3_386_335, // Monday 13 December 16:00:00 (Estimated)
-                Release1300ActivationHeight = 4_334_400,
-                Release1400ActivationHeight = 0,
             };
+
+            var activationHeights = consensusOptions.ActivationHeights;
+            activationHeights[(int)PoAActivationHeights.InterFluxV2MainChain] = 460_000;
+            activationHeights[(int)PoAActivationHeights.VotingManagerV2] = 1_683_000; // Tuesday, 12 January 2021 9:00:00 AM (Estimated)
+            activationHeights[(int)PoAActivationHeights.ContractSerializerV2] = 3_386_335; // Monday 13 December 16:00:00 (Estimated)
+            activationHeights[(int)PoAActivationHeights.Release1100] = 3_426_950; // Monday, 20 December 2021 10:00:00 AM (Estimated)
+            activationHeights[(int)PoAActivationHeights.GetMiningTimestampV2] = 3_709_000; // Monday 14 February 00:00:00 (Estimated)
+            activationHeights[(int)PoAActivationHeights.GetMiningTimestampV2Strict] = 3_783_000; // Monday 28 February 07:00:00 (London Time) (Estimated)
+            activationHeights[(int)PoAActivationHeights.Release1300] = 4_334_400;
+            activationHeights[(int)PoAActivationHeights.Release1320] = 4_665_600;
+            activationHeights[(int)PoAActivationHeights.Release1324] = 5_086_800;
+            activationHeights[(int)PoAActivationHeights.Release1400] = 0;
 
             var buriedDeployments = new BuriedDeploymentsArray
             {
@@ -199,8 +203,8 @@ namespace Stratis.Sidechains.Networks
             var bip9Deployments = new CirrusBIP9Deployments()
             {
                 // Deployment will go active once 75% of nodes are on 1.3.0.0 or later.
-                [CirrusBIP9Deployments.Release1320] = new BIP9DeploymentsParameters("Release1320", CirrusBIP9Deployments.FlagBitRelease1320, DateTime.Parse("2022-6-15 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-1-1 +0").ToUnixTimestamp(), 8100 /* 75% Activation Threshold */),
-                [CirrusBIP9Deployments.Release1324] = new BIP9DeploymentsParameters("Release1324", CirrusBIP9Deployments.FlagBitRelease1324, DateTime.Parse("2022-10-10 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-3-1 +0").ToUnixTimestamp(), 8100 /* 75% Activation Threshold */)
+                // Example:
+                // [CirrusBIP9Deployments.Release1324] = new BIP9DeploymentsParameters("Release1324", CirrusBIP9Deployments.FlagBitRelease1324, DateTime.Parse("2022-10-10 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-3-1 +0").ToUnixTimestamp(), 8100 /* 75% Activation Threshold */)
             };
 
             this.Consensus = new Consensus(

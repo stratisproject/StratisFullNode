@@ -193,7 +193,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             )
             {
                 PollExpiryBlocks = 10,
-                Release1100ActivationHeight = 10
+                ActivationHeights = { [(int)PoAActivationHeights.Release1100] = 10 }
             };
 
             this.Consensus.SetPrivatePropertyValue(nameof(this.Consensus.MaxReorgLength), (uint)5);

@@ -144,7 +144,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
                 }
             }
 
-            if (this.chainIndexer.Tip.Height >= (this.network.Consensus.Options as PoAConsensusOptions).Release1400ActivationHeight)
+            if (this.chainIndexer.Tip.Height >= (this.network.Consensus.Options as PoAConsensusOptions).ActivationHeights[(int)PoAActivationHeights.Release1400])
                 return multiSigRecipients.OrderBy(m => m.ScriptPubKey.ToHex()).ToList();
 
             return multiSigRecipients;
