@@ -75,7 +75,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 PoAConsensusErrors.InvalidHeaderSignature.Throw();
             }
 
-            if (chainedHeader.Height >= this.poAConsensusOptions.ActivationHeights[(int)PoAActivationHeights.GetMiningTimestampV2])
+            if (chainedHeader.Height >= this.poAConsensusOptions.ActivationHeights[(int)PoAActivationHeights.GetMiningTimestampV2Strict])
             {
                 uint expectedSlot = this.slotsManager.GetMiningTimestamp(chainedHeader.Previous, chainedHeader.Header.Time, pubKey);
 
