@@ -192,9 +192,11 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
                 federationMemberMaxIdleTimeSeconds: baseOptions.FederationMemberMaxIdleTimeSeconds
             )
             {
-                PollExpiryBlocks = 10,
-                ActivationHeights = { [(int)PoAActivationHeights.Release1100] = 10 }
+                PollExpiryBlocks = 10
             };
+
+            var activationHeights = ((PoAConsensusOptions)this.Consensus.Options).ActivationHeights;
+            activationHeights[(int)PoAActivationHeights.Release1100] = 10;
 
             this.Consensus.SetPrivatePropertyValue(nameof(this.Consensus.MaxReorgLength), (uint)5);
         }
