@@ -141,6 +141,8 @@ namespace Stratis.Sidechains.Networks
             activationHeights[(int)PoAActivationHeights.GetMiningTimestampV2] = 3_000_000; // 15 January 2022
             activationHeights[(int)PoAActivationHeights.GetMiningTimestampV2Strict] = 3_121_500; // 17 January 2022
             activationHeights[(int)PoAActivationHeights.Release1300] = 3_280_032;
+            activationHeights[(int)PoAActivationHeights.Release1320] = 3_588_480;
+            activationHeights[(int)PoAActivationHeights.Release1324] = 3_951_360;
             activationHeights[(int)PoAActivationHeights.Release1400] = 4_074_250;
 
             var buriedDeployments = new BuriedDeploymentsArray
