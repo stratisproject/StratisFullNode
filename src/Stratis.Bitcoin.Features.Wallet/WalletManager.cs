@@ -10,7 +10,6 @@ using NBitcoin;
 using NBitcoin.BuilderExtensions;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
-using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.Extensions;
 using TracerAttributes;
@@ -350,9 +349,8 @@ namespace Stratis.Bitcoin.Features.Wallet
         }
 
         /// <inheritdoc />
-        public string RetrievePrivateKey(string password, string walletName, string address)
+        public string RetrievePrivateKey(string walletName, string address, string password = null)
         {
-            Guard.NotEmpty(password, nameof(password));
             Guard.NotEmpty(walletName, nameof(walletName));
             Guard.NotEmpty(address, nameof(address));
 
@@ -370,8 +368,25 @@ namespace Stratis.Bitcoin.Features.Wallet
                     new WalletAccountReference(walletName, a.Name), 1, int.MaxValue)).Select(a => a).FirstOrDefault(addr => addr.Address.ToString() == address);
             }
 
-            ISecret privateKey = wallet.GetExtendedPrivateKeyForAddress(password, hdAddress).PrivateKey.GetWif(this.network);
-            return privateKey.ToString();
+            if (hdAddress == null)
+                throw new SecurityException("The address does not exist in the wallet.");
+
+            Key walletPrivateKey;
+            string cacheKey = wallet.EncryptedSeed;
+            
+            if (this.privateKeyCache.TryGetValue(cacheKey, out SecureString secretValue))
+            {
+                walletPrivateKey = wallet.Network.CreateBitcoinSecret(secretValue.FromSecureString()).PrivateKey;
+            }
+            else
+            {
+                walletPrivateKey = Key.Parse(wallet.EncryptedSeed, password, wallet.Network);
+            }
+
+            ISecret addressExtendedPrivateKey = HdOperations.GetExtendedPrivateKey(walletPrivateKey, wallet.ChainCode, hdAddress.HdPath, wallet.Network);
+            ISecret addressPrivateKey = addressExtendedPrivateKey.PrivateKey.GetWif(this.network);
+
+            return addressPrivateKey.ToString();
         }
 
         /// <inheritdoc />

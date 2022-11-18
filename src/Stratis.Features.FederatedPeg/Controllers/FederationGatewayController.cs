@@ -482,7 +482,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
                 var txData = new PrecomputedTransactionData(trx);
                 var checker = new TransactionChecker(trx, input, txout.Value, txData);
 
-                var ctx = new ScriptEvaluationContext(this.network)
+                var ctx = new PartialTransactionScriptEvaluationContext(this.network)
                 {
                     ScriptVerify = ScriptVerify.Mandatory
                 };

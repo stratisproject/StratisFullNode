@@ -12,6 +12,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers;
+using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.RPC.Exceptions;
@@ -22,6 +23,7 @@ using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Utilities;
 using TracerAttributes;
+using Script = NBitcoin.Script;
 
 namespace Stratis.Bitcoin.Features.Wallet
 {
@@ -139,6 +141,24 @@ namespace Stratis.Bitcoin.Features.Wallet
 
                 uint256 hash = transaction.GetHash();
                 return hash;
+            }
+            catch (SecurityException)
+            {
+                throw new RPCServerException(RPCErrorCode.RPC_WALLET_UNLOCK_NEEDED, "Wallet unlock needed");
+            }
+            catch (WalletException exception)
+            {
+                throw new RPCServerException(RPCErrorCode.RPC_WALLET_ERROR, exception.Message);
+            }
+        }
+
+        [ActionName("dumpprivkey")]
+        [ActionDescription("Reveals the private key corresponding to ‘address’.")]
+        public object DumpPrivKey(string address)
+        {
+            try
+            {
+                return new StringModel(this.walletManager.RetrievePrivateKey(this.GetWallet(), address));
             }
             catch (SecurityException)
             {
