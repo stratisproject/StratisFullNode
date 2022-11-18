@@ -110,6 +110,10 @@ namespace Stratis.Bitcoin.Features.PoA
         /// </summary>
         public int PollExpiryBlocks { get; set; }
 
+        /// <summary>
+        /// Leaving this for now for use by Stratis.SmartContracts.CLR.
+        /// </summary>
+        public int ContractSerializerV2ActivationHeight => this.ActivationHeights[(int)PoAActivationHeights.ContractSerializerV2];
 
         public int[] ActivationHeights { get; set; }
 
