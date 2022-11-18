@@ -98,6 +98,9 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient2
 
         [Parameter("string", "tokenAddress", 2)]
         public string TokenAddress { get; set; }
+
+        [Parameter("string", "burnId", 3)]
+        public string BurnId { get; set; }
     }
 
     public class WrappedToken
