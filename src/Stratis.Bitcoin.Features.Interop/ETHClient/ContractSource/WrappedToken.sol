@@ -26,14 +26,14 @@ contract WrappedToken is ERC20, Ownable {
      *
      * See {ERC20-_burn}.
      */
-    function burn(uint256 amount, string memory address, string memory id) public {
+    function burn(uint256 amount, string memory tokenAddress, string memory burnId) public {
         _burn(_msgSender(), amount);
         
         // When the tokens are burnt we need to know where to credit the equivalent value on the Stratis chain.
         // Currently it is only possible to assign a single address here, so if multiple recipients are required
         // the burner will have to wait until each burn is processed before proceeding with the next.
-        string memory key = string(abi.encodePacked(msg.sender, " ", id));
-        withdrawalAddresses[key] = address;
+        string memory key = string(abi.encodePacked(msg.sender, " ", burnId));
+        withdrawalAddresses[key] = tokenAddress;
     }
 
     /**
@@ -47,7 +47,7 @@ contract WrappedToken is ERC20, Ownable {
      * - the caller must have allowance for ``accounts``'s tokens of at least
      * `amount`.
      */
-    function burnFrom(address account, uint256 amount, string memory address, string memory id) public {
+    function burnFrom(address account, uint256 amount, string memory tokenAddress, string memory burnId) public {
         uint256 decreasedAllowance = allowance(account, _msgSender()).sub(amount, "ERC20: burn amount exceeds allowance");
 
         _approve(account, _msgSender(), decreasedAllowance);
@@ -56,7 +56,7 @@ contract WrappedToken is ERC20, Ownable {
         // When the tokens are burnt we need to know where to credit the equivalent value on the Stratis chain.
         // Currently it is only possible to assign a single address here, so if multiple recipients are required
         // the burner will have to wait until each burn is processed before proceeding with the next.
-        string memory key = string(abi.encodePacked(msg.sender, " ", id));
-        withdrawalAddresses[key] = address;
+        string memory key = string(abi.encodePacked(msg.sender, " ", burnId));
+        withdrawalAddresses[key] = tokenAddress;
     }
 }

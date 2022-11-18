@@ -398,6 +398,11 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient2
 						""internalType"": ""string"",
 						""name"": ""tokenAddress"",
 						""type"": ""string""
+					},
+					{
+						""internalType"": ""string"",
+						""name"": ""burnId"",
+						""type"": ""string""
 					}
 				],
 				""name"": ""burn"",
@@ -420,6 +425,11 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient2
 					{
 						""internalType"": ""string"",
 						""name"": ""tokenAddress"",
+						""type"": ""string""
+					},
+					{
+						""internalType"": ""string"",
+						""name"": ""burnId"",
 						""type"": ""string""
 					}
 				],
