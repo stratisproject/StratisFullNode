@@ -91,7 +91,8 @@ namespace Stratis.Sidechains.Networks
                 genesisFederationMembers: genesisFederationMembers,
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
-                autoKickIdleMembers: true
+                autoKickIdleMembers: true,
+                contractSerializerV2ActivationHeight: 0
             )
             {
                 PollExpiryBlocks = 10

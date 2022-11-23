@@ -115,6 +115,20 @@ namespace Stratis.Sidechains.Networks
                 new PubKey("03382ceb0a59b9b922aca6be9959ae51dabda159e79465393a308ee267ecebcaa5"),//Node8
             };
 
+            var buriedDeployments = new CirrusBuriedDeploymentsArray
+            {
+                [CirrusBuriedDeployments.InterFluxV2MainChain] = 500_000,
+                [CirrusBuriedDeployments.VotingManagerV2] = 1_999_500,
+                [CirrusBuriedDeployments.ContractSerializerV2] = 2_842_681,
+                [CirrusBuriedDeployments.Release1100] = 2_796_000,
+                [CirrusBuriedDeployments.GetMiningTimestampV2] = 3_000_000, // 15 January 2022
+                [CirrusBuriedDeployments.GetMiningTimestampV2Strict] = 3_121_500, // 17 January 2022
+                [CirrusBuriedDeployments.Release1300] = 3_280_032,
+                [CirrusBuriedDeployments.Release1320] = 3_588_480,
+                [CirrusBuriedDeployments.Release1324] = 3_951_360,
+                [CirrusBuriedDeployments.Release1400] = 4_074_250
+            };
+
             var consensusOptions = new PoAConsensusOptions(
                 maxBlockBaseSize: 1_000_000,
                 maxStandardVersion: 2,
@@ -125,31 +139,13 @@ namespace Stratis.Sidechains.Networks
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
                 autoKickIdleMembers: true,
+                contractSerializerV2ActivationHeight: buriedDeployments[CirrusBuriedDeployments.ContractSerializerV2],
                 federationMemberMaxIdleTimeSeconds: 60 * 30 // 30 minutes
             )
             {
                 EnforceMinProtocolVersionAtBlockHeight = 505900, // setting the value to zero makes the functionality inactive
                 EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
                 PollExpiryBlocks = 450
-            };
-
-            var activationHeights = consensusOptions.ActivationHeights;
-            activationHeights[(int)PoAActivationHeights.InterFluxV2MainChain] = 500_000;
-            activationHeights[(int)PoAActivationHeights.VotingManagerV2] = 1_999_500;
-            activationHeights[(int)PoAActivationHeights.ContractSerializerV2] = 2_842_681;
-            activationHeights[(int)PoAActivationHeights.Release1100] = 2_796_000;
-            activationHeights[(int)PoAActivationHeights.GetMiningTimestampV2] = 3_000_000; // 15 January 2022
-            activationHeights[(int)PoAActivationHeights.GetMiningTimestampV2Strict] = 3_121_500; // 17 January 2022
-            activationHeights[(int)PoAActivationHeights.Release1300] = 3_280_032;
-            activationHeights[(int)PoAActivationHeights.Release1320] = 3_588_480;
-            activationHeights[(int)PoAActivationHeights.Release1324] = 3_951_360;
-            activationHeights[(int)PoAActivationHeights.Release1400] = 4_074_250;
-
-            var buriedDeployments = new BuriedDeploymentsArray
-            {
-                [BuriedDeployments.BIP34] = 0,
-                [BuriedDeployments.BIP65] = 0,
-                [BuriedDeployments.BIP66] = 0
             };
 
             var bip9Deployments = new CirrusBIP9Deployments()

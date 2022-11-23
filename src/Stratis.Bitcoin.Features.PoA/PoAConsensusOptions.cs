@@ -5,7 +5,7 @@ using NBitcoin;
 
 namespace Stratis.Bitcoin.Features.PoA
 {
-    public enum PoAActivationHeights
+    public enum CirrusBuriedDeployments
     {
         /// <summary>
         /// This is the height on the main chain at which the dynamic fees paid to the multsig for interop conversion requests will activate.
@@ -113,9 +113,7 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <summary>
         /// Leaving this for now for use by Stratis.SmartContracts.CLR.
         /// </summary>
-        public int ContractSerializerV2ActivationHeight => this.ActivationHeights[(int)PoAActivationHeights.ContractSerializerV2];
-
-        public int[] ActivationHeights { get; set; }
+        public int ContractSerializerV2ActivationHeight { get; set; }
 
         /// <summary>Initializes values for networks that use block size rules.</summary>
         /// <param name="maxBlockBaseSize">See <see cref="ConsensusOptions.MaxBlockBaseSize"/>.</param>
@@ -128,6 +126,7 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <param name="votingEnabled">See <see cref="VotingEnabled"/>.</param>
         /// <param name="autoKickIdleMembers">See <see cref="AutoKickIdleMembers"/>.</param>
         /// <param name="federationMemberMaxIdleTimeSeconds">See <see cref="FederationMemberMaxIdleTimeSeconds"/>.</param>
+        /// <param name="contractSerializerV2ActivationHeight">See <see cref="ContractSerializerV2ActivationHeight"/>.</param>
         public PoAConsensusOptions(
             uint maxBlockBaseSize,
             int maxStandardVersion,
@@ -138,6 +137,7 @@ namespace Stratis.Bitcoin.Features.PoA
             uint targetSpacingSeconds,
             bool votingEnabled,
             bool autoKickIdleMembers,
+            int contractSerializerV2ActivationHeight,
             uint federationMemberMaxIdleTimeSeconds = 60 * 60 * 24 * 7)
                 : base(maxBlockBaseSize, maxStandardVersion, maxStandardTxWeight, maxBlockSigopsCost, maxStandardTxSigopsCost, witnessScaleFactor: 1)
         {
@@ -146,8 +146,7 @@ namespace Stratis.Bitcoin.Features.PoA
             this.VotingEnabled = votingEnabled;
             this.AutoKickIdleMembers = autoKickIdleMembers;
             this.FederationMemberMaxIdleTimeSeconds = federationMemberMaxIdleTimeSeconds;
-            this.ActivationHeights = new int[((int[])typeof(PoAActivationHeights).GetEnumValues()).Max() + 1];
-            this.ActivationHeights[(int)PoAActivationHeights.InterFluxV2MainChain] = 0;
+            this.ContractSerializerV2ActivationHeight = contractSerializerV2ActivationHeight;
 
             if (this.AutoKickIdleMembers && !this.VotingEnabled)
                 throw new ArgumentException("Voting should be enabled for automatic kicking to work.");

@@ -11,6 +11,23 @@ using Stratis.Bitcoin.Features.PoA.Voting.ConsensusRules;
 
 namespace Stratis.Bitcoin.Features.PoA
 {
+    public class CirrusBuriedDeploymentsArray : BuriedDeploymentsArray
+    {
+        public int this[CirrusBuriedDeployments index]
+        {
+            get => this.heights[EnsureIndex((int)index)];
+            set => this.heights[EnsureIndex((int)index)] = value;
+        }
+    }
+
+    public static class ConsensusExt
+    {
+        public static int CirrusBuriedDeployments(this IConsensus consensus, CirrusBuriedDeployments index)
+        {
+            return ((CirrusBuriedDeploymentsArray)consensus.BuriedDeployments)[index];
+        }
+    }
+
     /// <summary>
     /// Example network for PoA consensus.
     /// </summary>
@@ -106,17 +123,11 @@ namespace Stratis.Bitcoin.Features.PoA
                 genesisFederationMembers: genesisFederationMembers,
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
+                contractSerializerV2ActivationHeight: 0,
                 autoKickIdleMembers: true
             )
             {
                 PollExpiryBlocks = 450
-            };
-
-            var buriedDeployments = new BuriedDeploymentsArray
-            {
-                [BuriedDeployments.BIP34] = 0,
-                [BuriedDeployments.BIP65] = 0,
-                [BuriedDeployments.BIP66] = 0
             };
 
             var bip9Deployments = new NoBIP9Deployments();
@@ -130,7 +141,7 @@ namespace Stratis.Bitcoin.Features.PoA
                 majorityEnforceBlockUpgrade: 750,
                 majorityRejectBlockOutdated: 950,
                 majorityWindow: 1000,
-                buriedDeployments: buriedDeployments,
+                buriedDeployments: new CirrusBuriedDeploymentsArray(),
                 bip9Deployments: bip9Deployments,
                 bip34Hash: new uint256("0x000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8"),
                 minerConfirmationWindow: 2016, // nPowTargetTimespan / nPowTargetSpacing
