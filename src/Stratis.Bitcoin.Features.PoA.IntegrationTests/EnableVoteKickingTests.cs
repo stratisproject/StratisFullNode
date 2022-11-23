@@ -32,6 +32,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
                     targetSpacingSeconds: 60,
                     votingEnabled: true,
                     autoKickIdleMembers: false,
+                    contractSerializerV2ActivationHeight: 0,
                     federationMemberMaxIdleTimeSeconds: oldOptions.FederationMemberMaxIdleTimeSeconds);
 
                 CoreNode node1 = builder.CreatePoANode(votingNetwork1, votingNetwork1.FederationKey1).Start();
@@ -54,6 +55,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
                     targetSpacingSeconds: 60,
                     votingEnabled: true,
                     autoKickIdleMembers: true,
+                    contractSerializerV2ActivationHeight: 0,
                     federationMemberMaxIdleTimeSeconds: idleTimeSeconds);
 
                 // Restart node 1 to ensure that we have the new network consensus options which reflects

@@ -189,14 +189,14 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
                 targetSpacingSeconds: 60,
                 votingEnabled: baseOptions.VotingEnabled,
                 autoKickIdleMembers: baseOptions.AutoKickIdleMembers,
+                contractSerializerV2ActivationHeight: 0,
                 federationMemberMaxIdleTimeSeconds: baseOptions.FederationMemberMaxIdleTimeSeconds
             )
             {
                 PollExpiryBlocks = 10
             };
 
-            var activationHeights = ((PoAConsensusOptions)this.Consensus.Options).ActivationHeights;
-            activationHeights[(int)PoAActivationHeights.Release1100] = 10;
+            ((PoABuriedDeploymentsArray)this.Consensus)[PoABuriedDeployments.Release1100] = 10;
 
             this.Consensus.SetPrivatePropertyValue(nameof(this.Consensus.MaxReorgLength), (uint)5);
         }

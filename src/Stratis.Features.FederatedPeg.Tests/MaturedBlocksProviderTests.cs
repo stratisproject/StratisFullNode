@@ -56,7 +56,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.mainChainNetwork = new StraxRegTest();
 
             // TODO: Upgrade these tests to conform with release 1.3.0.0 activation.
-            ((PoAConsensusOptions)this.network.Consensus.Options).ActivationHeights[(int)PoAActivationHeights.Release1300] = int.MaxValue;
+            ((PoABuriedDeploymentsArray)this.network.Consensus.BuriedDeployments)[PoABuriedDeployments.Release1300] = int.MaxValue;
 
             this.opReturnDataReader = Substitute.For<IOpReturnDataReader>();
             this.opReturnDataReader.TryGetTargetAddress(null, out string address).Returns(callInfo => { callInfo[1] = null; return false; });

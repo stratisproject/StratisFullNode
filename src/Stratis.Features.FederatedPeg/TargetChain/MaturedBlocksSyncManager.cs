@@ -238,7 +238,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         continue;
                     }
 
-                    var interFluxV2MainChainActivationHeight = ((PoAConsensusOptions)this.network.Consensus.Options).ActivationHeights[(int)PoAActivationHeights.InterFluxV2MainChain];
+                    var interFluxV2MainChainActivationHeight = this.network.Consensus.PoABuriedDeployments(PoABuriedDeployments.InterFluxV2MainChain);
                     if (interFluxV2MainChainActivationHeight != 0 && maturedBlockDeposit.BlockInfo.BlockHeight < interFluxV2MainChainActivationHeight)
                     {
                         this.logger.LogWarning("Conversion transactions '{0}' will not be processed below the main chain activation height of {1}.", potentialConversionTransaction.Id, interFluxV2MainChainActivationHeight);
