@@ -11,18 +11,16 @@ namespace NBitcoin
             this.heights = new int[0];
         }
 
-        protected int EnsureIndex(int index)
+        protected void EnsureIndex(int index)
         {
             if (index >= this.heights.Length)
                 Array.Resize(ref this.heights, index + 1);
-            
-            return index;
         }
 
         public int this[BuriedDeployments index]
         {
-            get => this.heights[EnsureIndex((int)index)];
-            set => this.heights[EnsureIndex((int)index)] = value;
+            get { EnsureIndex((int)index); return this.heights[(int)index]; }
+            set { EnsureIndex((int)index); this.heights[(int)index] = value; }
         }
     }
 

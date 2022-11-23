@@ -15,8 +15,8 @@ namespace Stratis.Bitcoin.Features.PoA
     {
         public int this[PoABuriedDeployments index]
         {
-            get => this.heights[EnsureIndex((int)index)];
-            set => this.heights[EnsureIndex((int)index)] = value;
+            get { EnsureIndex((int)index); return this.heights[(int)index]; }
+            set { EnsureIndex((int)index); this.heights[(int)index] = value; }
         }
     }
 
