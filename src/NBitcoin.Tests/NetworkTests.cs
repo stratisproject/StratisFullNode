@@ -79,7 +79,7 @@ namespace NBitcoin.Tests
         [Trait("UnitTest", "UnitTest")]
         public void BitcoinMainnetIsInitializedCorrectly()
         {
-            Assert.Equal(17, this.networkMain.Checkpoints.Count);
+            Assert.Equal(18, this.networkMain.Checkpoints.Count);
             Assert.Equal(6, this.networkMain.DNSSeeds.Count);
             Assert.Equal(512, this.networkMain.SeedNodes.Count);
 
@@ -143,7 +143,7 @@ namespace NBitcoin.Tests
             Assert.Equal(Utils.UnixTimeToDateTime(1510704000), this.networkMain.Consensus.BIP9Deployments[BitcoinBIP9Deployments.Segwit].Timeout);
             Assert.Equal(0, this.networkMain.Consensus.CoinType);
             Assert.False(this.networkMain.Consensus.IsProofOfStake);
-            Assert.Equal(new uint256("0x0000000000000000000f1c54590ee18d15ec70e68c8cd4cfbadb1b4f11697eee"), this.networkMain.Consensus.DefaultAssumeValid);
+            Assert.Equal(new uint256("0x00000000000000000003e1d91b245eb32787afb10afe49b61621375361221c38"), this.networkMain.Consensus.DefaultAssumeValid);
             Assert.Equal(100, this.networkMain.Consensus.CoinbaseMaturity);
             Assert.Equal(0, this.networkMain.Consensus.PremineReward);
             Assert.Equal(0, this.networkMain.Consensus.PremineHeight);
@@ -163,7 +163,7 @@ namespace NBitcoin.Tests
         {
             Network network = KnownNetworks.TestNet;
 
-            Assert.Equal(13, network.Checkpoints.Count);
+            Assert.Equal(14, network.Checkpoints.Count);
             Assert.Equal(3, network.DNSSeeds.Count);
             Assert.Empty(network.SeedNodes);
 
@@ -224,7 +224,7 @@ namespace NBitcoin.Tests
             Assert.Equal(Utils.UnixTimeToDateTime(1493596800), network.Consensus.BIP9Deployments[BitcoinBIP9Deployments.Segwit].Timeout);
             Assert.Equal(1, network.Consensus.CoinType);
             Assert.False(network.Consensus.IsProofOfStake);
-            Assert.Equal(new uint256("0x0000000000000037a8cd3e06cd5edbfe9dd1dbcc5dacab279376ef7cfc2b4c75"), network.Consensus.DefaultAssumeValid);
+            Assert.Equal(new uint256("000000000000075566fba6ca27a2e4c8b33c7763f8a5f917b231b0d88c743af8"), network.Consensus.DefaultAssumeValid);
             Assert.Equal(100, network.Consensus.CoinbaseMaturity);
             Assert.Equal(0, network.Consensus.PremineReward);
             Assert.Equal(0, network.Consensus.PremineHeight);
