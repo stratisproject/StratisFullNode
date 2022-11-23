@@ -26,7 +26,7 @@ namespace Stratis.SmartContracts.CLR.Serialization
 
         public override object Deserialize(Type type, byte[] stream)
         {
-            if (this.network.Consensus.Options is PoAConsensusOptions poaConsensusOptions && this.chainIndexer.Tip.Height <= poaConsensusOptions.ActivationHeights[(int)PoAActivationHeights.ContractSerializerV2])
+            if (this.network.Consensus.Options is PoAConsensusOptions poaConsensusOptions && this.chainIndexer.Tip.Height <= this.network.Consensus.PoABuriedDeployments(PoABuriedDeployments.ContractSerializerV2))
                 return this.serializerV1.Deserialize(type, stream);
 
             return base.Deserialize(type, stream);

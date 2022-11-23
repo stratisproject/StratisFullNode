@@ -39,7 +39,7 @@ namespace Stratis.Features.Collateral
             }
 
             // Check that the commitment height is not less that of the prior block.
-            int release1324ActivationHeight = this.Parent.Network.Consensus.CirrusBuriedDeployments(CirrusBuriedDeployments.Release1324);
+            int release1324ActivationHeight = this.Parent.Network.Consensus.PoABuriedDeployments(PoABuriedDeployments.Release1324);
 
             if (context.ValidationContext.ChainedHeaderToValidate.Height >= release1324ActivationHeight)
             {

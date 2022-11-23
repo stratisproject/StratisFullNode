@@ -274,7 +274,7 @@ namespace Stratis.Features.Collateral
                     return false;
                 }
 
-                int release1320ActivationHeight = this.consensus.CirrusBuriedDeployments(CirrusBuriedDeployments.Release1320);
+                int release1320ActivationHeight = this.consensus.PoABuriedDeployments(PoABuriedDeployments.Release1320);
 
                 // Legacy behavior before activation.
                 if (localChainHeight < release1320ActivationHeight)

@@ -173,7 +173,7 @@ namespace Stratis.Bitcoin.Features.PoA
             IFederationMember[] miners = new IFederationMember[headers.Length];
 
             // Reading chainedHeader's "Header" does not play well with asynchronocity so we will load the block times here.
-            int votingManagerV2ActivationHeight = this.network.Consensus.CirrusBuriedDeployments(CirrusBuriedDeployments.VotingManagerV2);
+            int votingManagerV2ActivationHeight = this.network.Consensus.PoABuriedDeployments(PoABuriedDeployments.VotingManagerV2);
 
             int startHeight = lastHeader.Height + 1 - count;
 

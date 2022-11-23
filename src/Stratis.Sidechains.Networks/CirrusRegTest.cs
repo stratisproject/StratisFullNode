@@ -100,10 +100,10 @@ namespace Stratis.Sidechains.Networks
             // Use the new keys as the old keys should never be used by the new opcode.
             this.Federations.RegisterFederation(new Federation(newFederationPubKeys.ToArray()));
 
-            var buriedDeployments = new CirrusBuriedDeploymentsArray
+            var buriedDeployments = new PoABuriedDeploymentsArray
             {
-                [CirrusBuriedDeployments.GetMiningTimestampV2] = 100,
-                [CirrusBuriedDeployments.GetMiningTimestampV2Strict] = 100
+                [PoABuriedDeployments.GetMiningTimestampV2] = 100,
+                [PoABuriedDeployments.GetMiningTimestampV2Strict] = 100
             };
 
             var consensusOptions = new PoAConsensusOptions(
@@ -115,7 +115,7 @@ namespace Stratis.Sidechains.Networks
                 genesisFederationMembers: genesisFederationMembers,
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
-                contractSerializerV2ActivationHeight: buriedDeployments[CirrusBuriedDeployments.ContractSerializerV2],
+                contractSerializerV2ActivationHeight: buriedDeployments[PoABuriedDeployments.ContractSerializerV2],
                 autoKickIdleMembers: true)
             {
                 PollExpiryBlocks = 450 // 2 hours

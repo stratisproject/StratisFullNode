@@ -162,18 +162,18 @@ namespace Stratis.Sidechains.Networks
                 new PubKey("03f5de5176e29e1e7d518ae76c1e020b1da18b57a3713ac81b16015026e232748e"),
             };
 
-            var buriedDeployments = new CirrusBuriedDeploymentsArray
+            var buriedDeployments = new PoABuriedDeploymentsArray
             {
-                [CirrusBuriedDeployments.InterFluxV2MainChain] = 460_000,
-                [CirrusBuriedDeployments.VotingManagerV2] = 1_683_000, // Tuesday, 12 January 2021 9:00:00 AM (Estimated)
-                [CirrusBuriedDeployments.ContractSerializerV2] = 3_386_335, // Monday 13 December 16:00:00 (Estimated)
-                [CirrusBuriedDeployments.Release1100] = 3_426_950, // Monday, 20 December 2021 10:00:00 AM (Estimated)
-                [CirrusBuriedDeployments.GetMiningTimestampV2] = 3_709_000, // Monday 14 February 00:00:00 (Estimated)
-                [CirrusBuriedDeployments.GetMiningTimestampV2Strict] = 3_783_000, // Monday 28 February 07:00:00 (London Time) (Estimated)
-                [CirrusBuriedDeployments.Release1300] = 4_334_400,
-                [CirrusBuriedDeployments.Release1320] = 4_665_600,
-                [CirrusBuriedDeployments.Release1324] = 5_086_800,
-                [CirrusBuriedDeployments.Release1400] = 5_345_325 // 7 December 2022 (Estimated)
+                [PoABuriedDeployments.InterFluxV2MainChain] = 460_000,
+                [PoABuriedDeployments.VotingManagerV2] = 1_683_000, // Tuesday, 12 January 2021 9:00:00 AM (Estimated)
+                [PoABuriedDeployments.ContractSerializerV2] = 3_386_335, // Monday 13 December 16:00:00 (Estimated)
+                [PoABuriedDeployments.Release1100] = 3_426_950, // Monday, 20 December 2021 10:00:00 AM (Estimated)
+                [PoABuriedDeployments.GetMiningTimestampV2] = 3_709_000, // Monday 14 February 00:00:00 (Estimated)
+                [PoABuriedDeployments.GetMiningTimestampV2Strict] = 3_783_000, // Monday 28 February 07:00:00 (London Time) (Estimated)
+                [PoABuriedDeployments.Release1300] = 4_334_400,
+                [PoABuriedDeployments.Release1320] = 4_665_600,
+                [PoABuriedDeployments.Release1324] = 5_086_800,
+                [PoABuriedDeployments.Release1400] = 5_345_325 // 7 December 2022 (Estimated)
             };
 
             var consensusOptions = new PoAConsensusOptions(
@@ -186,7 +186,7 @@ namespace Stratis.Sidechains.Networks
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
                 autoKickIdleMembers: true,
-                contractSerializerV2ActivationHeight: buriedDeployments[CirrusBuriedDeployments.ContractSerializerV2],
+                contractSerializerV2ActivationHeight: buriedDeployments[PoABuriedDeployments.ContractSerializerV2],
                 federationMemberMaxIdleTimeSeconds: 60 * 60 * 24 * 2 // 2 days
             )
             {

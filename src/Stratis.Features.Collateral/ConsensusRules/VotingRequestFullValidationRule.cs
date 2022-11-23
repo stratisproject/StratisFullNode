@@ -75,7 +75,7 @@ namespace Stratis.Features.Collateral.ConsensusRules
             }
 
             // Prohibit re-use of collateral addresses.
-            if (height >= ((PoAConsensusOptions)(this.network.Consensus.Options)).ActivationHeights[(int)PoAActivationHeights.Release1100])
+            if (height >= this.network.Consensus.PoABuriedDeployments(PoABuriedDeployments.Release1100))
             {
                 Script script = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(request.CollateralMainchainAddress);
                 string collateralAddress = script.GetDestinationAddress(this.counterChainNetwork).ToString();

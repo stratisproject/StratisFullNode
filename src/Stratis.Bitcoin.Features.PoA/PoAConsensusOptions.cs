@@ -5,7 +5,7 @@ using NBitcoin;
 
 namespace Stratis.Bitcoin.Features.PoA
 {
-    public enum CirrusBuriedDeployments
+    public enum PoABuriedDeployments
     {
         /// <summary>
         /// This is the height on the main chain at which the dynamic fees paid to the multsig for interop conversion requests will activate.
