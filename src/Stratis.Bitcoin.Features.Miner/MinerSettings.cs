@@ -75,8 +75,7 @@ namespace Stratis.Bitcoin.Features.Miner
         private uint? blockMaxWeight = null;
 
         [CommandLineOption("blockmintxfee", "Set lowest fee rate (in BTC/kvB) for transactions to be included in block creation.")]
-        private uint BlockMinTxFee { get { return this.blockMinTxFee ?? PowMining.DefaultBlockMinTxFee; } set { this.blockMaxWeight = value; } }
-        private uint? blockMinTxFee = null;
+        public uint BlockMinTxFee { get; set; } = PowMining.DefaultBlockMinTxFee;
         
         /// <summary>
         /// Settings for <see cref="BlockDefinition"/>.
