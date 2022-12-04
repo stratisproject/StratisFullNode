@@ -74,6 +74,9 @@ namespace Stratis.Bitcoin.Features.Miner
         private uint BlockMaxWeight { get { return this.blockMaxWeight ?? this.nodeSettings.Network.Consensus.Options.MaxBlockWeight; } set { this.blockMaxWeight = value; } }
         private uint? blockMaxWeight = null;
 
+        [CommandLineOption("blockmintxfee", "Set lowest fee rate (in BTC/kvB) for transactions to be included in block creation.")]
+        public uint BlockMinTxFee { get; set; } = PowMining.DefaultBlockMinTxFee;
+        
         /// <summary>
         /// Settings for <see cref="BlockDefinition"/>.
         /// </summary>
@@ -85,7 +88,7 @@ namespace Stratis.Bitcoin.Features.Miner
         /// <param name="nodeSettings">The node configuration.</param>
         public MinerSettings(NodeSettings nodeSettings) : base(nodeSettings)
         {
-            this.BlockDefinitionOptions = new BlockDefinitionOptions(this.BlockMaxWeight, this.BlockMaxSize).RestrictForNetwork(nodeSettings.Network);
+            this.BlockDefinitionOptions = new BlockDefinitionOptions(this.BlockMaxWeight, this.BlockMaxSize, this.BlockMinTxFee).RestrictForNetwork(nodeSettings.Network);
 
             if (!this.Mine)
                 this.MineAddress = null;

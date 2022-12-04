@@ -20,11 +20,11 @@ namespace Stratis.Bitcoin.Features.Miner
         /// <summary>Minimum fee rate for transactions to be included in blocks created by miner.</summary>
         public FeeRate BlockMinFeeRate { get; private set; }
 
-        public BlockDefinitionOptions(uint blockMaxWeight, uint blockMaxSize)
+        public BlockDefinitionOptions(uint blockMaxWeight, uint blockMaxSize, uint blockMinTxFee)
         {
             this.BlockMaxWeight = blockMaxWeight;
             this.BlockMaxSize = blockMaxSize;
-            this.BlockMinFeeRate = new FeeRate(PowMining.DefaultBlockMinTxFee); // TODO: Where should this be set, really?
+            this.BlockMinFeeRate = new FeeRate(blockMinTxFee);
         }
 
         /// <summary>
@@ -38,6 +38,8 @@ namespace Stratis.Bitcoin.Features.Miner
             uint minAllowedBlockWeight = MinBlockSize * (uint) network.Consensus.Options.WitnessScaleFactor;
             this.BlockMaxWeight = Math.Max(minAllowedBlockWeight, Math.Min(network.Consensus.Options.MaxBlockWeight, this.BlockMaxWeight));
             this.BlockMaxSize = Math.Max(MinBlockSize, Math.Min(network.Consensus.Options.MaxBlockSerializedSize, this.BlockMaxSize));
+
+            // Note: The minimum fee rate is not a consensus parameter; miners can elect to include low or zero-fee transactions if they wish.
 
             return this;
         }
