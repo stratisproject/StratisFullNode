@@ -9,7 +9,7 @@ namespace Stratis.SCL.Crypto
         /// <summary>
         /// Retrieves the address of the signer of an ECDSA signature.
         /// </summary>
-        /// <param name="message"></param>
+        /// <param name="message">The message the signature relates to.</param>
         /// <param name="signature">The ECDSA signature prepended with header information specifying the correct value of recId.</param>
         /// <param name="address">The Address for the signer of a signature.</param>
         /// <returns>A bool representing whether or not the signer was retrieved successfully.</returns>
