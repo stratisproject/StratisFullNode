@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using Stratis.SCL;
 using Stratis.SmartContracts.CLR.Validation.Policy;
 using Stratis.SmartContracts.CLR.Validation.Validators.Instruction;
 using Stratis.SmartContracts.CLR.Validation.Validators.Type;
