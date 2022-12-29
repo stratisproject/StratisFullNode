@@ -12,10 +12,13 @@ namespace Stratis.Bitcoin.Features.RPC.Models
         public uint256 TxId { get; set; }
 
         [JsonProperty(PropertyName = "vout")]
-        public int VOut { get; set; }
+        public uint VOut { get; set; }
 
+        /// <summary>
+        /// If not provided, the sequence in the created transaction will be set to uint.MaxValue by default.
+        /// </summary>
         [JsonProperty(PropertyName = "sequence")]
-        public int Sequence { get; set; }
+        public uint? Sequence { get; set; }
     }
 
     /// <summary>

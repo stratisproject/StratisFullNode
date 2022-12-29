@@ -90,6 +90,48 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                 Assert.Equal(txHash, response.Transaction.Inputs[0].PrevOut.Hash);
                 Assert.Equal(0U, response.Transaction.Inputs[0].PrevOut.N);
 
+                Assert.Equal((Sequence)uint.MaxValue, response.Transaction.Inputs[0].Sequence);
+
+                Assert.Equal(recipient.ScriptPubKey, response.Transaction.Outputs[0].ScriptPubKey);
+                Assert.Equal(amount, response.Transaction.Outputs[0].Value);
+            }
+        }
+
+        [Fact]
+        public void CanCreateRawTransactionWithNonDefaultSequence()
+        {
+            using (NodeBuilder builder = NodeBuilder.Create(this))
+            {
+                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest10Miner).Start();
+
+                // Obtain an arbitrary uint256 to use as a 'transaction' hash (this transaction never needs to exist):
+                uint256 txHash = node.GetTip().HashBlock;
+
+                BitcoinAddress recipient = new Key().PubKey.Hash.GetAddress(node.FullNode.Network);
+                var amount = new Money(0.00012345m, MoneyUnit.BTC);
+
+                CreateRawTransactionResponse response = node.CreateRPCClient().CreateRawTransaction(
+                    new CreateRawTransactionInput[]
+                    {
+                        new CreateRawTransactionInput()
+                        {
+                            TxId = txHash,
+                            VOut = 0,
+                            Sequence = 5
+                        }
+                    },
+                    new List<KeyValuePair<string, string>>()
+                    {
+                        new KeyValuePair<string, string>(recipient.ToString(), amount.ToString()),
+                    });
+
+                Assert.NotNull(response.Transaction);
+
+                Assert.Equal(txHash, response.Transaction.Inputs[0].PrevOut.Hash);
+                Assert.Equal(0U, response.Transaction.Inputs[0].PrevOut.N);
+
+                Assert.Equal((Sequence)5, response.Transaction.Inputs[0].Sequence);
+
                 Assert.Equal(recipient.ScriptPubKey, response.Transaction.Outputs[0].ScriptPubKey);
                 Assert.Equal(amount, response.Transaction.Outputs[0].Value);
             }
