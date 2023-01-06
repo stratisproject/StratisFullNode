@@ -252,7 +252,10 @@ namespace Stratis.Bitcoin.Features.Wallet
                 // If this was not done the transaction deserialisation would attempt to use witness deserialisation and the transaction data would get mangled.
                 rawTx.FromBytes(Encoders.Hex.DecodeData(rawHex), this.Network.Consensus.ConsensusFactory, ProtocolVersion.WITNESS_VERSION - 1);
 
-                WalletAccountReference account = this.GetWalletAccountReference();
+                // It is difficult to combine multiple accounts as a source of funds given the existing transaction building logic.
+                // We would need to essentially run the process multiple times and combine the results if the non-watchonly account fails to provide sufficient funds.
+                // With the class of user expected to use this functionality it makes more sense in the interim to use the watchonly account exclusively if told to do so.
+                WalletAccountReference account = (options?.IncludeWatching ?? false) ? this.GetWatchOnlyWalletAccountReference() : this.GetWalletAccountReference();
 
                 HdAddress changeAddress = null;
 
@@ -262,10 +265,31 @@ namespace Stratis.Bitcoin.Features.Wallet
 
                 if (options?.ChangeAddress != null)
                 {
-                    changeAddress = this.walletManager.GetAllAccounts().SelectMany(a => a.GetCombinedAddresses()).FirstOrDefault(a => a.Address == options?.ChangeAddress);
+                    if (options?.IncludeWatching ?? false)
+                    {
+                        Script changeAddressScriptPubKey = BitcoinAddress.Create(options.ChangeAddress).ScriptPubKey;
+                        bool segwit = changeAddressScriptPubKey.IsScriptType(ScriptType.Witness);
+
+                        // For the watch-only account we need to construct a dummy HdAddress, as the wallet manager may not be able to find the address otherwise.
+                        changeAddress = new HdAddress()
+                        {
+                            Address = !segwit ? options.ChangeAddress : null,
+                            ScriptPubKey = changeAddressScriptPubKey,
+                            Bech32Address = segwit ? options.ChangeAddress : null
+                        };
+                    }
+                    else
+                    {
+                        changeAddress = this.walletManager.GetAllAccounts().SelectMany(a => a.GetCombinedAddresses()).FirstOrDefault(a => a.Address == options.ChangeAddress);
+                    }
                 }
                 else
                 {
+                    if (options?.IncludeWatching ?? false)
+                    {
+                        throw new RPCServerException(RPCErrorCode.RPC_WALLET_ERROR, "A change address needs to be specified when using watch-only funds");
+                    }
+
                     changeAddress = this.walletManager.GetUnusedChangeAddress(account);
                 }
 
@@ -284,6 +308,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                     Shuffle = false,
                     UseSegwitChangeAddress = changeAddress != null && (options?.ChangeAddress == changeAddress.Bech32Address),
 
+                    // Signing is deferred until the signrawtransaction RPC is called.
                     Sign = false
                 };
 

@@ -1,8 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
 using NBitcoin.DataEncoders;
-using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.RPC.Models;
 using Stratis.Bitcoin.Features.Wallet;
@@ -409,6 +409,93 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                 
                 // Check that the value of the change in the specified position is the expected value.
                 Assert.Equal(totalInputs - totalSent - fee, funded.Transaction.Outputs[funded.ChangePos].Value);
+            }
+        }
+
+        [Fact]
+        public void CanFundRawTransactionWithIncludeWatchingSpecified()
+        {
+            using (NodeBuilder builder = NodeBuilder.Create(this))
+            {
+                CoreNode nodeWithWallet = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
+
+                UnspentCoin[] unspent = nodeWithWallet.CreateRPCClient().ListUnspent(10, Int32.MaxValue);
+
+                string pubKey = nodeWithWallet.FullNode.WalletManager().GetPubKey("mywallet", unspent[0].Address.ToString());
+
+                // Watch-only wallet node.
+                // Need a wallet to exist for importpubkey to work, or alternatively a default wallet needs to be configured.
+                var configParams = new NodeConfigParameters
+                {
+                    { "-defaultwalletname", "test" },
+                    { "-defaultwalletpassword", "testpassword" },
+                    { "-unlockdefaultwallet", "1" }
+                };
+
+                CoreNode nodeWithWatchOnly = builder.CreateStratisPosNode(this.network, configParameters: configParams).Start();
+
+                nodeWithWatchOnly.CreateRPCClient().ImportPubKey(pubKey);
+
+                TestHelper.ConnectAndSync(nodeWithWallet, nodeWithWatchOnly);
+                
+                var tx = this.network.CreateTransaction();
+                var dest = new Key().ScriptPubKey;
+                tx.Outputs.Add(new TxOut(Money.Coins(1.0m), dest));
+                
+                string changeAddress = new Key().PubKey.GetAddress(this.network).ToString();
+
+                var options = new FundRawTransactionOptions()
+                {
+                    ChangeAddress = BitcoinAddress.Create(changeAddress, this.network).ToString(),
+                    IncludeWatching = true
+                };
+
+                FundRawTransactionResponse funded = nodeWithWatchOnly.CreateRPCClient().FundRawTransaction(tx, options);
+
+                Money fee = CheckFunding(nodeWithWatchOnly, funded.Transaction);
+
+                Assert.Equal(new Money(this.network.MinRelayTxFee), fee);
+                Assert.True(funded.ChangePos > -1);
+            }
+        }
+
+        [Fact]
+        public void CannotFundRawTransactionWithIncludeWatchingSpecifiedAndNoChangeAddress()
+        {
+            using (NodeBuilder builder = NodeBuilder.Create(this))
+            {
+                CoreNode nodeWithWallet = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
+
+                UnspentCoin[] unspent = nodeWithWallet.CreateRPCClient().ListUnspent(10, Int32.MaxValue);
+
+                string pubKey = nodeWithWallet.FullNode.WalletManager().GetPubKey("mywallet", unspent[0].Address.ToString());
+
+                // Watch-only wallet node.
+                // Need a wallet to exist for importpubkey to work, or alternatively a default wallet needs to be configured.
+                var configParams = new NodeConfigParameters
+                {
+                    { "-defaultwalletname", "test" },
+                    { "-defaultwalletpassword", "testpassword" },
+                    { "-unlockdefaultwallet", "1" }
+                };
+
+                CoreNode nodeWithWatchOnly = builder.CreateStratisPosNode(this.network, configParameters: configParams).Start();
+
+                nodeWithWatchOnly.CreateRPCClient().ImportPubKey(pubKey);
+
+                TestHelper.ConnectAndSync(nodeWithWallet, nodeWithWatchOnly);
+
+                var tx = this.network.CreateTransaction();
+                var dest = new Key().ScriptPubKey;
+                tx.Outputs.Add(new TxOut(Money.Coins(1.0m), dest));
+
+                var options = new FundRawTransactionOptions()
+                {
+                    ChangeAddress = null,
+                    IncludeWatching = true
+                };
+
+                Assert.Throws<RPCException>(() => nodeWithWatchOnly.CreateRPCClient().FundRawTransaction(tx, options));
             }
         }
 
