@@ -235,6 +235,73 @@ namespace Stratis.Bitcoin.Features.Wallet
             }
         }
 
+        [ActionName("createrawtransaction")]
+        [ActionDescription("Create a transaction spending the given inputs and creating new outputs.")]
+        public Task<CreateRawTransactionResponse> CreateRawTransactionAsync(CreateRawTransactionInput[] inputs, CreateRawTransactionOutput[] outputs, int locktime = 0, bool replaceable = false)
+        {
+            try
+            {
+                if (locktime != 0)
+                    throw new RPCServerException(RPCErrorCode.RPC_INVALID_PARAMETER, "Setting input locktime is currently not supported");
+
+                if (replaceable)
+                    throw new RPCServerException(RPCErrorCode.RPC_INVALID_PARAMETER, "Replaceable transactions are currently not supported");
+                
+                Transaction rawTx = this.Network.CreateTransaction();
+
+                foreach (CreateRawTransactionInput input in inputs)
+                {
+                    rawTx.AddInput(new TxIn()
+                    {
+                        PrevOut = new OutPoint(input.TxId, input.VOut),
+                        Sequence = input.Sequence ?? uint.MaxValue
+                        // Since this is a raw unsigned transaction, ScriptSig and WitScript must not be populated.
+                    });
+                }
+
+                bool dataSeen = false;
+
+                foreach (CreateRawTransactionOutput output in outputs)
+                {
+                    if (output.Key == "data")
+                    {
+                        if (dataSeen)
+                            throw new RPCServerException(RPCErrorCode.RPC_INVALID_PARAMETER, "Only one data output can be specified");
+
+                        dataSeen = true;
+
+                        byte[] data = Encoders.Hex.DecodeData(output.Value);
+
+                        rawTx.AddOutput(new TxOut
+                        {
+                            ScriptPubKey = TxNullDataTemplate.Instance.GenerateScriptPubKey(new []{ data }),
+                            Value = 0
+                        });
+
+                        continue;
+                    }
+
+                    var address = BitcoinAddress.Create(output.Key, this.Network);
+                    var amount = Money.Parse(output.Value);
+
+                    rawTx.AddOutput(new TxOut
+                    {
+                        ScriptPubKey = address.ScriptPubKey,
+                        Value = amount
+                    });
+                }
+
+                return Task.FromResult(new CreateRawTransactionResponse()
+                {
+                    Transaction = rawTx
+                });
+            }
+            catch (WalletException exception)
+            {
+                throw new RPCServerException(RPCErrorCode.RPC_WALLET_ERROR, exception.Message);
+            }
+        }
+
         [ActionName("fundrawtransaction")]
         [ActionDescription("Add inputs to a transaction until it has enough in value to meet its out value. Note that signing is performed separately.")]
         public Task<FundRawTransactionResponse> FundRawTransactionAsync(string rawHex, FundRawTransactionOptions options = null, bool? isWitness = null)
