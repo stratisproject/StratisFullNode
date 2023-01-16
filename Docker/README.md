@@ -31,7 +31,7 @@ docker run --mount source=stratisfullnode,target=/root/.stratisnode -it <contain
 
 ## Optionally forward ports from your localhost to the docker image
 
-When running the image, add a `-p <containerPort>:<localPort>` to formward the ports:
+When running the image, add a `-p <containerPort>:<localPort>` to forward the ports:
 
 ```
 docker run -p 17105:17105 -it <containerId>
@@ -42,20 +42,14 @@ docker run -p 17105:17105 -it <containerId>
 docker build . --no-cache 
 ```
 
-## Run image on the MainNet rather than the TestNet. 
+## Run image with modified configuration options
 
-Modify the Dockerfile to put the conf file in the right location and remove the "-testnet" from the run statement. 
+Modify the Dockerfile to put the conf file in the right location and modify/uncomment the settings as needed.
+The path shown below is for StraxMain, other networks will require a modified path:
 
 ``` 
 ---
 
 COPY strax.conf.docker /root/.stratisnode/strax/StraxMain/strax.conf
 
---- 
-
-CMD ["dotnet", "run"]
-
 ``` 
-
-Also remove `testnet=1` from the `*.docker.conf` file.
-
