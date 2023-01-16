@@ -7,12 +7,10 @@ using System.Threading.Tasks;
 using NBitcoin;
 using Newtonsoft.Json.Linq;
 using Stratis.Bitcoin.Features.RPC;
+using Stratis.Bitcoin.Features.RPC.Models;
 using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
-using Stratis.Bitcoin.Networks;
-using Stratis.Bitcoin.Networks.Deployments;
 using Stratis.Bitcoin.Tests.Common;
-using Stratis.Bitcoin.Utilities.Extensions;
 using Xunit;
 
 namespace Stratis.Bitcoin.IntegrationTests.RPC
@@ -161,6 +159,70 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
         }
 
         [Fact]
+        public void CanCreateRawTransactionWithInput()
+        {
+            using (NodeBuilder builder = NodeBuilder.Create(this))
+            {
+                CoreNode node = builder.CreateBitcoinCoreNode(version: "0.18.0", useNewConfigStyle: true).Start();
+
+                CoreNode sfn = builder.CreateStratisPowNode(this.regTest).WithWallet().Start();
+
+                TestHelper.ConnectAndSync(node, sfn);
+
+                RPCClient rpcClient = node.CreateRPCClient();
+                RPCClient sfnRpc = sfn.CreateRPCClient();
+
+                // Need one block per node so they can each fund a transaction.
+                rpcClient.Generate(1);
+
+                TestHelper.ConnectAndSync(node, sfn);
+
+                sfnRpc.Generate(1);
+
+                TestHelper.ConnectAndSync(node, sfn);
+
+                // And then enough blocks mined on top for the coinbases to mature.
+                rpcClient.Generate(101);
+
+                TestHelper.ConnectAndSync(node, sfn);
+
+                Key dest = new Key();
+
+                var tx = rpcClient.CreateRawTransaction(new CreateRawTransactionInput[]
+                    {
+                        new CreateRawTransactionInput()
+                        {
+                            TxId = uint256.One,
+                            VOut = 2
+                        }
+                    },
+                    new List<KeyValuePair<string, string>>()
+                {
+                    new KeyValuePair<string, string>(dest.PubKey.GetAddress(this.regTest).ToString(), "1")
+                });
+                
+                Assert.NotNull(tx);
+
+                var tx2 = sfnRpc.CreateRawTransaction(new CreateRawTransactionInput[]
+                    {
+                        new CreateRawTransactionInput()
+                        {
+                            TxId = uint256.One,
+                            VOut = 2
+                        }
+                    },
+                    new List<KeyValuePair<string, string>>()
+                    {
+                        new KeyValuePair<string, string>(dest.PubKey.GetAddress(this.regTest).ToString(), "1")
+                    });
+
+                Assert.NotNull(tx2);
+
+                Assert.True(tx.GetHash() == tx2.GetHash());
+            }
+        }
+
+        [Fact]
         public void CanSignRawTransaction()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
@@ -188,8 +250,11 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
 
                 TestHelper.ConnectAndSync(node, sfn);
 
-                var tx = new Transaction();
-                tx.Outputs.Add(new TxOut(Money.Coins(1.0m), new Key()));
+                var tx = rpcClient.CreateRawTransaction(new CreateRawTransactionInput[] {}, new List<KeyValuePair<string, string>>()
+                {
+                    new KeyValuePair<string, string>((new Key()).PubKey.GetAddress(this.regTest).ToString(), "1")
+                });
+
                 FundRawTransactionResponse funded = rpcClient.FundRawTransaction(tx);
 
                 // signrawtransaction was removed in 0.18. So just use its equivalent so that we can test SFN's ability to call signrawtransaction.
