@@ -137,12 +137,12 @@ namespace Stratis.Bitcoin.Features.RPC
             return response.Result.Select(t => this.Network.Parse<BitcoinAddress>((string)t));
         }
 
-        public CreateRawTransactionResponse CreateRawTransaction(CreateRawTransactionInput[] inputs, List<KeyValuePair<string,string>> outputs, int locktime = 0, bool replaceable = false)
+        public Transaction CreateRawTransaction(CreateRawTransactionInput[] inputs, List<KeyValuePair<string,string>> outputs, int locktime = 0, bool replaceable = false)
         {
             return CreateRawTransactionAsync(inputs, outputs, locktime, replaceable).GetAwaiter().GetResult();
         }
 
-        public async Task<CreateRawTransactionResponse> CreateRawTransactionAsync(CreateRawTransactionInput[] inputs, List<KeyValuePair<string, string>> outputs, int locktime = 0, bool replaceable = false)
+        public async Task<Transaction> CreateRawTransactionAsync(CreateRawTransactionInput[] inputs, List<KeyValuePair<string, string>> outputs, int locktime = 0, bool replaceable = false)
         {
             var jOutputs = new JArray();
 
@@ -167,12 +167,7 @@ namespace Stratis.Bitcoin.Features.RPC
 
             RPCResponse response = await SendCommandAsync(RPCOperations.createrawtransaction, inputs, jOutputs, locktime, replaceable).ConfigureAwait(false);
 
-            var r = (JObject)response.Result;
-
-            return new CreateRawTransactionResponse()
-            {
-                Transaction = this.network.CreateTransaction(r["hex"].Value<string>())
-            };
+            return this.network.CreateTransaction(response.ResultString, ProtocolVersion.WITNESS_VERSION - 1);
         }
 
         public FundRawTransactionResponse FundRawTransaction(Transaction transaction, FundRawTransactionOptions options = null, bool? isWitness = null)

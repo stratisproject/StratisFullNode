@@ -71,7 +71,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                 BitcoinAddress recipient = new Key().PubKey.Hash.GetAddress(node.FullNode.Network);
                 var amount = new Money(0.00012345m, MoneyUnit.BTC);
 
-                CreateRawTransactionResponse response = node.CreateRPCClient().CreateRawTransaction(
+                Transaction response = node.CreateRPCClient().CreateRawTransaction(
                 new CreateRawTransactionInput[] 
                 { 
                     new CreateRawTransactionInput()
@@ -85,15 +85,15 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                     new KeyValuePair<string, string>(recipient.ToString(), amount.ToString()),
                 });
 
-                Assert.NotNull(response.Transaction);
+                Assert.NotNull(response);
 
-                Assert.Equal(txHash, response.Transaction.Inputs[0].PrevOut.Hash);
-                Assert.Equal(0U, response.Transaction.Inputs[0].PrevOut.N);
+                Assert.Equal(txHash, response.Inputs[0].PrevOut.Hash);
+                Assert.Equal(0U, response.Inputs[0].PrevOut.N);
 
-                Assert.Equal((Sequence)uint.MaxValue, response.Transaction.Inputs[0].Sequence);
+                Assert.Equal((Sequence)uint.MaxValue, response.Inputs[0].Sequence);
 
-                Assert.Equal(recipient.ScriptPubKey, response.Transaction.Outputs[0].ScriptPubKey);
-                Assert.Equal(amount, response.Transaction.Outputs[0].Value);
+                Assert.Equal(recipient.ScriptPubKey, response.Outputs[0].ScriptPubKey);
+                Assert.Equal(amount, response.Outputs[0].Value);
             }
         }
 
@@ -110,7 +110,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                 BitcoinAddress recipient = new Key().PubKey.Hash.GetAddress(node.FullNode.Network);
                 var amount = new Money(0.00012345m, MoneyUnit.BTC);
 
-                CreateRawTransactionResponse response = node.CreateRPCClient().CreateRawTransaction(
+                Transaction response = node.CreateRPCClient().CreateRawTransaction(
                     new CreateRawTransactionInput[]
                     {
                         new CreateRawTransactionInput()
@@ -125,15 +125,15 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                         new KeyValuePair<string, string>(recipient.ToString(), amount.ToString()),
                     });
 
-                Assert.NotNull(response.Transaction);
+                Assert.NotNull(response);
 
-                Assert.Equal(txHash, response.Transaction.Inputs[0].PrevOut.Hash);
-                Assert.Equal(0U, response.Transaction.Inputs[0].PrevOut.N);
+                Assert.Equal(txHash, response.Inputs[0].PrevOut.Hash);
+                Assert.Equal(0U, response.Inputs[0].PrevOut.N);
 
-                Assert.Equal((Sequence)5, response.Transaction.Inputs[0].Sequence);
+                Assert.Equal((Sequence)5, response.Inputs[0].Sequence);
 
-                Assert.Equal(recipient.ScriptPubKey, response.Transaction.Outputs[0].ScriptPubKey);
-                Assert.Equal(amount, response.Transaction.Outputs[0].Value);
+                Assert.Equal(recipient.ScriptPubKey, response.Outputs[0].ScriptPubKey);
+                Assert.Equal(amount, response.Outputs[0].Value);
             }
         }
 
@@ -150,7 +150,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                 BitcoinAddress recipient = new Key().PubKey.Hash.GetAddress(node.FullNode.Network);
                 var amount = new Money(0.00012345m, MoneyUnit.BTC);
 
-                CreateRawTransactionResponse response = node.CreateRPCClient().CreateRawTransaction(
+                Transaction response = node.CreateRPCClient().CreateRawTransaction(
                     new CreateRawTransactionInput[]
                     {
                         new CreateRawTransactionInput()
@@ -165,18 +165,18 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                         new KeyValuePair<string, string>("data", "0011223344")
                     });
 
-                Assert.NotNull(response.Transaction);
+                Assert.NotNull(response);
 
-                Assert.Equal(txHash, response.Transaction.Inputs[0].PrevOut.Hash);
-                Assert.Equal(0U, response.Transaction.Inputs[0].PrevOut.N);
+                Assert.Equal(txHash, response.Inputs[0].PrevOut.Hash);
+                Assert.Equal(0U, response.Inputs[0].PrevOut.N);
 
-                Assert.Equal(recipient.ScriptPubKey, response.Transaction.Outputs[0].ScriptPubKey);
-                Assert.Equal(amount, response.Transaction.Outputs[0].Value);
+                Assert.Equal(recipient.ScriptPubKey, response.Outputs[0].ScriptPubKey);
+                Assert.Equal(amount, response.Outputs[0].Value);
 
-                Assert.True(response.Transaction.Outputs[1].ScriptPubKey.IsUnspendable);
-                Assert.Equal(0, response.Transaction.Outputs[1].Value);
+                Assert.True(response.Outputs[1].ScriptPubKey.IsUnspendable);
+                Assert.Equal(0, response.Outputs[1].Value);
 
-                byte[][] extracted = TxNullDataTemplate.Instance.ExtractScriptPubKeyParameters(response.Transaction.Outputs[1].ScriptPubKey);
+                byte[][] extracted = TxNullDataTemplate.Instance.ExtractScriptPubKeyParameters(response.Outputs[1].ScriptPubKey);
                 byte[] opReturn = extracted[0];
 
                 string opReturnHexString = Encoders.Hex.EncodeData(opReturn);
@@ -198,7 +198,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                 BitcoinAddress recipient = new Key().PubKey.Hash.GetAddress(node.FullNode.Network);
                 var amount = new Money(0.00012345m, MoneyUnit.BTC);
 
-                CreateRawTransactionResponse response = node.CreateRPCClient().CreateRawTransaction(
+                Transaction response = node.CreateRPCClient().CreateRawTransaction(
                     new CreateRawTransactionInput[]
                     {
                         new CreateRawTransactionInput()
@@ -212,15 +212,15 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                         new KeyValuePair<string, string>("data", "0011223344")
                     });
 
-                Assert.NotNull(response.Transaction);
+                Assert.NotNull(response);
 
-                Assert.Equal(txHash, response.Transaction.Inputs[0].PrevOut.Hash);
-                Assert.Equal(0U, response.Transaction.Inputs[0].PrevOut.N);
+                Assert.Equal(txHash, response.Inputs[0].PrevOut.Hash);
+                Assert.Equal(0U, response.Inputs[0].PrevOut.N);
 
-                Assert.True(response.Transaction.Outputs[0].ScriptPubKey.IsUnspendable);
-                Assert.Equal(0, response.Transaction.Outputs[0].Value);
+                Assert.True(response.Outputs[0].ScriptPubKey.IsUnspendable);
+                Assert.Equal(0, response.Outputs[0].Value);
 
-                byte[][] extracted = TxNullDataTemplate.Instance.ExtractScriptPubKeyParameters(response.Transaction.Outputs[0].ScriptPubKey);
+                byte[][] extracted = TxNullDataTemplate.Instance.ExtractScriptPubKeyParameters(response.Outputs[0].ScriptPubKey);
                 byte[] opReturn = extracted[0];
 
                 string opReturnHexString = Encoders.Hex.EncodeData(opReturn);
@@ -239,7 +239,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                 BitcoinAddress recipient = new Key().PubKey.Hash.GetAddress(node.FullNode.Network);
                 var amount = new Money(0.00012345m, MoneyUnit.BTC);
 
-                CreateRawTransactionResponse response = node.CreateRPCClient().CreateRawTransaction(
+                Transaction response = node.CreateRPCClient().CreateRawTransaction(
                     new CreateRawTransactionInput[]
                     {
                     },
@@ -249,15 +249,15 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                         new KeyValuePair<string, string>("data", "0011223344")
                     });
 
-                Assert.NotNull(response.Transaction);
+                Assert.NotNull(response);
 
-                Assert.Empty(response.Transaction.Inputs);
+                Assert.Empty(response.Inputs);
 
-                Assert.Equal(recipient.ScriptPubKey, response.Transaction.Outputs[0].ScriptPubKey);
-                Assert.Equal(amount, response.Transaction.Outputs[0].Value);
+                Assert.Equal(recipient.ScriptPubKey, response.Outputs[0].ScriptPubKey);
+                Assert.Equal(amount, response.Outputs[0].Value);
 
-                Assert.True(response.Transaction.Outputs[1].ScriptPubKey.IsUnspendable);
-                Assert.Equal(0, response.Transaction.Outputs[1].Value);
+                Assert.True(response.Outputs[1].ScriptPubKey.IsUnspendable);
+                Assert.Equal(0, response.Outputs[1].Value);
             }
         }
 
@@ -271,7 +271,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                 // Obtain an arbitrary uint256 to use as a 'transaction' hash (this transaction never needs to exist):
                 uint256 txHash = node.GetTip().HashBlock;
 
-                CreateRawTransactionResponse response = node.CreateRPCClient().CreateRawTransaction(
+                Transaction response = node.CreateRPCClient().CreateRawTransaction(
                     new CreateRawTransactionInput[]
                     {
                         new CreateRawTransactionInput()
@@ -284,12 +284,12 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                     {
                     });
 
-                Assert.NotNull(response.Transaction);
+                Assert.NotNull(response);
 
-                Assert.Equal(txHash, response.Transaction.Inputs[0].PrevOut.Hash);
-                Assert.Equal(0U, response.Transaction.Inputs[0].PrevOut.N);
+                Assert.Equal(txHash, response.Inputs[0].PrevOut.Hash);
+                Assert.Equal(0U, response.Inputs[0].PrevOut.N);
 
-                Assert.Empty(response.Transaction.Outputs);
+                Assert.Empty(response.Outputs);
             }
         }
 
@@ -300,7 +300,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
             {
                 CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest10Miner).Start();
                 
-                CreateRawTransactionResponse response = node.CreateRPCClient().CreateRawTransaction(
+                Transaction response = node.CreateRPCClient().CreateRawTransaction(
                     new CreateRawTransactionInput[]
                     {
                     },
@@ -308,10 +308,10 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                     {
                     });
 
-                Assert.NotNull(response.Transaction);
+                Assert.NotNull(response);
 
-                Assert.Empty(response.Transaction.Inputs);
-                Assert.Empty(response.Transaction.Outputs);
+                Assert.Empty(response.Inputs);
+                Assert.Empty(response.Outputs);
             }
         }
 
@@ -572,7 +572,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                 BitcoinAddress recipient = new Key().PubKey.Hash.GetAddress(node.FullNode.Network);
                 var amount = new Money(0.00012345m, MoneyUnit.BTC);
 
-                CreateRawTransactionResponse response = node.CreateRPCClient().CreateRawTransaction(
+                Transaction response = node.CreateRPCClient().CreateRawTransaction(
                     new CreateRawTransactionInput[]
                     {
                     },
@@ -582,24 +582,24 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                         new KeyValuePair<string, string>("data", "0011223344")
                     });
 
-                Assert.NotNull(response.Transaction);
+                Assert.NotNull(response);
 
-                Assert.Empty(response.Transaction.Inputs);
+                Assert.Empty(response.Inputs);
 
-                Assert.Equal(recipient.ScriptPubKey, response.Transaction.Outputs[0].ScriptPubKey);
-                Assert.Equal(amount, response.Transaction.Outputs[0].Value);
+                Assert.Equal(recipient.ScriptPubKey, response.Outputs[0].ScriptPubKey);
+                Assert.Equal(amount, response.Outputs[0].Value);
 
-                Assert.True(response.Transaction.Outputs[1].ScriptPubKey.IsUnspendable);
-                Assert.Equal(0, response.Transaction.Outputs[1].Value);
+                Assert.True(response.Outputs[1].ScriptPubKey.IsUnspendable);
+                Assert.Equal(0, response.Outputs[1].Value);
 
-                byte[][] extracted = TxNullDataTemplate.Instance.ExtractScriptPubKeyParameters(response.Transaction.Outputs[1].ScriptPubKey);
+                byte[][] extracted = TxNullDataTemplate.Instance.ExtractScriptPubKeyParameters(response.Outputs[1].ScriptPubKey);
                 byte[] opReturn = extracted[0];
 
                 string opReturnHexString = Encoders.Hex.EncodeData(opReturn);
 
                 Assert.Equal("0011223344", opReturnHexString);
 
-                FundRawTransactionResponse funded = node.CreateRPCClient().FundRawTransaction(response.Transaction);
+                FundRawTransactionResponse funded = node.CreateRPCClient().FundRawTransaction(response);
 
                 Money fee = CheckFunding(node, funded.Transaction);
 
