@@ -218,6 +218,9 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
 
                 Assert.NotNull(tx2);
 
+                // TODO: Need to verify our adherence to BIP68 (https://github.com/bitcoin/bips/blob/master/bip-0068.mediawiki#specification). But in the meantime the raw transaction we produce is identical to bitcoind except for the version field.
+                tx2.Version = 2;
+                
                 Assert.True(tx.GetHash() == tx2.GetHash());
             }
         }
