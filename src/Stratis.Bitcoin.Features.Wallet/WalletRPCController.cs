@@ -173,7 +173,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
         [ActionName("createrawtransaction")]
         [ActionDescription("Create a transaction spending the given inputs and creating new outputs.")]
-        public Task<CreateRawTransactionResponse> CreateRawTransactionAsync(CreateRawTransactionInput[] inputs, CreateRawTransactionOutput[] outputs, int locktime = 0, bool replaceable = false)
+        public async Task<TransactionModel> CreateRawTransactionAsync(CreateRawTransactionInput[] inputs, CreateRawTransactionOutput[] outputs, int locktime = 0, bool replaceable = false)
         {
             try
             {
@@ -182,7 +182,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
                 if (replaceable)
                     throw new RPCServerException(RPCErrorCode.RPC_INVALID_PARAMETER, "Replaceable transactions are currently not supported");
-                
+
                 Transaction rawTx = this.Network.CreateTransaction();
 
                 foreach (CreateRawTransactionInput input in inputs)
@@ -210,7 +210,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
                         rawTx.AddOutput(new TxOut
                         {
-                            ScriptPubKey = TxNullDataTemplate.Instance.GenerateScriptPubKey(new []{ data }),
+                            ScriptPubKey = TxNullDataTemplate.Instance.GenerateScriptPubKey(new[] { data }),
                             Value = 0
                         });
 
@@ -227,10 +227,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                     });
                 }
 
-                return Task.FromResult(new CreateRawTransactionResponse()
-                {
-                    Transaction = rawTx
-                });
+                return new TransactionBriefModel(rawTx);
             }
             catch (WalletException exception)
             {

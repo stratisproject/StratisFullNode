@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using NBitcoin.DataEncoders;
+using NBitcoin.Protocol;
 
 namespace NBitcoin
 {
@@ -175,6 +176,17 @@ namespace NBitcoin
         {
             var transaction = new Transaction();
             transaction.FromBytes(Encoders.Hex.DecodeData(hex));
+            return transaction;
+        }
+
+        /// <summary>
+        /// Create a <see cref="Transaction"/> instance from a hex string representation.
+        /// Allows the protocol version to be overridden from the node's default.
+        /// </summary>
+        public virtual Transaction CreateTransaction(string hex, ProtocolVersion protocolVersion)
+        {
+            var transaction = new Transaction();
+            transaction.FromBytes(Encoders.Hex.DecodeData(hex), protocolVersion);
             return transaction;
         }
 

@@ -33,10 +33,4 @@ namespace Stratis.Bitcoin.Features.RPC.Models
             [JsonProperty]
             public string Value { get; set; }
     }
-
-    public class CreateRawTransactionResponse
-    {
-        [JsonProperty(PropertyName = "hex")]
-        public Transaction Transaction { get; set; }
-    }
 }
