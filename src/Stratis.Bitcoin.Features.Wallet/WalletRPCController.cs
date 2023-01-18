@@ -173,7 +173,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
         [ActionName("createrawtransaction")]
         [ActionDescription("Create a transaction spending the given inputs and creating new outputs.")]
-        public Task<string> CreateRawTransactionAsync(CreateRawTransactionInput[] inputs, CreateRawTransactionOutput[] outputs, int locktime = 0, bool replaceable = false)
+        public async Task<TransactionModel> CreateRawTransactionAsync(CreateRawTransactionInput[] inputs, CreateRawTransactionOutput[] outputs, int locktime = 0, bool replaceable = false)
         {
             try
             {
@@ -227,7 +227,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                     });
                 }
 
-                return Task.FromResult(rawTx.ToHex(ProtocolVersion.WITNESS_VERSION - 1));
+                return new TransactionBriefModel(rawTx);
             }
             catch (WalletException exception)
             {

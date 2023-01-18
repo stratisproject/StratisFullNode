@@ -250,22 +250,6 @@ namespace Stratis.Bitcoin.Features.RPC
                 responseMemoryStream.Position = 0;
                 using (var streamReader = new StreamReader(responseMemoryStream))
                 {
-                    string jsonString = await streamReader.ReadToEndAsync().ConfigureAwait(false);
-
-                    // This is an extremely ugly hack, but not every RPC response body is actually valid JSON, so we are forced to check.
-                    if (!jsonString.Contains("{"))
-                    {
-                        response = new JObject();
-                        response["result"] = jsonString;
-
-                        if (requestObj.ContainsKey("id"))
-                            response["id"] = requestObj["id"];
-
-                        return response;
-                    }
-
-                    responseMemoryStream.Position = 0;
-
                     using (var textReader = new JsonTextReader(streamReader))
                     {
                         // Ensure floats are parsed as decimals and not as doubles.

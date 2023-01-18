@@ -226,6 +226,51 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
         }
 
         [Fact]
+        public void CanCreateRawTransactionWithoutInput()
+        {
+            using (NodeBuilder builder = NodeBuilder.Create(this))
+            {
+                CoreNode node = builder.CreateBitcoinCoreNode(version: "0.18.0", useNewConfigStyle: true).Start();
+
+                CoreNode sfn = builder.CreateStratisPowNode(this.regTest).WithWallet().Start();
+
+                TestHelper.ConnectAndSync(node, sfn);
+
+                RPCClient rpcClient = node.CreateRPCClient();
+                RPCClient sfnRpc = sfn.CreateRPCClient();
+                
+                TestHelper.ConnectAndSync(node, sfn);
+
+                Key dest = new Key();
+
+                var tx = rpcClient.CreateRawTransaction(new CreateRawTransactionInput[]
+                    {
+                    },
+                    new List<KeyValuePair<string, string>>()
+                {
+                    new KeyValuePair<string, string>(dest.PubKey.GetAddress(this.regTest).ToString(), "1")
+                });
+
+                Assert.NotNull(tx);
+
+                var tx2 = sfnRpc.CreateRawTransaction(new CreateRawTransactionInput[]
+                    {
+                    },
+                    new List<KeyValuePair<string, string>>()
+                    {
+                        new KeyValuePair<string, string>(dest.PubKey.GetAddress(this.regTest).ToString(), "1")
+                    });
+
+                Assert.NotNull(tx2);
+
+                // TODO: Need to verify our adherence to BIP68 (https://github.com/bitcoin/bips/blob/master/bip-0068.mediawiki#specification). But in the meantime the raw transaction we produce is identical to bitcoind except for the version field.
+                tx2.Version = 2;
+
+                Assert.True(tx.GetHash() == tx2.GetHash());
+            }
+        }
+
+        [Fact]
         public void CanSignRawTransaction()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
