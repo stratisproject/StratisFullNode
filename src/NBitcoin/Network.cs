@@ -984,6 +984,11 @@ namespace NBitcoin
             return this.Consensus.ConsensusFactory.CreateTransaction(hex);
         }
 
+        public Transaction CreateTransaction(string hex, ProtocolVersion protocolVersion)
+        {
+            return this.Consensus.ConsensusFactory.CreateTransaction(hex, protocolVersion);
+        }
+
         public Transaction CreateTransaction(byte[] bytes)
         {
             return this.Consensus.ConsensusFactory.CreateTransaction(bytes);
