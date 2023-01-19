@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Stratis.SCL;
 using Stratis.SmartContracts.Standards;
 
 namespace Stratis.SmartContracts.CLR.Compilation
@@ -23,7 +24,8 @@ namespace Stratis.SmartContracts.CLR.Compilation
                 Core, 
                 typeof(SmartContract).Assembly, 
                 typeof(Enumerable).Assembly,
-                typeof(IStandardToken).Assembly
+                typeof(IStandardToken).Assembly,
+                typeof(SCL.Base.Operations).Assembly
             };
     }
 }
