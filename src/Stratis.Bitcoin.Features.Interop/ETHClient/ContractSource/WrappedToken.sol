@@ -6,10 +6,10 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.3.0/contr
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.3.0/contracts/token/ERC20/ERC20.sol";
 
 contract WrappedToken is ERC20, Ownable {
-    mapping (address => string) public withdrawalAddresses;
+    mapping (string => string) public withdrawalAddresses;
     mapping (address => bool) public _isBlacklisted;
     
-    constructor(string tokenName, string tokenSymbol, uint256 initialSupply) public ERC20(tokenName, tokenSymbol) {
+    constructor(string memory tokenName, string memory tokenSymbol, uint256 initialSupply) public ERC20(tokenName, tokenSymbol) {
         _mint(msg.sender, initialSupply);
     }
     
