@@ -20,8 +20,14 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient2
         {
         }
 
-        [Parameter("uint256", "totalSupply")]
-        public BigInteger TotalSupply { get; set; }
+		[Parameter("string", "tokenName")]
+		public string TokenName { get; set; }
+
+        [Parameter("string", "tokenSymbol")]
+        public string TokenSymbol { get; set; }
+
+        [Parameter("uint256", "initialSupply")]
+        public BigInteger InitialSupply { get; set; }
     }
 
     [Function("balanceOf", "uint256")]
