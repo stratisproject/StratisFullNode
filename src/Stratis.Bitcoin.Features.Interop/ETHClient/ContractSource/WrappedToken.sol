@@ -61,13 +61,13 @@ contract WrappedToken is ERC20, Ownable {
         withdrawalAddresses[key] = tokenAddress;
     }
 
-    function addToBlackList(address[] calldata addresses) public onlyOwner {
+    function addToBlackList(address[] calldata addresses) external onlyOwner {
         for (uint256 i; i < addresses.length; ++i) {
             _isBlacklisted[addresses[i]] = true;
         }
     }
 
-    function removeFromBlackList(address account) public onlyOwner {
+    function removeFromBlackList(address account) external onlyOwner {
         _isBlacklisted[account] = false;
     }
 
