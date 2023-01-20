@@ -55,7 +55,19 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                     case TxOutType.TX_SEGWIT:
                         TxDestination txDestination = PayToWitTemplate.Instance.ExtractScriptPubKeyParameters(this.network, redeemScript);
                         if (txDestination != null)
-                            yield return new KeyId(txDestination.ToBytes());
+                        {
+                            if (txDestination.ToBytes().Length == 20)
+                            {
+                                yield return PayToWitPubKeyHashTemplate.Instance.ExtractScriptPubKeyParameters(this.network, redeemScript);
+                            }
+                            else if (txDestination.ToBytes().Length == 32)
+                            {
+                                yield return PayToWitScriptHashTemplate.Instance.ExtractScriptPubKeyParameters(this.network, redeemScript);
+                            }
+
+                            // This should not happen, segwit scripts should generally only have one of the two valid lengths.
+                            yield return txDestination;
+                        }
                         break;
                     default:
                         if (this.scriptAddressReader is ScriptDestinationReader scriptDestinationReader)
