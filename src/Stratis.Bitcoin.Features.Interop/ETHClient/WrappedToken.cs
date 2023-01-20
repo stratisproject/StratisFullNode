@@ -115,7 +115,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient2
         {
             var deploymentMessage = new WrappedTokenDeployment()
             {
-                TotalSupply = totalSupply
+                InitialSupply = totalSupply
             };
 
             IContractDeploymentTransactionHandler<WrappedTokenDeployment> deploymentHandler = web3.Eth.GetContractDeploymentHandler<WrappedTokenDeployment>();
