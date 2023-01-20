@@ -109,6 +109,20 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient2
         public string BurnId { get; set; }
     }
 
+	[Function("addToBlackList")]
+	public class AddToBlackListFunction : FunctionMessage
+	{
+		[Parameter("address[]", "addresses", 1)]
+		public string Addresses { get; set; }
+	}
+
+    [Function("removeFromBlackList")]
+    public class RemoveFromBlackListFunction : FunctionMessage
+    {
+        [Parameter("address", "account", 1)]
+		public string Address { get; set; }
+    }
+
     public class WrappedToken
     {
         public static async Task<string> DeployContractAsync(Web3 web3, BigInteger totalSupply)
