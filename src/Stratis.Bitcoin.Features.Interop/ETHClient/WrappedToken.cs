@@ -232,7 +232,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient2
 		"7e051867": "withdrawalAddresses(address)"
 		 */
 
-        public static string ABI = @"[
+		public static string ABI = @"[
 			{
 				""inputs"": [
 					{
@@ -322,6 +322,38 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient2
 				],
 				""name"": ""Transfer"",
 				""type"": ""event""
+			},
+			{
+				""inputs"": [
+					{
+						""internalType"": ""address"",
+						""name"": """",
+						""type"": ""address""
+					}
+				],
+				""name"": ""_isBlacklisted"",
+				""outputs"": [
+					{
+						""internalType"": ""bool"",
+						""name"": """",
+						""type"": ""bool""
+					}
+				],
+				""stateMutability"": ""view"",
+				""type"": ""function""
+			},
+			{
+				""inputs"": [
+					{
+						""internalType"": ""address[]"",
+						""name"": ""addresses"",
+						""type"": ""address[]""
+					}
+				],
+				""name"": ""addToBlackList"",
+				""outputs"": [],
+				""stateMutability"": ""nonpayable"",
+				""type"": ""function""
 			},
 			{
 				""inputs"": [
@@ -547,6 +579,19 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient2
 				""type"": ""function""
 			},
 			{
+				""inputs"": [
+					{
+						""internalType"": ""address"",
+						""name"": ""account"",
+						""type"": ""address""
+					}
+				],
+				""name"": ""removeFromBlackList"",
+				""outputs"": [],
+				""stateMutability"": ""nonpayable"",
+				""type"": ""function""
+			},
+			{
 				""inputs"": [],
 				""name"": ""renounceOwnership"",
 				""outputs"": [],
@@ -648,9 +693,9 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient2
 			{
 				""inputs"": [
 					{
-						""internalType"": ""address"",
+						""internalType"": ""string"",
 						""name"": """",
-						""type"": ""address""
+						""type"": ""string""
 					}
 				],
 				""name"": ""withdrawalAddresses"",
