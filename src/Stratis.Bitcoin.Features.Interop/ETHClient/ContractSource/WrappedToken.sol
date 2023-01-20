@@ -68,7 +68,7 @@ contract WrappedToken is ERC20, Ownable {
     }
 
     function removeFromBlackList(address account) public onlyOwner {
-        isBlacklisted[account] = false;
+        _isBlacklisted[account] = false;
     }
 
      /**
@@ -76,11 +76,11 @@ contract WrappedToken is ERC20, Ownable {
      *
      * Requirements:
      *
-     * - the contract must not be paused.
+     * - the addresses must not be blacklisted.
      */
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
         super._beforeTokenTransfer(from, to, amount);
 
-        require(!isBlacklisted[from] && !isBlacklisted[to], "This address is blacklisted");
+        require(!_isBlacklisted[from] && !_isBlacklisted[to], "This address is blacklisted");
     }
 }
