@@ -104,7 +104,7 @@ namespace Stratis.Bitcoin.Features.RPC
         generating         generate
 
         ------------------ Raw transactions
-        rawtransactions    createrawtransaction
+        rawtransactions    createrawtransaction         Yes
         rawtransactions    decoderawtransaction         Yes
         rawtransactions    decodescript
         rawtransactions    getrawtransaction            Yes

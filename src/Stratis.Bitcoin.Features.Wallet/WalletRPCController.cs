@@ -12,9 +12,11 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers;
+using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.RPC.Exceptions;
+using Stratis.Bitcoin.Features.RPC.Models;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Features.Wallet.Services;
@@ -22,6 +24,7 @@ using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Utilities;
 using TracerAttributes;
+using Script = NBitcoin.Script;
 
 namespace Stratis.Bitcoin.Features.Wallet
 {
@@ -150,6 +153,88 @@ namespace Stratis.Bitcoin.Features.Wallet
             }
         }
 
+        [ActionName("dumpprivkey")]
+        [ActionDescription("Reveals the private key corresponding to ‘address’.")]
+        public object DumpPrivKey(string address)
+        {
+            try
+            {
+                return new StringModel(this.walletManager.RetrievePrivateKey(this.GetWallet(), address));
+            }
+            catch (SecurityException)
+            {
+                throw new RPCServerException(RPCErrorCode.RPC_WALLET_UNLOCK_NEEDED, "Wallet unlock needed");
+            }
+            catch (WalletException exception)
+            {
+                throw new RPCServerException(RPCErrorCode.RPC_WALLET_ERROR, exception.Message);
+            }
+        }
+
+        [ActionName("createrawtransaction")]
+        [ActionDescription("Create a transaction spending the given inputs and creating new outputs.")]
+        public async Task<TransactionModel> CreateRawTransactionAsync(CreateRawTransactionInput[] inputs, CreateRawTransactionOutput[] outputs, int locktime = 0, bool replaceable = false)
+        {
+            try
+            {
+                if (locktime != 0)
+                    throw new RPCServerException(RPCErrorCode.RPC_INVALID_PARAMETER, "Setting input locktime is currently not supported");
+
+                if (replaceable)
+                    throw new RPCServerException(RPCErrorCode.RPC_INVALID_PARAMETER, "Replaceable transactions are currently not supported");
+
+                Transaction rawTx = this.Network.CreateTransaction();
+
+                foreach (CreateRawTransactionInput input in inputs)
+                {
+                    rawTx.AddInput(new TxIn()
+                    {
+                        PrevOut = new OutPoint(input.TxId, input.VOut),
+                        Sequence = input.Sequence ?? uint.MaxValue
+                        // Since this is a raw unsigned transaction, ScriptSig and WitScript must not be populated.
+                    });
+                }
+
+                bool dataSeen = false;
+
+                foreach (CreateRawTransactionOutput output in outputs)
+                {
+                    if (output.Key == "data")
+                    {
+                        if (dataSeen)
+                            throw new RPCServerException(RPCErrorCode.RPC_INVALID_PARAMETER, "Only one data output can be specified");
+
+                        dataSeen = true;
+
+                        byte[] data = Encoders.Hex.DecodeData(output.Value);
+
+                        rawTx.AddOutput(new TxOut
+                        {
+                            ScriptPubKey = TxNullDataTemplate.Instance.GenerateScriptPubKey(new[] { data }),
+                            Value = 0
+                        });
+
+                        continue;
+                    }
+
+                    var address = BitcoinAddress.Create(output.Key, this.Network);
+                    var amount = Money.Parse(output.Value);
+
+                    rawTx.AddOutput(new TxOut
+                    {
+                        ScriptPubKey = address.ScriptPubKey,
+                        Value = amount
+                    });
+                }
+
+                return new TransactionBriefModel(rawTx);
+            }
+            catch (WalletException exception)
+            {
+                throw new RPCServerException(RPCErrorCode.RPC_WALLET_ERROR, exception.Message);
+            }
+        }
+
         [ActionName("fundrawtransaction")]
         [ActionDescription("Add inputs to a transaction until it has enough in value to meet its out value. Note that signing is performed separately.")]
         public Task<FundRawTransactionResponse> FundRawTransactionAsync(string rawHex, FundRawTransactionOptions options = null, bool? isWitness = null)
@@ -164,7 +249,10 @@ namespace Stratis.Bitcoin.Features.Wallet
                 // If this was not done the transaction deserialisation would attempt to use witness deserialisation and the transaction data would get mangled.
                 rawTx.FromBytes(Encoders.Hex.DecodeData(rawHex), this.Network.Consensus.ConsensusFactory, ProtocolVersion.WITNESS_VERSION - 1);
 
-                WalletAccountReference account = this.GetWalletAccountReference();
+                // It is difficult to combine multiple accounts as a source of funds given the existing transaction building logic.
+                // We would need to essentially run the process multiple times and combine the results if the non-watchonly account fails to provide sufficient funds.
+                // With the class of user expected to use this functionality it makes more sense in the interim to use the watchonly account exclusively if told to do so.
+                WalletAccountReference account = (options?.IncludeWatching ?? false) ? this.GetWatchOnlyWalletAccountReference() : this.GetWalletAccountReference();
 
                 HdAddress changeAddress = null;
 
@@ -174,10 +262,31 @@ namespace Stratis.Bitcoin.Features.Wallet
 
                 if (options?.ChangeAddress != null)
                 {
-                    changeAddress = this.walletManager.GetAllAccounts().SelectMany(a => a.GetCombinedAddresses()).FirstOrDefault(a => a.Address == options?.ChangeAddress);
+                    if (options?.IncludeWatching ?? false)
+                    {
+                        Script changeAddressScriptPubKey = BitcoinAddress.Create(options.ChangeAddress).ScriptPubKey;
+                        bool segwit = changeAddressScriptPubKey.IsScriptType(ScriptType.Witness);
+
+                        // For the watch-only account we need to construct a dummy HdAddress, as the wallet manager may not be able to find the address otherwise.
+                        changeAddress = new HdAddress()
+                        {
+                            Address = !segwit ? options.ChangeAddress : null,
+                            ScriptPubKey = changeAddressScriptPubKey,
+                            Bech32Address = segwit ? options.ChangeAddress : null
+                        };
+                    }
+                    else
+                    {
+                        changeAddress = this.walletManager.GetAllAccounts().SelectMany(a => a.GetCombinedAddresses()).FirstOrDefault(a => a.Address == options.ChangeAddress);
+                    }
                 }
                 else
                 {
+                    if (options?.IncludeWatching ?? false)
+                    {
+                        throw new RPCServerException(RPCErrorCode.RPC_WALLET_ERROR, "A change address needs to be specified when using watch-only funds");
+                    }
+
                     changeAddress = this.walletManager.GetUnusedChangeAddress(account);
                 }
 
@@ -196,17 +305,34 @@ namespace Stratis.Bitcoin.Features.Wallet
                     Shuffle = false,
                     UseSegwitChangeAddress = changeAddress != null && (options?.ChangeAddress == changeAddress.Bech32Address),
 
+                    // Signing is deferred until the signrawtransaction RPC is called.
                     Sign = false
                 };
 
-                context.Recipients.AddRange(rawTx.Outputs
-                    .Select(s => new Recipient
+                foreach (TxOut output in rawTx.Outputs)
+                {
+                    // We can't add OP_RETURN outputs as recipients, they need to be added explicitly to the context's provided fields.
+                    if (output.ScriptPubKey.IsUnspendable)
                     {
-                        ScriptPubKey = s.ScriptPubKey,
-                        Amount = s.Value,
-                        SubtractFeeFromAmount = false // TODO: Do we properly support only subtracting the fee from particular recipients?
-                    }));
+                        byte[][] data = TxNullDataTemplate.Instance.ExtractScriptPubKeyParameters(output.ScriptPubKey);
 
+                        // This encoder uses 8-bit ASCII, so it is safe to use it on arbitrary bytes.
+                        string opReturn = Encoders.ASCII.EncodeData(data[0]);
+
+                        context.OpReturnData = opReturn;
+                        context.OpReturnAmount = output.Value;
+
+                        continue;
+                    }
+
+                    context.Recipients.Add(new Recipient
+                    {
+                        ScriptPubKey = output.ScriptPubKey,
+                        Amount = output.Value,
+                        SubtractFeeFromAmount = false // TODO: Do we properly support only subtracting the fee from particular recipients?
+                    });
+                }
+                
                 context.AllowOtherInputs = true;
 
                 foreach (TxIn transactionInput in rawTx.Inputs)
