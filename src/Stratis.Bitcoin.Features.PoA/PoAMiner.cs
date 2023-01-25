@@ -222,6 +222,8 @@ namespace Stratis.Bitcoin.Features.PoA
 
                 this.miningStatisticsLog = log.ToString();
 
+                this.signals?.Publish(new MiningStatisticsEvent(this.miningStatistics, 0));
+
                 return;
             }
 
@@ -232,6 +234,8 @@ namespace Stratis.Bitcoin.Features.PoA
                 log.AppendLine();
 
                 this.miningStatisticsLog = log.ToString();
+
+                this.signals?.Publish(new MiningStatisticsEvent(this.miningStatistics, 0));
 
                 return;
             }
@@ -249,7 +253,7 @@ namespace Stratis.Bitcoin.Features.PoA
             // TODO: Make this a command line option.
             bool includeHeight = false;
 
-            log.AppendLine($"Mining information for the last { maxDepth } blocks.");
+            log.AppendLine($"Mining information for the last {maxDepth} blocks.");
             if (includeHeight)
                 log.AppendLine("Note 'MISS' indicates a slot where a miner didn't produce a block.");
             else
@@ -288,7 +292,7 @@ namespace Stratis.Bitcoin.Features.PoA
                 if (includeHeight)
                 {
                     string strHeight = minedInThisSlot ? currentHeader.Height.ToString().PadLeft(7) : "---MISS";
-                    log.Append($"{strHeight}:{ pubKeyRepresentation } ");
+                    log.Append($"{strHeight}:{pubKeyRepresentation} ");
                 }
                 else
                 {
@@ -304,15 +308,12 @@ namespace Stratis.Bitcoin.Features.PoA
 
             this.miningStatistics.MinerHits = hitCount;
 
-            if (this.signals != null)
-            {
-                this.signals.Publish(new MiningStatisticsEvent(this.miningStatistics, maxDepth));
-            }
+            this.signals?.Publish(new MiningStatisticsEvent(this.miningStatistics, maxDepth));
 
             log.Append("...");
             log.AppendLine();
             log.AppendLine($"Miner hits".PadRight(LoggingConfiguration.ColumnLength) + $": {hitCount} of {maxDepth}({(((float)hitCount / (float)maxDepth)).ToString("P2")})");
-            log.AppendLine($"Miner idle time".PadRight(LoggingConfiguration.ColumnLength) + $": { TimeSpan.FromSeconds(this.network.ConsensusOptions.TargetSpacingSeconds * (maxDepth - hitCount)).ToString(@"hh\:mm\:ss")}");
+            log.AppendLine($"Miner idle time".PadRight(LoggingConfiguration.ColumnLength) + $": {TimeSpan.FromSeconds(this.network.ConsensusOptions.TargetSpacingSeconds * (maxDepth - hitCount)).ToString(@"hh\:mm\:ss")}");
             log.AppendLine();
 
             this.miningStatisticsLog = log.ToString();

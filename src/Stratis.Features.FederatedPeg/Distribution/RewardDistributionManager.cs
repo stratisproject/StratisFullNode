@@ -142,8 +142,10 @@ namespace Stratis.Features.FederatedPeg.Distribution
                     multiSigRecipients.Add(new Recipient() { Amount = feeReward, ScriptPubKey = multiSigMinerScript });
                     this.logger.LogDebug($"Paying multisig member '{multiSigMinerScript.ToHex()}' (hex) {feeReward} STRAX.");
                 }
-
             }
+
+            if (this.chainIndexer.Tip.Height >= (this.network.Consensus.Options as PoAConsensusOptions).Release1400ActivationHeight)
+                return multiSigRecipients.OrderBy(m => m.ScriptPubKey.ToHex()).ToList();
 
             return multiSigRecipients;
         }
