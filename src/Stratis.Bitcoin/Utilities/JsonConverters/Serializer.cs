@@ -1,5 +1,6 @@
 ﻿using NBitcoin;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 
 namespace Stratis.Bitcoin.Utilities.JsonConverters
@@ -37,7 +38,9 @@ namespace Stratis.Bitcoin.Utilities.JsonConverters
             {
                 Formatting = Formatting.Indented
             };
+
             RegisterFrontConverters(settings, network);
+
             return JsonConvert.DeserializeObject<T>(data, settings);
         }
 
@@ -47,8 +50,22 @@ namespace Stratis.Bitcoin.Utilities.JsonConverters
             {
                 Formatting = Formatting.Indented
             };
+
             RegisterFrontConverters(settings, network);
+
             return JsonConvert.SerializeObject(response, settings);
+        }
+
+        public static JToken ToToken<T>(T response, Network network = null)
+        {
+            var settings = new JsonSerializerSettings
+            {
+                Formatting = Formatting.Indented
+            };
+
+            RegisterFrontConverters(settings, network);
+
+            return JToken.FromObject(response, JsonSerializer.Create(settings));
         }
     }
 }
