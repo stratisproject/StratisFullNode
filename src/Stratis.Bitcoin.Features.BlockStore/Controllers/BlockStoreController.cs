@@ -278,7 +278,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
         {
             try
             {
-                string[] addressesArray = addresses?.Split(',') ?? new string[] { };
+                // The 'IsNullOrWhiteSpace' is required due to POST passing an empty string instead of null.
+                string[] addressesArray = string.IsNullOrWhiteSpace(addresses) ? new string[] { } : addresses.Split(',');
 
                 this.logger.LogDebug("Asking data for {0} addresses.", addressesArray.Length);
 
