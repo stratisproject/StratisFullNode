@@ -79,6 +79,8 @@ namespace Stratis.Features.Collateral
 
         private readonly NodeDeployments nodeDeployments;
 
+        private readonly IConsensus consensus;
+
         private Task updateCollateralContinuouslyTask;
 
         private bool collateralUpdated;
@@ -97,6 +99,7 @@ namespace Stratis.Features.Collateral
             this.logger = LogManager.GetCurrentClassLogger();
             this.blockStoreClient = new BlockStoreClient(httpClientFactory, $"http://{settings.CounterChainApiHost}", settings.CounterChainApiPort);
             this.nodeDeployments = nodeDeployments;
+            this.consensus = network.Consensus;
         }
 
         public async Task InitializeAsync()
@@ -271,9 +274,7 @@ namespace Stratis.Features.Collateral
                     return false;
                 }
 
-                int release1320ActivationHeight = 0;
-                if (this.nodeDeployments?.BIP9.ArraySize > 0  /* Not NoBIP9Deployments */)
-                    release1320ActivationHeight = this.nodeDeployments.BIP9.ActivationHeightProviders[0 /* Release1320 */].ActivationHeight;
+                int release1320ActivationHeight = this.consensus.PoABuriedDeployments(PoABuriedDeployments.Release1320);
 
                 // Legacy behavior before activation.
                 if (localChainHeight < release1320ActivationHeight)

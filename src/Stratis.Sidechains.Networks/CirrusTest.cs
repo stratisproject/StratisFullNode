@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using NBitcoin.Protocol;
@@ -114,6 +115,20 @@ namespace Stratis.Sidechains.Networks
                 new PubKey("03382ceb0a59b9b922aca6be9959ae51dabda159e79465393a308ee267ecebcaa5"),//Node8
             };
 
+            var buriedDeployments = new PoABuriedDeploymentsArray
+            {
+                [PoABuriedDeployments.InterFluxV2MainChain] = 500_000,
+                [PoABuriedDeployments.VotingManagerV2] = 1_999_500,
+                [PoABuriedDeployments.ContractSerializerV2] = 2_842_681,
+                [PoABuriedDeployments.Release1100] = 2_796_000,
+                [PoABuriedDeployments.GetMiningTimestampV2] = 3_000_000, // 15 January 2022
+                [PoABuriedDeployments.GetMiningTimestampV2Strict] = 3_121_500, // 17 January 2022
+                [PoABuriedDeployments.Release1300] = 3_280_032,
+                [PoABuriedDeployments.Release1320] = 3_588_480,
+                [PoABuriedDeployments.Release1324] = 3_951_360,
+                [PoABuriedDeployments.Release1400] = 4_074_250
+            };
+
             var consensusOptions = new PoAConsensusOptions(
                 maxBlockBaseSize: 1_000_000,
                 maxStandardVersion: 2,
@@ -124,34 +139,20 @@ namespace Stratis.Sidechains.Networks
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
                 autoKickIdleMembers: true,
+                contractSerializerV2ActivationHeight: buriedDeployments[PoABuriedDeployments.ContractSerializerV2],
                 federationMemberMaxIdleTimeSeconds: 60 * 30 // 30 minutes
             )
             {
-                InterFluxV2MainChainActivationHeight = 500_000,
                 EnforceMinProtocolVersionAtBlockHeight = 505900, // setting the value to zero makes the functionality inactive
                 EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
-                VotingManagerV2ActivationHeight = 1_999_500,
-                Release1100ActivationHeight = 2_796_000,
-                PollExpiryBlocks = 450,
-                GetMiningTimestampV2ActivationHeight = 3_000_000, // 15 January 2022
-                GetMiningTimestampV2ActivationStrictHeight = 3_121_500, // 17 January 2022
-                ContractSerializerV2ActivationHeight = 2_842_681,
-                Release1300ActivationHeight = 3_280_032,
-                Release1400ActivationHeight = 4_074_250,
-            };
-
-            var buriedDeployments = new BuriedDeploymentsArray
-            {
-                [BuriedDeployments.BIP34] = 0,
-                [BuriedDeployments.BIP65] = 0,
-                [BuriedDeployments.BIP66] = 0
+                PollExpiryBlocks = 450
             };
 
             var bip9Deployments = new CirrusBIP9Deployments()
             {
                 // Deployment will go active once 75% of nodes are on 1.3.0.0 or later.
-                [CirrusBIP9Deployments.Release1320] = new BIP9DeploymentsParameters("Release1320", CirrusBIP9Deployments.FlagBitRelease1320, DateTime.Parse("2022-6-15 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-1-1 +0").ToUnixTimestamp(), BIP9DeploymentsParameters.DefaultRegTestThreshold),
-                [CirrusBIP9Deployments.Release1324] = new BIP9DeploymentsParameters("Release1324", CirrusBIP9Deployments.FlagBitRelease1324, DateTime.Parse("2022-10-10 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-3-1 +0").ToUnixTimestamp(), BIP9DeploymentsParameters.DefaultRegTestThreshold)
+                // Example:
+                // [CirrusBIP9Deployments.Release1324] = new BIP9DeploymentsParameters("Release1324", CirrusBIP9Deployments.FlagBitRelease1324, DateTime.Parse("2022-10-10 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-3-1 +0").ToUnixTimestamp(), BIP9DeploymentsParameters.DefaultRegTestThreshold)
             };
 
             this.Consensus = new Consensus(

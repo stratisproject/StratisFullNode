@@ -48,6 +48,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
                 targetSpacingSeconds: 60,
                 votingEnabled: baseOptions.VotingEnabled,
                 autoKickIdleMembers: false,
+                contractSerializerV2ActivationHeight: 0,
                 federationMemberMaxIdleTimeSeconds: baseOptions.FederationMemberMaxIdleTimeSeconds
             )
             {

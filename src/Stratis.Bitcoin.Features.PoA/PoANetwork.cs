@@ -11,6 +11,23 @@ using Stratis.Bitcoin.Features.PoA.Voting.ConsensusRules;
 
 namespace Stratis.Bitcoin.Features.PoA
 {
+    public class PoABuriedDeploymentsArray : BuriedDeploymentsArray
+    {
+        public int this[PoABuriedDeployments index]
+        {
+            get { EnsureIndex((int)index); return this.heights[(int)index]; }
+            set { EnsureIndex((int)index); this.heights[(int)index] = value; }
+        }
+    }
+
+    public static class ConsensusExt
+    {
+        public static int PoABuriedDeployments(this IConsensus consensus, PoABuriedDeployments index)
+        {
+            return ((PoABuriedDeploymentsArray)consensus.BuriedDeployments)[index];
+        }
+    }
+
     /// <summary>
     /// Example network for PoA consensus.
     /// </summary>
@@ -106,17 +123,11 @@ namespace Stratis.Bitcoin.Features.PoA
                 genesisFederationMembers: genesisFederationMembers,
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
+                contractSerializerV2ActivationHeight: 0,
                 autoKickIdleMembers: true
             )
             {
                 PollExpiryBlocks = 450
-            };
-
-            var buriedDeployments = new BuriedDeploymentsArray
-            {
-                [BuriedDeployments.BIP34] = 0,
-                [BuriedDeployments.BIP65] = 0,
-                [BuriedDeployments.BIP66] = 0
             };
 
             var bip9Deployments = new NoBIP9Deployments();
@@ -130,7 +141,7 @@ namespace Stratis.Bitcoin.Features.PoA
                 majorityEnforceBlockUpgrade: 750,
                 majorityRejectBlockOutdated: 950,
                 majorityWindow: 1000,
-                buriedDeployments: buriedDeployments,
+                buriedDeployments: new PoABuriedDeploymentsArray(),
                 bip9Deployments: bip9Deployments,
                 bip34Hash: new uint256("0x000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8"),
                 minerConfirmationWindow: 2016, // nPowTargetTimespan / nPowTargetSpacing

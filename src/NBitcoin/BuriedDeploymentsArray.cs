@@ -4,17 +4,23 @@ namespace NBitcoin
 {
     public class BuriedDeploymentsArray
     {
-        private readonly int[] heights;
+        protected int[] heights;
 
         public BuriedDeploymentsArray()
         {
-            this.heights = new int[Enum.GetValues(typeof(BuriedDeployments)).Length];
+            this.heights = new int[0];
+        }
+
+        protected void EnsureIndex(int index)
+        {
+            if (index >= this.heights.Length)
+                Array.Resize(ref this.heights, index + 1);
         }
 
         public int this[BuriedDeployments index]
         {
-            get => this.heights[(int)index];
-            set => this.heights[(int)index] = value;
+            get { EnsureIndex((int)index); return this.heights[(int)index]; }
+            set { EnsureIndex((int)index); this.heights[(int)index] = value; }
         }
     }
 

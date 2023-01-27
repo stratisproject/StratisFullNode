@@ -24,7 +24,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
         private HashHeightPair lastCheckPoint;
 
-        private PoAConsensusOptions poAConsensusOptions;
+        private IConsensus consensus;
 
         /// <inheritdoc />
         public override void Initialize()
@@ -37,7 +37,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             this.slotsManager = engine.SlotsManager;
             this.federationHistory = engine.FederationHistory;
             this.validator = engine.PoaHeaderValidator;
-            this.poAConsensusOptions = engine.Network.Consensus.Options as PoAConsensusOptions;
+            this.consensus = engine.Network.Consensus;
 
             KeyValuePair<int, CheckpointInfo> lastCheckPoint = engine.Network.Checkpoints.LastOrDefault();
             this.lastCheckPoint = (lastCheckPoint.Value != null) ? new HashHeightPair(lastCheckPoint.Value.Hash, lastCheckPoint.Key) : null;
@@ -75,7 +75,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 PoAConsensusErrors.InvalidHeaderSignature.Throw();
             }
 
-            if (chainedHeader.Height >= this.poAConsensusOptions.GetMiningTimestampV2ActivationStrictHeight)
+            if (chainedHeader.Height >= this.consensus.PoABuriedDeployments(PoABuriedDeployments.GetMiningTimestampV2Strict))
             {
                 uint expectedSlot = this.slotsManager.GetMiningTimestamp(chainedHeader.Previous, chainedHeader.Header.Time, pubKey);
 

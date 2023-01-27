@@ -39,10 +39,7 @@ namespace Stratis.Features.Collateral
             }
 
             // Check that the commitment height is not less that of the prior block.
-            int release1324ActivationHeight = 0;
-            NodeDeployments nodeDeployments = this.Parent.NodeDeployments;
-            if (nodeDeployments.BIP9.ArraySize > 0  /* Not NoBIP9Deployments */)
-                release1324ActivationHeight = nodeDeployments.BIP9.ActivationHeightProviders[1 /* Release1324 */].ActivationHeight;
+            int release1324ActivationHeight = this.Parent.Network.Consensus.PoABuriedDeployments(PoABuriedDeployments.Release1324);
 
             if (context.ValidationContext.ChainedHeaderToValidate.Height >= release1324ActivationHeight)
             {

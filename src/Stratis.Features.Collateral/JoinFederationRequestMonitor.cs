@@ -113,7 +113,7 @@ namespace Stratis.Features.Collateral
                         Data = federationMemberBytes
                     };
 
-                    if (blockConnectedData.ConnectedBlock.ChainedHeader.Height >= ((PoAConsensusOptions)this.network.Consensus.Options).Release1300ActivationHeight)
+                    if (blockConnectedData.ConnectedBlock.ChainedHeader.Height >= this.network.Consensus.PoABuriedDeployments(PoABuriedDeployments.Release1300))
                     {
                         // If we are executing this from the miner, there will be no transaction present.
                         if (blockConnectedData.PollsRepositoryTransaction == null)

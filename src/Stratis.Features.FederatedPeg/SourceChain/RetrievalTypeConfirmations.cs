@@ -115,7 +115,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 if (this.federatedPegSettings.IsMainChain)
                     return ((PosConsensusOptions)this.network.Consensus.Options).Release1300ActivationHeight;
 
-                return ((PoAConsensusOptions)this.network.Consensus.Options).Release1300ActivationHeight;
+                return this.network.Consensus.PoABuriedDeployments(PoABuriedDeployments.Release1300);
             }
         }
     }

@@ -91,24 +91,18 @@ namespace Stratis.Sidechains.Networks
                 genesisFederationMembers: genesisFederationMembers,
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
-                autoKickIdleMembers: true
+                autoKickIdleMembers: true,
+                contractSerializerV2ActivationHeight: 0
             )
             {
                 PollExpiryBlocks = 10
             };
 
-            var buriedDeployments = new BuriedDeploymentsArray
-            {
-                [BuriedDeployments.BIP34] = 0,
-                [BuriedDeployments.BIP65] = 0,
-                [BuriedDeployments.BIP66] = 0
-            };
-
             var bip9Deployments = new CirrusBIP9Deployments()
             {
                 // Deployment will go active once 75% of nodes are on 1.3.0.0 or later.
-                [CirrusBIP9Deployments.Release1320] = new BIP9DeploymentsParameters("Release1320", CirrusBIP9Deployments.FlagBitRelease1320, DateTime.Parse("2022-6-15 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Now.AddDays(50).ToUnixTimestamp(), BIP9DeploymentsParameters.DefaultRegTestThreshold),
-                [CirrusBIP9Deployments.Release1324] = new BIP9DeploymentsParameters("Release1324", CirrusBIP9Deployments.FlagBitRelease1320, DateTime.Parse("2022-10-10 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Now.AddDays(50).ToUnixTimestamp(), BIP9DeploymentsParameters.DefaultRegTestThreshold)
+                // Example:
+                // [CirrusBIP9Deployments.Release1324] = new BIP9DeploymentsParameters("Release1324", CirrusBIP9Deployments.FlagBitRelease1320, DateTime.Parse("2022-10-10 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Now.AddDays(50).ToUnixTimestamp(), BIP9DeploymentsParameters.DefaultRegTestThreshold)
             };
 
             this.Consensus = new Consensus(
@@ -120,7 +114,7 @@ namespace Stratis.Sidechains.Networks
                 majorityEnforceBlockUpgrade: 750,
                 majorityRejectBlockOutdated: 950,
                 majorityWindow: 1000,
-                buriedDeployments: buriedDeployments,
+                buriedDeployments: new PoABuriedDeploymentsArray(),
                 bip9Deployments: bip9Deployments,
                 bip34Hash: new uint256("0x000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8"),
                 minerConfirmationWindow: 2016, // nPowTargetTimespan / nPowTargetSpacing
