@@ -167,7 +167,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
         {
             using (var nodeBuilder = SidechainNodeBuilder.CreateSidechainNodeBuilder(this))
             {
-                CirrusRegTest collateralSidechainNetwork = new CirrusSingleCollateralRegTest();
+                CirrusRegTest collateralSidechainNetwork = new CirrusSingleCollateralRegTest(this.mainNetwork);
 
                 CoreNode side = nodeBuilder.CreateSidechainFederationNode(collateralSidechainNetwork, this.mainNetwork, collateralSidechainNetwork.FederationKeys[0]);
                 side.AppendToConfig("sidechain=1");

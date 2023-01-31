@@ -421,7 +421,7 @@ namespace Stratis.Bitcoin.IntegrationTests.API
         {
             var commands = JsonDataSerializer.Instance.Deserialize<List<RpcCommandModel>>(this.responseText);
 
-            commands.Count.Should().Be(39);
+            commands.Count.Should().Be(41);
         }
 
         private void status_information_is_returned()

@@ -34,7 +34,7 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <summary>
         /// This currently only applies to  Cirrus Main Net.
         /// </summary>
-        public uint? FederationMemberActivationTime { get; protected set; }
+        public uint? FederationMemberActivationTime { get; set; }
 
         /// <summary>
         /// The height at which a federation members will be resolved via the <see cref="FederationHistory"/> class.
@@ -47,12 +47,12 @@ namespace Stratis.Bitcoin.Features.PoA
         /// method which resolves the pubkey from the signature directly.
         /// </para>
         /// </summary>
-        public int VotingManagerV2ActivationHeight { get; protected set; }
+        public int VotingManagerV2ActivationHeight { get; set; }
 
         /// <summary>
         /// This is the height on the main chain at which the dynamic fees paid to the multsig for interop conversion requests will activate.
         /// </summary>
-        public int InterFluxV2MainChainActivationHeight { get; protected set; }
+        public int InterFluxV2MainChainActivationHeight { get; set; }
 
         /// <summary>
         /// The height at which Release 1.3.0.0 became BIP activated.
@@ -72,30 +72,30 @@ namespace Stratis.Bitcoin.Features.PoA
         /// Legacy mining slots are determined by mining_slot = block_height % number_of_federation_members.
         /// Once the specified height is reached there should no longer be a shift in mining slots when new federation members are added/removed.
         /// </summary>
-        public int GetMiningTimestampV2ActivationHeight { get; protected set; }
+        public int GetMiningTimestampV2ActivationHeight { get; set; }
 
         /// <summary>
         /// The height at which inituitive mining slots are enfored without any lenience.
         /// Currently errors are sometimes suppressed if a federation change occurred.
         /// </summary>
-        public int GetMiningTimestampV2ActivationStrictHeight { get; protected set; }
+        public int GetMiningTimestampV2ActivationStrictHeight { get; set; }
 
         /// <summary>
         /// Logic related to release 1.1.0.0 will activate at this height, this includes Poll Expiry and the Join Federation Voting Request consensus rule.
         /// </summary>
-        public int Release1100ActivationHeight { get; protected set; }
+        public int Release1100ActivationHeight { get; set; }
 
         /// <summary>
         /// Polls are expired once the tip reaches a block this far beyond the poll start block.
         /// I.e. if (Math.Max(startblock + PollExpiryBlocks, PollExpiryActivationHeight) <= tip) (See IsPollExpiredAt)
         /// </summary>
-        public int PollExpiryBlocks { get; protected set; }
+        public int PollExpiryBlocks { get; set; }
 
         /// <summary>
         /// Defines when V2 of the contract serializer will be used.
         /// I.e if tip <= ContractSerializerV2ActivationHeight, V1 will be used.
         /// </summary>
-        public int ContractSerializerV2ActivationHeight { get; protected set; }
+        public int ContractSerializerV2ActivationHeight { get; set; }
 
         /// <summary>Initializes values for networks that use block size rules.</summary>
         /// <param name="maxBlockBaseSize">See <see cref="ConsensusOptions.MaxBlockBaseSize"/>.</param>
