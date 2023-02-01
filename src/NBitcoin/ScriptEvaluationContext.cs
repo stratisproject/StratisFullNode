@@ -160,7 +160,7 @@ namespace NBitcoin
     {
         public Network Network { get; }
 
-        private class CScriptNum
+        protected class CScriptNum
         {
             private const long nMaxNumSize = 4;
             /**
@@ -400,7 +400,7 @@ namespace NBitcoin
             }
         }
 
-        private ContextStack<byte[]> _stack = new ContextStack<byte[]>();
+        protected ContextStack<byte[]> _stack = new ContextStack<byte[]>();
 
         public ContextStack<byte[]> Stack
         {
@@ -1461,58 +1461,12 @@ namespace NBitcoin
                                         if(this._stack.Count < i)
                                             return SetError(ScriptError.InvalidStackOperation);
 
-                                        int nSigsCount = new CScriptNum(this._stack.Top(-i), fRequireMinimal).getint();
-                                        if(nSigsCount < 0 || nSigsCount > nKeysCount)
-                                            return SetError(ScriptError.SigCount);
-
-                                        int isig = ++i;
-                                        i += nSigsCount;
-                                        if(this._stack.Count < i)
-                                            return SetError(ScriptError.InvalidStackOperation);
-
-                                        // Subset of script starting at the most recent codeseparator
-                                        var scriptCode = new Script(s._Script.Skip(pbegincodehash).ToArray());
-                                        // Drop the signatures, since there's no way for a signature to sign itself
-                                        for(int k = 0; k < nSigsCount; k++)
-                                        {
-                                            byte[] vchSig = this._stack.Top(-isig - k);
-                                            if(hashversion == (int)HashVersion.Original)
-                                                scriptCode.FindAndDelete(vchSig);
-                                        }
-
-                                        bool fSuccess = true;
-                                        while(fSuccess && nSigsCount > 0)
-                                        {
-                                            byte[] vchSig = this._stack.Top(-isig);
-                                            byte[] vchPubKey = this._stack.Top(-ikey);
-
-                                            // Note how this makes the exact order of pubkey/signature evaluation
-                                            // distinguishable by CHECKMULTISIG NOT if the STRICTENC flag is set.
-                                            // See the script_(in)valid tests for details.
-                                            if(!CheckSignatureEncoding(vchSig) || !CheckPubKeyEncoding(vchPubKey, hashversion))
-                                            {
-                                                // serror is set
-                                                return false;
-                                            }
-
-                                            bool fOk = CheckSig(vchSig, vchPubKey, scriptCode, checker, hashversion);
-
-                                            if(fOk)
-                                            {
-                                                isig++;
-                                                nSigsCount--;
-                                            }
-                                            ikey++;
-                                            nKeysCount--;
-
-                                            // If there are more signatures left than keys left,
-                                            // then too many signatures have failed
-                                            if(nSigsCount > nKeysCount)
-                                                fSuccess = false;
-                                        }
+                                        (bool fSuccess, bool isError) = DetermineSignatures(ref i, fRequireMinimal, ref nKeysCount, pbegincodehash, s, hashversion, ref ikey, checker);
+                                        if (isError)
+                                            return false;
 
                                         // Clean up stack of actual arguments
-                                        while(i-- > 1)
+                                        while (i-- > 1)
                                         {
                                             // If the operation failed, we require that all signatures must be empty vector
                                             if(!fSuccess && (this.ScriptVerify & ScriptVerify.NullFail) != 0 && ikey2 == 0 && this._stack.Top(-1).Length != 0)
@@ -1567,6 +1521,62 @@ namespace NBitcoin
                 return SetError(ScriptError.UnbalancedConditional);
 
             return SetSuccess(ScriptError.OK);
+        }
+
+        public virtual (bool success, bool isError) DetermineSignatures(ref int i, bool fRequireMinimal, ref int nKeysCount, int pbegincodehash, Script s, int hashversion, ref int ikey, TransactionChecker checker)
+        {
+            int nSigsCount = new CScriptNum(this._stack.Top(-i), fRequireMinimal).getint();
+            if (nSigsCount < 0 || nSigsCount > nKeysCount)
+                return (false, !SetError(ScriptError.SigCount));
+
+            int isig = ++i;
+            i += nSigsCount;
+            if (this._stack.Count < i)
+                return (false, !SetError(ScriptError.InvalidStackOperation));
+
+            // Subset of script starting at the most recent codeseparator
+            var scriptCode = new Script(s._Script.Skip(pbegincodehash).ToArray());
+
+            // Drop the signatures, since there's no way for a signature to sign itself
+            for (int k = 0; k < nSigsCount; k++)
+            {
+                byte[] vchSig = this._stack.Top(-isig - k);
+                if (hashversion == (int)HashVersion.Original)
+                    scriptCode.FindAndDelete(vchSig);
+            }
+
+            bool fSuccess = true;
+            while (fSuccess && nSigsCount > 0)
+            {
+                byte[] vchSig = this._stack.Top(-isig);
+                byte[] vchPubKey = this._stack.Top(-ikey);
+
+                // Note how this makes the exact order of pubkey/signature evaluation
+                // distinguishable by CHECKMULTISIG NOT if the STRICTENC flag is set.
+                // See the script_(in)valid tests for details.
+                if (!CheckSignatureEncoding(vchSig) || !CheckPubKeyEncoding(vchPubKey, hashversion))
+                {
+                    // serror is set
+                    return (false, true);
+                }
+
+                bool fOk = CheckSig(vchSig, vchPubKey, scriptCode, checker, hashversion);
+
+                if (fOk)
+                {
+                    isig++;
+                    nSigsCount--;
+                }
+                ikey++;
+                nKeysCount--;
+
+                // If there are more signatures left than keys left,
+                // then too many signatures have failed
+                if (nSigsCount > nKeysCount)
+                    fSuccess = false;
+            }
+
+            return (fSuccess, false);
         }
 
         private bool CheckSequence(CScriptNum nSequence, TransactionChecker checker)
@@ -1663,7 +1673,7 @@ namespace NBitcoin
             return true;
         }
 
-        private bool SetError(ScriptError scriptError)
+        protected bool SetError(ScriptError scriptError)
         {
             this.Error = scriptError;
             return false;
@@ -1726,7 +1736,7 @@ namespace NBitcoin
             return true;
         }
 
-        private bool CheckPubKeyEncoding(byte[] vchPubKey, int sigversion)
+        protected bool CheckPubKeyEncoding(byte[] vchPubKey, int sigversion)
         {
             if((this.ScriptVerify & ScriptVerify.StrictEnc) != 0 && !IsCompressedOrUncompressedPubKey(vchPubKey))
             {
@@ -2033,7 +2043,7 @@ namespace NBitcoin
             return CheckSig(vchSig, vchPubKey, scriptCode, new TransactionChecker(txTo, nIn), 0);
         }
 
-        private bool CheckSig(byte[] vchSig, byte[] vchPubKey, Script scriptCode, TransactionChecker checker, int sigversion)
+        protected bool CheckSig(byte[] vchSig, byte[] vchPubKey, Script scriptCode, TransactionChecker checker, int sigversion)
         {
             PubKey pubkey = null;
             try
