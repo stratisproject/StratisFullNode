@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
 using Stratis.Bitcoin.Utilities;
@@ -41,6 +42,13 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Rules
                 {
                     context.State.MissingInputs = true;
                     this.logger.LogTrace("(-)[FAIL_MISSING_INPUTS]");
+                    int height = 0;
+                    try
+                    {
+                        height = context.View.GetTipHash()?.Height ?? 0;
+                    }
+                    catch (Exception) { }
+                    this.logger.LogDebug($"Transaction '{context.TransactionHash}' has a missing input at height { height }: '{(txin.PrevOut.Hash.ToString() + "-" + txin.PrevOut.N)}'. The full transaction is '{context.Transaction.ToHex()}'.");
                     context.State.Fail(MempoolErrors.MissingOrSpentInputs).Throw();
                 }
             }
