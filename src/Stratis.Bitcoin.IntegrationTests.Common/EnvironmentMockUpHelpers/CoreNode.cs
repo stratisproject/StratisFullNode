@@ -524,11 +524,14 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
         {
             lock (this.lockObject)
             {
-                this.runner.Stop();
-
                 if (!this.runner.IsDisposed)
                 {
-                    throw new Exception($"Problem disposing of a node of type {this.runner.GetType()}.");
+                    this.runner.Stop();
+
+                    if (!this.runner.IsDisposed)
+                    {
+                        throw new Exception($"Problem disposing of a node of type {this.runner.GetType()}.");
+                    }
                 }
 
                 this.State = CoreNodeState.Killed;
