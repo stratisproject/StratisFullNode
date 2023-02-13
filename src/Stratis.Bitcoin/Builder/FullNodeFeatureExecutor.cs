@@ -161,13 +161,14 @@ namespace Stratis.Bitcoin.Builder
 
         private void LogAndAddException(IFullNodeFeature feature, bool disposing, List<Exception> exceptions, Exception exception)
         {
-            exceptions.Add(exception);
-
             var messageText = disposing ? "disposing" : "starting";
-            var exceptionText = "An error occurred {0} full node feature '{1}' : '{2}'";
+            var exceptionText = "An error occurred {0} full node feature '{1}'.";
+            var message = string.Format(exceptionText, messageText, feature.GetType().Name);
+
+            exceptions.Add(new Exception(message, exception));
 
             this.logger.LogError(exceptionText, messageText, feature.GetType().Name, exception);
-            this.signals.Publish(new FullNodeEvent() { Message = string.Format(exceptionText, messageText, feature.GetType().Name, exception.Message), State = FullNodeState.Failed.ToString() });
+            this.signals.Publish(new FullNodeEvent() { Message = message, State = FullNodeState.Failed.ToString() });
         }
     }
 }
