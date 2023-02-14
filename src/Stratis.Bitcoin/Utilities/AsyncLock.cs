@@ -59,7 +59,8 @@ namespace Stratis.Bitcoin.Utilities
             /// <inheritdoc />
             public void Dispose()
             {
-                this.toRelease.semaphore.Release();
+                if (this.toRelease.semaphore.CurrentCount != 0)
+                    this.toRelease.semaphore.Release();
             }
         }
 
@@ -71,7 +72,7 @@ namespace Stratis.Bitcoin.Utilities
         /// <para>This releaser is used when the lock has been acquired and disposing it will release the lock.</para>
         /// </summary>
         /// <remarks>We use the disposable interfaced in a task here to avoid allocations on acquiring the lock when it is free.</remarks>
-        private readonly Task<IDisposable> releaser;
+        private readonly IDisposable releaser;
 
         /// <summary>
         /// Initializes an instance of the object.
@@ -79,7 +80,7 @@ namespace Stratis.Bitcoin.Utilities
         public AsyncLock()
         {
             this.semaphore = new SemaphoreSlim(1, 1);
-            this.releaser = Task.FromResult<IDisposable>(new Releaser(this));
+            this.releaser = new Releaser(this);
         }
 
         /// <summary>
@@ -99,7 +100,7 @@ namespace Stratis.Bitcoin.Utilities
                 // If the task was cancelled, we don't hold the lock and we need to throw.
                 if (wait.IsCanceled) throw new OperationCanceledException();
 
-                return this.releaser;
+                return Task.FromResult(this.releaser);
             }
 
             // If the lock is not available, we wait until it is available
@@ -111,7 +112,7 @@ namespace Stratis.Bitcoin.Utilities
                 if (task.IsCanceled) throw new OperationCanceledException();
 
                 return (IDisposable)state;
-            }, this.releaser.Result, cancel, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+            }, this.releaser, cancel, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
 
         /// <summary>
@@ -125,12 +126,13 @@ namespace Stratis.Bitcoin.Utilities
             this.semaphore.Wait(cancel);
 
             // We are holding the lock here, so we will want unlocking.
-            return this.releaser.Result;
+            return this.releaser;
         }
 
         /// <inheritdoc />
         public void Dispose()
         {
+            this.releaser.Dispose();
             this.semaphore.Dispose();
         }
     }
