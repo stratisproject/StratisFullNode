@@ -160,7 +160,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
             minter.StopStake();
 
             // Ensure nodes are synced.
-            TestBase.WaitLoop(() => TestHelper.AreNodesSynced(nodeA, nodeB));
+            TestBase.WaitLoop(() => TestHelper.AreNodesSynced(nodeA, nodeB), waitTimeSeconds: 120);
 
             // Call the block connected again on block 40.
             // This is to simulate that a rewind occurred to block 39 and block 40 was reconnected.

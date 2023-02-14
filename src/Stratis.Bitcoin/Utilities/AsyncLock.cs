@@ -59,7 +59,7 @@ namespace Stratis.Bitcoin.Utilities
             /// <inheritdoc />
             public void Dispose()
             {
-                if (this.toRelease.semaphore.CurrentCount != 1)
+                if (this.toRelease.semaphore.CurrentCount == 0)
                     this.toRelease.semaphore.Release();
             }
         }
