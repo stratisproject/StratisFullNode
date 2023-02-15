@@ -82,12 +82,23 @@ namespace Stratis.Features.FederatedPeg.Tests
                 asyncMock.Object, new Mock<INodeLifetime>().Object, new NodeDeployments(network, chainIndexerMock.Object));
         }
 
-        // This is failing under Ubuntu and OSX. Disabling temporarily.
-        /*
         [Fact]
         public async Task InitializationTakesForeverIfCounterNodeIsOfflineAsync()
         {
             InitializeCollateralChecker();
+
+            var blockStoreClientMock = new Mock<IBlockStoreClient>();
+
+            var collateralData = new VerboseAddressBalancesResult(this.collateralCheckHeight + 1000)
+            {
+                BalancesData = new List<AddressIndexerData>()
+                {
+                }
+            };
+
+            blockStoreClientMock.Setup(x => x.VerboseAddressesBalancesDataAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>())).ReturnsAsync(collateralData);
+
+            this.collateralChecker.SetPrivateVariableValue("blockStoreClient", blockStoreClientMock.Object);
 
             Task initTask = this.collateralChecker.InitializeAsync();
 
@@ -96,7 +107,6 @@ namespace Stratis.Features.FederatedPeg.Tests
             // Task never finishes since counter chain node doesn't respond.
             Assert.False(initTask.IsCompleted);
         }
-        */
 
         [Fact]
         public async Task CanInitializeAndCheckCollateralAsync()
