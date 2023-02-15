@@ -224,7 +224,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
         // This test is non-async to prevent locking when run in parallel with Reorg_FailsFV_Reconnect_OldChain_Nodes_DisconnectedAsync.
         [Fact]
-        public void Reorg_FailsFV_Reconnect_OldChain_From2ndMiner_DisconnectedAsync()
+        public void Reorg_FailsFV_Reconnect_OldChain_DisconnectedAsync()
         {
             using (var builder = NodeBuilder.Create(this))
             {
