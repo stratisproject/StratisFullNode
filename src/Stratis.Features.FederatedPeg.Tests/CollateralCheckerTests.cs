@@ -88,13 +88,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             InitializeCollateralChecker();
 
             var blockStoreClientMock = new Mock<IBlockStoreClient>();
-
-            var collateralData = new VerboseAddressBalancesResult(this.collateralCheckHeight + 1000)
-            {
-                BalancesData = new List<AddressIndexerData>()
-                {
-                }
-            };
+            var collateralData = default(VerboseAddressBalancesResult);
 
             blockStoreClientMock.Setup(x => x.VerboseAddressesBalancesDataAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>())).ReturnsAsync(collateralData);
 
