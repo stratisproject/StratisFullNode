@@ -1,12 +1,8 @@
 {
   "profiles": {
-    "Stratis.CirrusMinerD_Main": {
-      "commandName": "Project",
-      "commandLineArgs": "-mainchain -addressindex"
-    },
     "Stratis.CirrusMinerD": {
       "commandName": "Project",
-      "commandLineArgs": "-sidechain"
+      "commandLineArgs": "-devmode=miner"
     },
     "Stratis.CirrusMinerD TestNet": {
       "commandName": "Project",
