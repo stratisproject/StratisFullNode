@@ -36,6 +36,14 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// </summary>
         private const int InventoryBroadcastMax = 7 * InventoryBroadcastInterval;
 
+        /// <summary>
+        /// Prevents a single peer from sending us huge quantities of fake `inv` messages with nonexistent hashes.
+        /// <remarks>This value is somewhat arbitrarily chosen, it is far greater than the maximum number of transactions that can be stored in any single block.
+        /// The number of unmined transactions in the mempool should ideally hover around the number in a single block or below, otherwise the mempool will eventually
+        /// fill completely. However, on some networks it is not uncommon for there to be surges in transaction volume, so we leave some leeway.</remarks>
+        /// </summary>
+        private const int MaximumInventoryToTrackCount = 50000;
+
         /// <summary>Memory pool validator for validating transactions.</summary>
         private readonly IMempoolValidator validator;
 
@@ -73,7 +81,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// Filter for inventory known.
         /// State that is local to the behavior.
         /// </summary>
-        private readonly HashSet<uint256> filterInventoryKnown;
+        private readonly LruHashSet<uint256> filterInventoryKnown;
 
         /// <summary>
         /// Locking object for memory pool behaviour.
@@ -113,11 +121,12 @@ namespace Stratis.Bitcoin.Features.MemoryPool
 
             this.lockObject = new object();
             this.inventoryTxToSend = new HashSet<uint256>();
-            this.filterInventoryKnown = new HashSet<uint256>();
+            this.filterInventoryKnown = new LruHashSet<uint256>(MaximumInventoryToTrackCount);
             this.isPeerWhitelistedForRelay = false;
             this.isBlocksOnlyMode = false;
         }
 
+        // TODO: Not clear what this was intended for, maybe to periodically re-request mempool contents from peer nodes?
         /// <summary>Time of last memory pool request in unix time.</summary>
         public long LastMempoolReq { get; private set; }
 
@@ -261,14 +270,14 @@ namespace Stratis.Bitcoin.Features.MemoryPool
                         }
                     }
 
-                    this.filterInventoryKnown.Add(hash);
+                    this.filterInventoryKnown.AddOrUpdate(hash);
                     transactionsToSend.Add(hash);
                     this.logger.LogDebug("Added transaction ID '{0}' to inventory list.", hash);
                 }
             }
 
             this.logger.LogDebug("Sending transaction inventory to peer '{0}'.", peer.RemoteSocketEndpoint);
-            await this.SendAsTxInventoryAsync(peer, transactionsToSend);
+            await this.SendAsTxInventoryAsync(peer, transactionsToSend).ConfigureAwait(false);
             this.LastMempoolReq = this.mempoolManager.DateTimeProvider.GetTime();
         }
 
@@ -303,7 +312,13 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             {
                 foreach (var inv in inventoryTxs)
                 {
-                    this.filterInventoryKnown.Add(inv.Hash);
+                    // It is unlikely that the transaction will be in the to-send hashmap, but there is no harm attempting to remove it anyway.
+                    this.inventoryTxToSend.Remove(inv.Hash);
+
+                    // At this point we have no idea whether the proffered hashes exist or are spurious. So we have to rely on the bounded LRU hashmap implementation
+                    // to control the maximum number of extant hashes that we track for this peer. It isn't really worth trying to evict mined transactions from this
+                    // hashmap.
+                    this.filterInventoryKnown.AddOrUpdate(inv.Hash);
                 }
             }
 
@@ -344,19 +359,22 @@ namespace Stratis.Bitcoin.Features.MemoryPool
 
             foreach (InventoryVector item in getDataPayload.Inventory.Where(inv => inv.Type.HasFlag(InventoryType.MSG_TX)))
             {
-                // TODO: check if we need to add support for "not found"
-
                 TxMempoolInfo trxInfo = await this.mempoolManager.InfoAsync(item.Hash).ConfigureAwait(false);
 
-                if (trxInfo != null)
+                if (!peer.IsConnected)
+                    continue;
+
+                if (trxInfo == null)
                 {
-                    // TODO: strip block of witness if peer does not support
-                    if (peer.IsConnected)
-                    {
-                        this.logger.LogDebug("Sending transaction '{0}' to peer '{1}'.", item.Hash, peer.RemoteSocketEndpoint);
-                        await peer.SendMessageAsync(new TxPayload(trxInfo.Trx.WithOptions(peer.SupportedTransactionOptions, this.network.Consensus.ConsensusFactory))).ConfigureAwait(false);
-                    }
+                    // https://btcinformation.org/en/developer-reference#notfound
+                    // https://github.com/bitcoin/bitcoin/pull/2192
+                    await peer.SendMessageAsync(new NotFoundPayload(InventoryType.MSG_TX, item.Hash)).ConfigureAwait(false);
+
+                    continue;
                 }
+
+                this.logger.LogDebug("Sending transaction '{0}' to peer '{1}'.", item.Hash, peer.RemoteSocketEndpoint);
+                await peer.SendMessageAsync(new TxPayload(trxInfo.Trx.WithOptions(peer.SupportedTransactionOptions, this.network.Consensus.ConsensusFactory))).ConfigureAwait(false);
             }
         }
 
@@ -382,14 +400,14 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             // add to local filter
             lock (this.lockObject)
             {
-                this.filterInventoryKnown.Add(trxHash);
+                this.filterInventoryKnown.AddOrUpdate(trxHash);
             }
             this.logger.LogDebug("Added transaction ID '{0}' to known inventory filter.", trxHash);
 
             var state = new MempoolValidationState(true);
-            if (!await this.orphans.AlreadyHaveAsync(trxHash) && await this.validator.AcceptToMemoryPool(state, trx))
+            if (!await this.orphans.AlreadyHaveAsync(trxHash).ConfigureAwait(false) && await this.validator.AcceptToMemoryPool(state, trx).ConfigureAwait(false))
             {
-                await this.validator.SanityCheck();
+                await this.validator.SanityCheck().ConfigureAwait(false);
                 this.RelayTransaction(trxHash);
 
                 this.signals.Publish(new TransactionReceived(trx));
@@ -399,7 +417,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
 
                 this.logger.LogInformation("Transaction ID '{0}' accepted to memory pool from peer '{1}' (poolsz {2} txn, {3} kb).", trxHash, peer.RemoteSocketEndpoint, mmsize, memdyn / 1000);
 
-                await this.orphans.ProcessesOrphansAsync(this, trx);
+                await this.orphans.ProcessesOrphansAsync(this, trx).ConfigureAwait(false);
             }
             else if (state.MissingInputs)
             {
@@ -472,6 +490,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             {
                 if (!this.filterInventoryKnown.Contains(hash))
                 {
+                    // We do not need to bound this in the same way as the 'known' map, because transactions are only sent/relayed when they are considered valid, plus this map is constantly shrinking as txes are sent.
                     this.inventoryTxToSend.Add(hash);
                 }
             }
@@ -572,7 +591,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             foreach (uint256 hash in findInMempool)
             {
                 // Not in the mempool anymore? don't bother sending it.
-                TxMempoolInfo txInfo = await this.mempoolManager.InfoAsync(hash);
+                TxMempoolInfo txInfo = await this.mempoolManager.InfoAsync(hash).ConfigureAwait(false);
                 if (txInfo == null)
                 {
                     this.logger.LogDebug("Transaction ID '{0}' not added to inventory list, no longer in mempool.", hash);

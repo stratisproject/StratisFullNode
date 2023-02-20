@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -141,16 +142,22 @@ namespace Stratis.Bitcoin.Features.BlockStore
             {
                 ChainedHeaderBlock chainedHeaderBlock = this.consensusManager.GetBlockData(item.Hash);
 
+                if (!peer.IsConnected)
+                    continue;
+
                 if (chainedHeaderBlock?.Block != null)
                 {
                     this.logger.LogDebug("Sending block '{0}' to peer '{1}'.", chainedHeaderBlock.ChainedHeader, peer.RemoteSocketEndpoint);
 
-                    //TODO strip block of witness if node does not support
                     await peer.SendMessageAsync(new BlockPayload(chainedHeaderBlock.Block.WithOptions(this.ChainIndexer.Network.Consensus.ConsensusFactory, peer.SupportedTransactionOptions))).ConfigureAwait(false);
                 }
                 else
                 {
                     this.logger.LogDebug("Block with hash '{0}' requested from peer '{1}' was not found in store.", item.Hash, peer.RemoteSocketEndpoint);
+
+                    // https://btcinformation.org/en/developer-reference#notfound
+                    // https://github.com/bitcoin/bitcoin/pull/2192
+                    await peer.SendMessageAsync(new NotFoundPayload(InventoryType.MSG_BLOCK, item.Hash)).ConfigureAwait(false);
                 }
             }
         }
