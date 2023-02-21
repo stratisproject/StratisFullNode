@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -140,10 +139,12 @@ namespace Stratis.Bitcoin.Features.BlockStore
             // TODO: bring logic from core
             foreach (InventoryVector item in getDataPayload.Inventory.Where(inv => inv.Type.HasFlag(InventoryType.MSG_BLOCK)))
             {
-                ChainedHeaderBlock chainedHeaderBlock = this.consensusManager.GetBlockData(item.Hash);
-
+                // We could just check once on entry into this method, but it is possible for the peer's connected status to change
+                // between block transmission attempts.
                 if (!peer.IsConnected)
                     continue;
+
+                ChainedHeaderBlock chainedHeaderBlock = this.consensusManager.GetBlockData(item.Hash);
 
                 if (chainedHeaderBlock?.Block != null)
                 {

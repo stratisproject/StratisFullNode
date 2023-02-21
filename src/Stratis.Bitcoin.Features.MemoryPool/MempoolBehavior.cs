@@ -359,10 +359,12 @@ namespace Stratis.Bitcoin.Features.MemoryPool
 
             foreach (InventoryVector item in getDataPayload.Inventory.Where(inv => inv.Type.HasFlag(InventoryType.MSG_TX)))
             {
-                TxMempoolInfo trxInfo = await this.mempoolManager.InfoAsync(item.Hash).ConfigureAwait(false);
-
+                // We could just check once on entry into this method, but it is possible for the peer's connected status to change
+                // between inv transmission attempts.
                 if (!peer.IsConnected)
                     continue;
+
+                TxMempoolInfo trxInfo = await this.mempoolManager.InfoAsync(item.Hash).ConfigureAwait(false);
 
                 if (trxInfo == null)
                 {
