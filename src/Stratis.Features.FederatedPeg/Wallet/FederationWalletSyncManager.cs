@@ -89,7 +89,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 // state (behind the best chain).
                 ICollection<uint256> locators = this.federationWalletManager.GetWallet().BlockLocator;
                 var blockLocator = new BlockLocator { Blocks = locators.ToList() };
-                ChainedHeader fork = this.chain.FindFork(blockLocator);
+                ChainedHeader fork = this.chain.FindFork(blockLocator) ?? this.chain.Genesis;
                 this.federationWalletManager.RemoveBlocks(fork);
                 this.federationWalletManager.WalletTipHash = fork.HashBlock;
                 this.walletTip = fork;
