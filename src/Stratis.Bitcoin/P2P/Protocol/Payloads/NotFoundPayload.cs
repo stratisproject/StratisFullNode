@@ -7,6 +7,7 @@ namespace Stratis.Bitcoin.P2P.Protocol.Payloads
     /// <summary>
     /// A getdata message for an asked hash is not found by the remote peer.
     /// </summary>
+    [Payload("notfound")]
     public class NotFoundPayload : Payload, IEnumerable<InventoryVector>
     {
         private List<InventoryVector> inventory = new List<InventoryVector>();
