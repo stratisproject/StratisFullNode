@@ -6,6 +6,7 @@ using NBitcoin;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.PoA;
+using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Wallet;
 using Stratis.Features.PoA.Collateral;
@@ -160,10 +161,45 @@ namespace Stratis.Features.FederatedPeg.Distribution
             // Then find the header on the sidechain that contains the applicable commitment height.
             int sidechainTipHeight = this.chainIndexer.Tip.Height;
 
-            ChainedHeader currentHeader = this.chainIndexer.GetHeader(sidechainTipHeight);
+            // Get the set of miners (more specifically, the scriptPubKeys they generated blocks with) to distribute rewards to.
+            // Based on the computed 'common block height' we define the distribution epoch:
+            int currentHeaderHeight = FindSidechainHeightWithCommitmentBelowOrEqualMainchainHeight(applicableMainChainDepositHeight, sidechainTipHeight);
+            int sidechainStartHeight = currentHeaderHeight;
 
-            do
+            this.logger.LogTrace("Initial {0} : {1}", nameof(sidechainStartHeight), sidechainStartHeight);
+
+            // This is a special case which will not be the case on the live network.
+            if (sidechainStartHeight < this.epoch)
+                sidechainStartHeight = 0;
+
+            // If the sidechain start is more than the epoch, then deduct the epoch window.
+            if (sidechainStartHeight > this.epoch)
+                sidechainStartHeight -= this.epoch;
+
+            this.logger.LogTrace("Adjusted {0} : {1}", nameof(sidechainStartHeight), sidechainStartHeight);
+
+            // Ensure that the dictionary is cleared on every run.
+            // As this is a static class, new instances of this dictionary will
+            // only be cleaned up once the node shuts down. It is therefore better
+            // to use a single instance to work with.
+            this.blocksMinedEach.Clear();
+
+            var totalBlocks = CalculateBlocksMinedPerMiner(sidechainStartHeight, currentHeaderHeight);
+            return ConstructRecipients(heightOfRecordedDistributionDeposit, totalBlocks, totalReward);
+        }
+
+        private int FindSidechainHeightWithCommitmentBelowOrEqualMainchainHeight(int mainchainHeight, int sidechainTipHeight)
+        {
+            // Find the first sidechain height with commitment above the 'mainchainHeight'.
+            // Subtracting 1 will give us the height of the last commitment below the mainchainHeight.
+
+            return BinarySearch.BinaryFindFirst((int height) =>
             {
+                if (height > sidechainTipHeight)
+                    return true;
+
+                ChainedHeader currentHeader = this.chainIndexer[height];
+
                 this.commitmentTransactionByHashDictionary.TryGetValue(currentHeader.HashBlock, out Transaction transactionToCheck);
 
                 if (transactionToCheck == null)
@@ -183,43 +219,17 @@ namespace Stratis.Features.FederatedPeg.Distribution
                         commitmentHeightToCheck = heightOfMainChainCommitment.Value;
                         this.commitmentHeightsByHash.Add(currentHeader.HashBlock, commitmentHeightToCheck);
                     }
+
+                    if (commitmentHeightToCheck == null)
+                    {
+                        return null;
+                    }
                 }
 
-                if (commitmentHeightToCheck != null)
-                {
-                    this.logger.LogTrace("{0} : {1}={2}", currentHeader, nameof(commitmentHeightToCheck), commitmentHeightToCheck);
+                this.logger.LogTrace("{0} : {1}={2}", currentHeader, nameof(commitmentHeightToCheck), commitmentHeightToCheck);
 
-                    if (commitmentHeightToCheck <= applicableMainChainDepositHeight)
-                        break;
-                }
-
-                currentHeader = currentHeader.Previous;
-
-            } while (currentHeader.Height != 0);
-
-            // Get the set of miners (more specifically, the scriptPubKeys they generated blocks with) to distribute rewards to.
-            // Based on the computed 'common block height' we define the distribution epoch:
-            int sidechainStartHeight = currentHeader.Height;
-            this.logger.LogTrace("Initial {0} : {1}", nameof(sidechainStartHeight), sidechainStartHeight);
-
-            // This is a special case which will not be the case on the live network.
-            if (sidechainStartHeight < this.epoch)
-                sidechainStartHeight = 0;
-
-            // If the sidechain start is more than the epoch, then deduct the epoch window.
-            if (sidechainStartHeight > this.epoch)
-                sidechainStartHeight -= this.epoch;
-
-            this.logger.LogTrace("Adjusted {0} : {1}", nameof(sidechainStartHeight), sidechainStartHeight);
-
-            // Ensure that the dictionary is cleared on every run.
-            // As this is a static class, new instances of this dictionary will
-            // only be cleaned up once the node shuts down. It is therefore better
-            // to use a single instance to work with.
-            this.blocksMinedEach.Clear();
-
-            var totalBlocks = CalculateBlocksMinedPerMiner(sidechainStartHeight, currentHeader.Height);
-            return ConstructRecipients(heightOfRecordedDistributionDeposit, totalBlocks, totalReward);
+                return commitmentHeightToCheck > mainchainHeight;
+            }, 1, sidechainTipHeight + 1) - 1;
         }
 
         private long CalculateBlocksMinedPerMiner(int sidechainStartHeight, int sidechainEndHeight)
