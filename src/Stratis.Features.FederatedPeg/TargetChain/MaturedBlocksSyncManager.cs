@@ -209,8 +209,12 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             // If the last confirmed deposit is not known yet then try to find it via the federation wallet.
             uint maturityTimeOfLastConfirmedDeposit = 0;
 
+            FederationWallet wallet = this.federationWalletManager.GetWallet();
+            if (wallet == null)
+                return 0U;
+
             // Query the wallet for the last confirmed deposit.
-            foreach (WithdrawalDetails withdrawal in this.federationWalletManager.GetWallet().MultiSigAddress.Transactions.GetLastWithdrawals())
+            foreach (WithdrawalDetails withdrawal in wallet.MultiSigAddress.Transactions.GetLastWithdrawals())
             {
                 uint256 depositId = withdrawal.MatchingDepositId;
 
