@@ -220,7 +220,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                 if (!this.blockTimeOfDeposit.TryGetValue(depositId, out uint blockTime))
                 {
-                    TransactionVerboseModel result2 = await this.federationNodeClient.GetDepositTransactionVerboseAsync(depositId);
+                    TransactionVerboseModel result2 = await this.federationNodeClient.GetDepositTransactionVerboseAsync(depositId).ConfigureAwait(false);
                     if (result2 == null)
                         continue;
 
