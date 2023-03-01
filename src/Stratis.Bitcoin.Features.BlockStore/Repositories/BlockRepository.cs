@@ -7,19 +7,17 @@ using System.Threading;
 using DBreeze.Utils;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using RocksDbSharp;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
-using Stratis.Bitcoin.Persistence;
+using Stratis.Bitcoin.Database;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.BlockStore.Repositories
 {
-    public class RocksDbBlockRepository : IBlockRepository
+    public class BlockRepository<T> : IBlockRepository where T : IDb, new()
     {
         private readonly string dataFolder;
-        private DbOptions dbOptions;
-        private RocksDb rocksDb;
+        private IDb db;
         private readonly object locker;
         private readonly ILogger logger;
         private readonly Network network;
@@ -33,22 +31,22 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
 
         /// <inheritdoc />
         public bool TxIndex { get; private set; }
-
         private readonly DBreezeSerializer dBreezeSerializer;
         private IReadOnlyDictionary<uint256, Transaction> genesisTransactions;
 
-        public RocksDbBlockRepository(Network network, string dataFolder, DBreezeSerializer dataStoreSerializer)
+        public BlockRepository(Network network, DataFolder dataFolder, DBreezeSerializer dBreezeSerializer)
+            : this(network, dataFolder.BlockPath, dBreezeSerializer)
+        {
+        }
+
+        public BlockRepository(Network network, string dataFolder, DBreezeSerializer dBreezeSerializer)
         {
             this.dataFolder = dataFolder;
-            this.dBreezeSerializer = dataStoreSerializer;
             this.locker = new object();
             this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
-        }
-
-        public RocksDbBlockRepository(Network network, DataFolder dataFolder, DBreezeSerializer dataStoreSerializer)
-            : this(network, dataFolder.BlockPath, dataStoreSerializer)
-        {
+            this.dBreezeSerializer = dBreezeSerializer;
+            this.genesisTransactions = network.GetGenesis().Transactions.ToDictionary(k => k.GetHash());
         }
 
         /// <inheritdoc />
@@ -56,8 +54,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
         {
             Directory.CreateDirectory(this.dataFolder);
 
-            this.dbOptions = new DbOptions().SetCreateIfMissing(true);
-            this.rocksDb = RocksDb.Open(this.dbOptions, this.dataFolder);
+            this.db = new T();
+            this.db.Open(this.dataFolder);
 
             Block genesis = this.network.GetGenesis();
             this.genesisTransactions = this.network.GetGenesis().Transactions.ToDictionary(k => k.GetHash());
@@ -84,7 +82,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
             if (!this.TxIndex)
             {
                 this.logger.LogTrace("(-)[TX_INDEXING_DISABLED]:null");
-                return default;
+                return default(Transaction);
             }
 
             if (this.genesisTransactions.TryGetValue(trxid, out Transaction genesisTransaction))
@@ -95,7 +93,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
             Transaction res = null;
             lock (this.locker)
             {
-                byte[] transactionRow = this.rocksDb.Get(BlockRepositoryConstants.TransactionTableName, trxid.ToBytes());
+                byte[] transactionRow = this.db.Get(BlockRepositoryConstants.TransactionTableName, trxid.ToBytes());
 
                 if (transactionRow == null)
                 {
@@ -103,7 +101,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
                     return null;
                 }
 
-                byte[] blockRow = this.rocksDb.Get(BlockRepositoryConstants.BlockTableName, transactionRow);
+                byte[] blockRow = this.db.Get(BlockRepositoryConstants.BlockTableName, transactionRow);
 
                 if (blockRow != null)
                 {
@@ -148,14 +146,14 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
                         continue;
                     }
 
-                    byte[] transactionRow = this.rocksDb.Get(BlockRepositoryConstants.TransactionTableName, trxids[i].ToBytes());
+                    byte[] transactionRow = this.db.Get(BlockRepositoryConstants.TransactionTableName, trxids[i].ToBytes());
                     if (transactionRow == null)
                     {
                         this.logger.LogTrace("(-)[NO_TX_ROW]:null");
                         return null;
                     }
 
-                    byte[] blockRow = this.rocksDb.Get(BlockRepositoryConstants.BlockTableName, transactionRow);
+                    byte[] blockRow = this.db.Get(BlockRepositoryConstants.BlockTableName, transactionRow);
 
                     if (blockRow != null)
                     {
@@ -181,7 +179,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
             if (!this.TxIndex)
             {
                 this.logger.LogTrace("(-)[NO_TXINDEX]:null");
-                return default;
+                return default(uint256);
             }
 
             if (this.genesisTransactions.ContainsKey(trxid))
@@ -192,7 +190,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
             uint256 res = null;
             lock (this.locker)
             {
-                byte[] transactionRow = this.rocksDb.Get(BlockRepositoryConstants.TransactionTableName, trxid.ToBytes());
+                byte[] transactionRow = this.db.Get(BlockRepositoryConstants.TransactionTableName, trxid.ToBytes());
                 if (transactionRow != null)
                     res = new uint256(transactionRow);
             }
@@ -217,7 +215,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
             List<KeyValuePair<uint256, Block>> blockList = blockDict.ToList();
             blockList.Sort((pair1, pair2) => byteListComparer.Compare(pair1.Key.ToBytes(), pair2.Key.ToBytes()));
 
-            using (var batch = new WriteBatch())
+            using (var batch = this.db.GetWriteBatch())
             {
                 // Index blocks.
                 foreach (KeyValuePair<uint256, Block> kv in blockList)
@@ -226,7 +224,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
                     Block block = kv.Value;
 
                     // If the block is already in store don't write it again.
-                    byte[] blockRow = this.rocksDb.Get(BlockRepositoryConstants.BlockTableName, blockId.ToBytes());
+                    byte[] blockRow = this.db.Get(BlockRepositoryConstants.BlockTableName, blockId.ToBytes());
                     if (blockRow == null)
                     {
                         batch.Put(BlockRepositoryConstants.BlockTableName, blockId.ToBytes(), this.dBreezeSerializer.Serialize(block));
@@ -239,7 +237,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
                     }
                 }
 
-                this.rocksDb.Write(batch);
+                batch.Write();
             }
 
             if (this.TxIndex)
@@ -251,23 +249,24 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
             var byteListComparer = new ByteListComparer();
             transactions.Sort((pair1, pair2) => byteListComparer.Compare(pair1.Item1.GetHash().ToBytes(), pair2.Item1.GetHash().ToBytes()));
 
-            using (var batch = new WriteBatch())
+            using (var batch = this.db.GetWriteBatch())
             {
                 // Index transactions.
                 foreach ((Transaction transaction, Block block) in transactions)
                     batch.Put(BlockRepositoryConstants.TransactionTableName, transaction.GetHash().ToBytes(), block.GetHash().ToBytes());
 
-                this.rocksDb.Write(batch);
+                batch.Write();
             }
         }
 
+        /// <inheritdoc />
         public IEnumerable<Block> EnumerateBatch(List<ChainedHeader> headers)
         {
             lock (this.locker)
             {
                 foreach (ChainedHeader chainedHeader in headers)
                 {
-                    byte[] blockRow = this.rocksDb.Get(BlockRepositoryConstants.BlockTableName, chainedHeader.HashBlock.ToBytes());
+                    byte[] blockRow = this.db.Get(BlockRepositoryConstants.BlockTableName, chainedHeader.HashBlock.ToBytes());
                     Block block = blockRow != null ? this.dBreezeSerializer.Deserialize<Block>(blockRow) : null;
                     yield return block;
                 }
@@ -296,14 +295,13 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
                     warningMessage.AppendLine();
 
                     this.logger.LogInformation(warningMessage.ToString());
-                    using (var batch = new WriteBatch())
+                    using (var batch = this.db.GetWriteBatch())
                     {
-                        var enumerator = this.rocksDb.NewIterator();
-                        for (enumerator.SeekToFirst(); enumerator.Valid(); enumerator.Next())
+                        using (var iterator = this.db.GetIterator(BlockRepositoryConstants.BlockTableName))
                         {
-                            if (enumerator.Key()[0] == BlockRepositoryConstants.BlockTableName)
+                            foreach ((byte[] key, byte[] value) in iterator.GetAll())
                             {
-                                var block = this.dBreezeSerializer.Deserialize<Block>(enumerator.Value());
+                                var block = this.dBreezeSerializer.Deserialize<Block>(value);
                                 foreach (Transaction transaction in block.Transactions)
                                 {
                                     batch.Put(BlockRepositoryConstants.TransactionTableName, transaction.GetHash().ToBytes(), block.GetHash().ToBytes());
@@ -317,19 +315,25 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
                             }
                         }
 
-                        this.rocksDb.Write(batch);
+                        batch.Write();
                     }
 
                     this.logger.LogInformation("Reindex completed successfully.");
                 }
                 else
                 {
-                    var enumerator = this.rocksDb.NewIterator();
-                    for (enumerator.SeekToFirst(); enumerator.Valid(); enumerator.Next())
+                    using (var batch = this.db.GetWriteBatch())
                     {
-                        // Clear tx from database.
-                        if (enumerator.Key()[0] == BlockRepositoryConstants.TransactionTableName)
-                            this.rocksDb.Remove(enumerator.Key());
+                        using (var iterator = this.db.GetIterator(BlockRepositoryConstants.TransactionTableName))
+                        {
+                            foreach ((byte[] key, _) in iterator.GetAll(keysOnly: true))
+                            {
+                                // Clear tx from database.
+                                batch.Delete(BlockRepositoryConstants.TransactionTableName, key);
+                            }
+                        }
+
+                        batch.Write();
                     }
                 }
             }
@@ -355,10 +359,10 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
         private bool? LoadTxIndex()
         {
             bool? res = null;
-            byte[] row = this.rocksDb.Get(BlockRepositoryConstants.CommonTableName, TxIndexKey);
+            byte[] row = this.db.Get(BlockRepositoryConstants.CommonTableName, TxIndexKey);
             if (row != null)
             {
-                this.TxIndex = BitConverter.ToBoolean(row);
+                this.TxIndex = BitConverter.ToBoolean(row, 0);
                 res = this.TxIndex;
             }
 
@@ -367,8 +371,12 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
 
         private void SaveTxIndex(bool txIndex)
         {
-            this.TxIndex = txIndex;
-            this.rocksDb.Put(BlockRepositoryConstants.CommonTableName, TxIndexKey, BitConverter.GetBytes(txIndex));
+            using (var batch = this.db.GetWriteBatch())
+            {
+                this.TxIndex = txIndex;
+                batch.Put(BlockRepositoryConstants.CommonTableName, TxIndexKey, BitConverter.GetBytes(txIndex));
+                batch.Write();
+            }
         }
 
         /// <inheritdoc />
@@ -384,7 +392,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
         {
             if (this.TipHashAndHeight == null)
             {
-                byte[] row = this.rocksDb.Get(BlockRepositoryConstants.CommonTableName, RepositoryTipKey);
+                byte[] row = this.db.Get(BlockRepositoryConstants.CommonTableName, RepositoryTipKey);
                 if (row != null)
                     this.TipHashAndHeight = this.dBreezeSerializer.Deserialize<HashHeightPair>(row);
             }
@@ -394,8 +402,12 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
 
         private void SaveTipHashAndHeight(HashHeightPair newTip)
         {
-            this.TipHashAndHeight = newTip;
-            this.rocksDb.Put(BlockRepositoryConstants.CommonTableName, RepositoryTipKey, this.dBreezeSerializer.Serialize(newTip));
+            using (var batch = this.db.GetWriteBatch())
+            {
+                this.TipHashAndHeight = newTip;
+                batch.Put(BlockRepositoryConstants.CommonTableName, RepositoryTipKey, this.dBreezeSerializer.Serialize(newTip));
+                batch.Write();
+            }
         }
 
         /// <inheritdoc />
@@ -440,7 +452,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
             {
                 // Lazy loading is on so we don't fetch the whole value, just the row.
                 byte[] key = hash.ToBytes();
-                byte[] blockRow = this.rocksDb.Get(BlockRepositoryConstants.BlockTableName, key);
+                byte[] blockRow = this.db.Get(BlockRepositoryConstants.BlockTableName, key);
                 if (blockRow != null)
                     res = true;
             }
@@ -448,27 +460,24 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
             return res;
         }
 
-        protected virtual void OnDeleteTransactions(List<(Transaction, Block)> transactions)
-        {
-            foreach ((Transaction transaction, Block block) in transactions)
-                this.rocksDb.Remove(BlockRepositoryConstants.TransactionTableName, transaction.GetHash().ToBytes());
-        }
-
         protected virtual void OnDeleteBlocks(List<Block> blocks)
         {
-            if (this.TxIndex)
+            using (var batch = this.db.GetWriteBatch())
             {
-                var transactions = new List<(Transaction, Block)>();
+                if (this.TxIndex)
+                {
+                    var transactions = new List<(Transaction, Block)>();
+
+                    foreach (Block block in blocks)
+                        foreach (Transaction transaction in block.Transactions)
+                            batch.Delete(BlockRepositoryConstants.TransactionTableName, transaction.GetHash().ToBytes());
+                }
 
                 foreach (Block block in blocks)
-                    foreach (Transaction transaction in block.Transactions)
-                        transactions.Add((transaction, block));
+                    batch.Delete(BlockRepositoryConstants.BlockTableName, block.GetHash().ToBytes());
 
-                this.OnDeleteTransactions(transactions);
+                batch.Write();
             }
-
-            foreach (Block block in blocks)
-                this.rocksDb.Remove(BlockRepositoryConstants.BlockTableName, block.GetHash().ToBytes());
         }
 
         public List<Block> GetBlocksFromHashes(List<uint256> hashes)
@@ -490,7 +499,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
                     continue;
                 }
 
-                byte[] blockRow = this.rocksDb.Get(BlockRepositoryConstants.BlockTableName, key.Item2);
+                byte[] blockRow = this.db.Get(BlockRepositoryConstants.BlockTableName, key.Item2);
                 if (blockRow != null)
                 {
                     results[key.Item1] = this.dBreezeSerializer.Deserialize<Block>(blockRow);
@@ -538,19 +547,23 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
 
         public byte[] Get(byte tableName, byte[] key)
         {
-            byte[] result = this.rocksDb.Get(tableName, key);
+            byte[] result = this.db.Get(tableName, key);
             return result;
         }
 
         public void Put(byte tableName, byte[] key, byte[] value)
         {
-            this.rocksDb.Put(tableName, key, value);
+            using (var batch = this.db.GetWriteBatch())
+            {
+                batch.Put(tableName, key, value);
+                batch.Write();
+            }
         }
 
         /// <inheritdoc />
         public void Dispose()
         {
-            this.rocksDb.Dispose();
+            this.db.Dispose();
         }
     }
 }

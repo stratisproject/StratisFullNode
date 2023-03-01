@@ -37,5 +37,46 @@ namespace Stratis.Bitcoin.Interfaces
         Block GetBlock(uint256 blockHash);
 
         List<Block> GetBlocks(List<uint256> blockHashes);
+
+        /// <summary> Indicates that the node should store all transaction data in the database.</summary>
+        bool TxIndex { get; }
+    }
+
+    /// <summary>
+    /// Provides functionality that builds upon the <see cref="IBlockStore"/> interface.
+    /// </summary>
+    public static class IBlockStoreExt
+    {
+        public static IEnumerable<(ChainedHeader, Block)> BatchBlocksFrom(this IBlockStore blockStore, ChainedHeader previousBlock, ChainIndexer chainIndexer, CancellationTokenSource cancellationToken = null, int batchSize = 100)
+        {
+            for (int height = previousBlock.Height + 1; !(cancellationToken?.IsCancellationRequested ?? false);)
+            {
+                var hashes = new List<uint256>();
+                for (int i = 0; i < batchSize; i++)
+                {
+                    ChainedHeader header = chainIndexer.GetHeader(height + i);
+                    if (header == null)
+                        break;
+
+                    if (header.Previous != previousBlock)
+                        break;
+
+                    hashes.Add(header.HashBlock);
+
+                    previousBlock = header;
+                }
+
+                if (hashes.Count == 0)
+                    yield break;
+
+                List<Block> blocks = blockStore.GetBlocks(hashes);
+
+                for (int i = 0; i < blocks.Count && !(cancellationToken?.IsCancellationRequested ?? false); height++, i++)
+                {
+                    ChainedHeader header = chainIndexer.GetHeader(height);
+                    yield return ((header, blocks[i]));
+                }
+            }
+        }
     }
 }

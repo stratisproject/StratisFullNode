@@ -4,6 +4,7 @@ using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Database;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Consensus.Interfaces;
 using Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders;
@@ -68,10 +69,10 @@ namespace Stratis.Bitcoin.Features.Consensus
                         services.AddSingleton<IProvenBlockHeaderStore, ProvenBlockHeaderStore>();
 
                         if (coindbType == DbType.Leveldb)
-                            services.AddSingleton<IProvenBlockHeaderRepository, LevelDbProvenBlockHeaderRepository>();
+                            services.AddSingleton<IProvenBlockHeaderRepository, ProvenBlockHeaderRepository<LevelDb>>();
 
                         if (coindbType == DbType.RocksDb)
-                            services.AddSingleton<IProvenBlockHeaderRepository, RocksDbProvenBlockHeaderRepository>();
+                            services.AddSingleton<IProvenBlockHeaderRepository, ProvenBlockHeaderRepository<RocksDb>>();
                     });
             });
 
@@ -83,19 +84,19 @@ namespace Stratis.Bitcoin.Features.Consensus
             switch (coindbType)
             {
                 case DbType.Dbreeze:
-                    services.AddSingleton<ICoindb, DBreezeCoindb>();
+                    services.AddSingleton<ICoindb, Coindb<DBreezeDbWithCoinDbNames>>();
                     break;
 
                 case DbType.Leveldb:
-                    services.AddSingleton<ICoindb, LevelDbCoindb>();
+                    services.AddSingleton<ICoindb, Coindb<LevelDb>>();
                     break;
 
                 case DbType.RocksDb:
-                    services.AddSingleton<ICoindb, RocksDbCoindb>();
+                    services.AddSingleton<ICoindb, Coindb<RocksDb>>();
                     break;
 
                 default:
-                    services.AddSingleton<ICoindb, LevelDbCoindb>();
+                    services.AddSingleton<ICoindb, Coindb<LevelDb>>();
                     break;
             }
         }

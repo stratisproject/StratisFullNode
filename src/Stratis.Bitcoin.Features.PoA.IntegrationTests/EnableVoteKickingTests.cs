@@ -32,10 +32,8 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
                     targetSpacingSeconds: 60,
                     votingEnabled: true,
                     autoKickIdleMembers: false,
-                    federationMemberMaxIdleTimeSeconds: oldOptions.FederationMemberMaxIdleTimeSeconds)
-                {
-                    PollExpiryBlocks = 450
-                };
+                    federationMemberMaxIdleTimeSeconds: oldOptions.FederationMemberMaxIdleTimeSeconds,
+                    pollExpiryBlocks: 450);
 
                 CoreNode node1 = builder.CreatePoANode(votingNetwork1, votingNetwork1.FederationKey1).Start();
                 CoreNode node2 = builder.CreatePoANode(votingNetwork2, votingNetwork2.FederationKey2).Start();
@@ -57,10 +55,8 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
                     targetSpacingSeconds: 60,
                     votingEnabled: true,
                     autoKickIdleMembers: true,
-                    federationMemberMaxIdleTimeSeconds: idleTimeSeconds)
-                {
-                    PollExpiryBlocks = 450
-                };
+                    federationMemberMaxIdleTimeSeconds: idleTimeSeconds,
+                    pollExpiryBlocks: 450);
 
                 // Restart node 1 to ensure that we have the new network consensus options which reflects
                 // the autokicking enabled.

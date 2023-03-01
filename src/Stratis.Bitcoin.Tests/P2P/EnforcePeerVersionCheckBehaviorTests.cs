@@ -58,8 +58,8 @@ namespace Stratis.Bitcoin.Tests.BlockPulling
         public void IncompatibileNodesDisconnectAfterHardFork()
         {
             // Set the hard-fork parameters.
-            this.Network.Consensus.Options.EnforceMinProtocolVersionAtBlockHeight = 5;
-            this.Network.Consensus.Options.EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION;
+            this.Network.Consensus.Options.SetPrivatePropertyValue("EnforceMinProtocolVersionAtBlockHeight", 5);
+            this.Network.Consensus.Options.SetPrivatePropertyValue("EnforcedMinProtocolVersion", ProtocolVersion.CIRRUS_VERSION);
 
             // Configure local node version.
             var nodeSettings = NodeSettings.Default(this.Network, ProtocolVersion.CIRRUS_VERSION);
@@ -101,8 +101,8 @@ namespace Stratis.Bitcoin.Tests.BlockPulling
         public void CompatibileNodesStayConnectedAfterHardFork()
         {
             // Set the hard-fork parameters.
-            this.Network.Consensus.Options.EnforceMinProtocolVersionAtBlockHeight = 5;
-            this.Network.Consensus.Options.EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION;
+            this.Network.Consensus.Options.SetPrivatePropertyValue("EnforceMinProtocolVersionAtBlockHeight", 5);
+            this.Network.Consensus.Options.SetPrivatePropertyValue("EnforcedMinProtocolVersion", ProtocolVersion.CIRRUS_VERSION);
 
             // Configure local node version.
             var nodeSettings = NodeSettings.Default(this.Network, ProtocolVersion.CIRRUS_VERSION);

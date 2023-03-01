@@ -44,7 +44,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
 
             int result = checkpoints.GetLastCheckpointHeight();
 
-            Assert.Equal(610000, result);
+            Assert.Equal(760000, result);
         }
 
         [Fact]
@@ -54,7 +54,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
 
             int result = checkpoints.GetLastCheckpointHeight();
 
-            Assert.Equal(1400000, result);
+            Assert.Equal(2400000, result);
         }
 
         [Fact]
@@ -99,7 +99,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
             consensusSettings.UseCheckpoints = true;
 
             result = checkpoints.GetLastCheckpointHeight();
-            Assert.Equal(610000, result);
+            Assert.Equal(760000, result);
         }
 
         [Fact]
@@ -224,6 +224,9 @@ namespace Stratis.Bitcoin.Tests.Consensus
                 { 295000, new CheckpointInfo(new uint256("0x00000000000000004d9b4ef50f0f9d686fd69db2e03af35a100370c64632a983")) },
                 { 486000, new CheckpointInfo(new uint256("0x000000000000000000a2a8104d61651f76c666b70754d6e9346176385f7afa24")) },
                 { 491800, new CheckpointInfo(new uint256("0x000000000000000000d80de1f855902b50941bc3a3d0f71064d9613fd3943dc4")) },
+                { 550000, new CheckpointInfo(new uint256("0x000000000000000000223b7a2298fb1c6c75fb0efc28a4c56853ff4112ec6bc9")) },
+                { 610000, new CheckpointInfo(new uint256("0x0000000000000000000a6f607f74db48dae0a94022c10354536394c17672b7f7")) },
+                { 760000, new CheckpointInfo(new uint256("0x00000000000000000003e1d91b245eb32787afb10afe49b61621375361221c38")) },
             };
 
             var checkpoints = new Checkpoints(this.network, new ConsensusSettings(NodeSettings.Default(this.network)) { UseCheckpoints = true });

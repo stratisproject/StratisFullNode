@@ -8,6 +8,7 @@ using NBitcoin;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
+using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.Wallet.Controllers;
 using Stratis.Features.Unity3dApi.Controllers;
@@ -42,7 +43,7 @@ namespace Stratis.Features.Unity3dApi
             Unity3dApiSettings apiSettings,
             ILoggerFactory loggerFactory,
             ICertificateStore certificateStore,
-            INFTTransferIndexer NFTTransferIndexer)
+            INFTTransferIndexer NFTTransferIndexer = null /* Only available for Cirrus */)
         {
             this.fullNodeBuilder = fullNodeBuilder;
             this.fullNode = fullNode;
@@ -95,7 +96,7 @@ namespace Stratis.Features.Unity3dApi
         /// <param name="network">The network to extract values from.</param>
         public static void PrintHelp(Network network)
         {
-            ApiSettings.PrintHelp(network);
+            BaseSettings.PrintHelp(typeof(ApiSettings), network);
         }
 
         /// <summary>
@@ -105,7 +106,7 @@ namespace Stratis.Features.Unity3dApi
         /// <param name="network">The network to base the defaults off.</param>
         public static void BuildDefaultConfigurationFile(StringBuilder builder, Network network)
         {
-            ApiSettings.BuildDefaultConfigurationFile(builder, network);
+            BaseSettings.BuildDefaultConfigurationFile(typeof(ApiSettings), builder, network);
         }
 
         /// <inheritdoc />
@@ -127,7 +128,7 @@ namespace Stratis.Features.Unity3dApi
                 this.webHost = null;
             }
 
-            this.NFTTransferIndexer.Dispose();
+            this.NFTTransferIndexer?.Dispose();
         }
     }
 
@@ -136,7 +137,7 @@ namespace Stratis.Features.Unity3dApi
     /// </summary>
     public static class Unity3dApiFeatureExtension
     {
-        public static IFullNodeBuilder UseUnity3dApi(this IFullNodeBuilder fullNodeBuilder)
+        public static IFullNodeBuilder UseUnity3dApi(this IFullNodeBuilder fullNodeBuilder, bool isCirrus)
         {
             fullNodeBuilder.ConfigureFeature(features =>
             {
@@ -147,7 +148,9 @@ namespace Stratis.Features.Unity3dApi
                     services.AddSingleton(fullNodeBuilder);
                     services.AddSingleton<Unity3dApiSettings>();
                     services.AddSingleton<ICertificateStore, CertificateStore>();
-                    services.AddSingleton<INFTTransferIndexer, NFTTransferIndexer>();
+
+                    if (isCirrus)
+                        services.AddSingleton<INFTTransferIndexer, NFTTransferIndexer>();
 
                     // Controller
                     services.AddTransient<Unity3dController>();

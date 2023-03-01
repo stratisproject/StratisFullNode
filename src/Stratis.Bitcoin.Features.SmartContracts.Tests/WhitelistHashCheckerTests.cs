@@ -16,11 +16,11 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
 
             var repository = new Mock<IWhitelistedHashesRepository>();
 
-            repository.Setup(r => r.GetHashes()).Returns(new List<uint256>());
+            repository.Setup(r => r.GetHashes(It.IsAny<int>())).Returns(new List<uint256>());
 
             var strategy = new WhitelistedHashChecker(repository.Object);
 
-            Assert.False(strategy.CheckHashWhitelisted(hash));
+            Assert.False(strategy.CheckHashWhitelisted(hash, 0));
         }
 
         [Fact]
@@ -30,11 +30,11 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
 
             var repository = new Mock<IWhitelistedHashesRepository>();
 
-            repository.Setup(r => r.GetHashes()).Returns(new List<uint256> { new uint256(hash) });
+            repository.Setup(r => r.GetHashes(It.IsAny<int>())).Returns(new List<uint256> { new uint256(hash) });
 
             var strategy = new WhitelistedHashChecker(repository.Object);
 
-            Assert.True(strategy.CheckHashWhitelisted(hash));
+            Assert.True(strategy.CheckHashWhitelisted(hash, 0));
         }
 
         [Fact]
@@ -42,14 +42,14 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
         {
             var repository = new Mock<IWhitelistedHashesRepository>();
 
-            repository.Setup(r => r.GetHashes()).Returns(new List<uint256>());
+            repository.Setup(r => r.GetHashes(It.IsAny<int>())).Returns(new List<uint256>());
 
             var strategy = new WhitelistedHashChecker(repository.Object);
 
             // uint256 must be 256 bytes wide
             var invalidUint256Bytes = new byte[] { };
 
-            Assert.False(strategy.CheckHashWhitelisted(invalidUint256Bytes));
+            Assert.False(strategy.CheckHashWhitelisted(invalidUint256Bytes, 0));
         }
     }
 }

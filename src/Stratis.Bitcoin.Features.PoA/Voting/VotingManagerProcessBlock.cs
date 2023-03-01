@@ -11,9 +11,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
     public sealed class VotingManagerProcessBlock : EventBase
     {
         public ChainedHeaderBlock ConnectedBlock { get; }
-        public DBreeze.Transactions.Transaction PollsRepositoryTransaction { get; }
+        public PollsRepository.Transaction PollsRepositoryTransaction { get; }
 
-        public VotingManagerProcessBlock(ChainedHeaderBlock connectedBlock, DBreeze.Transactions.Transaction pollsRepositoryTransaction = null)
+        public VotingManagerProcessBlock(ChainedHeaderBlock connectedBlock, PollsRepository.Transaction pollsRepositoryTransaction = null)
         {
             this.ConnectedBlock = connectedBlock;
             this.PollsRepositoryTransaction = pollsRepositoryTransaction;

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Interfaces;
@@ -32,50 +33,6 @@ namespace Stratis.Features.SQLiteWalletRepository.External
             this.transactionsOfInterest = transactionsOfInterest;
             this.addressesOfInterest = addressesOfInterest;
             this.dateTimeProvider = dateTimeProvider;
-        }
-
-        internal IEnumerable<TxDestination> GetDestinations(Script redeemScript)
-        {
-            ScriptTemplate scriptTemplate = this.network.StandardScriptsRegistry.GetTemplateFromScriptPubKey(redeemScript);
-
-            if (scriptTemplate != null)
-            {
-                // We need scripts suitable for matching to HDAddress.ScriptPubKey.
-                switch (scriptTemplate.Type)
-                {
-                    case TxOutType.TX_PUBKEYHASH:
-                        yield return PayToPubkeyHashTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript);
-                        break;
-                    case TxOutType.TX_PUBKEY:
-                        yield return PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript).Hash;
-                        break;
-                    case TxOutType.TX_SCRIPTHASH:
-                        yield return PayToScriptHashTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript);
-                        break;
-                    case TxOutType.TX_SEGWIT:
-                        TxDestination txDestination = PayToWitTemplate.Instance.ExtractScriptPubKeyParameters(this.network, redeemScript);
-                        if (txDestination != null)
-                            yield return new KeyId(txDestination.ToBytes());
-                        break;
-                    default:
-                        if (this.scriptAddressReader is ScriptDestinationReader scriptDestinationReader)
-                        {
-                            foreach (TxDestination destination in scriptDestinationReader.GetDestinationFromScriptPubKey(this.network, redeemScript))
-                            {
-                                yield return destination;
-                            }
-                        }
-                        else
-                        {
-                            string address = this.scriptAddressReader.GetAddressFromScriptPubKey(this.network, redeemScript);
-                            TxDestination destination = ScriptDestinationReader.GetDestinationForAddress(address, this.network);
-                            if (destination != null)
-                                yield return destination;
-                        }
-
-                        break;
-                }
-            }
         }
 
         public bool ProcessTransactions(IEnumerable<Transaction> transactions, HashHeightPair block, uint256 fixedTxId = null, long? blockTime = null)
@@ -122,7 +79,7 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                     if (scriptPubKeyBytes.Length == 0 || scriptPubKeyBytes[0] == (byte)OpcodeType.OP_RETURN)
                         continue;
 
-                    var destinations = this.GetDestinations(txOut.ScriptPubKey);
+                    var destinations = this.scriptAddressReader.GetDestinationFromScriptPubKey(this.network, txOut.ScriptPubKey);
 
                     bool isChange = destinations.Any(d => addressesOfInterest.Contains(d.ScriptPubKey, out AddressIdentifier address2) && address2.AddressType == 1);
 
@@ -218,7 +175,7 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                         new HashHeightPair(transactionData.BlockHash ?? 0, (int)transactionData.BlockHeight);
 
                     Script scriptPubKey = transactionData.ScriptPubKey;
-                    foreach (Script pubKeyScript in this.GetDestinations(scriptPubKey).Select(d => d.ScriptPubKey))
+                    foreach (Script pubKeyScript in this.scriptAddressReader.GetDestinationFromScriptPubKey(this.network, scriptPubKey).Select(d => d.ScriptPubKey))
                     {
                         bool containsAddress = addressesOfInterest.Contains(pubKeyScript, out AddressIdentifier targetAddress);
 

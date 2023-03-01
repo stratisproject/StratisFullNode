@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using NBitcoin;
+using NBitcoin.Protocol;
 
 namespace Stratis.Bitcoin.Features.PoA
 {
@@ -25,7 +26,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
         /// <summary>Makes federation members kick idle members.</summary>
         /// <remarks>Requires voting to be enabled to be set <c>true</c>.</remarks>
-        public bool AutoKickIdleMembers { get; set; }
+        public bool AutoKickIdleMembers { get; protected set; }
 
         /// <summary>Time that federation member has to be idle to be kicked by others in case <see cref="AutoKickIdleMembers"/> is enabled.</summary>
         public uint FederationMemberMaxIdleTimeSeconds { get; protected set; }
@@ -107,6 +108,16 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <param name="votingEnabled">See <see cref="VotingEnabled"/>.</param>
         /// <param name="autoKickIdleMembers">See <see cref="AutoKickIdleMembers"/>.</param>
         /// <param name="federationMemberMaxIdleTimeSeconds">See <see cref="FederationMemberMaxIdleTimeSeconds"/>.</param>
+        /// <param name="enforceMinProtocolVersionAtBlockHeight">See <see cref="ConsensusOptions.EnforceMinProtocolVersionAtBlockHeight"/>.</param>
+        /// <param name="enforcedMinProtocolVersion"><see cref="ConsensusOptions.EnforcedMinProtocolVersion"/>.</param>
+        /// <param name="federationMemberActivationTime"><see cref="FederationMemberActivationTime"/>.</param>
+        /// <param name="votingManagerV2ActivationHeight"><see cref="VotingManagerV2ActivationHeight"/>.</param>
+        /// <param name="interFluxV2MainChainActivationHeight"><see cref="InterFluxV2MainChainActivationHeight"/>.</param>
+        /// <param name="getMiningTimestampV2ActivationHeight"><see cref="GetMiningTimestampV2ActivationHeight"/>.</param>
+        /// <param name="getMiningTimestampV2ActivationStrictHeight"><see cref="GetMiningTimestampV2ActivationStrictHeight"/>.</param>
+        /// <param name="release1100ActivationHeight"><see cref="Release1100ActivationHeight"/>.</param>
+        /// <param name="pollExpiryBlocks"><see cref="PollExpiryBlocks"/>.</param>
+        /// <param name="contractSerializerV2ActivationHeight"><see cref="ContractSerializerV2ActivationHeight"/>.</param>
         public PoAConsensusOptions(
             uint maxBlockBaseSize,
             int maxStandardVersion,
@@ -117,7 +128,17 @@ namespace Stratis.Bitcoin.Features.PoA
             uint targetSpacingSeconds,
             bool votingEnabled,
             bool autoKickIdleMembers,
-            uint federationMemberMaxIdleTimeSeconds = 60 * 60 * 24 * 7)
+            uint federationMemberMaxIdleTimeSeconds = 60 * 60 * 24 * 7,
+            int? enforceMinProtocolVersionAtBlockHeight = null,
+            ProtocolVersion? enforcedMinProtocolVersion = null,
+            uint? federationMemberActivationTime = null,
+            int? votingManagerV2ActivationHeight = null,
+            int? interFluxV2MainChainActivationHeight = null,
+            int? getMiningTimestampV2ActivationHeight = null,
+            int? getMiningTimestampV2ActivationStrictHeight = null,
+            int? release1100ActivationHeight = null,
+            int? pollExpiryBlocks = null,
+            int? contractSerializerV2ActivationHeight = null)
                 : base(maxBlockBaseSize, maxStandardVersion, maxStandardTxWeight, maxBlockSigopsCost, maxStandardTxSigopsCost, witnessScaleFactor: 1)
         {
             this.GenesisFederationMembers = genesisFederationMembers;
@@ -126,6 +147,25 @@ namespace Stratis.Bitcoin.Features.PoA
             this.AutoKickIdleMembers = autoKickIdleMembers;
             this.FederationMemberMaxIdleTimeSeconds = federationMemberMaxIdleTimeSeconds;
             this.InterFluxV2MainChainActivationHeight = 0;
+            if (enforceMinProtocolVersionAtBlockHeight.HasValue)
+                this.EnforceMinProtocolVersionAtBlockHeight = enforceMinProtocolVersionAtBlockHeight.Value;
+            if (enforcedMinProtocolVersion.HasValue)
+                this.EnforcedMinProtocolVersion = enforcedMinProtocolVersion.Value;
+            this.FederationMemberActivationTime = federationMemberActivationTime;
+            if (pollExpiryBlocks.HasValue)
+                this.PollExpiryBlocks = pollExpiryBlocks.Value;
+            if (interFluxV2MainChainActivationHeight.HasValue)
+                this.InterFluxV2MainChainActivationHeight = interFluxV2MainChainActivationHeight.Value;
+            if (getMiningTimestampV2ActivationHeight.HasValue)
+                this.GetMiningTimestampV2ActivationHeight = getMiningTimestampV2ActivationHeight.Value;
+            if (getMiningTimestampV2ActivationStrictHeight.HasValue)
+                this.GetMiningTimestampV2ActivationStrictHeight = getMiningTimestampV2ActivationStrictHeight.Value;
+            if (votingManagerV2ActivationHeight.HasValue)
+                this.VotingManagerV2ActivationHeight = votingManagerV2ActivationHeight.Value;
+            if (release1100ActivationHeight.HasValue)
+                this.Release1100ActivationHeight = release1100ActivationHeight.Value;
+            if (contractSerializerV2ActivationHeight.HasValue)
+                this.ContractSerializerV2ActivationHeight = contractSerializerV2ActivationHeight.Value;
 
             if (this.AutoKickIdleMembers && !this.VotingEnabled)
                 throw new ArgumentException("Voting should be enabled for automatic kicking to work.");

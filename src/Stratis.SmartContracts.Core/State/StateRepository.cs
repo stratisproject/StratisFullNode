@@ -124,6 +124,8 @@ namespace Stratis.SmartContracts.Core.State
         /// <summary>
         /// Gets a snaphot of the state repository up until the given state root.
         /// </summary>
+        /// <param name="stateRoot">The state root to get a snapshot for.</param>
+        /// <returns><see cref="IStateRepositoryRoot"/></returns>
         public virtual IStateRepositoryRoot GetSnapshotTo(byte[] stateRoot)
         {
             return this.parent.GetSnapshotTo(stateRoot);
@@ -159,6 +161,8 @@ namespace Stratis.SmartContracts.Core.State
         /// 
         /// Note that because the initial transaction will always be coming from a human we don't need to minus if from.
         /// </summary>
+        /// <param name="address">The contract to return the balance for.</param>
+        /// <returns>The balance of the contract.</returns>
         public ulong GetCurrentBalance(uint160 address)
         {
             ulong ret = 0;

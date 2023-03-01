@@ -74,7 +74,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         private readonly INFTTransferIndexer NFTTransferIndexer;
 
         public Unity3dController(ILoggerFactory loggerFactory, IAddressIndexer addressIndexer,
-            IBlockStore blockStore, IChainState chainState, Network network, ICoinView coinView, WalletController walletController, ChainIndexer chainIndexer, INFTTransferIndexer NFTTransferIndexer,
+            IBlockStore blockStore, IChainState chainState, Network network, ICoinView coinView, WalletController walletController, ChainIndexer chainIndexer, INFTTransferIndexer NFTTransferIndexer = null,
             IStakeChain stakeChain = null,
             IContractPrimitiveSerializer primitiveSerializer = null, IStateRepositoryRoot stateRoot = null, IContractAssemblyCache contractAssemblyCache = null,
             IReceiptRepository receiptRepository = null, ISmartContractTransactionService smartContractTransactionService = null, ILocalExecutor localExecutor = null)

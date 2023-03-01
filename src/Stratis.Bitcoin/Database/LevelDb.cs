@@ -15,6 +15,11 @@ namespace Stratis.Bitcoin.Database
             return new LevelDbIterator(table, this.db.CreateIterator());
         }
 
+        public IDbIterator GetIterator()
+        {
+            return new LevelDbIterator(this.db.CreateIterator());
+        }
+
         public void Open(string dbPath)
         {
             this.dbPath = dbPath;
@@ -28,11 +33,16 @@ namespace Stratis.Bitcoin.Database
             this.db = new DB(new Options() { CreateIfMissing = true }, this.dbPath);
         }
 
-        public IDbBatch GetWriteBatch() => new LevelDbBatch(this.db);
+        public IDbBatch GetWriteBatch(params byte[] tables) => new LevelDbBatch(this.db);
 
         public byte[] Get(byte table, byte[] key)
         {
             return this.db.Get(new[] { table }.Concat(key).ToArray());
+        }
+
+        public byte[] Get(byte[] key)
+        {
+            return this.db.Get(key);
         }
 
         public void Dispose()
@@ -51,14 +61,30 @@ namespace Stratis.Bitcoin.Database
             this.db = db;
         }
 
+        // Methods when using tables.
+
         public IDbBatch Put(byte table, byte[] key, byte[] value)
         {
-            return (IDbBatch)this.Put(new[] { table }.Concat(key).ToArray(), value);
+            return this.Put(new[] { table }.Concat(key).ToArray(), value);
         }
 
         public IDbBatch Delete(byte table, byte[] key)
         {
-            return (IDbBatch)this.Delete(new[] { table }.Concat(key).ToArray());
+            return this.Delete(new[] { table }.Concat(key).ToArray());
+        }
+
+        // Table-less operations.
+
+        public new IDbBatch Put(byte[] key, byte[] value)
+        {
+            base.Put(key, value);
+            return this;
+        }
+
+        public new IDbBatch Delete(byte[] key)
+        {
+            base.Delete(key);
+            return this;
         }
 
         public void Write()
@@ -70,7 +96,7 @@ namespace Stratis.Bitcoin.Database
     /// <summary>A minimal LevelDb wrapper that makes it compliant with the <see cref="IDbIterator"/> interface.</summary>
     public class LevelDbIterator : IDbIterator
     {
-        private byte table;
+        private byte? table;
         private Iterator iterator;
 
         public LevelDbIterator(byte table, Iterator iterator)
@@ -79,13 +105,25 @@ namespace Stratis.Bitcoin.Database
             this.iterator = iterator;
         }
 
+        // Table-less constructor.
+        public LevelDbIterator(Iterator iterator)
+        {
+            this.iterator = iterator;
+        }
+
         public void Seek(byte[] key)
         {
-            this.iterator.Seek(new[] { this.table }.Concat(key).ToArray());
+            this.iterator.Seek(this.table.HasValue ? (new[] { this.table.Value }.Concat(key).ToArray()) : key);
         }
 
         public void SeekToLast()
         {
+            if (!this.table.HasValue)
+            {
+                this.iterator.SeekToLast();
+                return;
+            }
+
             if (this.table != 255)
             {
                 // First seek past the last record in the table by attempting to seek to the start of the next table (if any).
@@ -115,12 +153,12 @@ namespace Stratis.Bitcoin.Database
 
         public bool IsValid()
         {
-            return this.iterator.IsValid() && this.iterator.Key()[0] == this.table;
+            return this.iterator.IsValid() && (!this.table.HasValue || this.iterator.Key()[0] == this.table);
         }
 
         public byte[] Key()
         {
-            return this.iterator.Key().Skip(1).ToArray();
+            return this.table.HasValue ? this.iterator.Key().Skip(1).ToArray() : this.iterator.Key();
         }
 
         public byte[] Value()

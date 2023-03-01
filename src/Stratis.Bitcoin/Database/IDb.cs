@@ -26,6 +26,13 @@ namespace Stratis.Bitcoin.Database
         byte[] Get(byte table, byte[] key);
 
         /// <summary>
+        /// Gets the value associated with a key.
+        /// </summary>
+        /// <param name="key">The key of the value to retrieve.</param>
+        /// <returns>The value for the specified key.</returns>
+        byte[] Get(byte[] key);
+
+        /// <summary>
         /// Gets an iterator that allows iteration over keys in a table.
         /// </summary>
         /// <param name="table">The table that will be iterated.</param>
@@ -33,12 +40,18 @@ namespace Stratis.Bitcoin.Database
         IDbIterator GetIterator(byte table);
 
         /// <summary>
+        /// Gets an iterator that allows iteration over keys.
+        /// </summary>
+        /// <returns>See <see cref="IDbIterator"/>.</returns>
+        IDbIterator GetIterator();
+
+        /// <summary>
         /// Gets a batch that can be used to record changes that can be applied atomically.
         /// </summary>
         /// <remarks>The <see cref="IDb.Get"/> method will not reflect these changes until they are committed. Use
         /// the <see cref="ReadWriteBatch"/> class if uncommitted changes need to be accessed.</remarks>
         /// <returns>See <see cref="IDbBatch"/>.</returns>
-        IDbBatch GetWriteBatch();
+        IDbBatch GetWriteBatch(params byte[] tables);
 
         /// <summary>
         /// Removes all tables and their contents.
@@ -68,6 +81,21 @@ namespace Stratis.Bitcoin.Database
         /// <param name="key">The table key that will be removed.</param>
         /// <returns>This class for fluent operations.</returns>
         IDbBatch Delete(byte table, byte[] key);
+
+        /// <summary>
+        /// Records a value that will be written to the database when the <see cref="Write"/> method is invoked.
+        /// </summary>
+        /// <param name="key">The table key that identifies the value to be updated.</param>
+        /// <param name="value">The value to be written to the table.</param>
+        /// <returns>This class for fluent operations.</returns>
+        IDbBatch Put(byte[] key, byte[] value);
+
+        /// <summary>
+        /// Records a key that will be deleted from the database when the <see cref="Write"/> method is invoked.
+        /// </summary>
+        /// <param name="key">The table key that will be removed.</param>
+        /// <returns>This class for fluent operations.</returns>
+        IDbBatch Delete(byte[] key);
 
         /// <summary>
         /// Writes the recorded changes to the database.

@@ -15,6 +15,8 @@ namespace Stratis.Bitcoin.Features.PoA
         }
 
         /// <summary>Signs PoA header with the specified key.</summary>
+        /// <param name="key">Key to sign wih.</param>
+        /// <param name="header"><see cref="PoABlockHeader"/> to sign.</param>
         public void Sign(Key key, PoABlockHeader header)
         {
             uint256 headerHash = header.GetHash();
@@ -27,6 +29,9 @@ namespace Stratis.Bitcoin.Features.PoA
         /// Verifies if signature of provided header was created using
         /// private key that corresponds to given public key.
         /// </summary>
+        /// <param name="pubKey"><see cref="PubKey"/> of private <see cref="Key"/> used to sign the message.</param>
+        /// <param name="header"><see cref="PoABlockHeader"/> to verify signature of.</param>
+        /// <returns><c>true</c> if verification successful or <c>false</c> otherwise.</returns>
         public bool VerifySignature(PubKey pubKey, PoABlockHeader header)
         {
             if ((header.BlockSignature == null) || header.BlockSignature.IsEmpty())

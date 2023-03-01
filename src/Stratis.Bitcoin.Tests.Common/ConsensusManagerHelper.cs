@@ -60,7 +60,7 @@ namespace Stratis.Bitcoin.Tests.Common
             // Dont check PoW of a header in this test.
             network.Consensus.ConsensusRules.HeaderValidationRules.RemoveAll(x => x == typeof(CheckDifficultyPowRule));
 
-            var mockingServices = new ServiceCollection()
+            IServiceCollection mockingServices = new ServiceCollection()
                 .AddSingleton(network)
                 .AddSingleton(nodeSettings ?? (ctx => new NodeSettings(network)))
                 .AddSingleton(ctx => ctx.GetService<NodeSettings>().DataFolder)

@@ -63,31 +63,13 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules
         }
 
         /// <inheritdoc />
-        public override void Initialize(ChainedHeader chainTip)
+        public override void Initialize(ChainedHeader chainTip, IConsensusManager consensusManager)
         {
-            base.Initialize(chainTip);
+            base.Initialize(chainTip, consensusManager);
 
-            var coinDatabase = ((CachedCoinView)this.UtxoSet).ICoindb;
-            coinDatabase.Initialize(chainTip);
+            Guard.Assert(chainTip.HashBlock == this.ChainIndexer.Tip.HashBlock);
 
-            HashHeightPair coinViewTip = coinDatabase.GetTipHash();
-
-            while (true)
-            {
-                ChainedHeader pendingTip = chainTip.FindAncestorOrSelf(coinViewTip.Hash);
-
-                if (pendingTip != null)
-                    break;
-
-                if ((coinViewTip.Height % 100) == 0)
-                    this.logger.LogInformation("Rewinding coin view from '{0}' to {1}.", coinViewTip, chainTip);
-
-                // If the block store was initialized behind the coin view's tip, rewind it to on or before it's tip.
-                // The node will complete loading before connecting to peers so the chain will never know that a reorg happened.
-                coinViewTip = coinDatabase.Rewind(new HashHeightPair(chainTip));
-            }
-
-            this.logger.LogInformation("Coin view initialized at '{0}'.", coinDatabase.GetTipHash());
+            this.UtxoSet.Initialize(consensusManager);
         }
 
         public override async Task<ValidationContext> FullValidationAsync(ChainedHeader header, Block block)
