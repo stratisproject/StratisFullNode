@@ -12,10 +12,12 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
+using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.FederatedPeg.Controllers;
 using Stratis.Features.FederatedPeg.Events;
 using Stratis.Features.FederatedPeg.Exceptions;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -25,7 +27,7 @@ using Stratis.SmartContracts.Core.State;
 
 namespace Stratis.Features.FederatedPeg.TargetChain
 {
-    public sealed class CrossChainTransferStore : ICrossChainTransferStore
+    public sealed class CrossChainTransferStore : LockProtected, ICrossChainTransferStore
     {
         /// <summary>
         /// Given that we can have up to 10 UTXOs going at once.
@@ -86,9 +88,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly IWithdrawalHistoryProvider withdrawalHistoryProvider;
         private readonly IWithdrawalTransactionBuilder withdrawalTransactionBuilder;
 
-        /// <summary>Provider of time functions.</summary>
-        private readonly object lockObj;
-
         public CrossChainTransferStore(Network network, INodeStats nodeStats, DataFolder dataFolder, ChainIndexer chainIndexer, IFederatedPegSettings settings, IDateTimeProvider dateTimeProvider,
             IWithdrawalExtractor withdrawalExtractor, IWithdrawalHistoryProvider withdrawalHistoryProvider, IBlockRepository blockRepository, IFederationWalletManager federationWalletManager, IWithdrawalTransactionBuilder withdrawalTransactionBuilder,
             DBreezeSerializer dBreezeSerializer, ISignals signals, IStateRepositoryRoot stateRepositoryRoot = null)
@@ -113,7 +112,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.blockRepository = blockRepository;
             this.federationWalletManager = federationWalletManager;
             this.dBreezeSerializer = dBreezeSerializer;
-            this.lockObj = new object();
             this.logger = LogManager.GetCurrentClassLogger();
             this.TipHashAndHeight = this.chainIndexer.GetHeader(0);
             this.NextMatureDepositHeight = 1;
@@ -141,7 +139,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <summary>Performs any needed initialisation for the database.</summary>
         public void Initialize()
         {
-            lock (this.lockObj)
+            lock (this.lockObject)
             {
                 using (DBreeze.Transactions.Transaction dbreezeTransaction = this.DBreeze.GetTransaction())
                 {
@@ -177,7 +175,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <summary>Starts the cross-chain-transfer store.</summary>
         public void Start()
         {
-            lock (this.lockObj)
+            lock (this.lockObject)
             {
                 this.federationWalletManager.Synchronous(() =>
                 {
@@ -189,7 +187,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <inheritdoc />
         public bool HasSuspended()
         {
-            lock (this.lockObj)
+            lock (this.lockObject)
             {
                 return this.depositsIdsByStatus[CrossChainTransferStatus.Suspended].Count != 0;
             }
@@ -325,7 +323,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         {
             return Task.Run(() =>
             {
-                lock (this.lockObj)
+                lock (this.lockObject)
                 {
                     using (DBreeze.Transactions.Transaction dbreezeTransaction = this.DBreeze.GetTransaction())
                     {
@@ -342,7 +340,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         {
             Guard.Assert(crossChainTransfer.Status == CrossChainTransferStatus.FullySigned);
 
-            lock (this.lockObj)
+            lock (this.lockObject)
             {
                 var tracker = new StatusChangeTracker();
 
@@ -389,7 +387,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             return Task.Run(() =>
             {
-                lock (this.lockObj)
+                lock (this.lockObject)
                 {
                     int originalDepositHeight = this.NextMatureDepositHeight;
 
@@ -470,7 +468,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                                 // Log the target address in the event that it fails.
                                 this.logger.LogDebug($"Attempting to create script pubkey from target address '{deposit.TargetAddress}'.");
-                                Script scriptPubKey = BitcoinAddress.Create(deposit.TargetAddress, this.network).ScriptPubKey;
+                                NBitcoin.Script scriptPubKey = BitcoinAddress.Create(deposit.TargetAddress, this.network).ScriptPubKey;
 
                                 if (!haveSuspendedTransfers)
                                 {
@@ -621,7 +619,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             Guard.NotNull(depositId, nameof(depositId));
             Guard.NotNull(partialTransactions, nameof(partialTransactions));
 
-            lock (this.lockObj)
+            lock (this.lockObject)
             {
                 return this.federationWalletManager.Synchronous(() =>
                 {
@@ -815,7 +813,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                             if (crossChainTransfers[i] == null)
                             {
-                                Script scriptPubKey = BitcoinAddress.Create(withdrawal.TargetAddress, this.network).ScriptPubKey;
+                                NBitcoin.Script scriptPubKey = BitcoinAddress.Create(withdrawal.TargetAddress, this.network).ScriptPubKey;
 
                                 crossChainTransfers[i] = new CrossChainTransfer(CrossChainTransferStatus.SeenInBlock, withdrawal.DepositId,
                                     scriptPubKey, withdrawal.Amount, null, transaction, withdrawal.BlockHash, withdrawal.BlockNumber);
@@ -952,7 +950,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <returns>Returns <c>true</c> if the store is in sync or <c>false</c> otherwise.</returns>
         private bool Synchronize()
         {
-            lock (this.lockObj)
+            lock (this.lockObject)
             {
                 if (this.TipHashAndHeight == null)
                 {
@@ -980,21 +978,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                 while (!this.cancellation.IsCancellationRequested)
                 {
-                    if (this.HasSuspended())
-                    {
-                        try
-                        {
-                            ICrossChainTransfer[] transfers = this.Get(this.depositsIdsByStatus[CrossChainTransferStatus.Suspended].ToArray());
-                            this.NextMatureDepositHeight = transfers.Min(t => t.DepositHeight) ?? this.NextMatureDepositHeight;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.logger.LogError($"An error occurred whilst synchronizing the store: {ex}.");
-                            throw ex;
-                        }
-                    }
-
-                    this.RewindIfRequiredLocked();
+                     this.RewindIfRequiredLocked();
 
                     try
                     {
@@ -1142,7 +1126,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         {
             return Task.Run(() =>
             {
-                lock (this.lockObj)
+                lock (this.lockObject)
                 {
                     return this.federationWalletManager.Synchronous(() =>
                     {
@@ -1209,7 +1193,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <inheritdoc />
         public ICrossChainTransfer[] GetTransfersByStatus(CrossChainTransferStatus[] statuses, bool sort = false, bool validate = true)
         {
-            lock (this.lockObj)
+            lock (this.lockObject)
             {
                 return this.federationWalletManager.Synchronous(() =>
                 {
@@ -1407,7 +1391,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         {
             var res = new List<Transaction>();
 
-            lock (this.lockObj)
+            lock (this.lockObject)
             {
                 HashSet<uint256> inProgress = this.depositsIdsByStatus[CrossChainTransferStatus.Partial].Union(
                     this.depositsIdsByStatus[CrossChainTransferStatus.FullySigned].Union(

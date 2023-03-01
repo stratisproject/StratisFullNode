@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration.Logging;
+using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Interfaces;
@@ -49,6 +50,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly IAsyncProvider asyncProvider;
         private readonly ICrossChainTransferStore crossChainTransferStore;
         private readonly IFederationGatewayClient federationGatewayClient;
+        private readonly IFederationNodeClient federationNodeClient;
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly IFederationWalletManager federationWalletManager;
         private readonly IInitialBlockDownloadState initialBlockDownloadState;
@@ -63,6 +65,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly IConversionRequestFeeService conversionRequestFeeService;
         private readonly Network network;
         private readonly IFederationManager federationManager;
+        private readonly Dictionary<uint256, uint> blockTimeOfDeposit;
         private IAsyncLoop requestDepositsTask;
 
         /// <summary>When we are fully synced we stop asking for more blocks for this amount of time.</summary>
@@ -81,6 +84,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             IAsyncProvider asyncProvider,
             ICrossChainTransferStore crossChainTransferStore,
             IFederationGatewayClient federationGatewayClient,
+            IFederationNodeClient federationNodeClient,
             IFederationWalletManager federationWalletManager,
             IInitialBlockDownloadState initialBlockDownloadState,
             INodeLifetime nodeLifetime,
@@ -99,6 +103,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.conversionRequestRepository = conversionRequestRepository;
             this.crossChainTransferStore = crossChainTransferStore;
             this.federationGatewayClient = federationGatewayClient;
+            this.federationNodeClient = federationNodeClient;
             this.federatedPegSettings = federatedPegSettings;
             this.federationWalletManager = federationWalletManager;
             this.initialBlockDownloadState = initialBlockDownloadState;
@@ -111,6 +116,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.conversionRequestFeeService = conversionRequestFeeService;
             this.network = network;
             this.federationManager = federationManager;
+            this.blockTimeOfDeposit = new Dictionary<uint256, uint>();
 
             this.lockObject = new object();
             this.logger = LogManager.GetCurrentClassLogger();
@@ -198,6 +204,36 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             return await ProcessMatureBlockDepositsAsync(matureBlockDeposits).ConfigureAwait(false);
         }
 
+        private async Task<uint> GetMaturityTimeOfLastConfirmedDeposit()
+        {
+            // If the last confirmed deposit is not known yet then try to find it via the federation wallet.
+            uint maturityTimeOfLastConfirmedDeposit = 0;
+
+            // Query the wallet for the last confirmed deposit.
+            foreach (WithdrawalDetails withdrawal in this.federationWalletManager.GetWallet().MultiSigAddress.Transactions.GetLastWithdrawals())
+            {
+                uint256 depositId = withdrawal.MatchingDepositId;
+
+                if (!this.blockTimeOfDeposit.TryGetValue(depositId, out uint blockTime))
+                {
+                    TransactionVerboseModel result2 = await this.federationNodeClient.GetDepositTransactionVerboseAsync(depositId);
+                    if (result2 == null)
+                        continue;
+
+                    blockTime = (uint)result2.BlockTime;
+                    this.blockTimeOfDeposit[depositId] = blockTime;
+                }
+
+                // TODO: First adjust blockTime by the deposit confirmation time.
+                if (blockTime > maturityTimeOfLastConfirmedDeposit)
+                {
+                    maturityTimeOfLastConfirmedDeposit = blockTime;
+                }
+            }
+
+            return maturityTimeOfLastConfirmedDeposit;
+        }
+
         private async Task<bool> ProcessMatureBlockDepositsAsync(SerializableResult<List<MaturedBlockDepositsModel>> matureBlockDeposits)
         {
             // "Value"'s count will be 0 if we are using NewtonSoft's serializer, null if using .Net Core 3's serializer.
@@ -212,6 +248,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 return true;
             }
 
+            uint maturityTimeOfLastConfirmedDeposit = await GetMaturityTimeOfLastConfirmedDeposit().ConfigureAwait(false);
+
             this.logger.LogInformation("Processing {0} matured blocks.", matureBlockDeposits.Value.Count);
 
             // Filter out conversion transactions & also log what we've received for diagnostic purposes.
@@ -221,6 +259,10 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                 if (maturedBlockDeposit.Deposits.Count > 0)
                     this.logger.LogDebug("Matured deposit count for block {0} height {1}: {2}.", maturedBlockDeposit.BlockInfo.BlockHash, maturedBlockDeposit.BlockInfo.BlockHeight, maturedBlockDeposit.Deposits.Count);
+
+                // Remove deposits prior to already processed deposits.
+                if (maturedBlockDeposit.BlockInfo.BlockTime < maturityTimeOfLastConfirmedDeposit)
+                    maturedBlockDeposit.Deposits = new List<IDeposit>().AsReadOnly();
 
                 foreach (IDeposit potentialConversionTransaction in maturedBlockDeposit.Deposits)
                 {
@@ -375,22 +417,16 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             this.logger.LogDebug($"Finding applicable header for deposit with block time '{maturedBlockDeposit.BlockInfo.BlockTime}'; chain tip '{this.chainIndexer.Tip}'.");
 
-            while (true)
+            // Get the first block on this chain that has a timestamp after the deposit's block time on the counterchain.
+            int chainedHeaderHeight = BinarySearch.BinaryFindFirst((height) =>
             {
-                if (chainedHeader == this.chainIndexer.Genesis)
-                    break;
+                return this.chainIndexer[height].Header.Time > maturedBlockDeposit.BlockInfo.BlockTime;
+            }, 0, this.chainIndexer.Tip.Height + 1);
 
-                if (chainedHeader.Previous.Header.Time <= maturedBlockDeposit.BlockInfo.BlockTime)
-                {
-                    found = true;
-                    break;
-                }
-
-                chainedHeader = chainedHeader.Previous;
-            }
-
-            if (!found)
+            if (chainedHeaderHeight == -1)
                 this.logger.LogWarning("Unable to determine timestamp for conversion transaction '{0}', ignoring.", potentialConversionTransaction.Id);
+
+            chainedHeader = this.chainIndexer[chainedHeaderHeight];
 
             this.logger.LogDebug($"Applicable header selected '{chainedHeader}'");
 
