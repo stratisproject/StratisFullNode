@@ -97,7 +97,8 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// <summary>
         /// Saves the wallet into the file system.
         /// </summary>
-        void SaveWallet();
+        /// <param name="force">If <c>false</c> (default) the wallet is not guaranteed to be saved if saved recently.</param>
+        void SaveWallet(bool force = false);
 
         /// <summary>
         /// Gets some general information about a wallet.
