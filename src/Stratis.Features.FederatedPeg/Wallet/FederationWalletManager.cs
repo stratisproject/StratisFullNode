@@ -881,12 +881,12 @@ namespace Stratis.Features.FederatedPeg.Wallet
         /// <inheritdoc />
         public void SaveWallet(bool force = false)
         {
-            // If this is not a forced save then check that we're not saving to wallet too often.
-            if (!force && ((DateTime.Now - this.lastWalletSave) < TimeSpan.FromMinutes(WalletSavetimeMinIntervalInMinutes)))
-                return;
-
             lock (this.lockObject)
             {
+                // If this is not a forced save then check that we're not saving the wallet too often.
+                if (!force && ((DateTime.Now - this.lastWalletSave) < TimeSpan.FromMinutes(WalletSavetimeMinIntervalInMinutes)))
+                    return;
+
                 if (this.Wallet != null)
                 {
                     this.fileStorage.SaveToFile(this.Wallet, WalletFileName);
