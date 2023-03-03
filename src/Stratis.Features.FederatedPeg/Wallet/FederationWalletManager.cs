@@ -314,7 +314,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
             lock (this.lockObject)
             {
                 this.asyncLoop?.Dispose();
-                this.SaveWallet();
+                this.SaveWallet(true);
             }
         }
 
