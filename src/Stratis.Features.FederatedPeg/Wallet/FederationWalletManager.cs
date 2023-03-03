@@ -482,8 +482,22 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 IWithdrawal withdrawal = this.withdrawalExtractor.ExtractWithdrawalFromTransaction(transaction, blockHash, blockHeight ?? 0);
                 if (withdrawal != null)
                 {
-                    // Exit if already present and included in a block.
+                    // Check the wallet for any existing transactions related to this deposit id.
                     List<(Transaction transaction, IWithdrawal withdrawal)> walletData = this.FindWithdrawalTransactions(withdrawal.DepositId);
+
+                    // Already redeemed in a confirmed block?
+                    if (blockHeight != null)
+                    {
+                        (_, IWithdrawal existingWithdrawal) = walletData.LastOrDefault(d => d.withdrawal.BlockNumber != 0);
+
+                        if (existingWithdrawal != null)
+                        {
+                            string error = string.Format("Deposit '{0}' last redeemed in transaction '{1}' (height {2}) and then redeemed again in '{3}' (height {4})!.", withdrawal.DepositId, existingWithdrawal.Id, existingWithdrawal.BlockNumber, withdrawal.Id, withdrawal.BlockNumber);
+                            this.logger.LogError(error);
+                            throw new Exception(error);
+                        }
+                    }
+
                     if ((walletData.Count == 1) && (walletData[0].withdrawal.BlockNumber != 0))
                     {
                         this.logger.LogDebug("Deposit '{0}' already included in block.", withdrawal.DepositId);
