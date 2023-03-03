@@ -61,10 +61,17 @@ namespace Stratis.Features.FederatedPeg.Wallet
         /// <summary>Timer for saving wallet files to the file system.</summary>
         private const int WalletSavetimeIntervalInMinutes = 5;
 
+        /// <summary>Minimum time to wait between saving wallet if not forced.</summary>
+        private const int WalletSavetimeMinIntervalInMinutes = 1;
+
         /// <summary>Keep at least this many transactions in the wallet despite the
         /// max reorg age limit for spent transactions. This is so that it never
         /// looks like the wallet has become empty to the user.</summary>
         private const int MinimumRetainedTransactions = 100;
+
+
+        /// <summary>The last time the wallet was saved.</summary>
+        private DateTime lastWalletSave;
 
         /// <summary>The async loop we need to wait upon before we can shut down this manager.</summary>
         private IAsyncLoop asyncLoop;
@@ -170,6 +177,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
             this.isFederationActive = false;
             this.blockStore = blockStore;
             this.signals = signals;
+            this.lastWalletSave = DateTime.Now;
 
             nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
             nodeStats.RegisterStats(this.AddInlineStats, StatsType.Inline, this.GetType().Name, 800);
@@ -290,7 +298,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 // save the wallets file every 5 minutes to help against crashes.
                 this.asyncLoop = this.asyncProvider.CreateAndRunAsyncLoop("wallet persist job", token =>
                 {
-                    this.SaveWallet();
+                    this.SaveWallet(true);
                     this.logger.LogInformation("Wallets saved to file at {0}.", this.dateTimeProvider.GetUtcNow());
 
                     return Task.CompletedTask;
@@ -307,7 +315,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
             lock (this.lockObject)
             {
                 this.asyncLoop?.Dispose();
-                this.SaveWallet();
+                this.SaveWallet(true);
             }
         }
 
@@ -888,16 +896,18 @@ namespace Stratis.Features.FederatedPeg.Wallet
         }
 
         /// <inheritdoc />
-        public void SaveWallet()
+        public void SaveWallet(bool force = false)
         {
             lock (this.lockObject)
             {
+                // If this is not a forced save then check that we're not saving the wallet too often.
+                if (!force && ((DateTime.Now - this.lastWalletSave) < TimeSpan.FromMinutes(WalletSavetimeMinIntervalInMinutes)))
+                    return;
+
                 if (this.Wallet != null)
                 {
-                    lock (this.lockObject)
-                    {
-                        this.fileStorage.SaveToFile(this.Wallet, WalletFileName);
-                    }
+                    this.fileStorage.SaveToFile(this.Wallet, WalletFileName);
+                    this.lastWalletSave = DateTime.Now;
                 }
             }
         }
