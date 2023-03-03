@@ -272,6 +272,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 if (this.fileStorage.Exists(WalletFileName))
                 {
                     this.Wallet = this.fileStorage.LoadByFileName(WalletFileName);
+                    Guard.Assert(this.Wallet.MultiSigAddress.Address == this.federatedPegSettings.MultiSigAddress.ToString());
                     this.RemoveUnconfirmedTransactionData();
                 }
                 else
@@ -494,6 +495,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                         {
                             string error = string.Format("Deposit '{0}' last redeemed in transaction '{1}' (height {2}) and then redeemed again in '{3}' (height {4})!.", withdrawal.DepositId, existingWithdrawal.Id, existingWithdrawal.BlockNumber, withdrawal.Id, withdrawal.BlockNumber);
                             this.logger.LogError(error);
+                            this.nodeLifetime.StopApplication();
                             throw new Exception(error);
                         }
                     }
