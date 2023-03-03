@@ -494,13 +494,14 @@ namespace Stratis.Features.FederatedPeg.Wallet
                         if (existingWithdrawal != null)
                         {
                             string error = string.Format("Deposit '{0}' last redeemed in transaction '{1}' (height {2}) and then redeemed again in '{3}' (height {4})!.", withdrawal.DepositId, existingWithdrawal.Id, existingWithdrawal.BlockNumber, withdrawal.Id, withdrawal.BlockNumber);
-                            this.logger.LogError(error);
-                            this.nodeLifetime.StopApplication();
-                            throw new Exception(error);
-                        }
-                    }
 
-                    if ((walletData.Count == 1) && (walletData[0].withdrawal.BlockNumber != 0))
+                            // Just display an error on the console for now.
+                            this.logger.LogError(error);
+
+                            // Fall through and keep the latest withdrawal.
+                        }
+                    } 
+                    else if ((walletData.Count == 1) && (walletData[0].withdrawal.BlockNumber != 0))
                     {
                         this.logger.LogDebug("Deposit '{0}' already included in block.", withdrawal.DepositId);
                         return false;
