@@ -487,9 +487,9 @@ namespace Stratis.Features.FederatedPeg.Wallet
                     List<(Transaction transaction, IWithdrawal withdrawal)> walletData = this.FindWithdrawalTransactions(withdrawal.DepositId);
 
                     // Already redeemed in a confirmed block?
-                    if (blockHeight != null)
+                    if (walletData.Count != 0 && blockHeight != null)
                     {
-                        (_, IWithdrawal existingWithdrawal) = walletData.LastOrDefault(d => d.withdrawal.BlockNumber != 0);
+                        (_, IWithdrawal existingWithdrawal) = walletData.LastOrDefault(d => d.withdrawal.BlockNumber != 0 && d.withdrawal.Id != withdrawal.Id);
 
                         if (existingWithdrawal != null)
                         {
