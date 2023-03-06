@@ -280,6 +280,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 if (this.fileStorage.Exists(WalletFileName))
                 {
                     this.Wallet = this.fileStorage.LoadByFileName(WalletFileName);
+                    Guard.Assert(this.Wallet.MultiSigAddress.Address == this.federatedPegSettings.MultiSigAddress.ToString());
                     this.RemoveUnconfirmedTransactionData();
                 }
                 else
@@ -490,9 +491,25 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 IWithdrawal withdrawal = this.withdrawalExtractor.ExtractWithdrawalFromTransaction(transaction, blockHash, blockHeight ?? 0);
                 if (withdrawal != null)
                 {
-                    // Exit if already present and included in a block.
+                    // Check the wallet for any existing transactions related to this deposit id.
                     List<(Transaction transaction, IWithdrawal withdrawal)> walletData = this.FindWithdrawalTransactions(withdrawal.DepositId);
-                    if ((walletData.Count == 1) && (walletData[0].withdrawal.BlockNumber != 0))
+
+                    // Already redeemed in a confirmed block?
+                    if (walletData.Count != 0 && blockHeight != null)
+                    {
+                        (_, IWithdrawal existingWithdrawal) = walletData.LastOrDefault(d => d.withdrawal.BlockNumber != 0 && d.withdrawal.Id != withdrawal.Id);
+
+                        if (existingWithdrawal != null)
+                        {
+                            string error = string.Format("Deposit '{0}' last redeemed in transaction '{1}' (height {2}) and then redeemed again in '{3}' (height {4})!.", withdrawal.DepositId, existingWithdrawal.Id, existingWithdrawal.BlockNumber, withdrawal.Id, withdrawal.BlockNumber);
+
+                            // Just display an error on the console for now.
+                            this.logger.LogError(error);
+
+                            // Fall through and keep the latest withdrawal.
+                        }
+                    }
+                    else if ((walletData.Count == 1) && (walletData[0].withdrawal.BlockNumber != 0))
                     {
                         this.logger.LogDebug("Deposit '{0}' already included in block.", withdrawal.DepositId);
                         return false;
@@ -938,7 +955,8 @@ namespace Stratis.Features.FederatedPeg.Wallet
 
                 foreach ((Transaction transaction, IWithdrawal withdrawal) in this.FindWithdrawalTransactions(depositId))
                 {
-                    walletUpdated |= this.RemoveTransaction(transaction);
+                    if (withdrawal.BlockNumber == 0)
+                        walletUpdated |= this.RemoveTransaction(transaction);
                 }
 
                 return walletUpdated;
