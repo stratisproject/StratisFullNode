@@ -32,7 +32,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <summary>
         /// Given that we can have up to 10 UTXOs going at once.
         /// </summary>
-        private const int TransfersToDisplay = 10;
+        private const int TransfersToDisplay = 30;
 
         /// <summary>
         /// Maximum number of partial transactions.
@@ -1457,7 +1457,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 IEnumerable<ICrossChainTransfer> inprogress = transfers.Where(x => x.Status != CrossChainTransferStatus.Suspended && x.Status != CrossChainTransferStatus.Rejected);
                 IEnumerable<ICrossChainTransfer> suspended = transfers.Where(x => x.Status == CrossChainTransferStatus.Suspended || x.Status == CrossChainTransferStatus.Rejected);
 
-                IEnumerable<WithdrawalModel> pendingWithdrawals = this.withdrawalHistoryProvider.GetPendingWithdrawals(inprogress.Concat(suspended)).OrderByDescending(p => p.SignatureCount);
+                IEnumerable<WithdrawalModel> pendingWithdrawals = this.withdrawalHistoryProvider.GetPendingWithdrawals(inprogress.Concat(suspended)).OrderBy(p => p.DepositHeight);
 
                 if (pendingWithdrawals.Count() > 0)
                 {
