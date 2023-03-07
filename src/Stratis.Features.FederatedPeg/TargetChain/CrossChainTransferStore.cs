@@ -978,7 +978,21 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                 while (!this.cancellation.IsCancellationRequested)
                 {
-                     this.RewindIfRequiredLocked();
+                    if (this.HasSuspended())
+                    {
+                        try
+                        {
+                            ICrossChainTransfer[] transfers = this.Get(this.depositsIdsByStatus[CrossChainTransferStatus.Suspended].ToArray());
+                            this.NextMatureDepositHeight = transfers.Min(t => t.DepositHeight) ?? this.NextMatureDepositHeight;
+                        }
+                        catch (Exception ex)
+                        {
+                            this.logger.LogError($"An error occurred whilst synchronizing the store: {ex}.");
+                            throw ex;
+                        }
+                    }
+
+                    this.RewindIfRequiredLocked();
 
                     try
                     {
