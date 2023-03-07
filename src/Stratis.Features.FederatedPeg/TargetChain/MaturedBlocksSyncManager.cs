@@ -266,7 +266,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                 // Remove deposits prior to already processed deposits.
                 if (maturedBlockDeposit.BlockInfo.BlockTime < maturityTimeOfLastConfirmedDeposit)
-                    maturedBlockDeposit.Deposits = new List<IDeposit>().AsReadOnly();
+                    continue;
 
                 foreach (IDeposit potentialConversionTransaction in maturedBlockDeposit.Deposits)
                 {
