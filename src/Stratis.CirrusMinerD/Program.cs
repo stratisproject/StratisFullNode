@@ -181,7 +181,7 @@ namespace Stratis.CirrusMinerD
                 .AddPowPosMining(true)
                 .AddSignalR(options =>
                 {
-                    DaemonConfiguration.ConfigureSignalRForCirrus(options);
+                    DaemonConfiguration.ConfigureSignalRForStrax(options);
                 })
                 .Build();
 
