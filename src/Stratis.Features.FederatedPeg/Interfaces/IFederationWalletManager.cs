@@ -170,5 +170,7 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// </summary>
         /// <returns>Returns <c>true</c> if within <see cref="FederationWalletManager.FederationWalletTipSyncBuffer"/> blocks of the chain's tip.</returns>
         bool IsSyncedWithChain();
+
+        string GetSpendingInfo(Transaction partialTransaction);
     }
 }

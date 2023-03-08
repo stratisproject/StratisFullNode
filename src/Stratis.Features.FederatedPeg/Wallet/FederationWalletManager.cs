@@ -1146,6 +1146,22 @@ namespace Stratis.Features.FederatedPeg.Wallet
             }
         }
 
+
+        public string GetSpendingInfo(Transaction partialTransaction)
+        {
+            string ret = "";
+
+            foreach (TxIn input in partialTransaction.Inputs)
+            {
+                if (this.outpointLookup.TryGetValue(input.PrevOut, out TransactionData transactionData))
+                    ret += transactionData.BlockHeight + "-";
+
+                ret += input.PrevOut.Hash.ToString().Substring(0, 6) + "-" + input.PrevOut.N + ",";
+            }
+
+            return ret;
+        }
+
         /// <inheritdoc />
         public bool ValidateConsolidatingTransaction(Transaction transaction, bool checkSignature = false)
         {

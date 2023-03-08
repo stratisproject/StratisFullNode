@@ -429,6 +429,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         this.logger.LogInformation($"{maturedBlockDeposits.Count} blocks received, containing a total of {maturedBlockDeposits.SelectMany(d => d.Deposits).Where(a => a.Amount > 0).Count()} deposits.");
                         this.logger.LogInformation($"Block Range : {maturedBlockDeposits.Min(a => a.BlockInfo.BlockHeight)} to {maturedBlockDeposits.Max(a => a.BlockInfo.BlockHeight)}.");
 
+                        // Deposits are assumed to be in order of occurrence on the source chain.
+                        // If we fail to build a transaction the transfer and subsequent transfers
+                        // in the ordered list will be set to suspended.
+                        bool haveSuspendedTransfers = false;
+
                         foreach (MaturedBlockDepositsModel maturedDeposit in maturedBlockDeposits)
                         {
                             if (maturedDeposit.BlockInfo.BlockHeight != this.NextMatureDepositHeight)
@@ -452,13 +457,17 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                             var tracker = new StatusChangeTracker();
                             bool walletUpdated = false;
 
-                            // Deposits are assumed to be in order of occurrence on the source chain.
-                            // If we fail to build a transaction the transfer and subsequent transfers
-                            // in the ordered list will be set to suspended.
-                            bool haveSuspendedTransfers = false;
-
                             for (int i = 0; i < deposits.Count; i++)
                             {
+                                // Can't have any transfers after a suspended transfer.
+                                // Otherwise it will be impossible to allocate the correct inputs in deterministic order.
+                                if (haveSuspendedTransfers && transfers[i].Status == CrossChainTransferStatus.Partial)
+                                {                                    
+                                    this.federationWalletManager.RemoveWithdrawalTransactions(transfers[i].DepositTransactionId);
+                                    // "ValidateTransfers" will detect the missing transaction and suspend this transfer.
+                                    continue;
+                                }
+
                                 if (transfers[i] != null && transfers[i].Status != CrossChainTransferStatus.Suspended)
                                     continue;
 
@@ -1462,7 +1471,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             try
             {
-                foreach (CrossChainTransferStatus status in new[] { CrossChainTransferStatus.FullySigned, CrossChainTransferStatus.Partial })
+                foreach (CrossChainTransferStatus status in new[] { CrossChainTransferStatus.FullySigned, CrossChainTransferStatus.Partial, CrossChainTransferStatus.Suspended })
                     depositIds.UnionWith(this.depositsIdsByStatus[status]);
 
                 transfers = this.Get(depositIds.ToArray()).Where(t => t != null).ToArray();

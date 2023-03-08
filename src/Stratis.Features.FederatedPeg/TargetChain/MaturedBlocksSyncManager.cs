@@ -264,114 +264,113 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 if (maturedBlockDeposit.Deposits.Count > 0)
                     this.logger.LogDebug("Matured deposit count for block {0} height {1}: {2}.", maturedBlockDeposit.BlockInfo.BlockHash, maturedBlockDeposit.BlockInfo.BlockHeight, maturedBlockDeposit.Deposits.Count);
 
-                // Remove deposits prior to already processed deposits.
-                if (maturedBlockDeposit.BlockInfo.BlockTime >= maturityTimeOfLastConfirmedDeposit)
+                foreach (IDeposit potentialConversionTransaction in maturedBlockDeposit.Deposits)
                 {
-                    foreach (IDeposit potentialConversionTransaction in maturedBlockDeposit.Deposits)
+                    // If this is not a conversion transaction then add it immediately to the temporary list.
+                    if (potentialConversionTransaction.RetrievalType != DepositRetrievalType.ConversionSmall &&
+                        potentialConversionTransaction.RetrievalType != DepositRetrievalType.ConversionNormal &&
+                        potentialConversionTransaction.RetrievalType != DepositRetrievalType.ConversionLarge)
                     {
-                        // If this is not a conversion transaction then add it immediately to the temporary list.
-                        if (potentialConversionTransaction.RetrievalType != DepositRetrievalType.ConversionSmall &&
-                            potentialConversionTransaction.RetrievalType != DepositRetrievalType.ConversionNormal &&
-                            potentialConversionTransaction.RetrievalType != DepositRetrievalType.ConversionLarge)
-                        {
-                            tempDepositList.Add(potentialConversionTransaction);
-                            continue;
-                        }
-
-                        if (this.federatedPegSettings.IsMainChain)
-                        {
-                            this.logger.LogWarning("Conversion transactions do not get actioned by the main chain.");
-                            continue;
-                        }
-
-                        var interFluxV2MainChainActivationHeight = ((PoAConsensusOptions)this.network.Consensus.Options).InterFluxV2MainChainActivationHeight;
-                        if (interFluxV2MainChainActivationHeight != 0 && maturedBlockDeposit.BlockInfo.BlockHeight < interFluxV2MainChainActivationHeight)
-                        {
-                            this.logger.LogWarning("Conversion transactions '{0}' will not be processed below the main chain activation height of {1}.", potentialConversionTransaction.Id, interFluxV2MainChainActivationHeight);
-                            continue;
-                        }
-
-                        this.logger.LogInformation("Conversion transaction '{0}' received.", potentialConversionTransaction.Id);
-
-                        ChainedHeader applicableHeader = null;
-                        bool conversionExists = false;
-                        if (this.conversionRequestRepository.Get(potentialConversionTransaction.Id.ToString()) != null)
-                        {
-                            this.logger.LogWarning("Conversion transaction '{0}' already exists, ignoring.", potentialConversionTransaction.Id);
-                            conversionExists = true;
-                        }
-                        else
-                        {
-                            // This should ony happen if the conversion does't exist yet.
-                            if (!FindApplicableConversionRequestHeader(maturedBlockDeposit, potentialConversionTransaction, out applicableHeader))
-                                continue;
-                        }
-
-                        InteropConversionRequestFee interopConversionRequestFee = await this.conversionRequestFeeService.AgreeFeeForConversionRequestAsync(potentialConversionTransaction.Id.ToString(), maturedBlockDeposit.BlockInfo.BlockHeight).ConfigureAwait(false);
-
-                        // If a dynamic fee could not be determined, create a fallback fee.
-                        if (interopConversionRequestFee == null ||
-                            (interopConversionRequestFee != null && interopConversionRequestFee.State != InteropFeeState.AgreeanceConcluded))
-                        {
-                            interopConversionRequestFee.Amount = ConversionRequestFeeService.FallBackFee;
-                            this.logger.LogWarning($"A dynamic fee for conversion request '{potentialConversionTransaction.Id}' could not be determined, using a fixed fee of {ConversionRequestFeeService.FallBackFee} STRAX.");
-                        }
-
-                        if (Money.Satoshis(interopConversionRequestFee.Amount) >= potentialConversionTransaction.Amount)
-                        {
-                            this.logger.LogWarning("Conversion transaction '{0}' is no longer large enough to cover the fee.", potentialConversionTransaction.Id);
-                            continue;
-                        }
-
-                        // We insert the fee distribution as a deposit to be processed, albeit with a special address.
-                        // Deposits with this address as their destination will be distributed between the multisig members.
-                        // Note that it will be actioned immediately as a matured deposit.
-                        this.logger.LogInformation("Adding conversion fee distribution for transaction '{0}' to deposit list.", potentialConversionTransaction.Id);
-
-                        // Instead of being a conversion deposit, the fee distribution is translated to its non-conversion equivalent.
-                        DepositRetrievalType depositType = DepositRetrievalType.Small;
-
-                        switch (potentialConversionTransaction.RetrievalType)
-                        {
-                            case DepositRetrievalType.ConversionSmall:
-                                depositType = DepositRetrievalType.Small;
-                                break;
-                            case DepositRetrievalType.ConversionNormal:
-                                depositType = DepositRetrievalType.Normal;
-                                break;
-                            case DepositRetrievalType.ConversionLarge:
-                                depositType = DepositRetrievalType.Large;
-                                break;
-                        }
-
-                        tempDepositList.Add(new Deposit(potentialConversionTransaction.Id,
-                            depositType,
-                            Money.Satoshis(interopConversionRequestFee.Amount),
-                            this.network.ConversionTransactionFeeDistributionDummyAddress,
-                            potentialConversionTransaction.TargetChain,
-                            potentialConversionTransaction.BlockNumber,
-                            potentialConversionTransaction.BlockHash));
-
-                        if (!conversionExists)
-                        {
-                            this.logger.LogDebug("Adding conversion request for transaction '{0}' to repository.", potentialConversionTransaction.Id);
-
-                            this.conversionRequestRepository.Save(new ConversionRequest()
-                            {
-                                RequestId = potentialConversionTransaction.Id.ToString(),
-                                RequestType = ConversionRequestType.Mint,
-                                Processed = false,
-                                RequestStatus = ConversionRequestStatus.Unprocessed,
-                                // We do NOT convert to wei here yet. That is done when the minting transaction is submitted on the Ethereum network.
-                                Amount = (ulong)(potentialConversionTransaction.Amount - Money.Satoshis(interopConversionRequestFee.Amount)).Satoshi,
-                                BlockHeight = applicableHeader.Height,
-                                DestinationAddress = potentialConversionTransaction.TargetAddress,
-                                DestinationChain = potentialConversionTransaction.TargetChain
-                            });
-                        }
+                        tempDepositList.Add(potentialConversionTransaction);
+                        continue;
                     }
 
+                    if (this.federatedPegSettings.IsMainChain)
+                    {
+                        this.logger.LogWarning("Conversion transactions do not get actioned by the main chain.");
+                        continue;
+                    }
 
+                    var interFluxV2MainChainActivationHeight = ((PoAConsensusOptions)this.network.Consensus.Options).InterFluxV2MainChainActivationHeight;
+                    if (interFluxV2MainChainActivationHeight != 0 && maturedBlockDeposit.BlockInfo.BlockHeight < interFluxV2MainChainActivationHeight)
+                    {
+                        this.logger.LogWarning("Conversion transactions '{0}' will not be processed below the main chain activation height of {1}.", potentialConversionTransaction.Id, interFluxV2MainChainActivationHeight);
+                        continue;
+                    }
+
+                    this.logger.LogInformation("Conversion transaction '{0}' received.", potentialConversionTransaction.Id);
+
+                    ChainedHeader applicableHeader = null;
+                    bool conversionExists = false;
+                    if (this.conversionRequestRepository.Get(potentialConversionTransaction.Id.ToString()) != null)
+                    {
+                        this.logger.LogWarning("Conversion transaction '{0}' already exists, ignoring.", potentialConversionTransaction.Id);
+                        conversionExists = true;
+                    }
+                    else
+                    {
+                        // This should ony happen if the conversion does't exist yet.
+                        if (!FindApplicableConversionRequestHeader(maturedBlockDeposit, potentialConversionTransaction, out applicableHeader))
+                            continue;
+                    }
+
+                    InteropConversionRequestFee interopConversionRequestFee = null;
+
+                    // The fee will not be needed if the deposit already has a withdrawal.
+                    var existingTransfer = await this.crossChainTransferStore.GetAsync(new[] { potentialConversionTransaction.Id }).ConfigureAwait(false);
+                    if (existingTransfer == null || existingTransfer.Length == 0 || existingTransfer[0].Status != CrossChainTransferStatus.SeenInBlock)
+                        interopConversionRequestFee = await this.conversionRequestFeeService.AgreeFeeForConversionRequestAsync(potentialConversionTransaction.Id.ToString(), maturedBlockDeposit.BlockInfo.BlockHeight).ConfigureAwait(false);
+
+                    // If a dynamic fee could not be determined, create a fallback fee.
+                    if (interopConversionRequestFee == null ||
+                        (interopConversionRequestFee != null && interopConversionRequestFee.State != InteropFeeState.AgreeanceConcluded))
+                    {
+                        interopConversionRequestFee.Amount = ConversionRequestFeeService.FallBackFee;
+                        this.logger.LogWarning($"A dynamic fee for conversion request '{potentialConversionTransaction.Id}' could not be determined, using a fixed fee of {ConversionRequestFeeService.FallBackFee} STRAX.");
+                    }
+
+                    if (Money.Satoshis(interopConversionRequestFee.Amount) >= potentialConversionTransaction.Amount)
+                    {
+                        this.logger.LogWarning("Conversion transaction '{0}' is no longer large enough to cover the fee.", potentialConversionTransaction.Id);
+                        continue;
+                    }
+
+                    // We insert the fee distribution as a deposit to be processed, albeit with a special address.
+                    // Deposits with this address as their destination will be distributed between the multisig members.
+                    // Note that it will be actioned immediately as a matured deposit.
+                    this.logger.LogInformation("Adding conversion fee distribution for transaction '{0}' to deposit list.", potentialConversionTransaction.Id);
+
+                    // Instead of being a conversion deposit, the fee distribution is translated to its non-conversion equivalent.
+                    DepositRetrievalType depositType = DepositRetrievalType.Small;
+
+                    switch (potentialConversionTransaction.RetrievalType)
+                    {
+                        case DepositRetrievalType.ConversionSmall:
+                            depositType = DepositRetrievalType.Small;
+                            break;
+                        case DepositRetrievalType.ConversionNormal:
+                            depositType = DepositRetrievalType.Normal;
+                            break;
+                        case DepositRetrievalType.ConversionLarge:
+                            depositType = DepositRetrievalType.Large;
+                            break;
+                    }
+
+                    tempDepositList.Add(new Deposit(potentialConversionTransaction.Id,
+                        depositType,
+                        Money.Satoshis(interopConversionRequestFee.Amount),
+                        this.network.ConversionTransactionFeeDistributionDummyAddress,
+                        potentialConversionTransaction.TargetChain,
+                        potentialConversionTransaction.BlockNumber,
+                        potentialConversionTransaction.BlockHash));
+
+                    if (!conversionExists)
+                    {
+                        this.logger.LogDebug("Adding conversion request for transaction '{0}' to repository.", potentialConversionTransaction.Id);
+
+                        this.conversionRequestRepository.Save(new ConversionRequest()
+                        {
+                            RequestId = potentialConversionTransaction.Id.ToString(),
+                            RequestType = ConversionRequestType.Mint,
+                            Processed = false,
+                            RequestStatus = ConversionRequestStatus.Unprocessed,
+                            // We do NOT convert to wei here yet. That is done when the minting transaction is submitted on the Ethereum network.
+                            Amount = (ulong)(potentialConversionTransaction.Amount - Money.Satoshis(interopConversionRequestFee.Amount)).Satoshi,
+                            BlockHeight = applicableHeader.Height,
+                            DestinationAddress = potentialConversionTransaction.TargetAddress,
+                            DestinationChain = potentialConversionTransaction.TargetChain
+                        });
+                    }
                 }
 
                 maturedBlockDeposit.Deposits = tempDepositList.AsReadOnly();
