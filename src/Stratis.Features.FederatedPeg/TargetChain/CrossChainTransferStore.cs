@@ -461,7 +461,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                             {
                                 // Can't have any transfers after a suspended transfer.
                                 // Otherwise it will be impossible to allocate the correct inputs in deterministic order.
-                                if (haveSuspendedTransfers && transfers[i].Status == CrossChainTransferStatus.Partial)
+                                if (haveSuspendedTransfers && transfers[i]?.Status == CrossChainTransferStatus.Partial)
                                 {                                    
                                     this.federationWalletManager.RemoveWithdrawalTransactions(transfers[i].DepositTransactionId);
                                     // "ValidateTransfers" will detect the missing transaction and suspend this transfer.
@@ -1474,7 +1474,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 foreach (CrossChainTransferStatus status in new[] { CrossChainTransferStatus.FullySigned, CrossChainTransferStatus.Partial, CrossChainTransferStatus.Suspended })
                     depositIds.UnionWith(this.depositsIdsByStatus[status]);
 
-                transfers = this.Get(depositIds.ToArray()).Where(t => t != null).ToArray();
+                transfers = this.GetAsync(depositIds.ToArray(), false).GetAwaiter().GetResult().Where(t => t != null).ToArray();
 
                 // When sorting, Suspended transactions will have null PartialTransactions. Always put them last in the order they're in.
                 IEnumerable<ICrossChainTransfer> inprogress = transfers.Where(x => x.Status != CrossChainTransferStatus.Suspended && x.Status != CrossChainTransferStatus.Rejected);

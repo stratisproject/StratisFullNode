@@ -392,7 +392,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     this.logger.LogDebug($"Adding {this.interOpFeeDeposits.Count} interflux fee deposits.");
 
                     MaturedBlockDepositsModel tempModelList = matureBlockDeposits.Value
-                        .Where(d => d.BlockInfo.BlockTime >= maturityTimeOfLastConfirmedDeposit)
                         .OrderByDescending(d => d.BlockInfo.BlockHeight).First();
                     List<IDeposit> tempDepositList = tempModelList.Deposits.ToList();
                     tempDepositList.AddRange(this.interOpFeeDeposits);
