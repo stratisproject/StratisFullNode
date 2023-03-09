@@ -252,9 +252,17 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 return true;
             }
 
-            uint maturityTimeOfLastConfirmedDeposit = await GetMaturityTimeOfLastConfirmedDeposit().ConfigureAwait(false);
-
             this.logger.LogInformation("Processing {0} matured blocks.", matureBlockDeposits.Value.Count);
+
+            // Create a dictionary of existing transfers and a hashset of completed transfers.
+           ICrossChainTransfer[] existingTransfers = await this.crossChainTransferStore.GetAsync(matureBlockDeposits.Value.SelectMany(b => b.Deposits).Select(d => d.Id).ToArray()).ConfigureAwait(false);
+
+            // The sync must be successful. Otherwise try again later.
+            if (existingTransfers == null)
+                return true;
+
+            var existingTransfersDict = existingTransfers.Where(t => t != null).ToDictionary(t => t.DepositTransactionId, t => t);
+            var completedTransferIds = new HashSet<uint256>(existingTransfers.Where(t => t?.Status == CrossChainTransferStatus.SeenInBlock).Select(t => t.DepositTransactionId));
 
             // Filter out conversion transactions & also log what we've received for diagnostic purposes.
             foreach (MaturedBlockDepositsModel maturedBlockDeposit in matureBlockDeposits.Value)
@@ -266,6 +274,10 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                 foreach (IDeposit potentialConversionTransaction in maturedBlockDeposit.Deposits)
                 {
+                    // Don't process already completed transfers.
+                   if (completedTransferIds.Contains(potentialConversionTransaction.Id))
+                       continue;
+
                     // If this is not a conversion transaction then add it immediately to the temporary list.
                     if (potentialConversionTransaction.RetrievalType != DepositRetrievalType.ConversionSmall &&
                         potentialConversionTransaction.RetrievalType != DepositRetrievalType.ConversionNormal &&
@@ -304,17 +316,13 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                             continue;
                     }
 
-                    InteropConversionRequestFee interopConversionRequestFee = null;
-
-                    // The fee will not be needed if the deposit already has a withdrawal.
-                    var existingTransfer = await this.crossChainTransferStore.GetAsync(new[] { potentialConversionTransaction.Id }).ConfigureAwait(false);
-                    if (existingTransfer == null || existingTransfer.Length == 0 || existingTransfer[0].Status != CrossChainTransferStatus.SeenInBlock)
-                        interopConversionRequestFee = await this.conversionRequestFeeService.AgreeFeeForConversionRequestAsync(potentialConversionTransaction.Id.ToString(), maturedBlockDeposit.BlockInfo.BlockHeight).ConfigureAwait(false);
+                    InteropConversionRequestFee interopConversionRequestFee = await this.conversionRequestFeeService.AgreeFeeForConversionRequestAsync(potentialConversionTransaction.Id.ToString(), maturedBlockDeposit.BlockInfo.BlockHeight).ConfigureAwait(false);
 
                     // If a dynamic fee could not be determined, create a fallback fee.
                     if (interopConversionRequestFee == null ||
                         (interopConversionRequestFee != null && interopConversionRequestFee.State != InteropFeeState.AgreeanceConcluded))
                     {
+                        interopConversionRequestFee ??= new InteropConversionRequestFee();
                         interopConversionRequestFee.Amount = ConversionRequestFeeService.FallBackFee;
                         this.logger.LogWarning($"A dynamic fee for conversion request '{potentialConversionTransaction.Id}' could not be determined, using a fixed fee of {ConversionRequestFeeService.FallBackFee} STRAX.");
                     }
