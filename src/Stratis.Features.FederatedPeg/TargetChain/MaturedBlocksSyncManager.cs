@@ -50,7 +50,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly IAsyncProvider asyncProvider;
         private readonly ICrossChainTransferStore crossChainTransferStore;
         private readonly IFederationGatewayClient federationGatewayClient;
-        private readonly IFederationNodeClient federationNodeClient;
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly IFederationWalletManager federationWalletManager;
         private readonly IInitialBlockDownloadState initialBlockDownloadState;
@@ -84,7 +83,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             IAsyncProvider asyncProvider,
             ICrossChainTransferStore crossChainTransferStore,
             IFederationGatewayClient federationGatewayClient,
-            IFederationNodeClient federationNodeClient,
             IFederationWalletManager federationWalletManager,
             IInitialBlockDownloadState initialBlockDownloadState,
             INodeLifetime nodeLifetime,
@@ -103,7 +101,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.conversionRequestRepository = conversionRequestRepository;
             this.crossChainTransferStore = crossChainTransferStore;
             this.federationGatewayClient = federationGatewayClient;
-            this.federationNodeClient = federationNodeClient;
             this.federatedPegSettings = federatedPegSettings;
             this.federationWalletManager = federationWalletManager;
             this.initialBlockDownloadState = initialBlockDownloadState;
@@ -202,40 +199,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             }
 
             return await ProcessMatureBlockDepositsAsync(matureBlockDeposits).ConfigureAwait(false);
-        }
-
-        private async Task<uint> GetMaturityTimeOfLastConfirmedDeposit()
-        {
-            // If the last confirmed deposit is not known yet then try to find it via the federation wallet.
-            uint maturityTimeOfLastConfirmedDeposit = 0;
-
-            FederationWallet wallet = this.federationWalletManager.GetWallet();
-            if (wallet == null)
-                return 0U;
-
-            // Query the wallet for the last confirmed deposit.
-            foreach (WithdrawalDetails withdrawal in wallet.MultiSigAddress.Transactions.GetLastWithdrawals())
-            {
-                uint256 depositId = withdrawal.MatchingDepositId;
-
-                if (!this.blockTimeOfDeposit.TryGetValue(depositId, out uint blockTime))
-                {
-                    TransactionVerboseModel result2 = await this.federationNodeClient.GetDepositTransactionVerboseAsync(depositId).ConfigureAwait(false);
-                    if (result2 == null)
-                        continue;
-
-                    blockTime = (uint)result2.BlockTime;
-                    this.blockTimeOfDeposit[depositId] = blockTime;
-                }
-
-                // TODO: First adjust blockTime by the deposit confirmation time.
-                if (blockTime > maturityTimeOfLastConfirmedDeposit)
-                {
-                    maturityTimeOfLastConfirmedDeposit = blockTime;
-                }
-            }
-
-            return maturityTimeOfLastConfirmedDeposit;
         }
 
         private async Task<bool> ProcessMatureBlockDepositsAsync(SerializableResult<List<MaturedBlockDepositsModel>> matureBlockDeposits)
@@ -399,8 +362,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 {
                     this.logger.LogDebug($"Adding {this.interOpFeeDeposits.Count} interflux fee deposits.");
 
-                    MaturedBlockDepositsModel tempModelList = matureBlockDeposits.Value
-                        .OrderByDescending(d => d.BlockInfo.BlockHeight).First();
+                    MaturedBlockDepositsModel tempModelList = matureBlockDeposits.Value.OrderByDescending(d => d.BlockInfo.BlockHeight).First();
                     List<IDeposit> tempDepositList = tempModelList.Deposits.ToList();
                     tempDepositList.AddRange(this.interOpFeeDeposits);
                     tempModelList.Deposits = tempDepositList.AsReadOnly().OrderBy(x => x.Id, Comparer<uint256>.Create(DeterministicCoinOrdering.CompareUint256)).ToList();

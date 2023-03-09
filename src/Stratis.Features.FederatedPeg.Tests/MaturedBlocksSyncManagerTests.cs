@@ -21,7 +21,6 @@ namespace Stratis.Features.FederatedPeg.Tests
         private readonly ChainIndexer chainIndexer;
         private readonly ICrossChainTransferStore crossChainTransferStore;
         private readonly IFederationGatewayClient federationGatewayClient;
-        private readonly IFederationNodeClient federationNodeClient;
         private IFederationWalletManager federationWalletManager;
         private IInitialBlockDownloadState initialBlockDownloadState;
         private readonly StraxTest network;
@@ -35,7 +34,6 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.chainIndexer = new ChainIndexer(this.network);
             this.crossChainTransferStore = Substitute.For<ICrossChainTransferStore>();
             this.federationGatewayClient = Substitute.For<IFederationGatewayClient>();
-            this.federationNodeClient = Substitute.For<IFederationNodeClient>();
 
             this.federationWalletManager = Substitute.For<IFederationWalletManager>();
             this.federationWalletManager.IsFederationWalletActive().Returns(true);
@@ -45,7 +43,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.initialBlockDownloadState = Substitute.For<IInitialBlockDownloadState>();
             this.initialBlockDownloadState.IsInitialBlockDownload().Returns(false);
 
-            this.syncManager = new TestOnlyMaturedBlocksSyncManager(this.asyncProvider, this.chainIndexer, this.crossChainTransferStore, this.federationGatewayClient, this.federationNodeClient, this.federationWalletManager, this.initialBlockDownloadState, new NodeLifetime());
+            this.syncManager = new TestOnlyMaturedBlocksSyncManager(this.asyncProvider, this.chainIndexer, this.crossChainTransferStore, this.federationGatewayClient, this.federationWalletManager, this.initialBlockDownloadState, new NodeLifetime());
         }
 
         [Fact]
@@ -84,7 +82,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         {
             this.initialBlockDownloadState = Substitute.For<IInitialBlockDownloadState>();
             this.initialBlockDownloadState.IsInitialBlockDownload().Returns(true);
-            this.syncManager = new TestOnlyMaturedBlocksSyncManager(this.asyncProvider, this.chainIndexer, this.crossChainTransferStore, this.federationGatewayClient, this.federationNodeClient, this.federationWalletManager, this.initialBlockDownloadState, new NodeLifetime());
+            this.syncManager = new TestOnlyMaturedBlocksSyncManager(this.asyncProvider, this.chainIndexer, this.crossChainTransferStore, this.federationGatewayClient, this.federationWalletManager, this.initialBlockDownloadState, new NodeLifetime());
 
             bool delayRequired = await this.syncManager.ExposedSyncBatchOfBlocksAsync();
             Assert.True(delayRequired);
@@ -104,7 +102,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.federationWalletManager = Substitute.For<IFederationWalletManager>();
             this.federationWalletManager.WalletTipHeight.Returns(0);
 
-            this.syncManager = new TestOnlyMaturedBlocksSyncManager(this.asyncProvider, this.chainIndexer, this.crossChainTransferStore, this.federationGatewayClient, this.federationNodeClient, this.federationWalletManager, this.initialBlockDownloadState, new NodeLifetime());
+            this.syncManager = new TestOnlyMaturedBlocksSyncManager(this.asyncProvider, this.chainIndexer, this.crossChainTransferStore, this.federationGatewayClient, this.federationWalletManager, this.initialBlockDownloadState, new NodeLifetime());
 
             bool delayRequired = await this.syncManager.ExposedSyncBatchOfBlocksAsync();
             Assert.True(delayRequired);
@@ -117,7 +115,6 @@ namespace Stratis.Features.FederatedPeg.Tests
                 ChainIndexer chainIndexer,
                 ICrossChainTransferStore crossChainTransferStore,
                 IFederationGatewayClient federationGatewayClient,
-                IFederationNodeClient federationNodeClient,
                 IFederationWalletManager federationWalletManager,
                 IInitialBlockDownloadState initialBlockDownloadState,
                 INodeLifetime nodeLifetime)
@@ -125,7 +122,6 @@ namespace Stratis.Features.FederatedPeg.Tests
                       asyncProvider,
                       crossChainTransferStore,
                       federationGatewayClient,
-                      federationNodeClient,
                       federationWalletManager,
                       initialBlockDownloadState,
                       nodeLifetime,

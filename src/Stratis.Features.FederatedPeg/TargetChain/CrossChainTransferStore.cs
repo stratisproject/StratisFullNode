@@ -32,7 +32,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <summary>
         /// Given that we can have up to 10 UTXOs going at once.
         /// </summary>
-        private const int TransfersToDisplay = 30;
+        private const int TransfersToDisplay = 20;
 
         /// <summary>
         /// Maximum number of partial transactions.
