@@ -33,7 +33,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly ISignals signals;
         private readonly IRewardDistributionManager distributionManager;
-        private int previousDistributionHeight;
 
         public WithdrawalTransactionBuilder(
             Network network,
@@ -56,8 +55,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             if (!this.federatedPegSettings.IsMainChain)
                 this.conversionTransactionFeeDistributionScriptPubKey = BitcoinAddress.Create(this.network.ConversionTransactionFeeDistributionDummyAddress).ScriptPubKey;
-
-            this.previousDistributionHeight = 0;
         }
 
         /// <inheritdoc />
@@ -87,19 +84,17 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 // Withdrawals from the sidechain won't have the OP_RETURN transaction tag, so we need to check against the ScriptPubKey of the Cirrus Dummy address.
                 if (!this.federatedPegSettings.IsMainChain && recipient.ScriptPubKey.Length > 0)
                 {
-                    if (recipient.ScriptPubKey == this.cirrusRewardDummyAddressScriptPubKey && this.previousDistributionHeight != blockHeight)
+                    if (recipient.ScriptPubKey == this.cirrusRewardDummyAddressScriptPubKey)
                     {
                         // Use the distribution manager to determine the actual list of recipients.
-                        // TODO: This would probably be neater if it was moved to the CCTS with the current method accepting a list of recipients instead
+                        this.logger.LogDebug("Generating recipient list for reward distribution.");
+                        
                         multiSigContext.Recipients = this.distributionManager.Distribute(blockHeight, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount); // Reduce the overall amount by the fee first before splitting it up.
-
-                        // This can be transient as it is just to stop distribution happening multiple times
-                        // on blocks that contain more than one deposit.
-                        this.previousDistributionHeight = blockHeight;
                     }
 
                     if (recipient.ScriptPubKey == this.conversionTransactionFeeDistributionScriptPubKey)
                     {
+                        // Use the distribution manager to determine the actual list of recipients.
                         this.logger.LogDebug("Generating recipient list for conversion transaction fee distribution.");
 
                         multiSigContext.Recipients = this.distributionManager.DistributeToMultisigNodes(depositId, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount);
