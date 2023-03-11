@@ -298,7 +298,6 @@ namespace Stratis.Features.FederatedPeg
                         services.AddSingleton<IPartialTransactionRequester, PartialTransactionRequester>();
                         services.AddSingleton<MempoolCleaner>();
                         services.AddSingleton<IFederationGatewayClient, FederationGatewayClient>();
-                        services.AddSingleton<IFederationNodeClient, FederationNodeClient>();
 
                         services.AddSingleton<IConversionRequestKeyValueStore, ConversionRequestKeyValueStore>();
                         services.AddSingleton<IConversionRequestRepository, ConversionRequestRepository>();

@@ -50,7 +50,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly IAsyncProvider asyncProvider;
         private readonly ICrossChainTransferStore crossChainTransferStore;
         private readonly IFederationGatewayClient federationGatewayClient;
-        private readonly IFederationNodeClient federationNodeClient;
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly IFederationWalletManager federationWalletManager;
         private readonly IInitialBlockDownloadState initialBlockDownloadState;
@@ -84,7 +83,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             IAsyncProvider asyncProvider,
             ICrossChainTransferStore crossChainTransferStore,
             IFederationGatewayClient federationGatewayClient,
-            IFederationNodeClient federationNodeClient,
             IFederationWalletManager federationWalletManager,
             IInitialBlockDownloadState initialBlockDownloadState,
             INodeLifetime nodeLifetime,
@@ -103,7 +101,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.conversionRequestRepository = conversionRequestRepository;
             this.crossChainTransferStore = crossChainTransferStore;
             this.federationGatewayClient = federationGatewayClient;
-            this.federationNodeClient = federationNodeClient;
             this.federatedPegSettings = federatedPegSettings;
             this.federationWalletManager = federationWalletManager;
             this.initialBlockDownloadState = initialBlockDownloadState;
@@ -204,40 +201,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             return await ProcessMatureBlockDepositsAsync(matureBlockDeposits).ConfigureAwait(false);
         }
 
-        private async Task<uint> GetMaturityTimeOfLastConfirmedDeposit()
-        {
-            // If the last confirmed deposit is not known yet then try to find it via the federation wallet.
-            uint maturityTimeOfLastConfirmedDeposit = 0;
-
-            FederationWallet wallet = this.federationWalletManager.GetWallet();
-            if (wallet == null)
-                return 0U;
-
-            // Query the wallet for the last confirmed deposit.
-            foreach (WithdrawalDetails withdrawal in wallet.MultiSigAddress.Transactions.GetLastWithdrawals())
-            {
-                uint256 depositId = withdrawal.MatchingDepositId;
-
-                if (!this.blockTimeOfDeposit.TryGetValue(depositId, out uint blockTime))
-                {
-                    TransactionVerboseModel result2 = await this.federationNodeClient.GetDepositTransactionVerboseAsync(depositId).ConfigureAwait(false);
-                    if (result2 == null)
-                        continue;
-
-                    blockTime = (uint)result2.BlockTime;
-                    this.blockTimeOfDeposit[depositId] = blockTime;
-                }
-
-                // TODO: First adjust blockTime by the deposit confirmation time.
-                if (blockTime > maturityTimeOfLastConfirmedDeposit)
-                {
-                    maturityTimeOfLastConfirmedDeposit = blockTime;
-                }
-            }
-
-            return maturityTimeOfLastConfirmedDeposit;
-        }
-
         private async Task<bool> ProcessMatureBlockDepositsAsync(SerializableResult<List<MaturedBlockDepositsModel>> matureBlockDeposits)
         {
             // "Value"'s count will be 0 if we are using NewtonSoft's serializer, null if using .Net Core 3's serializer.
@@ -252,9 +215,17 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 return true;
             }
 
-            uint maturityTimeOfLastConfirmedDeposit = await GetMaturityTimeOfLastConfirmedDeposit().ConfigureAwait(false);
-
             this.logger.LogInformation("Processing {0} matured blocks.", matureBlockDeposits.Value.Count);
+
+            // Create a dictionary of existing transfers and a hashset of completed transfers.
+           ICrossChainTransfer[] existingTransfers = await this.crossChainTransferStore.GetAsync(matureBlockDeposits.Value.SelectMany(b => b.Deposits).Select(d => d.Id).ToArray()).ConfigureAwait(false);
+
+            // The sync must be successful. Otherwise try again later.
+            if (existingTransfers == null)
+                return true;
+
+            var existingTransfersDict = existingTransfers.Where(t => t != null).ToDictionary(t => t.DepositTransactionId, t => t);
+            var completedTransferIds = new HashSet<uint256>(existingTransfers.Where(t => t?.Status == CrossChainTransferStatus.SeenInBlock).Select(t => t.DepositTransactionId));
 
             // Filter out conversion transactions & also log what we've received for diagnostic purposes.
             foreach (MaturedBlockDepositsModel maturedBlockDeposit in matureBlockDeposits.Value)
@@ -264,12 +235,12 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 if (maturedBlockDeposit.Deposits.Count > 0)
                     this.logger.LogDebug("Matured deposit count for block {0} height {1}: {2}.", maturedBlockDeposit.BlockInfo.BlockHash, maturedBlockDeposit.BlockInfo.BlockHeight, maturedBlockDeposit.Deposits.Count);
 
-                // Remove deposits prior to already processed deposits.
-                if (maturedBlockDeposit.BlockInfo.BlockTime < maturityTimeOfLastConfirmedDeposit)
-                    maturedBlockDeposit.Deposits = new List<IDeposit>().AsReadOnly();
-
                 foreach (IDeposit potentialConversionTransaction in maturedBlockDeposit.Deposits)
                 {
+                    // Don't process already completed transfers.
+                   if (completedTransferIds.Contains(potentialConversionTransaction.Id))
+                       continue;
+
                     // If this is not a conversion transaction then add it immediately to the temporary list.
                     if (potentialConversionTransaction.RetrievalType != DepositRetrievalType.ConversionSmall &&
                         potentialConversionTransaction.RetrievalType != DepositRetrievalType.ConversionNormal &&
@@ -314,6 +285,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     if (interopConversionRequestFee == null ||
                         (interopConversionRequestFee != null && interopConversionRequestFee.State != InteropFeeState.AgreeanceConcluded))
                     {
+                        interopConversionRequestFee ??= new InteropConversionRequestFee();
                         interopConversionRequestFee.Amount = ConversionRequestFeeService.FallBackFee;
                         this.logger.LogWarning($"A dynamic fee for conversion request '{potentialConversionTransaction.Id}' could not be determined, using a fixed fee of {ConversionRequestFeeService.FallBackFee} STRAX.");
                     }
