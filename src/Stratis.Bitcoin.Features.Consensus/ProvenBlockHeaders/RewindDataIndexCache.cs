@@ -12,8 +12,6 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
     public class RewindDataIndexCache : IRewindDataIndexCache
     {
         private readonly Network network;
-        private readonly IFinalizedBlockInfoRepository finalizedBlockInfoRepository;
-        private readonly ICheckpoints checkpoints;
 
         /// <summary>
         /// Internal cache for rewind data index. Key is a TxId + N (N is an index of output in a transaction)
@@ -26,22 +24,18 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         /// The number of items stored in cache is the sum of inputs used in every transaction in each of those blocks.
         /// </summary>
         private int numberOfBlocksToKeep;
-        private int lastCheckpoint;
 
         /// <summary>
         /// Performance counter to measure performance of the save and get operations.
         /// </summary>
         private readonly BackendPerformanceCounter performanceCounter;
 
-        public RewindDataIndexCache(IDateTimeProvider dateTimeProvider, Network network, IFinalizedBlockInfoRepository finalizedBlockInfoRepository, ICheckpoints checkpoints)
+        public RewindDataIndexCache(IDateTimeProvider dateTimeProvider, Network network)
         {
             Guard.NotNull(dateTimeProvider, nameof(dateTimeProvider));
 
             this.network = network;
-            this.finalizedBlockInfoRepository = finalizedBlockInfoRepository;
-            this.checkpoints = checkpoints;
             this.items = new ConcurrentDictionary<OutPoint, int>();
-            this.lastCheckpoint = this.checkpoints.GetLastCheckpointHeight();
 
             this.performanceCounter = new BackendPerformanceCounter(dateTimeProvider);
         }
@@ -51,23 +45,9 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         {
             this.items.Clear();
 
-            if (this.lastCheckpoint > tipHeight)
-                return;
-
-            HashHeightPair finalBlock = this.finalizedBlockInfoRepository.GetFinalizedBlockInfo();
-
             this.numberOfBlocksToKeep = (int)this.network.Consensus.MaxReorgLength;
 
             int heightToSyncTo = tipHeight > this.numberOfBlocksToKeep ? tipHeight - this.numberOfBlocksToKeep : 1;
-
-            if (tipHeight < finalBlock.Height)
-                throw new ConsensusException($"Violation of finality on height { tipHeight } for RewindDataIndex.");
-
-            if (heightToSyncTo < finalBlock.Height)
-                heightToSyncTo = finalBlock.Height;
-
-            if (heightToSyncTo < this.lastCheckpoint)
-                heightToSyncTo = this.lastCheckpoint;
 
             for (int rewindHeight = tipHeight; rewindHeight >= heightToSyncTo; rewindHeight--)
             {
@@ -104,9 +84,6 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         /// <inheritdoc />
         public void Remove(int tipHeight, ICoinView coinView)
         {
-            if (this.lastCheckpoint > tipHeight)
-                return;
-
             this.SaveAndEvict(tipHeight, null);
 
             int bottomHeight = tipHeight > this.numberOfBlocksToKeep ? tipHeight - this.numberOfBlocksToKeep : 1;
@@ -118,9 +95,6 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         /// <inheritdoc />
         public void SaveAndEvict(int tipHeight, Dictionary<OutPoint, int> indexData)
         {
-            if (this.lastCheckpoint > tipHeight)
-                return;
-
             if (indexData != null)
             {
                 using (new StopwatchDisposable(o => this.performanceCounter.AddInsertTime(o)))

@@ -117,7 +117,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
             var stakeChain = new StakeChainStore(network, chain, null, loggerFactory);
             ConsensusRuleEngine consensusRules = new PosConsensusRuleEngine(network, loggerFactory, dateTimeProvider, chain, deployments, consensusSettings, new Checkpoints(),
                 inMemoryCoinView, stakeChain, new StakeValidator(network, stakeChain, chain, inMemoryCoinView, loggerFactory), chainState, new InvalidBlockHashStore(dateTimeProvider),
-                new NodeStats(dateTimeProvider, NodeSettings.Default(network), new Mock<IVersionProvider>().Object), new RewindDataIndexCache(dateTimeProvider, network, finalizedBlockInfoRepository, new Checkpoints()), asyncProvider, consensusRulesContainer).SetupRulesEngineParent();
+                new NodeStats(dateTimeProvider, NodeSettings.Default(network), new Mock<IVersionProvider>().Object), new RewindDataIndexCache(dateTimeProvider, network), asyncProvider, consensusRulesContainer).SetupRulesEngineParent();
 
             IConsensusManager consensus = ConsensusManagerHelper.CreateConsensusManager(network, dataDir, chainState, chainIndexer: chain, consensusRules: consensusRules, inMemoryCoinView: inMemoryCoinView);
 
