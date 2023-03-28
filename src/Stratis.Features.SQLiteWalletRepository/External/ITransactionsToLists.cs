@@ -140,11 +140,6 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                     foreach (TxDestination destination in destinations)
                     {
                         var pubKeyScript = destination.ScriptPubKey;
-                        if (PayToWitPubKeyHashTemplate.Instance.CheckScriptPubKey(pubKeyScript))
-                        {
-
-                        }
-
                         bool containsAddress = addressesOfInterest.Contains(pubKeyScript, out AddressIdentifier address);
 
                         // Paying to one of our addresses?
