@@ -13,8 +13,6 @@ namespace Stratis.Features.FederatedPeg.Conversion
     {
         List<ConversionRequest> GetAll();
         List<ConversionRequest> GetAll(ConversionRequestType type, bool onlyUnprocessed);
-
-        void Delete(string key);
     }
 
     public class ConversionRequestKeyValueStore : IConversionRequestKeyValueStore
