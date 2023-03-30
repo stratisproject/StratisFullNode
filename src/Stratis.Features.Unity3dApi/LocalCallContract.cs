@@ -29,12 +29,15 @@ namespace Stratis.Features.Unity3dApi
         private readonly IContractPrimitiveSerializer primitiveSerializer;
         private readonly IContractAssemblyCache contractAssemblyCache;
 
-        public LocalCallContract(Network network, ISmartContractTransactionService smartContractTransactionService, ChainIndexer chainIndexer, ILocalExecutor localExecutor)
+        public LocalCallContract(Network network, ISmartContractTransactionService smartContractTransactionService, ChainIndexer chainIndexer, ILocalExecutor localExecutor,
+            IContractPrimitiveSerializer contractPrimitiveSerializer, IContractAssemblyCache contractAssemblyCache)
         {
             this.network = network;
             this.chainIndexer = chainIndexer;
             this.smartContractTransactionService = smartContractTransactionService;
             this.localExecutor = localExecutor;
+            this.primitiveSerializer = contractPrimitiveSerializer;
+            this.contractAssemblyCache = contractAssemblyCache;
         }
 
         public LocalExecutionResponse LocalCallSmartContract(LocalCallContractRequest request)
