@@ -8,7 +8,7 @@ using Stratis.Bitcoin.Utilities.JsonConverters;
 
 namespace Stratis.Bitcoin.Persistence.KeyValueStores
 {
-    public class KeyValueRepository<T> : IKeyValueRepository where T : IDb, new()
+    public class KeyValueRepository<TDB> : IKeyValueRepository where TDB : IDb, new()
     {
         /// <summary>Access to database.</summary>
         private readonly IDb db;
@@ -25,7 +25,7 @@ namespace Stratis.Bitcoin.Persistence.KeyValueStores
             this.dBreezeSerializer = dBreezeSerializer;
 
             // Open a connection to a new DB and create if not found
-            this.db = new T();
+            this.db = new TDB();
             this.db.Open(folder);
         }
 

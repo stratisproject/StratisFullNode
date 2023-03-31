@@ -48,7 +48,7 @@ namespace Stratis.Bitcoin.Configuration
 
         /// <summary>A factory responsible for creating a Full Node logger instance.</summary>
         public ILoggerFactory LoggerFactory
-        { 
+        {
             get
             {
                 if (loggerFactory == null)

@@ -67,11 +67,11 @@ namespace Stratis.Bitcoin.Features.Miner
         public string WalletName { get; set; } = null;
 
         [CommandLineOption("blockmaxsize", "Maximum block size (in bytes) for the miner to generate.")]
-        private uint BlockMaxSize { get { return this.blockMaxSize ?? this.nodeSettings.Network.Consensus.Options.MaxBlockSerializedSize; } set { this.blockMaxSize = value; } }
+        private uint BlockMaxSize { get { return this.blockMaxSize ?? this.NodeSettings.Network.Consensus.Options.MaxBlockSerializedSize; } set { this.blockMaxSize = value; } }
         private uint? blockMaxSize = null;
 
         [CommandLineOption("blockmaxweight", "Maximum block weight (in weight units) for the miner to generate.")]
-        private uint BlockMaxWeight { get { return this.blockMaxWeight ?? this.nodeSettings.Network.Consensus.Options.MaxBlockWeight; } set { this.blockMaxWeight = value; } }
+        private uint BlockMaxWeight { get { return this.blockMaxWeight ?? this.NodeSettings.Network.Consensus.Options.MaxBlockWeight; } set { this.blockMaxWeight = value; } }
         private uint? blockMaxWeight = null;
 
         [CommandLineOption("blockmintxfee", "Set lowest fee rate (in BTC/kvB) for transactions to be included in block creation.")]
