@@ -15,6 +15,8 @@ using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
 using Stratis.Bitcoin.Utilities;
 using Stratis.SmartContracts.CLR;
+using Stratis.SmartContracts.CLR.Caching;
+using Stratis.SmartContracts.CLR.Serialization;
 using FileMode = LiteDB.FileMode;
 
 namespace Stratis.Features.Unity3dApi
@@ -65,7 +67,9 @@ namespace Stratis.Features.Unity3dApi
         private IAsyncLoop indexingLoop;
 
         public NFTTransferIndexer(DataFolder dataFolder, ILoggerFactory loggerFactory, IAsyncProvider asyncProvider, INodeLifetime nodeLifetime,
-            ChainIndexer chainIndexer, Network network, ILocalExecutor localExecutor, Unity3dApiSettings apiSettings, ISmartContractTransactionService smartContractTransactionService = null)
+            ChainIndexer chainIndexer, Network network, ILocalExecutor localExecutor, Unity3dApiSettings apiSettings, 
+            ISmartContractTransactionService smartContractTransactionService = null, IContractPrimitiveSerializer contractPrimitiveSerializer = null, 
+            IContractAssemblyCache contractAssemblyCache = null)
         {
             this.network = network;
             this.dataFolder = dataFolder;
@@ -74,7 +78,7 @@ namespace Stratis.Features.Unity3dApi
             this.nodeLifetime = nodeLifetime;
             this.chainIndexer = chainIndexer;
 
-            var localCallContract = new LocalCallContract(network, smartContractTransactionService, chainIndexer, localExecutor);
+            var localCallContract = new LocalCallContract(network, smartContractTransactionService, chainIndexer, localExecutor, contractPrimitiveSerializer, contractAssemblyCache);
 
             this.nftContractLocalClient = new NftContractLocalClient(localCallContract, apiSettings.LocalCallSenderAddress);
             this.smartContractTransactionService = smartContractTransactionService;
