@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Configuration.Logging;
+using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
 using Stratis.Bitcoin.Features.Interop.Models;
 using Stratis.Bitcoin.Features.Interop.Settings;
@@ -42,6 +43,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         private readonly ILogger logger;
         private readonly IReplenishmentKeyValueStore replenishmentKeyValueStore;
         private readonly Network network;
+        private readonly IExternalApiPoller externalApiPoller;
 
         public InteropController(
             ICallDataSerializer callDataSerializer,
@@ -55,7 +57,8 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             IFederationManager federationManager,
             InteropSettings interopSettings,
             InteropPoller interopPoller,
-            IReplenishmentKeyValueStore replenishmentKeyValueStore)
+            IReplenishmentKeyValueStore replenishmentKeyValueStore,
+            IExternalApiPoller externalApiPoller)
         {
             this.callDataSerializer = callDataSerializer;
             this.chainIndexer = chainIndexer;
@@ -70,6 +73,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
             this.replenishmentKeyValueStore = replenishmentKeyValueStore;
+            this.externalApiPoller = externalApiPoller;
         }
 
         [Route("initializeinterflux")]
@@ -152,7 +156,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult InteropStatusBurnRequests([FromBody] string requestId)
+        public IActionResult InteropStatusGetRequest([FromBody] string requestId)
         {
             try
             {
@@ -259,6 +263,8 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                 var response = new InteropStatusResponseModel();
 
                 var receivedVotes = new Dictionary<string, List<string>>();
+
+                response.TransactionIdVotes = this.conversionRequestCoordinationService.GetTransactionIdStatus();
 
                 foreach ((string requestId, HashSet<PubKey> pubKeys) in this.conversionRequestCoordinationService.GetStatus())
                 {
@@ -390,7 +396,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         /// </summary>
         /// <param name="destinationChain">The chain the multisig wallet contract is deployed to.</param>
         /// <param name="transactionId">The multisig wallet transactionId (this is an integer, not an on-chain transaction hash).</param>
-        /// <param name="gasPrice">The gas price to use for submitting the confirmation.</param>
+        /// <param name="gasPrice">The gas price to use for submitting the confirmation (non-Cirrus chains only). Passing 0 will use the <see cref="IExternalApiPoller"/> to look up the value.</param>
         /// <returns>The on-chain transaction hash of the contract call transaction.</returns>
         [Route("confirmtransaction")]
         [HttpGet]
@@ -401,12 +407,25 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         {
             try
             {
+                if (destinationChain == DestinationChain.CIRRUS)
+                {
+                    var cirrusClient = new CirrusContractClient(this.interopSettings, this.chainIndexer);
+
+                    (string TransactionHash, string Message) result = await cirrusClient.ConfirmTransactionAsync(transactionId).ConfigureAwait(false);
+
+                    return this.Json(result.TransactionHash);
+                }
+
                 if (!this.ethCompatibleClientProvider.IsChainSupportedAndEnabled(destinationChain))
                     return BadRequest($"{destinationChain} not enabled or supported!");
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
 
-                // TODO: Maybe for convenience the gas price could come from the external API poller
+                if (gasPrice == 0)
+                {
+                    gasPrice = this.externalApiPoller.GetGasPrice();
+                }
+                
                 return this.Json(await client.ConfirmTransactionAsync(transactionId, gasPrice).ConfigureAwait(false));
             }
             catch (Exception e)
