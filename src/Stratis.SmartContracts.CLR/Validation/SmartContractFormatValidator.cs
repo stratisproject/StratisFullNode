@@ -1,17 +1,23 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Mono.Cecil;
+using Stratis.SmartContracts.CLR.Validation;
 
 namespace Stratis.SmartContracts.CLR.Validation
 {
-    public sealed class SmartContractValidator : ISmartContractValidator
+    /// <summary>
+    /// Validates the format of a Smart Contract <see cref="ModuleDefinition"/>
+    /// </summary>
+    public class SmartContractFormatValidator : ISmartContractValidator
     {
         public SmartContractValidationResult Validate(ModuleDefinition moduleDefinition)
         {
-            ValidationPolicy policy = ValidationPolicy.FromExisting(new[] { FormatPolicy.Default, DeterminismPolicy.Default });
+            ValidationPolicy policy = FormatPolicy.Default;
+
             var validator = new ModulePolicyValidator(policy);
 
-            List<ValidationResult> results = validator.Validate(moduleDefinition).ToList();
+            var results = validator.Validate(moduleDefinition).ToList();
+
             return new SmartContractValidationResult(results);
         }
     }

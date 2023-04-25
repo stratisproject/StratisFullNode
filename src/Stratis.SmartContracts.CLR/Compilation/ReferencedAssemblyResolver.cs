@@ -23,7 +23,8 @@ namespace Stratis.SmartContracts.CLR.Compilation
                 Core, 
                 typeof(SmartContract).Assembly, 
                 typeof(Enumerable).Assembly,
-                typeof(IStandardToken).Assembly
+                typeof(IStandardToken).Assembly,
+                typeof(SCL.Base.Operations).Assembly
             };
     }
 }
