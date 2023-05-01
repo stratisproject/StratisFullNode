@@ -238,7 +238,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 foreach (IDeposit potentialConversionTransaction in maturedBlockDeposit.Deposits)
                 {
                     // Don't process already completed transfers.
-                   if (completedTransferIds.Contains(potentialConversionTransaction.Id))
+                    if (completedTransferIds.Contains(potentialConversionTransaction.Id))
                        continue;
 
                     // If this is not a conversion transaction then add it immediately to the temporary list.
@@ -274,8 +274,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     }
                     else
                     {
-                        // This should ony happen if the conversion does't exist yet.
-                        if (!FindApplicableConversionRequestHeader(maturedBlockDeposit, potentialConversionTransaction, out applicableHeader))
+                        // This should ony happen if the conversion doesn't exist yet.
+                        if (!FindApplicableConversionRequestHeader(potentialConversionTransaction, out applicableHeader))
                             continue;
                     }
 
@@ -379,34 +379,34 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <summary>
         /// Get the first block on this chain that has a timestamp after the deposit's block time on the counterchain.
         /// This is so that we can assign a block height that the deposit 'arrived' on the sidechain.
-        /// TODO: This can probably be made more efficient than looping every time. 
         /// </summary>
-        /// <param name="maturedBlockDeposit">The matured block deposit's block time to check against.</param>
         /// <param name="potentialConversionTransaction">The conversion transaction we are currently working with.</param>
         /// <param name="chainedHeader">The chained header to use.</param>
         /// <returns><c>true</c> if found.</returns>
-        private bool FindApplicableConversionRequestHeader(MaturedBlockDepositsModel maturedBlockDeposit, IDeposit potentialConversionTransaction, out ChainedHeader chainedHeader)
+        private bool FindApplicableConversionRequestHeader(IDeposit potentialConversionTransaction, out ChainedHeader chainedHeader)
         {
             chainedHeader = this.chainIndexer.Tip;
 
-            bool found = false;
-
-            this.logger.LogDebug($"Finding applicable header for deposit with block time '{maturedBlockDeposit.BlockInfo.BlockTime}'; chain tip '{this.chainIndexer.Tip}'.");
+            this.logger.LogDebug($"Finding applicable header for deposit with block time '{potentialConversionTransaction.BlockTime}'; chain tip '{this.chainIndexer.Tip}'.");
 
             // Get the first block on this chain that has a timestamp after the deposit's block time on the counterchain.
+            // Note that it is the block time of the block the deposit was made in, not the block time of the block it matured in (as this may be too close to this chain's tip to be reliably found).
             int chainedHeaderHeight = BinarySearch.BinaryFindFirst((height) =>
             {
-                return this.chainIndexer[height].Header.Time > maturedBlockDeposit.BlockInfo.BlockTime;
+                return this.chainIndexer[height].Header.Time > potentialConversionTransaction.BlockTime;
             }, 0, this.chainIndexer.Tip.Height + 1);
 
             if (chainedHeaderHeight == -1)
+            {
                 this.logger.LogWarning("Unable to determine timestamp for conversion transaction '{0}', ignoring.", potentialConversionTransaction.Id);
+                return false;
+            }
 
             chainedHeader = this.chainIndexer[chainedHeaderHeight];
 
             this.logger.LogDebug($"Applicable header selected '{chainedHeader}'");
 
-            return found;
+            return true;
         }
 
         /// <inheritdoc />
