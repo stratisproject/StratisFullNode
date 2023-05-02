@@ -36,6 +36,8 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         /// <inheritdoc />
         public uint256 BlockHash { get; set; }
 
+        public uint BlockTime { get; set; }
+
         /// <inheritdoc />
         public DepositRetrievalType RetrievalType { get; }
 

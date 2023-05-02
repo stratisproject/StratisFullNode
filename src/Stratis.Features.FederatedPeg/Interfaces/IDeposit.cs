@@ -35,5 +35,8 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// <summary>The hash of the block where the source deposit has been persisted.</summary>
         [JsonConverter(typeof(UInt256JsonConverter))]
         uint256 BlockHash { get; }
+
+        /// <summary>Only used for InterFlux STRAX -> wSTRAX transfers, this field is not used by the <see cref="ICrossChainTransferStore"/>.</summary>
+        uint BlockTime { get; set; }
     }
 }
