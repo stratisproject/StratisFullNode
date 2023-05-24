@@ -150,12 +150,12 @@ namespace Stratis.Bitcoin.P2P
         public void AddPeers(IEnumerable<IPEndPoint> endPoints, IPAddress source)
         {
             // Pre-filter for peers that exist already.
-            List<IPEndPoint> cleanedList = endPoints.Where(proposed => !this.peerInfoByPeerAddress.ContainsKey(proposed)).ToList();
+            IEnumerable<IPEndPoint> cleanedList = endPoints.Where(proposed => !this.peerInfoByPeerAddress.ContainsKey(proposed));
 
-            if (cleanedList.Count == 0)
+            if (cleanedList.IsEmpty())
                 return;
 
-            this.EnsureMaxItems(cleanedList);
+            cleanedList = this.EnsureMaxItems(cleanedList);
 
             foreach (IPEndPoint endPoint in cleanedList)
                 this.AddPeerWithoutCleanup(endPoint, source);
@@ -163,12 +163,12 @@ namespace Stratis.Bitcoin.P2P
             this.EnsureMaxItemsPerSource(source);
         }
 
-        private void EnsureMaxItems(IEnumerable<IPEndPoint> endPoints)
+        private IEnumerable<IPEndPoint> EnsureMaxItems(IEnumerable<IPEndPoint> endPoints)
         {
             int numberToEvict = (this.peerInfoByPeerAddress.Count + endPoints.Count()) - MaxAddressesToStore;
 
             if (numberToEvict <= 0)
-                return;
+                return endPoints;
 
             // Otherwise, we need to figure out whether to evict already-stored addresses or just trim the incoming list to fit.
             // If we never evict already-stored addresses there is a potential risk that we only store dud addresses forever and land up with no valid peers.
@@ -177,7 +177,8 @@ namespace Stratis.Bitcoin.P2P
 
             foreach (IPEndPoint endPoint in this.peerInfoByPeerAddress.Keys)
             {
-                PeerAddress address = this.peerInfoByPeerAddress[endPoint];
+                if (!this.peerInfoByPeerAddress.TryGetValue(endPoint, out PeerAddress address))
+                    continue;
 
                 // If the peer is not 'good', or we have never connected to them, then they are an eviction candidate.
                 if (address.Attempted ||
@@ -196,16 +197,22 @@ namespace Stratis.Bitcoin.P2P
                 if (numberToEvict == 0)
                     break;
 
-                this.peerInfoByPeerAddress.Remove(endPointToEvict, out _);
+                this.peerInfoByPeerAddress.TryRemove(endPointToEvict, out _);
 
                 numberToEvict--;
             }
 
-            // Note: numberToEvict can never be longer than the endPoints.
+            if (numberToEvict >= endPoints.Count())
+            {
+                return new List<IPEndPoint>();
+            }
+
             if (numberToEvict > 0)
             {
-                endPoints = endPoints.Skip(numberToEvict);
+                return endPoints.Skip(numberToEvict);
             }
+
+            return endPoints;
         }
 
         private void EnsureMaxItemsPerSource(IPAddress source)
