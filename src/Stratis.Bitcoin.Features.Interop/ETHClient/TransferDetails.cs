@@ -24,10 +24,6 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
         public string From { get; set; }
 
-        /// <summary>
-        /// The string is in the format "Destination Address[:Destination Chain]".
-        /// I.e. either just "0x..." OR "0x...:ETH". See <see cref="DestinationChain"/>.
-        /// </summary>
         public string To { get; set; }
 
         /// <summary>

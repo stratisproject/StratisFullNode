@@ -477,6 +477,13 @@ namespace Stratis.Bitcoin.Features.Interop
                         conversionRequestType = ConversionRequestType.Mint;
                     }
 
+                    // This is a special case, and will be a mint if the transfer is being made to the federation multisig contract.
+                    if (watchedErc20Contracts.Contains(receipt.To))
+                    {
+                        contractType = ContractType.ERC20;
+                        conversionRequestType = ConversionRequestType.Mint;
+                    }
+
                     this.logger.Info($"Found transaction {receipt.TransactionHash} from {receipt.From} with a receipt that affects watched contract {receipt.To}.");
 
                     // In any case we have to validate all the fields in the relevant receipt logs.
@@ -495,17 +502,23 @@ namespace Stratis.Bitcoin.Features.Interop
                         var request = new ConversionRequest()
                         {
                             RequestId = receipt.TransactionHash,
-                            RequestType = ConversionRequestType.Burn,
+                            RequestType = conversionRequestType,
                             Amount = ConvertBigIntegerToUint256(srcDetails.Value),
                             BlockHeight = applicableHeight,
                             DestinationAddress = srcDetails.To,
                             DestinationChain = DestinationChain.ETH,
                         };
 
-                        if (srcDetails.To.Split(':').Length >= 2)
+                        // If its a transfer type then check for a "CrosschainLog".
+                        if (conversionRequestType == ConversionRequestType.Mint)
                         {
-                            request.DestinationAddress = srcDetails.To.Split(':')[0];
-                            request.DestinationChain = Enum.Parse<DestinationChain>(srcDetails.To.Split(':')[1]);
+                            CirrusLogResponse crosschainLog = receipt.Logs.FirstOrDefault(l => l.Log.Event == "CrosschainLog");
+                            if (crosschainLog != null && crosschainLog.Log.Data.TryGetValue("address", out object address) && crosschainLog.Log.Data.TryGetValue("network", out object network))
+                            {
+                                // Read the network and address topics.
+                                request.DestinationAddress = (string)address;
+                                request.DestinationChain = Enum.Parse<DestinationChain>((string)network);
+                            }
                         }
 
                         // Save it.
@@ -654,7 +667,7 @@ namespace Stratis.Bitcoin.Features.Interop
             if (!log.Log.Data.TryGetValue("metadata", out object metadata))
                 return null;
 
-            // TODO: Check that this string is in an acceptable format?
+            // TODO: Check that this string is in an acceptable format? Maybe it should encode the destination chain as well
             string metadataString = (string)metadata;
 
             if (!log.Log.Data.TryGetValue("amount", out object amount))
