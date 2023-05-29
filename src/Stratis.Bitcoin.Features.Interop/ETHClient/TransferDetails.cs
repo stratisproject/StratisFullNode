@@ -1,5 +1,4 @@
 ﻿using System.Numerics;
-using Stratis.Bitcoin.Features.Wallet;
 
 namespace Stratis.Bitcoin.Features.Interop.ETHClient
 {
