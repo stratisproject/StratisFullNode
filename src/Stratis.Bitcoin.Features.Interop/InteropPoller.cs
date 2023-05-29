@@ -510,6 +510,7 @@ namespace Stratis.Bitcoin.Features.Interop
                         };
 
                         // If its a transfer type then check for a "CrosschainLog".
+                        // TODO: Check that we only overwrite the destination address if it is the multisig address.
                         if (conversionRequestType == ConversionRequestType.Mint)
                         {
                             CirrusLogResponse crosschainLog = receipt.Logs.FirstOrDefault(l => l.Log.Event == "CrosschainLog");
