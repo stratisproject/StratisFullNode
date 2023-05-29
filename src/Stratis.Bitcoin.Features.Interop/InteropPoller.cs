@@ -502,6 +502,12 @@ namespace Stratis.Bitcoin.Features.Interop
                             DestinationChain = DestinationChain.ETH,
                         };
 
+                        if (srcDetails.To.Split(':').Length >= 2)
+                        {
+                            request.DestinationAddress = srcDetails.To.Split(':')[0];
+                            request.DestinationChain = Enum.Parse<DestinationChain>(srcDetails.To.Split(':')[1]);
+                        }
+
                         // Save it.
                         lock (this.repositoryLock)
                         {
@@ -527,17 +533,6 @@ namespace Stratis.Bitcoin.Features.Interop
                         KeyValuePair<string, string> contractMapping = this.interopSettings.GetSettingsByChain(DestinationChain.ETH).WatchedErc20Contracts.First(c => c.Value == receipt.To);
                         SupportedContractAddress token = SupportedContractAddresses.ForNetwork(this.network.NetworkType).FirstOrDefault(t => t.NativeNetworkAddress.ToLowerInvariant() == contractMapping.Key.ToLowerInvariant());
                         var tokenString = token == null ? contractMapping.Key : $"{token.TokenName}-{contractMapping.Key}";
-
-                        this.logger.Info($"A transfer request from CRS to '{tokenString}' will be processed.");
-
-                        request.Processed = false;
-                        request.RequestStatus = ConversionRequestStatus.Unprocessed;
-                        request.TokenContract = contractMapping.Key;
-
-                        lock (this.repositoryLock)
-                        {
-                            this.conversionRequestRepository.Save(request);
-                        }
 
                         this.logger.Info($"A transfer request from CRS to '{tokenString}' will be processed.");
 
