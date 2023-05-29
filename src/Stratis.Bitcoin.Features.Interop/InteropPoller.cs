@@ -654,8 +654,7 @@ namespace Stratis.Bitcoin.Features.Interop
             if (!log.Log.Data.TryGetValue("metadata", out object metadata))
                 return null;
 
-            // The string is in the format <Destination Address>[:<Destination Chain>].
-            // I.e. either just "0x..." OR "0x...:ETH". See the DestinationChain enumeration.
+            // TODO: Add validation?
             string metadataString = (string)metadata;
 
             if (!log.Log.Data.TryGetValue("amount", out object amount))
