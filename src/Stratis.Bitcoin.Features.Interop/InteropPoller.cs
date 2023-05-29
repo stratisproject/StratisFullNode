@@ -654,7 +654,7 @@ namespace Stratis.Bitcoin.Features.Interop
             if (!log.Log.Data.TryGetValue("metadata", out object metadata))
                 return null;
 
-            // TODO: Add validation?
+            // TODO: Check that this string is in an acceptable format?
             string metadataString = (string)metadata;
 
             if (!log.Log.Data.TryGetValue("amount", out object amount))
