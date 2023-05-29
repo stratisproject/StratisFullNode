@@ -478,6 +478,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     }
 
                     // This is a special case, and will be a mint if the transfer is being made to the federation multisig contract.
+                    // TODO: Where is this logic being enforced. Why not filter conversions on that basis within this method???
                     if (watchedErc20Contracts.Contains(receipt.To))
                     {
                         contractType = ContractType.ERC20;
