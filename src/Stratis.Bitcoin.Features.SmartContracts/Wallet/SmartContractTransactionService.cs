@@ -407,23 +407,38 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         /// <inheritdoc />
         public List<ReceiptResponse> ReceiptSearch(string contractAddress, string eventName, List<string> topics = null, int fromBlock = 0, int? toBlock = null)
         {
-            uint160 address = contractAddress.ToUint160(this.network);
+            return ReceiptSearch(new List<string>() { contractAddress }, eventName, topics, fromBlock, toBlock);
+        }
 
-            byte[] contractCode = this.stateRoot.GetCode(address);
+        /// <inheritdoc />
+        public List<ReceiptResponse> ReceiptSearch(List<string> contractAddresses, string eventName, List<string> topics = null, int fromBlock = 0, int? toBlock = null)
+        {
+            var filteredContractAddresses = new HashSet<string>();
 
-            if (contractCode == null || !contractCode.Any())
+            if (contractAddresses != null)
             {
-                return null;
+                foreach (string contractAddress in contractAddresses)
+                {
+                    uint160 address = contractAddress.ToUint160(this.network);
+
+                    byte[] contractCode = this.stateRoot.GetCode(address);
+
+                    if (contractCode == null || !contractCode.Any())
+                    {
+                        continue;
+                    }
+
+                    filteredContractAddresses.Add(contractAddress);
+                }
             }
 
             IEnumerable<byte[]> topicsBytes = topics != null ? topics.Where(topic => topic != null).Select(t => t.HexToByteArray()) : new List<byte[]>();
-
-
+            
             var deserializer = new ApiLogDeserializer(this.primitiveSerializer, this.network, this.stateRoot, this.contractAssemblyCache);
 
             var receiptSearcher = new ReceiptSearcher(this.chainIndexer, this.blockStore, this.receiptRepository, this.network);
 
-            List<Receipt> receipts = receiptSearcher.SearchReceipts(contractAddress, eventName, fromBlock, toBlock, topicsBytes);
+            List<Receipt> receipts = receiptSearcher.SearchReceipts(filteredContractAddresses, eventName, fromBlock, toBlock, topicsBytes);
 
             var result = new List<ReceiptResponse>();
 

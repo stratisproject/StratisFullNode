@@ -13,6 +13,7 @@ namespace Stratis.Features.FederatedPeg.Models
         public WithdrawalModel(Network network, ICrossChainTransfer transfer)
         {
             this.DepositId = transfer.DepositTransactionId;
+            this.DepositHeight = transfer.DepositHeight;
             this.Id = transfer.PartialTransaction?.GetHash();
             this.Amount = transfer.DepositAmount;
             var target = transfer.DepositTargetAddress.GetDestinationAddress(network).ToString();
@@ -25,6 +26,7 @@ namespace Stratis.Features.FederatedPeg.Models
         {
             this.Id = withdrawal.Id;
             this.DepositId = withdrawal.DepositId;
+            this.DepositHeight = transfer.DepositHeight;
             this.Amount = withdrawal.Amount;
             this.BlockHash = withdrawal.BlockHash;
             this.BlockHeight = withdrawal.BlockNumber;
@@ -35,6 +37,8 @@ namespace Stratis.Features.FederatedPeg.Models
         public uint256 Id { get; set; }
 
         public uint256 DepositId { get; set; }
+
+        public int? DepositHeight { get; set; }
 
         public Money Amount { get; set; }
 
@@ -54,12 +58,13 @@ namespace Stratis.Features.FederatedPeg.Models
         {
             var stringBuilder = new StringBuilder();
 
-            stringBuilder.Append(string.Format("Height={0,8} Paying={1} Amount={2,14} Status={3} DepositId={4}",
+            stringBuilder.Append(string.Format("Height={0,8} Paying={1} Amount={2,14} Status={3} DepositId={4} MaturityHeight={5}",
                 this.BlockHeight == 0 ? "Unconfirmed" : this.BlockHeight.ToString(),
                 this.PayingTo.Length > RewardsString.Length ? this.PayingTo.Substring(0, RewardsString.Length) : this.PayingTo,
                 this.Amount.ToString(),
                 this.TransferStatus,
-                this.DepositId.ToString()));
+                this.DepositId.ToString(),
+                this.DepositHeight));
 
             if (this.SpendingOutputDetails != null)
                 stringBuilder.Append($" Spending={this.SpendingOutputDetails} ");

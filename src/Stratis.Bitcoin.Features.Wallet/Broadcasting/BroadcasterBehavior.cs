@@ -98,6 +98,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Broadcasting
                 {
                     this.broadcasterManager.AddOrUpdate(txEntry.Transaction, TransactionBroadcastState.Propagated);
                 }
+
+                // TODO: Do we need a NOTFOUND response here, if the mempool behaviour is already sending them?
             }
         }
 
@@ -115,6 +117,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Broadcasting
                         this.broadcasterManager.AddOrUpdate(txEntry.Transaction, TransactionBroadcastState.Broadcasted);
                     }
                 }
+
+                // TODO: Do we need a NOTFOUND response here, if the mempool behaviour is already sending them?
             }
         }
 

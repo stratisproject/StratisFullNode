@@ -355,8 +355,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             Assert.Contains(fundTransaction.Outputs, a => a.ScriptPubKey == destinationKeys3.PubKey.ScriptPubKey);
         }
 
+        /// <summary>
+        /// Given_AnInvalidAccountIsUsed_When_GetMaximumSpendableAmountIsCalled_Then_AnExceptionIsThrown
+        /// </summary>
         [Fact]
-        public void Given_AnInvalidAccountIsUsed_When_GetMaximumSpendableAmountIsCalled_Then_AnExceptionIsThrown()
+        public void WalletInvalidAccountTest()
         {
             DataFolder dataFolder = CreateDataFolder(this);
 
@@ -419,7 +422,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             HdAddress accountAddress2 = account.InternalAddresses.First();
             accountAddress2.Transactions.Add(WalletTestsHelpers.CreateTransaction(new uint256(3), new Money(20000), 3, new SpendingDetails()));
             accountAddress2.Transactions.Add(WalletTestsHelpers.CreateTransaction(new uint256(4), new Money(120000), 4, new SpendingDetails()));
-            
+
             (Money max, Money fee) result = walletTransactionHandler.GetMaximumSpendableAmount(new WalletAccountReference("wallet1", "account 1"), FeeType.Low, true);
             Assert.Equal(Money.Zero, result.max);
             Assert.Equal(Money.Zero, result.fee);
@@ -490,7 +493,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             var reserveUtxoService = new ReserveUtxoService(this.loggerFactory, new Mock<ISignals>().Object);
 
             var walletTransactionHandler = new WalletTransactionHandler(this.LoggerFactory.Object, walletManager, walletFeePolicy.Object, this.Network, this.standardTransactionPolicy, reserveUtxoService);
-            
+
             (Wallet wallet, ExtKey extKey) = WalletTestsHelpers.GenerateBlankWalletWithExtKey("wallet1", "password", walletRepository);
 
             // Passing a null extpubkey into account creation causes problems later, so we need to obtain it first
@@ -507,7 +510,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             HdAddress accountAddress2 = account.InternalAddresses.Skip(1).First();
             accountAddress2.Transactions.Add(WalletTestsHelpers.CreateTransaction(new uint256(3), new Money(20000), null, null, null, accountAddress2.ScriptPubKey));
             accountAddress2.Transactions.Add(WalletTestsHelpers.CreateTransaction(new uint256(4), new Money(120000), null, null, null, accountAddress2.ScriptPubKey));
-            
+
             (Money max, Money fee) result = walletTransactionHandler.GetMaximumSpendableAmount(new WalletAccountReference("wallet1", "account 1"), FeeType.Low, true);
             Assert.Equal(new Money(165000), result.max + result.fee);
         }
@@ -698,8 +701,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             Assert.True(transaction.Outputs.Count(i => i.Value.Satoshi < 5_000_000_000) == 2); // 2 outputs should have fees taken from the amount
         }
 
+        /// <summary>
+        /// When_BuildTransactionIsCalledWithoutTransactionFee_Then_FeeIsDeductedFromSingleOutputInTransaction
+        /// </summary>
         [Fact]
-        public void When_BuildTransactionIsCalledWithoutTransactionFee_Then_FeeIsDeductedFromSingleOutputInTransaction()
+        public void BuildTransactionWithoutTransactionFeeTest1()
         {
             DataFolder dataFolder = CreateDataFolder(this);
 
@@ -766,8 +772,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             Assert.True(transaction.Outputs.Count(i => i.Value.Satoshi < 5_000_000_000) == 1); // 1 output should have fees taken from the amount
         }
 
+        /// <summary>
+        /// When_BuildTransactionIsCalledWithoutTransactionFee_Then_MultipleSubtractFeeRecipients_ThrowsException
+        /// </summary>
         [Fact]
-        public void When_BuildTransactionIsCalledWithoutTransactionFee_Then_MultipleSubtractFeeRecipients_ThrowsException()
+        public void BuildTransactionWithoutTransactionFeeTest2()
         {
             DataFolder dataFolder = CreateDataFolder(this);
 

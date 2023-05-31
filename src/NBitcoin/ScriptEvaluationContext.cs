@@ -156,6 +156,7 @@ namespace NBitcoin
             internal set;
         }
     }
+
     public class ScriptEvaluationContext
     {
         public Network Network { get; }
@@ -176,13 +177,14 @@ namespace NBitcoin
             {
                 this.m_value = n;
             }
+
             private long m_value;
 
             public CScriptNum(byte[] vch, bool fRequireMinimal)
                 : this(vch, fRequireMinimal, 4)
             {
-
             }
+
             public CScriptNum(byte[] vch, bool fRequireMinimal, long nMaxNumSize)
             {
                 if(vch.Length > nMaxNumSize)
@@ -1523,7 +1525,7 @@ namespace NBitcoin
             return SetSuccess(ScriptError.OK);
         }
 
-        public virtual (bool success, bool isError) DetermineSignatures(ref int i, bool fRequireMinimal, ref int nKeysCount, int pbegincodehash, Script s, int hashversion, ref int ikey, TransactionChecker checker)
+        public virtual (bool success, bool isError) DetermineSignatures(ref int i, bool fRequireMinimal, ref int nKeysCount,int pbegincodehash, Script s, int hashversion, ref int ikey, TransactionChecker checker)
         {
             int nSigsCount = new CScriptNum(this._stack.Top(-i), fRequireMinimal).getint();
             if (nSigsCount < 0 || nSigsCount > nKeysCount)
@@ -2023,11 +2025,11 @@ namespace NBitcoin
             }
         }
 
-
         public bool CheckSig(TransactionSignature signature, PubKey pubKey, Script scriptPubKey, IndexedTxIn txIn)
         {
             return CheckSig(signature, pubKey, scriptPubKey, txIn.Transaction, txIn.Index);
         }
+
         public bool CheckSig(TransactionSignature signature, PubKey pubKey, Script scriptPubKey, Transaction txTo, uint nIn)
         {
             return CheckSig(signature.ToBytes(), pubKey.ToBytes(), scriptPubKey, txTo, (int)nIn);

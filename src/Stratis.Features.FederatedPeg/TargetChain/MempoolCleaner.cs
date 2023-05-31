@@ -112,23 +112,27 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             if (transactionsToCheck.Count == 0)
                 return Task.CompletedTask;
 
-            List<Transaction> completedTransactions = null;
-
-            this.federationWalletManager.Synchronous(() =>
+            this.store.Synchronous(() =>
             {
-                completedTransactions = this.CompletedTransactions(transactionsToCheck).ToList();
+                List<Transaction> completedTransactions = null;
+
+                this.federationWalletManager.Synchronous(() =>
+                {
+                    completedTransactions = this.CompletedTransactions(transactionsToCheck).ToList();
+                });
+
+
+                List<Transaction> transactionsToRemove = this.store.GetCompletedWithdrawalsForTransactions(transactionsToCheck)
+                    .Union(completedTransactions)
+                    .ToList();
+
+                if (transactionsToRemove.Count > 0)
+                {
+                    this.mempoolOrphans.RemoveForBlock(transactionsToRemove);
+
+                    this.logger.LogDebug("Removed {0} transactions from mempool", transactionsToRemove.Count);
+                }
             });
-
-            List<Transaction> transactionsToRemove = this.store.GetCompletedWithdrawalsForTransactions(transactionsToCheck)
-                .Union(completedTransactions)
-                .ToList();
-
-            if (transactionsToRemove.Count > 0)
-            {
-                this.mempoolOrphans.RemoveForBlock(transactionsToRemove);
-
-                this.logger.LogDebug("Removed {0} transactions from mempool", transactionsToRemove.Count);
-            }
 
             return Task.CompletedTask;
         }

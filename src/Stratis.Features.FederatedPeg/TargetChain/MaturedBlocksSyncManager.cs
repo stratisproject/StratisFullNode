@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration.Logging;
+using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Interfaces;
@@ -63,7 +64,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly IConversionRequestFeeService conversionRequestFeeService;
         private readonly Network network;
         private readonly IFederationManager federationManager;
-        private int mainChainActivationHeight;
+        private readonly Dictionary<uint256, uint> blockTimeOfDeposit;
         private IAsyncLoop requestDepositsTask;
 
         /// <summary>When we are fully synced we stop asking for more blocks for this amount of time.</summary>
@@ -112,7 +113,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.conversionRequestFeeService = conversionRequestFeeService;
             this.network = network;
             this.federationManager = federationManager;
-            this.mainChainActivationHeight = int.MaxValue;
+            this.blockTimeOfDeposit = new Dictionary<uint256, uint>();
 
             this.lockObject = new object();
             this.logger = LogManager.GetCurrentClassLogger();
@@ -216,6 +217,16 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             this.logger.LogInformation("Processing {0} matured blocks.", matureBlockDeposits.Value.Count);
 
+            // Create a dictionary of existing transfers and a hashset of completed transfers.
+           ICrossChainTransfer[] existingTransfers = await this.crossChainTransferStore.GetAsync(matureBlockDeposits.Value.SelectMany(b => b.Deposits).Select(d => d.Id).ToArray()).ConfigureAwait(false);
+
+            // The sync must be successful. Otherwise try again later.
+            if (existingTransfers == null)
+                return true;
+
+            var existingTransfersDict = existingTransfers.Where(t => t != null).ToDictionary(t => t.DepositTransactionId, t => t);
+            var completedTransferIds = new HashSet<uint256>(existingTransfers.Where(t => t?.Status == CrossChainTransferStatus.SeenInBlock).Select(t => t.DepositTransactionId));
+
             // Filter out conversion transactions & also log what we've received for diagnostic purposes.
             foreach (MaturedBlockDepositsModel maturedBlockDeposit in matureBlockDeposits.Value)
             {
@@ -226,6 +237,10 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                 foreach (IDeposit potentialConversionTransaction in maturedBlockDeposit.Deposits)
                 {
+                    // Don't process already completed transfers.
+                    if (completedTransferIds.Contains(potentialConversionTransaction.Id))
+                       continue;
+
                     // If this is not a conversion transaction then add it immediately to the temporary list.
                     if (potentialConversionTransaction.RetrievalType != DepositRetrievalType.ConversionSmall &&
                         potentialConversionTransaction.RetrievalType != DepositRetrievalType.ConversionNormal &&
@@ -259,8 +274,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     }
                     else
                     {
-                        // This should ony happen if the conversion does't exist yet.
-                        if (!FindApplicableConversionRequestHeader(maturedBlockDeposit, potentialConversionTransaction, out applicableHeader))
+                        // This should ony happen if the conversion doesn't exist yet.
+                        if (!FindApplicableConversionRequestHeader(potentialConversionTransaction, out applicableHeader))
                             continue;
                     }
 
@@ -270,6 +285,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     if (interopConversionRequestFee == null ||
                         (interopConversionRequestFee != null && interopConversionRequestFee.State != InteropFeeState.AgreeanceConcluded))
                     {
+                        interopConversionRequestFee ??= new InteropConversionRequestFee();
                         interopConversionRequestFee.Amount = ConversionRequestFeeService.FallBackFee;
                         this.logger.LogWarning($"A dynamic fee for conversion request '{potentialConversionTransaction.Id}' could not be determined, using a fixed fee of {ConversionRequestFeeService.FallBackFee} STRAX.");
                     }
@@ -363,40 +379,34 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <summary>
         /// Get the first block on this chain that has a timestamp after the deposit's block time on the counterchain.
         /// This is so that we can assign a block height that the deposit 'arrived' on the sidechain.
-        /// TODO: This can probably be made more efficient than looping every time. 
         /// </summary>
-        /// <param name="maturedBlockDeposit">The matured block deposit's block time to check against.</param>
         /// <param name="potentialConversionTransaction">The conversion transaction we are currently working with.</param>
         /// <param name="chainedHeader">The chained header to use.</param>
         /// <returns><c>true</c> if found.</returns>
-        private bool FindApplicableConversionRequestHeader(MaturedBlockDepositsModel maturedBlockDeposit, IDeposit potentialConversionTransaction, out ChainedHeader chainedHeader)
+        private bool FindApplicableConversionRequestHeader(IDeposit potentialConversionTransaction, out ChainedHeader chainedHeader)
         {
             chainedHeader = this.chainIndexer.Tip;
 
-            bool found = false;
+            this.logger.LogDebug($"Finding applicable header for deposit with block time '{potentialConversionTransaction.BlockTime}'; chain tip '{this.chainIndexer.Tip}'.");
 
-            this.logger.LogDebug($"Finding applicable header for deposit with block time '{maturedBlockDeposit.BlockInfo.BlockTime}'; chain tip '{this.chainIndexer.Tip}'.");
-
-            while (true)
+            // Get the first block on this chain that has a timestamp after the deposit's block time on the counterchain.
+            // Note that it is the block time of the block the deposit was made in, not the block time of the block it matured in (as this may be too close to this chain's tip to be reliably found).
+            int chainedHeaderHeight = BinarySearch.BinaryFindFirst((height) =>
             {
-                if (chainedHeader == this.chainIndexer.Genesis)
-                    break;
+                return this.chainIndexer[height].Header.Time > potentialConversionTransaction.BlockTime;
+            }, 0, this.chainIndexer.Tip.Height + 1);
 
-                if (chainedHeader.Previous.Header.Time <= maturedBlockDeposit.BlockInfo.BlockTime)
-                {
-                    found = true;
-                    break;
-                }
-
-                chainedHeader = chainedHeader.Previous;
+            if (chainedHeaderHeight == -1)
+            {
+                this.logger.LogWarning("Unable to determine timestamp for conversion transaction '{0}', ignoring.", potentialConversionTransaction.Id);
+                return false;
             }
 
-            if (!found)
-                this.logger.LogWarning("Unable to determine timestamp for conversion transaction '{0}', ignoring.", potentialConversionTransaction.Id);
+            chainedHeader = this.chainIndexer[chainedHeaderHeight];
 
             this.logger.LogDebug($"Applicable header selected '{chainedHeader}'");
 
-            return found;
+            return true;
         }
 
         /// <inheritdoc />
