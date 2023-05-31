@@ -38,7 +38,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         public const string GetTransfersFullySignedEndpoint = "transfers/fullysigned";
         public const string GetTransfersSuspendedEndpoint = "transfers/suspended";
         public const string VerifyPartialTransactionEndpoint = "transfer/verify";
-        public const string GetMultiSigTransactionSignersEndpoint = "transfer/signers";
+        public const string GetPartialTransactionSignersEndpoint = "transfer/signers";
     }
 
     /// <summary>
@@ -446,10 +446,23 @@ namespace Stratis.Features.FederatedPeg.Controllers
 
             return this.Json($"{depositIdTransactionId} does not exist.");
         }
+        
+        [Route(FederationGatewayRouteEndPoint.DeleteSuspended)]
+        [HttpDelete]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult DeleteSuspendedTransfers([FromBody] DeleteSuspendedTransferModel model)
+        {
+            (bool result, string message) deleteResult = this.crossChainTransferStore.DeleteSuspendedTransfer(new uint256(model.DepositId));
+            if (deleteResult.result)
+                return Ok($"'{model.DepositId}' was deleted.");
 
-        [Route(FederationGatewayRouteEndPoint.GetMultiSigTransactionSignersEndpoint)]
-        [HttpGet]
-        public async Task<IActionResult> GetPartialTransactionSignersAsync([FromQuery] string trxid, [FromQuery] int input)
+            return BadRequest(deleteResult.message);
+        }
+
+        [Route(FederationGatewayRouteEndPoint.GetPartialTransactionSignersEndpoint)]
+        [HttpPost]
+        public async Task<IActionResult> GetPartialTransactionSignersAsync([FromBody] string trxid, [FromBody] int input)
         {
             try
             {
@@ -466,7 +479,9 @@ namespace Stratis.Features.FederatedPeg.Controllers
                 Transaction trx = cctx.FirstOrDefault()?.PartialTransaction;
 
                 if (trx == null)
-                    return BadRequest("The Partial Transaction was null.");
+                {
+                    return this.Json(null);
+                }
 
                 uint256 prevOutHash = trx.Inputs[input].PrevOut.Hash;
                 uint prevOutIndex = trx.Inputs[input].PrevOut.N;
@@ -475,7 +490,9 @@ namespace Stratis.Features.FederatedPeg.Controllers
 
                 // Shouldn't be possible under normal circumstances.
                 if (prevTrx == null)
-                    return BadRequest("The previous transaction was null.");
+                {
+                    return this.Json(null);
+                }
 
                 TxOut txout = prevTrx.Outputs[prevOutIndex];
 
@@ -505,31 +522,18 @@ namespace Stratis.Features.FederatedPeg.Controllers
 
                         if (federation.transactionSigningKeys != null && federation.transactionSigningKeys.Contains(pubKey))
                         {
-                            signers.Add(pubKey.ToHex());
+                            signers.Add(pubKey.GetAddress(this.network).ToString());
                         }
                     }
                 }
 
-                return Ok(this.Json(signers));
+                return this.Json(signers);
             }
             catch (Exception e)
             {
                 this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
-        }
-
-        [Route(FederationGatewayRouteEndPoint.DeleteSuspended)]
-        [HttpDelete]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        public IActionResult DeleteSuspendedTransfers([FromBody] DeleteSuspendedTransferModel model)
-        {
-            (bool result, string message) deleteResult = this.crossChainTransferStore.DeleteSuspendedTransfer(new uint256(model.DepositId));
-            if (deleteResult.result)
-                return Ok($"'{model.DepositId}' was deleted.");
-
-            return BadRequest(deleteResult.message);
         }
     }
 }
