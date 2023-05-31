@@ -550,17 +550,6 @@ namespace Stratis.Bitcoin.Features.Interop
                         {
                             this.conversionRequestRepository.Save(request);
                         }
-
-                        this.logger.Info($"A transfer request from CRS to '{tokenString}' will be processed.");
-
-                        request.Processed = false;
-                        request.RequestStatus = ConversionRequestStatus.Unprocessed;
-                        request.TokenContract = contractMapping.Key;
-
-                        lock (this.repositoryLock)
-                        {
-                            this.conversionRequestRepository.Save(request);
-                        }
                     }
                 }
                 catch (Exception e)
