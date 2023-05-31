@@ -280,7 +280,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                     WHERE   t.WalletId = {strWalletId} AND t.AccountIndex = {strAccountIndex}{((address == null) ? "" : $@" AND t.Address = {strAddress}")}
                     AND     (t.OutputTxIsCoinbase != 0 OR t2.SpendTxId IS NULL){(!forCirrus ? "" : $@"
                     AND     t.OutputTxIsCoinbase = 0")}
-                    GROUP   BY t.OutputTxId
+                    GROUP   BY t.OutputTxId, t.Address
                     UNION   ALL";
 
             string spends = $@"

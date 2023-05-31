@@ -158,7 +158,8 @@ namespace Stratis.Bitcoin.Features.Api
                 CoinTicker = this.network.CoinTicker,
                 State = this.fullNode.State.ToString(),
                 BestPeerHeight = this.chainState.BestPeerTip?.Height,
-                InIbd = this.initialBlockDownloadState.IsInitialBlockDownload()
+                InIbd = this.initialBlockDownloadState.IsInitialBlockDownload(),
+                NodeStarted = this.fullNode.StartTime
             };
 
             try

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
@@ -551,7 +552,9 @@ public class Test {
         {
             var mscorlib = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);
             var smartContracts = MetadataReference.CreateFromFile(typeof(Address).Assembly.Location);
-            var runtime = MetadataReference.CreateFromFile(typeof(System.Runtime.AssemblyTargetedPatchBandAttribute).Assembly.Location);
+
+            var assembly = Assembly.Load("System.Runtime");
+            var runtime = MetadataReference.CreateFromFile(assembly.Location);
 
             SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(source);
 

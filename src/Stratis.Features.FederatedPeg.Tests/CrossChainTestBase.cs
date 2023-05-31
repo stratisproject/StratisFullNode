@@ -213,7 +213,8 @@ namespace Stratis.Features.FederatedPeg.Tests
                 this.dateTimeProvider,
                 this.federatedPegSettings,
                 this.withdrawalExtractor,
-                this.blockRepository);
+                this.blockRepository,
+                Substitute.For<ISignals>());
 
             // Starts and creates the wallet.
             this.federationWalletManager.Start();

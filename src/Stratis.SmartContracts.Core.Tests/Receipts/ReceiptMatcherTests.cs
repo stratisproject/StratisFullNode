@@ -51,7 +51,7 @@ namespace Stratis.SmartContracts.Core.Tests.Receipts
             // Every receipt should have at least one log like this.
             for (int i = 0; i < 10; i++)
             {
-                List<Receipt> matches = matcher.MatchReceipts(receipts, null, 
+                List<Receipt> matches = matcher.MatchReceipts(receipts, (uint160)null, 
                     new List<byte[]>
                     {
                         Encoding.UTF8.GetBytes("Event" + i)
@@ -59,7 +59,7 @@ namespace Stratis.SmartContracts.Core.Tests.Receipts
 
                 Assert.Single(matches);
 
-                matches = matcher.MatchReceipts(receipts, null,
+                matches = matcher.MatchReceipts(receipts, (uint160)null,
                     new List<byte[]>
                     {
                         Encoding.UTF8.GetBytes("Topic" + i)

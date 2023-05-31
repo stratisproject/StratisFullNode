@@ -84,6 +84,9 @@ namespace Stratis.Bitcoin.Controllers.Models
 
         /// <summary>Returns whether or not the node is in Initial Block Download (syncing).</summary>
         public bool? InIbd { get; set; }
+
+        /// <summary>Returns the Node Start Datetime.</summary>
+        public DateTime NodeStarted { get; set; }
     }
 
     /// <summary>

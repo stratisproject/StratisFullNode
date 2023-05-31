@@ -2,22 +2,22 @@
 using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Stratis.Bitcoin.Utilities.JsonConverters;
 
 namespace Stratis.Bitcoin.Features.RPC
 {
     public class RPCRequest
     {
-        public RPCRequest(RPCOperations method, object[] parameters)
-            : this(method.ToString(), parameters)
+        public RPCRequest(RPCOperations method, object[] parameters) : this(method.ToString(), parameters)
         {
-
         }
-        public RPCRequest(string method, object[] parameters)
-            : this()
+
+        public RPCRequest(string method, object[] parameters) : this()
         {
             this.Method = method;
             this.Params = parameters;
         }
+
         public RPCRequest()
         {
             this.JsonRpc = "1.0";
@@ -33,7 +33,7 @@ namespace Stratis.Bitcoin.Features.RPC
 
         public void WriteJSON(TextWriter writer)
         {
-            using (JsonTextWriter jsonWriter = new JsonTextWriter(writer))
+            using (var jsonWriter = new JsonTextWriter(writer))
             {
                 jsonWriter.CloseOutput = false;
                 WriteJSON(jsonWriter);
@@ -51,32 +51,52 @@ namespace Stratis.Bitcoin.Features.RPC
             writer.WritePropertyName("params");
             writer.WriteStartArray();
 
-            if(this.Params != null)
+            if (this.Params == null)
             {
-                for(int i = 0; i < this.Params.Length; i++)
-                {
-                    if(this.Params[i] is JToken)
-                    {
-                        ((JToken) this.Params[i]).WriteTo(writer);
-                    }
-                    else if(this.Params[i] is Array)
-                    {
-                        writer.WriteStartArray();
-                        foreach(object x in (Array) this.Params[i])
-                        {
-                            writer.WriteValue(x);
-                        }
-                        writer.WriteEndArray();
-                    }
-                    else
-                    {
-                        writer.WriteValue(this.Params[i]);
-                    }
-                }
+                writer.WriteEndArray();
+                writer.WriteEndObject();
+                return;
             }
 
+            for (int i = 0; i < this.Params.Length; i++)
+            {
+                if (this.Params[i] is JToken)
+                {
+                    ((JToken) this.Params[i]).WriteTo(writer);
+                }
+                else if (this.Params[i] is Array)
+                {
+                    writer.WriteStartArray();
+
+                    foreach (object x in (Array) this.Params[i])
+                    {
+                        // Primitive types are handled well by the writer's WriteValue method, but classes need to be serialised using the same converter set as the rest of the codebase.
+                        WriteValueOrSerializeAndWrite(writer, x);
+                    }
+
+                    writer.WriteEndArray();
+                }
+                else
+                {
+                    WriteValueOrSerializeAndWrite(writer, this.Params[i]);
+                }
+            }
+            
             writer.WriteEndArray();
             writer.WriteEndObject();
+        }
+
+        private void WriteValueOrSerializeAndWrite(JsonTextWriter writer, object valueToWrite)
+        {
+            if (valueToWrite == null || valueToWrite.GetType().IsValueType)
+            {
+                writer.WriteValue(valueToWrite);
+                return;
+            }
+
+            // TODO: It did not appear that the RPC subsystem was automatically handling complex class parameters in requests. So we will need to start passing the network into the RPCRequest constructor to properly handle every possible type
+            JToken token = Serializer.ToToken(valueToWrite);
+            token.WriteTo(writer);
         }
 
         private void WriteProperty<TValue>(JsonTextWriter writer, string property, TValue value)

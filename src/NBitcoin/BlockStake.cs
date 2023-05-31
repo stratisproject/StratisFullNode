@@ -264,6 +264,14 @@ namespace NBitcoin
         }
 
         /// <inheritdoc />
+        public override Transaction CreateTransaction(string hex, ProtocolVersion protocolVersion)
+        {
+            var transaction = new PosTransaction();
+            transaction.FromBytes(Encoders.Hex.DecodeData(hex), protocolVersion);
+            return transaction;
+        }
+
+        /// <inheritdoc />
         public override Transaction CreateTransaction(byte[] bytes)
         {
             return new PosTransaction(bytes);
