@@ -36,12 +36,12 @@ namespace NBitcoin
 
                 // If the signature at the particular index in the stack is empty,
                 // move onto the next one.
-                if (vchSig.Length == 0)
+                if(vchSig.Length == 0)
                 {
                     isig++;
                     continue;
                 }
-
+                
                 byte[] vchPubKey = this._stack.Top(-ikey);
 
                 // Note how this makes the exact order of pubkey/signature evaluation

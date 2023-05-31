@@ -97,12 +97,12 @@ namespace Stratis.Bitcoin.Features.Wallet
                 TimeSpan.FromSeconds(1),
                 TimeSpan.FromSeconds(1));
 
-            this.transactionAddedSubscription = this.signals.Subscribe<TransactionAddedToMemoryPool>(this.OnTransactionAdded);
+            this.transactionAddedSubscription = this.signals.Subscribe<TransactionAddedToMemoryPoolEvent>(this.OnTransactionAdded);
             this.transactionRemovedSubscription = this.signals.Subscribe<TransactionRemovedFromMemoryPool>(this.OnTransactionRemoved);
             this.blockConnectedSubscription = this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
         }
 
-        private void OnTransactionAdded(TransactionAddedToMemoryPool transactionAddedToMempool)
+        private void OnTransactionAdded(TransactionAddedToMemoryPoolEvent transactionAddedToMempool)
         {
             this.logger.LogDebug("Adding transaction '{0}' as it was added to the mempool.", transactionAddedToMempool.AddedTransaction.GetHash());
             this.walletManager.ProcessTransaction(transactionAddedToMempool.AddedTransaction);

@@ -445,6 +445,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         /// <summary>
         /// Whether to send the change to a P2WPKH (segwit bech32) addresses, or a regular P2PKH address
         /// </summary>
+        [DefaultValue(false)]
         public bool SegwitChangeAddress { get; set; }
 
         /// <inheritdoc />

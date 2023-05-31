@@ -1,14 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     
     <Version>2.0.1.0</Version>
     <Authors>Stratis Group Ltd.</Authors>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Mono.Cecil" Version="0.10.1" />
+    <PackageReference Include="Mono.Cecil" Version="0.11.4" />
     <PackageReference Include="Stratis.SmartContracts" Version="2.0.0" />
     <PackageReference Include="Stratis.SmartContracts.Standards" Version="2.0.0" />
   </ItemGroup>

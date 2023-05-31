@@ -615,7 +615,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             var counterChainNetwork = new CounterChainNetworkWrapper(CirrusNetwork.NetworksSelector.Testnet());
             var reader = new OpReturnDataReader(counterChainNetwork.CounterChainNetwork);
             var extractor = new DepositExtractor(Substitute.For<IConversionRequestRepository>(), this.federatedPegSettings, this.network, reader, Substitute.For<IBlockStore>());
-            IDeposit deposit = await extractor.ExtractDepositFromTransaction(transaction, 2, 1);
+            IDeposit deposit = await extractor.ExtractDepositFromTransaction(transaction, 2, 1, 0);
 
             Assert.NotNull(deposit);
             Assert.Equal(transaction.GetHash(), deposit.Id);

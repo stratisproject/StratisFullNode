@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
+using Org.BouncyCastle.Crypto.Parameters;
 using Stratis.Bitcoin.Utilities;
 using TracerAttributes;
 
@@ -29,6 +30,18 @@ namespace Stratis.Features.FederatedPeg.Wallet
             this.spendableTransactionList = new SortedList<TransactionData, TransactionData>(Comparer<TransactionData>.Create(DeterministicCoinOrdering.CompareTransactionData));
             this.withdrawalsByDepositDict = new Dictionary<uint256, List<TransactionData>>();
             this.spentTransactionsByHeightDict = new SortedDictionary<int, List<TransactionData>>();
+        }
+
+        public IEnumerable<WithdrawalDetails> GetLastWithdrawals()
+        {
+            foreach (int height in this.spentTransactionsByHeightDict.Keys.Reverse())
+            {
+                foreach (TransactionData transactionData in this.spentTransactionsByHeightDict[height])
+                {
+                    if (transactionData.SpendingDetails?.WithdrawalDetails?.MatchingDepositId != null)
+                        yield return transactionData.SpendingDetails.WithdrawalDetails;
+                }
+            }
         }
 
         private void AddWithdrawal(TransactionData transactionData)

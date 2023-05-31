@@ -6,6 +6,7 @@ using NBitcoin;
 using NBitcoin.DataEncoders;
 using NBitcoin.Protocol;
 using Newtonsoft.Json.Linq;
+using Stratis.Bitcoin.Features.RPC.Models;
 
 namespace Stratis.Bitcoin.Features.RPC
 {
@@ -52,7 +53,7 @@ namespace Stratis.Bitcoin.Features.RPC
         wallet             signmessage
         wallet             walletlock
         wallet             walletpassphrasechange
-        wallet             walletpassphrase            yes
+        wallet             walletpassphrase            Yes
     */
     public partial class RPCClient
     {
@@ -134,6 +135,39 @@ namespace Stratis.Bitcoin.Features.RPC
         {
             RPCResponse response = SendCommand(RPCOperations.getaddressesbyaccount, account);
             return response.Result.Select(t => this.Network.Parse<BitcoinAddress>((string)t));
+        }
+
+        public Transaction CreateRawTransaction(CreateRawTransactionInput[] inputs, List<KeyValuePair<string,string>> outputs, int locktime = 0, bool replaceable = false)
+        {
+            return CreateRawTransactionAsync(inputs, outputs, locktime, replaceable).GetAwaiter().GetResult();
+        }
+
+        public async Task<Transaction> CreateRawTransactionAsync(CreateRawTransactionInput[] inputs, List<KeyValuePair<string, string>> outputs, int locktime = 0, bool replaceable = false)
+        {
+            var jOutputs = new JArray();
+
+            /* Need the layout of the output array to look like the following, per bitcoind documentation:
+
+                [
+                  {                       (json object)
+                    "address": amount,    (numeric or string, required) A key-value pair. The key (string) is the bitcoin address, the value (float or string) is the amount in BTC
+                  },
+                  {                       (json object)
+                    "data": "hex",        (string, required) A key-value pair. The key must be "data", the value is hex-encoded data
+                  },
+                  ...
+                ]
+            */
+            foreach (KeyValuePair<string, string> kv in outputs)
+            {
+                var temp = new JObject();
+                temp.Add(new JProperty(kv.Key, kv.Value));
+                jOutputs.Add(temp);
+            }
+
+            RPCResponse response = await SendCommandAsync(RPCOperations.createrawtransaction, inputs, jOutputs, locktime, replaceable).ConfigureAwait(false);
+
+            return this.network.CreateTransaction(response.ResultString, ProtocolVersion.WITNESS_VERSION - 1);
         }
 
         public FundRawTransactionResponse FundRawTransaction(Transaction transaction, FundRawTransactionOptions options = null, bool? isWitness = null)

@@ -277,8 +277,11 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
             }
         }
 
+        /// <summary>
+        /// GetRawTransactionWithTransactionAndBlockHashInBlockchainAndNotIndexedAsync
+        /// </summary>
         [Fact]
-        public async Task GetRawTransactionWithTransactionAndBlockHashInBlockchainAndNotIndexedAsync()
+        public async Task GetRawTransactionAndBlockHashAsync()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {

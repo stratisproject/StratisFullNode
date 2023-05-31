@@ -12,10 +12,12 @@ using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.P2P;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
+using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.Extensions;
 
@@ -89,6 +91,8 @@ namespace Stratis.Bitcoin.Connection
 
         private readonly PayloadProvider payloadProvider;
 
+        private readonly ISignals signals;
+
         public ConnectionManager(IDateTimeProvider dateTimeProvider,
             ILoggerFactory loggerFactory,
             Network network,
@@ -104,7 +108,8 @@ namespace Stratis.Bitcoin.Connection
             IVersionProvider versionProvider,
             INodeStats nodeStats,
             IAsyncProvider asyncProvider,
-            PayloadProvider payloadProvider)
+            PayloadProvider payloadProvider,
+            ISignals signals)
         {
             this.connectedPeers = new NetworkPeerCollection();
             this.dateTimeProvider = dateTimeProvider;
@@ -132,6 +137,7 @@ namespace Stratis.Bitcoin.Connection
             this.Parameters.UserAgent = $"{this.ConnectionSettings.Agent}:{versionProvider.GetVersion()} ({(int)this.NodeSettings.ProtocolVersion})";
 
             this.Parameters.Version = this.NodeSettings.ProtocolVersion;
+            this.signals = signals;
 
             nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name, 1100);
         }
@@ -279,6 +285,8 @@ namespace Stratis.Bitcoin.Connection
             var addNodeDict = this.ConnectionSettings.RetrieveAddNodes().ToDictionary(ep => ep.MapToIpv6(), ep => ep);
             var connectDict = this.ConnectionSettings.Connect.ToDictionary(ep => ep.MapToIpv6(), ep => ep);
 
+            var peerList = new List<PeerConnectionModel>();
+
             foreach (INetworkPeer peer in this.ConnectedPeers)
             {
                 bool added = false;
@@ -312,6 +320,22 @@ namespace Stratis.Bitcoin.Connection
                 {
                     AddPeerInfo(otherBuilder, peer);
                 }
+
+                // peer connection info to send in signalr message
+                ConsensusManagerBehavior chainHeadersBehavior = peer.Behavior<ConsensusManagerBehavior>();
+                var peerNode = new PeerConnectionModel
+                {
+                    SubVersion = peer.PeerVersion.UserAgent,
+                    Address = peer.RemoteSocketEndpoint.ToString(),
+                    Height = chainHeadersBehavior.BestReceivedTip != null ? chainHeadersBehavior.BestReceivedTip.Height : peer.PeerVersion?.StartHeight ?? -1,
+                    Inbound = peer.Inbound
+                };
+                peerList.Add(peerNode);
+            }
+
+            if (this.signals != null)
+            {
+                this.signals.Publish(new PeerConnectionInfoEvent(peerList));
             }
 
             int inbound = this.ConnectedPeers.Count(x => x.Inbound);

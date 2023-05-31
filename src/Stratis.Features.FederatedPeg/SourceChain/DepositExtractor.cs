@@ -11,7 +11,6 @@ using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
-using Stratis.SmartContracts;
 using Block = NBitcoin.Block;
 
 namespace Stratis.Features.FederatedPeg.SourceChain
@@ -97,7 +96,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
                 foreach (Transaction transaction in block.Transactions)
                 {
-                    IDeposit deposit = await this.ExtractDepositFromTransaction(transaction, blockHeight, blockHash).ConfigureAwait(false);
+                    IDeposit deposit = await this.ExtractDepositFromTransaction(transaction, blockHeight, blockHash, block.Header.Time).ConfigureAwait(false);
 
                     if (deposit == null)
                         continue;
@@ -218,7 +217,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         }
 
         /// <inheritdoc />
-        public Task<IDeposit> ExtractDepositFromTransaction(Transaction transaction, int blockHeight, uint256 blockHash)
+        public Task<IDeposit> ExtractDepositFromTransaction(Transaction transaction, int blockHeight, uint256 blockHash, uint blockTime)
         {
             // If there are no deposits to the multsig (i.e. cross chain transfers) do nothing.
             if (!DepositValidationHelper.TryGetDepositsToMultisig(this.network, transaction, FederatedPegSettings.CrossChainTransferMinimum, out List<TxOut> depositsToMultisig))
@@ -239,7 +238,11 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
                     if (utxo.ScriptPubKey == StraxCoinstakeRule.CirrusRewardScript)
                     {
-                        return Task.FromResult((IDeposit)new Deposit(transaction.GetHash(), DepositRetrievalType.Distribution, amount, this.network.CirrusRewardDummyAddress, DestinationChain.STRAX, blockHeight, blockHash));
+                        IDeposit rewardDeposit = new Deposit(transaction.GetHash(), DepositRetrievalType.Distribution, amount, this.network.CirrusRewardDummyAddress, DestinationChain.STRAX, blockHeight, blockHash);
+
+                        rewardDeposit.BlockTime = blockTime;
+
+                        return Task.FromResult(rewardDeposit);
                     }
                 }
             }
@@ -276,7 +279,11 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 }
             }
 
-            return Task.FromResult((IDeposit)new Deposit(transaction.GetHash(), depositRetrievalType, amount, targetAddress, (DestinationChain)targetChain, blockHeight, blockHash));
+            IDeposit deposit = new Deposit(transaction.GetHash(), depositRetrievalType, amount, targetAddress, (DestinationChain)targetChain, blockHeight, blockHash);
+
+            deposit.BlockTime = blockTime;
+
+            return Task.FromResult(deposit);
         }
 
         private DepositRetrievalType DetermineDepositRetrievalType(ulong satoshiAmount)

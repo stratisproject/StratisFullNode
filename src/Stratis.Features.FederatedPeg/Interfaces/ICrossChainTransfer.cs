@@ -41,7 +41,7 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         long DepositAmount { get; }
 
         /// <summary>
-        /// The chain A deposit height of the transaction. Is null if only seen in a block.
+        /// The chain A maturity deposit height of the transaction. Is null if only seen in a block.
         /// </summary>
         int? DepositHeight { get; }
 
