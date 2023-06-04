@@ -96,6 +96,8 @@ namespace Stratis.Bitcoin.Features.PoA
         /// </summary>
         public int ContractSerializerV2ActivationHeight { get; set; }
 
+        public int CollateralImmaturityActivationHeight { get; set; }
+
         /// <summary>Initializes values for networks that use block size rules.</summary>
         /// <param name="maxBlockBaseSize">See <see cref="ConsensusOptions.MaxBlockBaseSize"/>.</param>
         /// <param name="maxStandardVersion">See <see cref="ConsensusOptions.MaxStandardVersion"/>.</param>

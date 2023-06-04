@@ -35,6 +35,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private readonly PoANetwork network;
 
+        /// <summary>
+        /// Tracks the block height that each particular masternode was first registered. Once a node is kicked it is removed from the collection.
+        /// If it subsequently re-registers the height will be reset to the new registration.
+        /// </summary>
+        private Dictionary<PubKey, int> firstRegisteredBlock;
+
         public PollsRepository(ChainIndexer chainIndexer, DataFolder dataFolder, DBreezeSerializer dBreezeSerializer, PoANetwork network)
         {
             Guard.NotEmpty(dataFolder.PollsPath, nameof(dataFolder.PollsPath));
@@ -44,6 +50,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.dbreeze = new DBreezeEngine(dataFolder.PollsPath);
             this.dBreezeSerializer = dBreezeSerializer;
             this.network = network;
+
+            this.firstRegisteredBlock = new Dictionary<PubKey, int>();
 
             this.logger = LogManager.GetCurrentClassLogger();
         }
@@ -165,12 +173,27 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                             if (modified)
                                 UpdatePoll(transaction, poll);
+                            
+                            // Build the registration lookup here once the polls to be trimmed have been determined, so that the polls don't have to be reloaded. 
+                            if (poll.IsApproved && poll.IsExecuted)
+                            {
+                                IFederationMember fedMember = (this.network.Consensus.ConsensusFactory as PoAConsensusFactory).DeserializeFederationMember(poll.VotingData.Data);
+
+                                if (fedMember != null)
+                                {
+                                    if (poll.VotingData.Key == VoteKey.AddFederationMember)
+                                        this.firstRegisteredBlock[fedMember.PubKey] = poll.PollExecutedBlockData.Height;
+
+                                    if (poll.VotingData.Key == VoteKey.KickFederationMember)
+                                        this.firstRegisteredBlock.Remove(fedMember.PubKey);
+                                }
+                            }
                         }
 
                         DeletePollsAndSetHighestPollId(transaction, pollsToDelete.Select(p => p.Id).ToArray());
                         SaveCurrentTip(transaction, this.CurrentTip);
                         transaction.Commit();
-
+                        
                         this.logger.LogInformation("Polls repository initialized at height {0}; highest poll id: {1}.", this.CurrentTip.Height, this.highestPollId);
                     }
                     catch (Exception err) when (err.Message == "No more byte to read")
@@ -180,6 +203,17 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         transaction.Commit();
                     }
                 }
+            }
+        }
+
+        public int GetFirstRegisteredBlock(PubKey fedMemberPubKey)
+        {
+            lock (this.lockObject)
+            {
+                if (this.firstRegisteredBlock.TryGetValue(fedMemberPubKey, out int blockHeight))
+                    return blockHeight;
+
+                return -1;
             }
         }
 

@@ -36,6 +36,8 @@ namespace Stratis.Features.Collateral
         Task UpdateCollateralInfoAsync(CancellationToken cancellation);
 
         int GetCounterChainConsensusHeight();
+
+        AddressIndexerData GetAddressIndexerData(string collateralAddress);
     }
 
     public class CollateralChecker : ICollateralChecker
@@ -293,6 +295,17 @@ namespace Stratis.Features.Collateral
                 this.logger.LogInformation($"The balance for {member.CollateralMainchainAddress} at block {heightToCheckAt} is { Money.Satoshis(balance).ToUnit(MoneyUnit.BTC)} which meets the requirement of {member.CollateralAmount}.");
 
                 return true;
+            }
+        }
+
+        public AddressIndexerData GetAddressIndexerData(string collateralAddress)
+        {
+            lock (this.locker)
+            {
+                if (this.balancesDataByAddress.TryGetValue(collateralAddress, out AddressIndexerData data))
+                    return data;
+
+                return null;
             }
         }
 

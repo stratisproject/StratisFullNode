@@ -15,10 +15,12 @@ namespace Stratis.Features.Collateral
     public class CollateralFeature : FullNodeFeature
     {
         private readonly ICollateralChecker collateralChecker;
+        private readonly IImmatureCollateralKicker immatureCollateralKicker;
 
-        public CollateralFeature(ICollateralChecker collateralChecker)
+        public CollateralFeature(ICollateralChecker collateralChecker, IImmatureCollateralKicker immatureCollateralKicker)
         {
             this.collateralChecker = collateralChecker;
+            this.immatureCollateralKicker = immatureCollateralKicker;
         }
 
         public override async Task InitializeAsync()
@@ -26,10 +28,12 @@ namespace Stratis.Features.Collateral
             // Note that the node's startup can remain here for a while as it retrieves the collateral for all federation members.
             // This is in contrast with other features' async startup methods that are not required to complete before proceeding.
             await this.collateralChecker.InitializeAsync().ConfigureAwait(false);
+            await this.immatureCollateralKicker.InitializeAsync().ConfigureAwait(false);
         }
 
         public override void Dispose()
         {
+            this.immatureCollateralKicker?.Dispose();
             this.collateralChecker?.Dispose();
         }
     }
@@ -70,6 +74,7 @@ namespace Stratis.Features.Collateral
                     services.AddSingleton<IBlockBufferGenerator, BlockBufferGenerator>();
 
                     services.AddSingleton<ICollateralChecker, CollateralChecker>();
+                    services.AddSingleton<IImmatureCollateralKicker, ImmatureCollateralKicker>();
                 });
             });
 

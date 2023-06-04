@@ -126,7 +126,7 @@ namespace Stratis.Bitcoin.Controllers.Models
         public static long CalculateMinBalance(this IEnumerable<AddressBalanceChange> balanceChanges, int startHeight)
         {
             long balance = 0;
-            long? minbalance = null;
+            long? minBalance = null;
 
             // If the balance drop occurs within a block it should not count towards the minimum.
             var balancesByHeight = balanceChanges
@@ -140,11 +140,11 @@ namespace Stratis.Bitcoin.Controllers.Models
                 if (change.BalanceChangedHeight < startHeight)
                     continue;
 
-                if (!minbalance.HasValue || balance < minbalance.Value)
-                    minbalance = balance;
+                if (!minBalance.HasValue || balance < minBalance.Value)
+                    minBalance = balance;
             }
 
-            return minbalance ?? balance;
+            return minBalance ?? balance;
         }
     }
 }
