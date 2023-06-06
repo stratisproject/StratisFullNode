@@ -16,6 +16,7 @@
         importpubkey,
         dumpwallet,
         importwallet,
+        setwallet,
 
         getgenerate,
         setgenerate,

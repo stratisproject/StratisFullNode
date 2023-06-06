@@ -9,7 +9,7 @@ namespace Stratis.Bitcoin.Utilities.Extensions
         /// </summary>
         public static decimal BytesToKiloBytes(this long input, int decimals = 4)
         {
-            decimal result = Convert.ToDecimal(input / Math.Pow(2, 17));
+            decimal result = Convert.ToDecimal(input / Math.Pow(2, 10));
             return Math.Round(result, decimals);
         }
 

@@ -240,6 +240,47 @@ function Check-TimeDifference
         }
 }
 
+function Get-GethPeers
+{
+    $body = ConvertTo-Json -Compress @{
+
+        id = '1'
+        method = 'net_peerCount'
+        jsonrpc = '2.0'
+    }
+
+    $result = Invoke-RestMethod -Uri http://localhost:8545 -Method Post -UseBasicParsing -Body $body -ContentType application/json | Select-Object -ExpandProperty result 
+    [uint32]$result
+}
+
+function Is-GethSyncing
+{
+    $body = ConvertTo-Json -Compress @{
+        id = '1'
+        method = 'eth_syncing'
+        jsonrpc = '2.0'
+    }
+
+    Invoke-RestMethod -Uri http://localhost:8545 -Method Post -UseBasicParsing -Body $body -ContentType application/json | Select-Object -ExpandProperty result
+}
+
+function Get-PrysmState
+{
+    Invoke-RestMethod -Uri http://localhost:3500/eth/v1/node/syncing -ContentType application/json | Select-Object -ExpandProperty data
+}
+
+function Get-GethCurrentSyncBlock
+{
+    [uint32]$currentBlock = (Is-GethSyncing).currentBlock
+    $currentBlock
+}
+
+function Get-GethHighestSyncBlock
+{
+    [uint32]$highestBlock = (Is-GethSyncing).highestBlock
+    $highestBlock
+}
+
 #Create DataDir(s)
 if ( -not ( Get-Item -Path $mainChainDataDir -ErrorAction SilentlyContinue ) )
 {
@@ -358,12 +399,12 @@ if ( $NodeType -eq "50K" )
     ""
     Start-Sleep 10
 
-if ($ethAddress -notmatch '^0x[a-fA-F0-9]{40}$')
-{
-    Write-Host (Get-TimeStamp) "ERROR: Invalid ETH Address Loaded.. Is GETH already running?" -ForegroundColor Red
-    Start-Sleep 30
-    Exit
-}
+    if ($ethAddress -notmatch '^0x[a-fA-F0-9]{40}$')
+    {
+        Write-Host (Get-TimeStamp) "ERROR: Invalid ETH Address Loaded.. Is GETH already running?" -ForegroundColor Red
+        Start-Sleep 30
+        Exit
+    }
 
     #Launching GETH
     $API = $gethAPIPort
@@ -376,55 +417,47 @@ if ($ethAddress -notmatch '^0x[a-fA-F0-9]{40}$')
         Start-Sleep 3
         if ( $StartNode.HasExited -eq $true )
         {
+            Write-Host (Get-TimeStamp) "ERROR: GETH not found. Please contact support in Discord" -ForegroundColor Red
+            Start-Sleep 30
+            Exit
+        }
+    }
+
+    While ( (Get-GethPeers) -lt 1 ) 
+    {
+        Write-Host (Get-TimeStamp) "Waiting for Peers..." -ForegroundColor Yellow  
+        Start-Sleep 3
+        if ( $StartNode.HasExited -eq $true )
+        {
             Write-Host (Get-TimeStamp) "ERROR: Something went wrong. Please contact support in Discord" -ForegroundColor Red
             Start-Sleep 30
             Exit
         }
     }
-    <#
-    $gethPeerCountBody = ConvertTo-Json -Compress @{
-        jsonrpc = "2.0"
-        method = "net_peerCount"
-        id = "1"
-    }
 
-    [uint32]$gethPeerCount = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethPeerCountBody -ContentType application/json | Select-Object -ExpandProperty result
-    While ( $gethPeerCount -lt 1 )
+    While (((Get-PrysmState).is_optimistic -eq $true )-or ( (Get-PrysmState).is_syncing -eq $true ))
     {
-        Write-Host (Get-TimeStamp) "Waiting for Peers..." -ForegroundColor Yellow
-        Start-Sleep 2
-        [uint32]$gethPeerCount = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethPeerCountBody -ContentType application/json | Select-Object -ExpandProperty result
+        Write-Host (Get-TimeStamp) "Waiting for GETH to sync..." -ForegroundColor Yellow  
+        Start-Sleep 3
+        if ( Is-GethSyncing -ne $false )
+        {
+            $missingBlocks = (Get-GethHighestSyncBlock) - (Get-GethCurrentSyncBlock)
+            While ( ($missingBlocks) -gt 1 )
+            {
+                ""
+                Write-Host (Get-TimeStamp) "The Synced Height is" (Get-GethCurrentSyncBlock)  -ForegroundColor Yellow
+                Write-Host (Get-TimeStamp) "The Current Tip is" (Get-GethHighestSyncBlock) -ForegroundColor Yellow
+                Write-Host (Get-TimeStamp) "$missingBlocks Blocks Require Syncing..." -ForegroundColor Yellow
+                Start-Sleep 10
+                if ( ! ( Get-Process -Name beacon-chain* ))
+                {
+                    Write-Host (Get-TimeStamp) "ERROR: Prysm not found. Please contact support in Discord" -ForegroundColor Red
+                    Start-Sleep 30
+                    Exit    
+                }
+            }
+        }
     }
-
-    $gethSyncStateBody = ConvertTo-Json -Compress @{
-        jsonrpc = "2.0"
-        method = "eth_syncing"
-        id = "1"
-    }
-
-    $syncStatus = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json -ErrorAction SilentlyContinue | Select-Object -ExpandProperty result
-    While ( $syncStatus -eq $false -or $syncStatus.currentBlock -eq $null )
-    {
-        Write-Host (Get-TimeStamp) "Waiting for Blockchain Synchronization to begin" -ForegroundColor Yellow
-        $syncStatus = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json -ErrorAction SilentlyContinue | Select-Object -ExpandProperty result
-        Start-Sleep 2
-    }
-
-    [uint32]$currentBlock = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json | Select-Object -ExpandProperty result | Select-Object -ExpandProperty currentBlock
-    [uint32]$highestBlock = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json | Select-Object -ExpandProperty result | Select-Object -ExpandProperty highestBlock
-
-    While ( ( $highestBlock ) -gt ( $currentBlock ) ) 
-    {
-        [uint32]$currentBlock = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json | Select-Object -ExpandProperty result | Select-Object -ExpandProperty currentBlock
-        [uint32]$highestBlock = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json | Select-Object -ExpandProperty result | Select-Object -ExpandProperty highestBlock
-        $syncProgress = $highestBlock - $currentBlock
-        ""
-        Write-Host (Get-TimeStamp) "The Local Height is $currentBlock" -ForegroundColor Yellow
-        Write-Host (Get-TimeStamp) "The Current Tip is $highestBlock" -ForegroundColor Yellow
-        Write-Host (Get-TimeStamp) "$syncProgress Blocks Require Indexing..." -ForegroundColor Yellow
-        Start-Sleep 10
-    }
-    #>
    
     #Move to CirrusPegD
     Set-Location -Path $cloneDir/src/Stratis.CirrusPegD
@@ -505,7 +538,7 @@ if ( $NodeType -eq "50K" )
 {
     if ( $ethGasPrice )
     {
-        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -eth_interopenabled=1 -ethereummultisigwalletquorum=7 -ethereumgaspricetracking -pricetracking -eth_account=$ethAddress -eth_passphrase=$ethPassword -eth_multisigwalletcontractaddress=$ethMultiSigContract -eth_wrappedstraxcontractaddress=$ethWrappedStraxContract -eth_keyvaluestorecontractaddress=$ethKeyValueStoreContractAddress -eth_gasprice=$ethGasPrice -eth_gas=$ethGasLimit -cirrusmultisigcontractaddress=$cirrusMultiSigContract -cirrussmartcontractactiveaddress=$miningWalletAddress -eth_watcherc20=$Token1 -eth_watcherc20=$Token2 -eth_watcherc20=$Token3 -eth_watcherc20=$Token4 -eth_watcherc20=$Token5 -eth_watcherc20=$Token6 -cirruskeyvaluestorecontractaddress=$cirrusKeyValueStoreContractAddress -eth_watcherc721=$NFTA -eth_watcherc721=$NFTB -eth_watcherc721=$NFTC" -PassThru    }
+        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -eth_interopenabled=1 -ethereumgaspricetracking -pricetracking -eth_account=$ethAddress -eth_passphrase=$ethPassword -eth_multisigwalletcontractaddress=$ethMultiSigContract -eth_wrappedstraxcontractaddress=$ethWrappedStraxContract -eth_keyvaluestorecontractaddress=$ethKeyValueStoreContractAddress -eth_gasprice=$ethGasPrice -eth_gas=$ethGasLimit -cirrusmultisigcontractaddress=$cirrusMultiSigContract -cirrussmartcontractactiveaddress=$miningWalletAddress -eth_watcherc20=$Token1 -eth_watcherc20=$Token2 -eth_watcherc20=$Token3 -eth_watcherc20=$Token4 -eth_watcherc20=$Token5 -eth_watcherc20=$Token6 -ethereummultisigwalletquorum=7" -PassThru    }
         Else
         {
             $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -eth_interopenabled=1 -eth_account=$ethAddress -eth_passphrase=$ethPassword -eth_multisigwalletcontractaddress=$ethMultiSigContract -eth_wrappedstraxcontractaddress=$ethWrappedStraxContract" -PassThru
@@ -766,8 +799,8 @@ Exit
 # SIG # Begin signature block
 # MIIO+gYJKoZIhvcNAQcCoIIO6zCCDucCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUejsUZ0JLxas+Jqi18Wly5q0+
-# JuugggxCMIIFfjCCBGagAwIBAgIQCrk836uc/wPyOiuycqPb5zANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUrObR9s8OxtM113HzHFHzWizX
+# 7w2gggxCMIIFfjCCBGagAwIBAgIQCrk836uc/wPyOiuycqPb5zANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTIxMDQyMjAwMDAwMFoXDTI0MDcxOTIzNTk1
@@ -837,11 +870,11 @@ Exit
 # ZXJ0LmNvbTErMCkGA1UEAxMiRGlnaUNlcnQgRVYgQ29kZSBTaWduaW5nIENBIChT
 # SEEyKQIQCrk836uc/wPyOiuycqPb5zAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIB
 # DDEKMAigAoAAoQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEE
-# AYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQU0uX/VCXDvyJn
-# BQQNVZ7Sa/3rHyEwDQYJKoZIhvcNAQEBBQAEggEAREhkDWsFFW5NTq6O8Tu7XOrj
-# zVyt4YmbvHrOu4YtPRNsbs0Ch+OMa0oB2I5JSN5Ftez4YfjVyCt8xui+0hLpoZE5
-# HABgRZDZVpO5RLjB6j5DFx5nbWT1YZ32dM5DrATgYny3lf1/EIQUGlW6AKtxO8R4
-# PF64f7iq6v9Kv70e0HNc/hAFspRraOgwtJnMcVN4EsEMv8BqkKXoqUFJ/eycpMQJ
-# yGpodM6/FleM8t/clyx3roZVE81QZcYphMbG6YvCn/8IfD44ibEHBq7wyGIST2ZP
-# 9qoH+rk7qb16DiI0LT88CufOGxWPgEEB/Ic4oqiQC0sDG14SiWJ1mK3FuKbn1w==
+# AYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUtkdZtCkwChYL
+# lfthA+rvfs02/fQwDQYJKoZIhvcNAQEBBQAEggEAOc212C7goOPHqsBfnSW7+h3j
+# +vWWdF+Ik/kS/1icZSrYFBYiqsyF7CZodi/885xN+Vt80D6was9elZz55qbYY8Fy
+# VeG/yHAHqodg3Rt2KDlYkk0xTReTrS2PSBGG3aaSqV4fj/xj3CMJ4bKlekJ0xnZU
+# v66D8SlyCeyn+pR6dNahGF9IikfasJM4W3jgvd14unoilvKqtKFaCxPdl4c/pixV
+# IaTRTfFgBwp1ibxY0Kdq/5TQ91oByYICJ4Kwwu/G0n2VP1ZLf7QJaJfzmjdxV+Jw
+# qlaydHIC7Gd4iXJ/TcqpZki5VWHOXGef51cdauLD+nn+Xt12LYhi8Pxa5AncBg==
 # SIG # End signature block

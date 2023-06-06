@@ -27,7 +27,8 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// <param name="transaction">The transaction to extract deposits from.</param>
         /// <param name="blockHeight">The block height of the block containing the transaction.</param>
         /// <param name="blockHash">The block hash of the block containing the transaction.</param>
+        /// <param name="blockTime">The timestamp of the block containing the transaction.</param>
         /// <returns>The extracted deposit (if any), otherwise <c>null</c>.</returns>
-        Task<IDeposit> ExtractDepositFromTransaction(Transaction transaction, int blockHeight, uint256 blockHash);
+        Task<IDeposit> ExtractDepositFromTransaction(Transaction transaction, int blockHeight, uint256 blockHash, uint blockTime);
     }
 }
