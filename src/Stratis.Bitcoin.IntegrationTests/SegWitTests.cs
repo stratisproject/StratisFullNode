@@ -27,6 +27,7 @@ using Stratis.Bitcoin.P2P.Protocol.Behaviors;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities.Extensions;
+using Stratis.Bitcoin.Utilities.JsonErrors;
 using Xunit;
 
 namespace Stratis.Bitcoin.IntegrationTests
@@ -713,7 +714,14 @@ namespace Stratis.Bitcoin.IntegrationTests
                         FeeAmount = Money.Coins(0.001m).ToString()
                     }).GetAwaiter().GetResult();
 
+                if (transactionResult is ErrorResult errorResult && errorResult.Value is ErrorResponse errorResponse)
+                {
+                    Assert.False(true, errorResponse.Errors.First().Message);
+                }
+
                 walletBuildTransactionModel = (WalletBuildTransactionModel)(transactionResult as JsonResult)?.Value;
+
+                Assert.NotNull(walletBuildTransactionModel);
 
                 _ = node.FullNode.NodeController<WalletController>().SendTransactionAsync(new SendTransactionRequest(walletBuildTransactionModel.Hex));
 
