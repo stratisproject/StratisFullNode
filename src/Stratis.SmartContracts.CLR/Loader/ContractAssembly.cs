@@ -49,12 +49,11 @@ namespace Stratis.SmartContracts.CLR.Loader
                     x.CustomAttributes.Any(y => y.AttributeType == typeof(DeployAttribute)));
         }
 
-        public static bool IsContractType(Type typeDefinition)
+        private static bool IsContractType(Type typeDefinition)
         {
             return typeDefinition.IsClass &&
                    !typeDefinition.IsAbstract &&
-                   typeDefinition.BaseType != null &&
-                   typeDefinition.BaseType == typeof(SmartContract);
+                   typeDefinition.IsSubclassOf(typeof(SmartContract));
         }
 
         private Type GetObserverType()
