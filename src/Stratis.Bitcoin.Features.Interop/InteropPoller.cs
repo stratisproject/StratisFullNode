@@ -420,7 +420,7 @@ namespace Stratis.Bitcoin.Features.Interop
             NBitcoin.Block block = await this.cirrusClient.GetBlockByHeightAsync(applicableHeight).ConfigureAwait(false);
             if (block == null)
             {
-                this.logger.Info($"Unable to retrieve block at height {applicableHeight}.");
+                this.logger.Info($"Unable to retrieve Cirrus block at height {applicableHeight}.");
 
                 // We shouldn't update the block height before returning because we might skip a block. 
                 return;
@@ -443,7 +443,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     // This is probably a normal Cirrus transfer (if null), or a failed contract call that should be ignored.
                     if (receipt == null || !receipt.Success)
                     {
-                        this.logger.Debug($"Transaction {transaction.GetHash()} did not contain a receipt.");
+                        this.logger.Debug($"Transaction {transaction.GetHash()} (CRS) did not contain a receipt.");
                         continue;
                     }
 
@@ -470,7 +470,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     if (watchedErc721Contracts.Contains(receipt.To))
                         contractType = ContractType.ERC721;
 
-                    // This is a special case, and will be a mint if the transfer is being made to the federation multisig contract.
+                    // This is a special case, and will be a mint if the NFT transfer is being made to the federation multisig contract (i.e. in the relevant Transfer log).
                     if (watchedSrc721Contracts.Contains(receipt.To))
                     {
                         contractType = ContractType.ERC721;
@@ -493,6 +493,18 @@ namespace Stratis.Bitcoin.Features.Interop
                         TransferDetails srcDetails = conversionRequestType == ConversionRequestType.Burn ? ExtractBurnFromBurnMetadataLog(log, contractType) : ExtractTransferFromTransferLog(log, contractType);
 
                         if (srcDetails == null)
+                        {
+                            continue;
+                        }
+
+                        // This is a safety check, BurnWithMetadata logs should not be getting emitted for non-burn transfers (i.e. transfers where the To address is not zero). But it is possible that a contract erroneously does so.
+                        if (conversionRequestType == ConversionRequestType.Burn && receipt.To != "0000000000000000000000000000000000000000")
+                        {
+                            continue;
+                        }
+
+                        // It can only be an xRC721 mint if the multisig contract is the recipient on CRS.
+                        if (conversionRequestType == ConversionRequestType.Mint && srcDetails.To != this.interopSettings.CirrusSettings.CirrusMultisigContractAddress)
                         {
                             continue;
                         }
@@ -541,7 +553,7 @@ namespace Stratis.Bitcoin.Features.Interop
                         // If a dynamic fee could not be determined, ignore the fee for now.
                         // Subsequent work in progress will allow us to reprocess "missed" multisig fees.
                         if (feeDeterminedByMultiSig == null || (feeDeterminedByMultiSig != null && feeDeterminedByMultiSig.State != InteropFeeState.AgreeanceConcluded))
-                            this.logger.Warn($"A dynamic fee for SRC20->ERC20 request '{receipt.TransactionHash}' could not be determined, ignoring fee until reprocessing at some later stage.");
+                            this.logger.Warn($"A dynamic fee for {(contractType == ContractType.ERC721 ? "SRC721->ERC721" : "SRC20->ERC20")} request '{receipt.TransactionHash}' could not be determined, ignoring fee until reprocessing at some later stage.");
                         else
                             ProcessConversionRequestFee(feeProvidedFromTransaction, feeDeterminedByMultiSig, receipt, applicableHeight, block);
 
