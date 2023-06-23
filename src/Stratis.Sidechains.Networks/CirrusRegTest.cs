@@ -53,52 +53,49 @@ namespace Stratis.Sidechains.Networks
             var consensusFactory = new SmartContractCollateralPoAConsensusFactory();
 
             // Create the genesis block.
-            this.GenesisTime = 1513622125;
-            this.GenesisNonce = 1560058197;
-            this.GenesisBits = 402691653;
+            this.GenesisTime = 1545310504;
+            this.GenesisNonce = 761900;
+            this.GenesisBits = new Target(new uint256("0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"));
             this.GenesisVersion = 1;
             this.GenesisReward = Money.Zero;
 
-            string coinbaseText = "https://news.bitcoin.com/markets-update-cryptocurrencies-shed-billions-in-bloody-sell-off/";
+            string coinbaseText = "https://www.abc.net.au/news/science/2018-12-07/encryption-bill-australian-technology-industry-fuming-mad/10589962";
             Block genesisBlock = CirrusNetwork.CreateGenesis(consensusFactory, this.GenesisTime, this.GenesisNonce, this.GenesisBits, this.GenesisVersion, this.GenesisReward, coinbaseText);
 
             this.Genesis = genesisBlock;
 
-            this.FederationMnemonics = new[] {
-                "ensure feel swift crucial bridge charge cloud tell hobby twenty people mandate",
-                "quiz sunset vote alley draw turkey hill scrap lumber game differ fiction",
-                "exchange rent bronze pole post hurry oppose drama eternal voice client state"
-            }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
-
-            this.FederationKeys = this.FederationMnemonics.Select(m => m.DeriveExtKey().PrivateKey).ToList();
-
-            var federationPubKeys = this.FederationKeys.Select(k => k.PubKey).ToList();
-
-            var genesisFederationMembers = new List<IFederationMember>(federationPubKeys.Count);
-            foreach (PubKey pubKey in federationPubKeys)
-                genesisFederationMembers.Add(new CollateralFederationMember(pubKey, true, new Money(0), null));
-
-            // Will replace the last multisig member.
-            var newFederationMemberMnemonics = new string[]
+            // Configure federation public keys used to sign blocks.
+            // Keep in mind that order in which keys are added to this list is important
+            // and should be the same for all nodes operating on this network.
+            var genesisFederationMembers = new List<IFederationMember>()
             {
-                "fat chalk grant major hair possible adjust talent magnet lobster retreat siren"
-            }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
+                new CollateralFederationMember(new PubKey("035791879dede5d312d30a880f4932ed011f2a038d6101663dbe6cd80ded280e53"), true, new Money(0), null),
+                new CollateralFederationMember(new PubKey("025a1d22c4858d6ffb861a7541d12d196fce1f7d145aa4675325d8d440f3f8134b"), true, new Money(0), null),
+                new CollateralFederationMember(new PubKey("02cfb22048508d84d1251a0f9803a140b2f0d37296fc306e81d3fe1818e32ded4c"), true, new Money(0), null)
+            };
 
-            var newFederationKeys = this.FederationMnemonics.Take(2).Concat(newFederationMemberMnemonics).Select(m => m.DeriveExtKey().PrivateKey).ToList();
-            var newFederationPubKeys = newFederationKeys.Select(k => k.PubKey).ToList();
+            // Register only the new federation as we won't be doing anything with the old federation.
+            this.Federations = new Federations();
+            var straxFederationTransactionSigningKeys = new List<PubKey>()
+            {
+                new PubKey("035791879dede5d312d30a880f4932ed011f2a038d6101663dbe6cd80ded280e53"),//Node1
+                new PubKey("025a1d22c4858d6ffb861a7541d12d196fce1f7d145aa4675325d8d440f3f8134b"),//Node2
+                new PubKey("02cfb22048508d84d1251a0f9803a140b2f0d37296fc306e81d3fe1818e32ded4c")//Node3
+            };
+
+            // Register the new set of federation members.
+            this.Federations.RegisterFederation(new Federation(straxFederationTransactionSigningKeys));
 
             // The height at which the following list of members apply.
             this.MultisigMinersApplicabilityHeight = 0;
 
-            // Mining keys!
-            this.StraxMiningMultisigMembers = newFederationPubKeys;
-
-            // Register only the new federation as we won't be doing anything with the old federation.
-            this.Federations = new Federations();
-
-            // Default transaction-signing keys!
-            // Use the new keys as the old keys should never be used by the new opcode.
-            this.Federations.RegisterFederation(new Federation(newFederationPubKeys.ToArray()));
+            // Set the list of Strax Era mining keys.
+            this.StraxMiningMultisigMembers = new List<PubKey>()
+            {
+                new PubKey("035791879dede5d312d30a880f4932ed011f2a038d6101663dbe6cd80ded280e53"),//Node1
+                new PubKey("025a1d22c4858d6ffb861a7541d12d196fce1f7d145aa4675325d8d440f3f8134b"),//Node2
+                new PubKey("02cfb22048508d84d1251a0f9803a140b2f0d37296fc306e81d3fe1818e32ded4c")//Node3
+            };
 
             var consensusOptions = new PoAConsensusOptions(
                 maxBlockBaseSize: 1_000_000,
@@ -109,11 +106,21 @@ namespace Stratis.Sidechains.Networks
                 genesisFederationMembers: genesisFederationMembers,
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
-                autoKickIdleMembers: true)
+                autoKickIdleMembers: true,
+                federationMemberMaxIdleTimeSeconds: 60 * 60
+                )
             {
+                EnforceMinProtocolVersionAtBlockHeight = 1, // setting the value to zero makes the functionality inactive
+                EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
+                InterFluxV2MainChainActivationHeight = 100,
+                VotingManagerV2ActivationHeight = 100, // Tuesday, 12 January 2021 9:00:00 AM (Estimated)
+                Release1100ActivationHeight = 200, // Monday, 20 December 2021 10:00:00 AM (Estimated)
+                PollExpiryBlocks = 200, // Roughly 9 days
                 GetMiningTimestampV2ActivationHeight = 100,
-                GetMiningTimestampV2ActivationStrictHeight = 100,
-                PollExpiryBlocks = 450 // 2 hours
+                GetMiningTimestampV2ActivationStrictHeight = 200,
+                ContractSerializerV2ActivationHeight = 400, // Monday 13 December 16:00:00 (Estimated)
+                Release1300ActivationHeight = 500,
+                Release1400ActivationHeight = 800
             };
 
             var buriedDeployments = new BuriedDeploymentsArray
@@ -126,8 +133,8 @@ namespace Stratis.Sidechains.Networks
             var bip9Deployments = new CirrusBIP9Deployments()
             {
                 // Deployment will go active once 75% of nodes are on 1.3.0.0 or later.
-                [CirrusBIP9Deployments.Release1320] = new BIP9DeploymentsParameters("Release1320", CirrusBIP9Deployments.FlagBitRelease1320, DateTime.Parse("2022-6-15 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Now.AddDays(50).ToUnixTimestamp(), BIP9DeploymentsParameters.DefaultRegTestThreshold),
-                [CirrusBIP9Deployments.Release1324] = new BIP9DeploymentsParameters("Release1324", CirrusBIP9Deployments.FlagBitRelease1324, DateTime.Parse("2022-10-10 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Now.AddDays(50).ToUnixTimestamp(), BIP9DeploymentsParameters.DefaultRegTestThreshold)
+                [CirrusBIP9Deployments.Release1320] = new BIP9DeploymentsParameters("Release1320", CirrusBIP9Deployments.FlagBitRelease1320, DateTime.Parse("2022-6-15 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-1-1 +0").ToUnixTimestamp(), BIP9DeploymentsParameters.DefaultTestnetThreshold),
+                [CirrusBIP9Deployments.Release1324] = new BIP9DeploymentsParameters("Release1324", CirrusBIP9Deployments.FlagBitRelease1324, DateTime.Parse("2022-10-10 +0").ToUnixTimestamp() /* Activation date lower bound */, DateTime.Parse("2023-3-1 +0").ToUnixTimestamp(), BIP9DeploymentsParameters.DefaultTestnetThreshold)
             };
 
             this.Consensus = new Consensus(
@@ -141,7 +148,7 @@ namespace Stratis.Sidechains.Networks
                 majorityWindow: 1000,
                 buriedDeployments: buriedDeployments,
                 bip9Deployments: bip9Deployments,
-                bip34Hash: new uint256("0x000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8"),
+                bip34Hash: null,
                 minerConfirmationWindow: 2016, // nPowTargetTimespan / nPowTargetSpacing
                 maxReorgLength: 240, // Heuristic. Roughly 2 * mining members
                 defaultAssumeValid: null,

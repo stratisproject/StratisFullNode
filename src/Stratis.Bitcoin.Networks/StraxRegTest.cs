@@ -34,13 +34,13 @@ namespace Stratis.Bitcoin.Networks
             this.CoinTicker = "TSTRAX";
             this.DefaultBanTimeSeconds = 11250; // 500 (MaxReorg) * 45 (TargetSpacing) / 2 = 3 hours, 7 minutes and 30 seconds
 
-            this.RewardClaimerBatchActivationHeight = 0;
+            this.RewardClaimerBatchActivationHeight = 10000;
             this.RewardClaimerBlockInterval = 100;
             this.CirrusRewardDummyAddress = "PDpvfcpPm9cjQEoxWzQUL699N8dPaf8qML"; // Cirrus test address
 
             this.ConversionTransactionFeeDistributionDummyAddress = "PTCPsLQoF3WNoH1qXMy5PouquiXQKp7WBV";
 
-            var powLimit = new Target(new uint256("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"));
+            var powLimit = new Target(new uint256("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"));
 
             var consensusFactory = new PosConsensusFactory();
 
@@ -85,27 +85,13 @@ namespace Stratis.Bitcoin.Networks
 
             // To successfully process the OP_FEDERATION opcode the federations should be known.
             this.Federations = new Federations();
-
-            // Cirrus federation.
-            var cirrusFederationMnemonics = new[] {
-                "ensure feel swift crucial bridge charge cloud tell hobby twenty people mandate",
-                "quiz sunset vote alley draw turkey hill scrap lumber game differ fiction",
-                "exchange rent bronze pole post hurry oppose drama eternal voice client state"
-               }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
-
-            // Will replace the last multisig member.
-            var newFederationMemberMnemonics = new string[]
-            {
-                "fat chalk grant major hair possible adjust talent magnet lobster retreat siren"
-            }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
-
-            // Mimic the code found in CirrusRegTest.
-            var cirrusFederationKeys = cirrusFederationMnemonics.Take(2).Concat(newFederationMemberMnemonics).Select(m => m.DeriveExtKey().PrivateKey).ToList();
-
-            List<PubKey> cirrusFederationPubKeys = cirrusFederationKeys.Select(k => k.PubKey).ToList();
-
             // Transaction-signing keys!
-            this.Federations.RegisterFederation(new Federation(cirrusFederationPubKeys.ToArray()));
+            this.Federations.RegisterFederation(new Federation(new[]
+            {
+                new PubKey("035791879dede5d312d30a880f4932ed011f2a038d6101663dbe6cd80ded280e53"),//Node1
+                new PubKey("025a1d22c4858d6ffb861a7541d12d196fce1f7d145aa4675325d8d440f3f8134b"),//Node2
+                new PubKey("02cfb22048508d84d1251a0f9803a140b2f0d37296fc306e81d3fe1818e32ded4c")//Node3
+            }));
 
             this.Consensus = new NBitcoin.Consensus(
                 consensusFactory: consensusFactory,
@@ -174,9 +160,6 @@ namespace Stratis.Bitcoin.Networks
             this.StandardScriptsRegistry = new StraxStandardScriptsRegistry();
 
             Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
-
-            // TODO: Update this once the final block is mined
-            Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0x77283cca51b83fe3bda9ce8966248613036b0dc55a707ce76ca7b79aaa9962e4"));
 
             StraxNetwork.RegisterRules(this.Consensus);
             StraxNetwork.RegisterMempoolRules(this.Consensus);
