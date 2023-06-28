@@ -12,6 +12,9 @@ namespace Stratis.Features.FederatedPeg.Conversion
         /// <summary>Retrieves <see cref="ConversionRequest"/> with specified id.</summary>
         ConversionRequest Get(string requestId);
 
+        /// <summary>Retrieves all conversion requests.</summary>
+        List<ConversionRequest> GetAll(bool onlyUnprocessed);
+
         /// <summary>Retrieves all mint requests.</summary>
         List<ConversionRequest> GetAllMint(bool onlyUnprocessed);
 
@@ -64,6 +67,16 @@ namespace Stratis.Features.FederatedPeg.Conversion
         public ConversionRequest Get(string requestId)
         {
             return this.KeyValueStore.LoadValue<ConversionRequest>(requestId);
+        }
+
+        /// <inheritdoc />
+        public List<ConversionRequest> GetAll(bool onlyUnprocessed)
+        {
+            List<ConversionRequest> requests = this.KeyValueStore.GetAll(ConversionRequestType.Mint, onlyUnprocessed);
+
+            requests.AddRange(this.KeyValueStore.GetAll(ConversionRequestType.Burn, onlyUnprocessed));
+
+            return requests;
         }
 
         /// <inheritdoc />
