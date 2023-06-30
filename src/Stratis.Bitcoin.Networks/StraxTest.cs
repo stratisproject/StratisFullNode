@@ -83,18 +83,14 @@ namespace Stratis.Bitcoin.Networks
 
             // To successfully process the OP_FEDERATION opcode the federations should be known.
             this.Federations = new Federations();
-            /*
+            
             // This should mirror the federation registered in CirrusTest.
             this.Federations.RegisterFederation(new Federation(new[] {
-               new PubKey("021040ef28c82fcffb63028e69081605ed4712910c8384d5115c9ffeacd9dbcae4"),//Node1
-               new PubKey("0244290a31824ba7d53e59c7a29d13dbeca15a9b0d36fdd4d28fce426753107bfc"),//Node2
-               new PubKey("032df4a2d62c0db12cd1d66201819a10788637c9b90a1cd2a5a3f5196fdab7a621"),//Node3
-               new PubKey("028ed190eb4ed6e46440ac6af21d8a67a537bd1bd7edb9cc5177d36d5a0972244d"),//Node4
-               new PubKey("02ff9923324399a188daf4310825a85dd3b89e2301d0ad073295b6f33ae1c72f7a"),//Node5
-               new PubKey("030e03b808ddb51701d4d3dbc0a74a6f9aedfecf23d5f874914641fc81197b239a"),//Node7
-               new PubKey("02270d6c20d3393fad7f74c59d2d26b0824ed016ccbc15e698e7354314459a60a5"),//Node8
+               new PubKey("033dfd7d36c65e68d927ec9ab5f05f4f5c236bb9772cf1b6ffa2eb28d7c3832780"),//Node1
+               new PubKey("02c06a50abb5059cf3ae0565865b89219b0755ffacd86711a9dc5a44b411ba748e"),//Node2
+               new PubKey("02f889a431499e77e7bd4956a1daebe5494f6b73a28fdf6a8d20ba3dc052a8a20b"),//Node3
             }));
-            */
+
             this.Consensus = new NBitcoin.Consensus(
                 consensusFactory: consensusFactory,
                 consensusOptions: consensusOptions,
