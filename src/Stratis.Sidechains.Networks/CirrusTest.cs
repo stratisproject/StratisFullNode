@@ -28,7 +28,7 @@ namespace Stratis.Sidechains.Networks
             this.Name = "CirrusTest";
             this.NetworkType = NetworkType.Testnet;
             this.CoinTicker = "TCRS";
-            this.Magic = 0x522357B;
+            this.Magic = 0x5223532;
             this.DefaultPort = 26179;
             this.DefaultMaxOutboundConnections = 16;
             this.DefaultMaxInboundConnections = 109;
