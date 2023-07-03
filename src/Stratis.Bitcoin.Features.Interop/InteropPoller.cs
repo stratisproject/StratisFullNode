@@ -880,7 +880,7 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <param name="transactionHash">The hash of the transaction that the transfer method call appeared in.</param>
         /// <param name="transferContractAddress">The address of the ERC20 contract that the transfer was actioned against.</param>
         /// <param name="transfer">The metadata of the transfer method call.</param>
-        /// <param name="supportedChain">The chain-specific client.</param>
+        /// <param name="supportedChain">A <see cref="KeyValuePair"/> containing the <see cref="DestinationChain"/> and <see cref="IETHClient"/> respectively.</param>
         private async Task ProcessTransferAsync(string blockHash, string transactionHash, string transferContractAddress, TransferDetails transfer, KeyValuePair<DestinationChain, IETHClient> supportedChain)
         {
             this.logger.Info("Conversion transfer transaction '{0}' of type '{1}' received from polled block '{2}', sender {3}.", transactionHash, transfer.ContractType, blockHash, transfer.From);
