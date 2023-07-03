@@ -71,10 +71,11 @@ namespace Stratis.Features.Collateral
                 // we are relying on chain state old data. It is possible that when we advance on counter chain commitment height will be
                 // sufficiently old.
                 context.ValidationContext.RejectUntil = this.dateTime.GetUtcNow() + TimeSpan.FromSeconds(this.collateralCheckBanDurationSeconds);
+                context.ValidationContext.InsufficientHeaderInformation = true;
 
                 this.Logger.LogDebug("commitmentHeight is {0}, counterChainHeight is {1}.", commitmentHeight, counterChainHeight);
 
-                this.Logger.LogTrace("(-)[COMMITMENT_TOO_NEW]");
+                this.Logger.LogTrace("(-)[COMMITMENT_TOO_NEW]");               
                 PoAConsensusErrors.InvalidCollateralAmountCommitmentTooNew.Throw();
             }
 

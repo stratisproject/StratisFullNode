@@ -255,6 +255,13 @@ namespace Stratis.Bitcoin.Consensus
                 return;
             }
 
+            // The block shouldn't be banned because there is insufficient information to determine that it is bad.
+            if (validationContext.InsufficientHeaderInformation)
+            {
+                this.logger.LogTrace("(-)[INSUFFICIENT_HEADER_INFORMATION]");
+                return;
+            }
+
             uint256 hashToBan = validationContext.ChainedHeaderToValidate.HashBlock;
 
             this.logger.LogWarning("Marking '{0}' invalid with reason '{1}'.", hashToBan, validationContext.Error.Message);
