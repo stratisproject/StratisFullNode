@@ -13,4 +13,8 @@
     <PackageReference Include="Stratis.SmartContracts.Standards" Version="2.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Stratis.SCL\Stratis.SCL.csproj" />
+  </ItemGroup>
+
 </Project>
