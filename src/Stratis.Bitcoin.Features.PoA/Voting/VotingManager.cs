@@ -5,8 +5,6 @@ using System.Text;
 using ConcurrentCollections;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using Stratis.Bitcoin.Base.Deployments;
-using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.EventBus.CoreEvents;
@@ -47,7 +45,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private IIdleFederationMembersKicker idleFederationMembersKicker;
         private readonly INodeLifetime nodeLifetime;
-        private readonly NodeDeployments nodeDeployments;
 
         /// <summary>In-memory collection of pending polls.</summary>
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
@@ -70,14 +67,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             IFederationManager federationManager,
             IPollResultExecutor pollResultExecutor,
             INodeStats nodeStats,
-            DataFolder dataFolder,
-            DBreezeSerializer dBreezeSerializer,
             ISignals signals,
             Network network,
             ChainIndexer chainIndexer,
+            PollsRepository pollsRepository,
             IBlockRepository blockRepository = null,
-            INodeLifetime nodeLifetime = null,
-            NodeDeployments nodeDeployments = null)
+            INodeLifetime nodeLifetime = null)
         {
             this.federationManager = Guard.NotNull(federationManager, nameof(federationManager));
             this.pollResultExecutor = Guard.NotNull(pollResultExecutor, nameof(pollResultExecutor));
@@ -87,7 +82,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.locker = new object();
             this.votingDataEncoder = new VotingDataEncoder();
             this.scheduledVotingData = new List<VotingData>();
-            this.PollsRepository = new PollsRepository(chainIndexer, dataFolder, dBreezeSerializer, network as PoANetwork);
+            this.PollsRepository = pollsRepository;
 
             this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
@@ -98,7 +93,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.blockRepository = blockRepository;
             this.chainIndexer = chainIndexer;
             this.nodeLifetime = nodeLifetime;
-            this.nodeDeployments = nodeDeployments;
 
             this.isInitialized = false;
         }
