@@ -41,7 +41,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// </summary>
         private Dictionary<PubKey, int> firstRegisteredBlock;
 
-        public PollsRepository(ChainIndexer chainIndexer, DataFolder dataFolder, DBreezeSerializer dBreezeSerializer, PoANetwork network)
+        public PollsRepository(ChainIndexer chainIndexer, DataFolder dataFolder, DBreezeSerializer dBreezeSerializer, Network network)
         {
             Guard.NotEmpty(dataFolder.PollsPath, nameof(dataFolder.PollsPath));
 
@@ -49,7 +49,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.chainIndexer = chainIndexer;
             this.dbreeze = new DBreezeEngine(dataFolder.PollsPath);
             this.dBreezeSerializer = dBreezeSerializer;
-            this.network = network;
+            this.network = network as PoANetwork;
 
             this.firstRegisteredBlock = new Dictionary<PubKey, int>();
 
