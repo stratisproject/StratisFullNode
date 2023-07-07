@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;
+using NBitcoin;
 using NBitcoin.DataEncoders;
 using Nethereum.RLP;
 using Stratis.SmartContracts;
@@ -14,8 +14,9 @@ namespace Stratis.SCL.Crypto
     {
         public static byte[] ValidateAndParse(Address address, string url, byte[] signature, string signatureTemplateMap)
         {
-            // First verify the signature.
-            if (!ECRecover.TryGetSigner(Encoding.ASCII.GetBytes(url), signature, out Address signer) || signer != address)
+            // Validate the signature.
+            var key = PubKey.RecoverFromMessage(url, Encoders.Base64.EncodeData(signature));
+            if (key.Hash != new KeyId(address.ToBytes()))
                 return null;
 
             try
@@ -29,8 +30,8 @@ namespace Stratis.SCL.Crypto
                     .Select(argName =>
                     {
                         var argNameSplit = argName.Split("#");
-                        var argValue = argDict[argNameSplit[1]].ToString();
-                        var fieldType = int.Parse(argNameSplit[0]);
+                        var argValue = argDict[argNameSplit[0]].ToString();
+                        var fieldType = int.Parse(argNameSplit[1]);
                         var hexEncoder = new HexEncoder();
                         byte[] argumentBytes;
                         switch (fieldType)
