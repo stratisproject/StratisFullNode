@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.Primitives;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using Nethereum.RLP;
@@ -22,7 +20,7 @@ namespace Stratis.SCL.Crypto
             try
             {
                 // Create a mapping of available url arguments.
-                Dictionary<string, StringValues> argDict = QueryHelpers.ParseQuery(new Uri(url).Query);
+                Dictionary<string, string> argDict = ParseQueryString(url);
 
                 // The "signatureTemplateMap" takes the following form: "uid#11,symbol#4,amount#12,targetAddres#4,targetNetwork#4"
                 var arguments = signatureTemplateMap
@@ -30,7 +28,7 @@ namespace Stratis.SCL.Crypto
                     .Select(argName =>
                     {
                         var argNameSplit = argName.Split("#");
-                        var argValue = argDict[argNameSplit[0]].ToString();
+                        var argValue = argDict[argNameSplit[0]];
                         var fieldType = int.Parse(argNameSplit[1]);
                         var hexEncoder = new HexEncoder();
                         byte[] argumentBytes;
@@ -82,6 +80,29 @@ namespace Stratis.SCL.Crypto
             {
                 return null;
             }
+        }
+
+        private static Dictionary<string, string> ParseQueryString(string queryString)
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>();
+
+            if (!string.IsNullOrEmpty(queryString))
+            {
+                // Remove the '?' at the start of the query string
+                if (queryString[0] == '?') queryString = queryString.Substring(1);
+
+                var queryParts = queryString.Split('&');
+
+                foreach (var part in queryParts)
+                {
+                    var keyValue = part.Split('=');
+
+                    if (keyValue.Length == 2)
+                        result[keyValue[0]] = Uri.UnescapeDataString(keyValue[1]);
+                }
+            }
+
+            return result;
         }
     }
 }
