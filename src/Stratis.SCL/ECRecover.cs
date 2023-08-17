@@ -9,7 +9,7 @@ namespace Stratis.SCL.Crypto
         /// <summary>
         /// Retrieves the address of the signer of an ECDSA signature.
         /// </summary>
-        /// <param name="message"></param>
+        /// <param name="message">The message that was used to compute a hash that was signed.</param>
         /// <param name="signature">The ECDSA signature prepended with header information specifying the correct value of recId.</param>
         /// <param name="address">The Address for the signer of a signature.</param>
         /// <returns>A bool representing whether or not the signer was retrieved successfully.</returns>
@@ -26,6 +26,35 @@ namespace Stratis.SCL.Crypto
                 uint256 hashedUint256 = GetUint256FromMessage(message);
 
                 PubKey pubKey = PubKey.RecoverCompact(hashedUint256, signature);
+
+                address = CreateAddress(pubKey.Hash.ToBytes());
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves the address of the signer of an ECDSA signature.
+        /// </summary>
+        /// <param name="message">The message that was signed.</param>
+        /// <param name="signature">The ECDSA signature prepended with header information specifying the correct value of recId.</param>
+        /// <param name="address">The Address for the signer of a signature.</param>
+        /// <returns>A bool representing whether or not the signer was retrieved successfully.</returns>
+        public static bool TryGetSignerNoHash(byte[] message, byte[] signature, out Address address)
+        {
+            address = Address.Zero;
+
+            if (message == null || signature == null)
+                return false;
+
+            // NBitcoin is very throwy
+            try
+            {
+                PubKey pubKey = PubKey.RecoverFromMessage(message, Convert.ToBase64String(signature));
 
                 address = CreateAddress(pubKey.Hash.ToBytes());
 
