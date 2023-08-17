@@ -77,5 +77,38 @@ namespace Stratis.SCL.Crypto
                 return null;
             }
         }
+
+        public static string[] GetURLArguments(string url, string[] argumentNames)
+        {
+            // Create a mapping of available url arguments.
+            Dictionary<string, string> argDict = ParseQueryString(url);
+
+            return argumentNames.Select(argName => argDict[argName]).ToArray();
+        }
+
+        private static Dictionary<string, string> ParseQueryString(string queryString)
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>();
+
+            int startOfQueryString = queryString.IndexOf('?') + 1;
+
+            if (!string.IsNullOrEmpty(queryString) && startOfQueryString != 0)
+            {
+                // Remove the '?' at the start of the query string
+                queryString = queryString.Substring(startOfQueryString);
+
+                foreach (var part in queryString.Split('&'))
+                {
+                    var keyValue = part.Split('=');
+
+                    if (keyValue.Length == 2)
+                    {
+                        result[keyValue[0]] = Uri.UnescapeDataString(keyValue[1]);
+                    }
+                }
+            }
+
+            return result;
+        }
     }
 }
