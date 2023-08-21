@@ -12,6 +12,14 @@ namespace Stratis.SCL.Crypto
 {
     public static class SSAS
     {
+        class ChameleonNetwork : Network
+        {
+            public ChameleonNetwork(byte base58Prefix)
+            {
+                this.Base58Prefixes = new byte[][] { new byte[] { base58Prefix } };
+            }
+        }
+
         public static byte[] ValidateAndParse(Address address, string url, byte[] signature, string signatureTemplateMap)
         {
             // Validate the signature.
@@ -76,6 +84,15 @@ namespace Stratis.SCL.Crypto
             {
                 return null;
             }
+        }
+
+        public static byte[] ParseAddress(string address, out byte prefix)
+        {
+            prefix = (new Base58Encoder()).DecodeData(address)[0];
+            var bitcoinAddress = BitcoinAddress.Create(address, new ChameleonNetwork(prefix));
+            var pubKeyHash = ((BitcoinPubKeyAddress)bitcoinAddress).Hash;
+
+            return pubKeyHash.ToBytes();
         }
 
         public static string[] GetURLArguments(string url, string[] argumentNames)
