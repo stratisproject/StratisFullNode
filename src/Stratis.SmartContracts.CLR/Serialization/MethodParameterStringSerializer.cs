@@ -46,7 +46,7 @@ namespace Stratis.SmartContracts.CLR.Serialization
 
             string serialized = Serialize(obj, this.network);
 
-            return string.Format("{0}#{1}", (int) prefix.DataType, serialized);
+            return string.Format("{0}#{1}", (int)prefix.DataType, serialized);
         }
 
         public static string Serialize(object obj, Network network)
@@ -59,10 +59,10 @@ namespace Stratis.SmartContracts.CLR.Serialization
             switch (primitiveType)
             {
                 case MethodParameterDataType.ByteArray:
-                    serialized = ((byte[]) obj).ToHexString();
+                    serialized = ((byte[])obj).ToHexString();
                     break;
                 case MethodParameterDataType.Address:
-                    serialized = ((Address) obj).ToUint160().ToBase58Address(network);
+                    serialized = ((Address)obj).ToUint160().ToBase58Address(network);
                     break;
                 default:
                     serialized = obj.ToString();
@@ -107,15 +107,11 @@ namespace Stratis.SmartContracts.CLR.Serialization
             if (!hex.Contains("#"))
                 return hex.HexToByteArray();
 
-            var byteSerializer = new MethodParameterByteSerializer(new ContractPrimitiveSerializer(this.network, null));
-
             // "#" is a special case for indicating an empty list of parameters.
             object[] objects = (hex == "#") ? new object[0] : this.Deserialize(hex);
 
             // RLP encode the parameters.
-            var output = byteSerializer.Serialize(objects);
-
-            return output;
+            return new ContractPrimitiveSerializerV2(this.network).Serialize(objects);
         }
 
         private object[] StringToObjects(string parameters)
@@ -135,7 +131,7 @@ namespace Stratis.SmartContracts.CLR.Serialization
                         Regex.Split(parameter.Replace(@"\|", "|"), @"(?<!(?<!\\)*\\)\#").ToArray();
                     parameterSignature[1] = parameterSignature[1].Replace(@"\#", "#");
 
-                    parameterType = ulong.TryParse(parameterSignature[0], out var parsedParameterType) 
+                    parameterType = ulong.TryParse(parameterSignature[0], out var parsedParameterType)
                         ? Enum.GetName(typeof(MethodParameterDataType), parsedParameterType) ?? parameterSignature[0]
                         : parameterSignature[0];
 
