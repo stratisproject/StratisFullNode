@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
 using NBitcoin.DataEncoders;
+using Stratis.SmartContracts;
 
 namespace Stratis.SCL.Crypto
 {
@@ -31,6 +32,46 @@ namespace Stratis.SCL.Crypto
             Dictionary<string, string> argDict = ParseQueryString(url);
 
             return argumentNames.Select(argName => argDict[argName]).ToArray();
+        }
+
+        /// <summary>
+        /// Retrieves the address of the signer of an ECDSA signature.
+        /// </summary>
+        /// <param name="message">The message that was signed.</param>
+        /// <param name="signature">The ECDSA signature prepended with header information specifying the correct value of recId.</param>
+        /// <param name="address">The Address for the signer of a signature.</param>
+        /// <returns>A bool representing whether or not the signer was retrieved successfully.</returns>
+        public static bool TryGetSignerSHA256(byte[] message, byte[] signature, out Address address)
+        {
+            address = Address.Zero;
+
+            if (message == null || signature == null)
+                return false;
+
+            // NBitcoin is very throwy
+            try
+            {
+                PubKey pubKey = PubKey.RecoverFromMessage(message, Convert.ToBase64String(signature));
+
+                address = CreateAddress(pubKey.Hash.ToBytes());
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static Address CreateAddress(byte[] bytes)
+        {
+            uint pn0 = BitConverter.ToUInt32(bytes, 0);
+            uint pn1 = BitConverter.ToUInt32(bytes, 4);
+            uint pn2 = BitConverter.ToUInt32(bytes, 8);
+            uint pn3 = BitConverter.ToUInt32(bytes, 12);
+            uint pn4 = BitConverter.ToUInt32(bytes, 16);
+
+            return new Address(pn0, pn1, pn2, pn3, pn4);
         }
 
         private static Dictionary<string, string> ParseQueryString(string queryString)
