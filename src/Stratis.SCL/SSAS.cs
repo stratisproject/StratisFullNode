@@ -31,7 +31,7 @@ namespace Stratis.SCL.Crypto
             // Create a mapping of available url arguments.
             Dictionary<string, string> argDict = ParseQueryString(url);
 
-            return argumentNames.Select(argName => argDict[argName]).ToArray();
+            return argumentNames.Select(argName => argDict.TryGetValue(argName, out string argValue) ? argValue : null).ToArray();
         }
 
         /// <summary>
