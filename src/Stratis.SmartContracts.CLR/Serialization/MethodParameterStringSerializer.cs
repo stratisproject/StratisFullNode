@@ -107,11 +107,15 @@ namespace Stratis.SmartContracts.CLR.Serialization
             if (!hex.Contains("#"))
                 return hex.HexToByteArray();
 
+            var byteSerializer = new MethodParameterByteSerializer(new ContractPrimitiveSerializer(this.network, null));
+
             // "#" is a special case for indicating an empty list of parameters.
             object[] objects = (hex == "#") ? new object[0] : this.Deserialize(hex);
 
             // RLP encode the parameters.
-            return new ContractPrimitiveSerializerV2(this.network).Serialize(objects);
+            var output = byteSerializer.Serialize(objects);
+
+            return output;
         }
 
         private object[] StringToObjects(string parameters)
