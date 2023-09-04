@@ -71,6 +71,7 @@ contract WrappedToken is ERC20, Ownable {
         bytes memory signature
     ) public {
         require(toAddr == interflux, "Must be a transfer to interflux");
+        // TODO: Prevent this method from being called with the same "uniqueNumber" twice.
         bytes32 domainSeparator = keccak256(abi.encode(keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"), keccak256(abi.encodePacked("WrappedToken")), keccak256(abi.encodePacked("v1")), block.chainid, address(this)));
         bytes32 dataHash = keccak256(abi.encode(uniqueNumber, keccak256(bytes(token)), fromAddr, toAddr, keccak256(bytes(targetNetwork)), keccak256(bytes(targetAddress)), keccak256(bytes(metadata)), amount, amountCents, fee, feeCents));
         bytes32 eip712DataHash = keccak256(abi.encodePacked("\x19\x01", domainSeparator, dataHash));
