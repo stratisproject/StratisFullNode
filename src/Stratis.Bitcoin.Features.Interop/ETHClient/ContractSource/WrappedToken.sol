@@ -1,86 +1,98 @@
-// contracts/WrappedToken.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.6.0;
 
+// Importing dependencies
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.3.0/contracts/access/Ownable.sol";
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.3.0/contracts/token/ERC20/ERC20.sol";
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.3.0/contracts/cryptography/ECDSA.sol";
 
 contract WrappedToken is ERC20, Ownable {
     mapping (string => string) public withdrawalAddresses;
-    mapping (address => bool) public _isBlacklisted;
+    mapping (address => bool) public isBlacklisted;
     
+    // Constructor initializes the ERC20 token
     constructor(string memory tokenName, string memory tokenSymbol, uint256 initialSupply) public ERC20(tokenName, tokenSymbol) {
         _mint(msg.sender, initialSupply);
     }
     
-    /**
-     * @dev Creates `amount` new tokens and assigns them to `account`.
-     *
-     * See {ERC20-_mint}.
-     */
+    // Allows only the owner to mint new tokens
     function mint(address account, uint256 amount) public onlyOwner {
         _mint(account, amount);
     }
     
-    /**
-     * @dev Destroys `amount` tokens from the caller.
-     *
-     * See {ERC20-_burn}.
-     */
+    // Allows users to burn tokens and specify a withdrawal address
     function burn(uint256 amount, string memory tokenAddress, string memory burnId) public {
-        _burn(_msgSender(), amount);
-        
-        // When the tokens are burnt we need to know where to credit the equivalent value on the Stratis chain.
-        // Currently it is only possible to assign a single address here, so if multiple recipients are required
-        // the burner will have to wait until each burn is processed before proceeding with the next.
+        _burn(msg.sender, amount);
         string memory key = string(abi.encodePacked(msg.sender, " ", burnId));
         withdrawalAddresses[key] = tokenAddress;
     }
 
-    /**
-     * @dev Destroys `amount` tokens from `account`, deducting from the caller's
-     * allowance.
-     *
-     * See {ERC20-_burn} and {ERC20-allowance}.
-     *
-     * Requirements:
-     *
-     * - the caller must have allowance for ``accounts``'s tokens of at least
-     * `amount`.
-     */
+    // Allows users to burn tokens from an approved address
     function burnFrom(address account, uint256 amount, string memory tokenAddress, string memory burnId) public {
-        uint256 decreasedAllowance = allowance(account, _msgSender()).sub(amount, "ERC20: burn amount exceeds allowance");
-
-        _approve(account, _msgSender(), decreasedAllowance);
+        uint256 decreasedAllowance = allowance(account, msg.sender).sub(amount, "ERC20: burn amount exceeds allowance");
+        _approve(account, msg.sender, decreasedAllowance);
         _burn(account, amount);
-        
-        // When the tokens are burnt we need to know where to credit the equivalent value on the Stratis chain.
-        // Currently it is only possible to assign a single address here, so if multiple recipients are required
-        // the burner will have to wait until each burn is processed before proceeding with the next.
         string memory key = string(abi.encodePacked(msg.sender, " ", burnId));
         withdrawalAddresses[key] = tokenAddress;
     }
 
+    // Allows the owner to add addresses to the blacklist
     function addToBlackList(address[] calldata addresses) external onlyOwner {
-        for (uint256 i; i < addresses.length; ++i) {
-            _isBlacklisted[addresses[i]] = true;
+        for (uint256 i = 0; i < addresses.length; ++i) {
+            isBlacklisted[addresses[i]] = true;
         }
     }
 
+    // Allows the owner to remove addresses from the blacklist
     function removeFromBlackList(address account) external onlyOwner {
-        _isBlacklisted[account] = false;
+        isBlacklisted[account] = false;
     }
 
-     /**
-     * @dev See {ERC20-_beforeTokenTransfer}.
-     *
-     * Requirements:
-     *
-     * - the addresses must not be blacklisted.
-     */
+    // Checks if the address is blacklisted before any token transfer
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
         super._beforeTokenTransfer(from, to, amount);
+        require(!isBlacklisted[from] && !isBlacklisted[to], "This address is blacklisted");
+    }
 
-        require(!_isBlacklisted[from] && !_isBlacklisted[to], "This address is blacklisted");
+    // Perform a cross-chain transfer using delegated transfer with metadata
+    function delegatedTransferForNetwork(
+        uint128 uniqueNumber, 
+        string memory token,
+        address fromAddr,
+        address toAddr,
+        string memory targetNetwork,
+        string memory targetAddress,
+        string memory metadata,
+        bytes memory userSignature,
+        uint32 amount,
+        uint8 amountCents,
+        uint32 fee,
+        uint8 feeCents,
+        bytes memory signature
+    ) public {
+        bytes32 domainSeparator = keccak256(abi.encode(keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"), keccak256(abi.encodePacked("WrappedToken")), keccak256(abi.encodePacked("v1")), block.chainid, address(this)));
+        bytes32 dataHash = keccak256(abi.encode(uniqueNumber, keccak256(bytes(token)), fromAddr, toAddr, keccak256(bytes(targetNetwork)), keccak256(bytes(targetAddress)), keccak256(bytes(metadata)), amount, amountCents, fee, feeCents));
+        bytes32 eip712DataHash = keccak256(abi.encodePacked("\x19\x01", domainSeparator, dataHash));
+        address recoveredAddress = ECDSA.recover(eip712DataHash, signature);
+        require(fromAddr == recoveredAddress, "The 'from' address is not the signer");
+        // Convert amounts to satoshis.
+        uint256 redemptionAmount = (uint256(amount) * 100 + amountCents) * 1000000;
+        uint256 feeAmount = (uint256(fee) * 100 + feeCents) * 1000000;
+        _beforeTokenTransfer(fromAddr, interflux, redemptionAmount + feeAmount);
+        _transfer(fromAddr, interflux, redemptionAmount + feeAmount);
+        emit CrossChainTransferLog(targetAddress, targetNetwork);
+        emit MetadataLog(metadata);
+    }
+
+    // Event definitions
+    event CrossChainTransferLog(string account, string network);
+    event MetadataLog(string metadata);
+
+    // Ethereum Interflux address variable
+    address public interflux;
+
+    // Method to update the Ethereum Interflux address
+    function setInterflux(address newAddress) public onlyOwner {
+        interflux = newAddress;
     }
 }
