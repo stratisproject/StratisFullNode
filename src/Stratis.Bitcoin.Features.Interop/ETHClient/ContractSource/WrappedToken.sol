@@ -63,7 +63,6 @@ contract WrappedToken is ERC20, Ownable {
         string memory targetNetwork,
         string memory targetAddress,
         string memory metadata,
-        bytes memory userSignature,
         uint32 amount,
         uint8 amountCents,
         uint32 fee,
@@ -77,9 +76,6 @@ contract WrappedToken is ERC20, Ownable {
         bytes32 eip712DataHash = keccak256(abi.encodePacked("\x19\x01", domainSeparator, dataHash));
         address recoveredAddress = ECDSA.recover(eip712DataHash, signature);
         require(fromAddr == recoveredAddress, "The 'from' address is not the signer");
-        // The userSignature is not evaluated here.
-        // It will be used to determine the Cirrus identity later in the process.
-        // Convert amounts to satoshis.
         uint256 redemptionAmount = (uint256(amount) * 100 + amountCents) * 1000000;
         uint256 feeAmount = (uint256(fee) * 100 + feeCents) * 1000000;
         _beforeTokenTransfer(fromAddr, interflux, redemptionAmount + feeAmount);
