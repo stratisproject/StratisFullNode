@@ -70,11 +70,14 @@ contract WrappedToken is ERC20, Ownable {
         uint8 feeCents,
         bytes memory signature
     ) public {
+        require(toAddr == interflux, "Must be a transfer to interflux");
         bytes32 domainSeparator = keccak256(abi.encode(keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"), keccak256(abi.encodePacked("WrappedToken")), keccak256(abi.encodePacked("v1")), block.chainid, address(this)));
         bytes32 dataHash = keccak256(abi.encode(uniqueNumber, keccak256(bytes(token)), fromAddr, toAddr, keccak256(bytes(targetNetwork)), keccak256(bytes(targetAddress)), keccak256(bytes(metadata)), amount, amountCents, fee, feeCents));
         bytes32 eip712DataHash = keccak256(abi.encodePacked("\x19\x01", domainSeparator, dataHash));
         address recoveredAddress = ECDSA.recover(eip712DataHash, signature);
         require(fromAddr == recoveredAddress, "The 'from' address is not the signer");
+        // The userSignature is not evaluated here.
+        // It will be used to determine the Cirrus identity later in the process.
         // Convert amounts to satoshis.
         uint256 redemptionAmount = (uint256(amount) * 100 + amountCents) * 1000000;
         uint256 feeAmount = (uint256(fee) * 100 + feeCents) * 1000000;
