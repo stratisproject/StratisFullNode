@@ -8,6 +8,7 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.3.0/contr
 
 contract WrappedToken is ERC20, Ownable {
     mapping (string => string) public withdrawalAddresses;
+    mapping (uint128 => bool) public uniqueNumberUsed;
     mapping (address => bool) public isBlacklisted;
     
     // Constructor initializes the ERC20 token
@@ -69,13 +70,14 @@ contract WrappedToken is ERC20, Ownable {
         uint8 feeCents,
         bytes memory signature
     ) public {
+        require(!uniqueNumberUsed[uniqueNumber], "Unique number already used");
+        uniqueNumberUsed[uniqueNumber] = true;
         require(toAddr == interflux, "Must be a transfer to interflux");
-        // TODO: Prevent this method from being called with the same "uniqueNumber" twice.
         bytes32 domainSeparator = keccak256(abi.encode(keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"), keccak256(abi.encodePacked("WrappedToken")), keccak256(abi.encodePacked("v1")), block.chainid, address(this)));
         bytes32 dataHash = keccak256(abi.encode(uniqueNumber, keccak256(bytes(token)), fromAddr, toAddr, keccak256(bytes(targetNetwork)), keccak256(bytes(targetAddress)), keccak256(bytes(metadata)), amount, amountCents, fee, feeCents));
         bytes32 eip712DataHash = keccak256(abi.encodePacked("\x19\x01", domainSeparator, dataHash));
         address recoveredAddress = ECDSA.recover(eip712DataHash, signature);
-        require(fromAddr == recoveredAddress, "The 'from' address is not the signer");
+        require(fromAddr == recoveredAddress, "The 'fromAddr' is not the signer");
         uint256 redemptionAmount = (uint256(amount) * 100 + amountCents) * 1000000;
         uint256 feeAmount = (uint256(fee) * 100 + feeCents) * 1000000;
         _beforeTokenTransfer(fromAddr, interflux, redemptionAmount + feeAmount);
