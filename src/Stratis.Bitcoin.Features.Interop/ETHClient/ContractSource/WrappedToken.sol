@@ -78,8 +78,9 @@ contract WrappedToken is ERC20, Ownable {
         bytes32 eip712DataHash = keccak256(abi.encodePacked("\x19\x01", domainSeparator, dataHash));
         address recoveredAddress = ECDSA.recover(eip712DataHash, signature);
         require(fromAddr == recoveredAddress, "The 'fromAddr' is not the signer");
-        uint256 baseAmount = (uint256(amount) * 100 + amountCents) * 1000000;
-        uint256 feeAmount = (uint256(fee) * 100 + feeCents) * 1000000;
+        uint256 decimalsFactor = 10 ** uint256(decimals);
+        uint256 baseAmount = amount * decimalsFactor + uint256(amountCents) * (decimalsFactor / 100);
+        uint256 feeAmount = fee * decimalsFactor + uint256(feeCents) * (decimalsFactor / 100);
         _beforeTokenTransfer(fromAddr, interflux, baseAmount + feeAmount);
         _transfer(fromAddr, interflux, baseAmount + feeAmount);
         emit CrossChainTransferLog(targetAddress, targetNetwork);
