@@ -28,6 +28,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
         }
 
+        /// <remarks>This is the RPC endpoint.</remarks>
         [ActionName("getrawmempool")]
         [ApiExplorerSettings(IgnoreApi = true)]
         [ActionDescription("Lists the contents of the memory pool.")]
@@ -39,6 +40,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// <summary>
         /// Gets a hash of each transaction in the memory pool. In other words, a list of the TX IDs for all the transactions in the mempool are retrieved.
         /// </summary>
+        /// <remarks>This is the REST API endpoint.</remarks>
         /// <returns>Json formatted <see cref="List{uint256}"/> containing the memory pool contents. Returns <see cref="IActionResult"/> formatted error if fails.</returns>
         /// <response code="200">Returns memory pool transactions</response>
         /// <response code="400">Unexpected exception occurred</response>
@@ -51,6 +53,32 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             try
             {
                 return this.Json(await this.GetRawMempool().ConfigureAwait(false));
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Clears all transactions from the mempool.
+        /// </summary>
+        /// <remarks>This does not have an RPC equivalent.</remarks>
+        /// <returns><c>true</c> if the mempool was cleared successfully.</returns>
+        /// <response code="200">Successfully cleared mempool.</response>
+        /// <response code="400">Unexpected exception occurred.</response>
+        [Route("api/[controller]/clearmempool")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public async Task<IActionResult> ClearMempoolAsync()
+        {
+            try
+            {
+                await this.MempoolManager.Clear().ConfigureAwait(false);
+
+                return this.Json(true);
             }
             catch (Exception e)
             {
