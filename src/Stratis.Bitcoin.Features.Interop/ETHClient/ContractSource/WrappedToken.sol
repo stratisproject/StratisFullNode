@@ -60,38 +60,31 @@ contract WrappedToken is ERC20, Ownable {
         uint128 uniqueNumber, 
         string memory token,
         address fromAddr,
-        address toAddr,
         string memory targetNetwork,
         string memory targetAddress,
         string memory metadata,
         uint32 amount,
         uint8 amountCents,
-        uint32 fee,
-        uint8 feeCents,
         bytes memory signature
     ) public {
         require(!uniqueNumberUsed[uniqueNumber], "Unique number already used");
         uniqueNumberUsed[uniqueNumber] = true;
-        require(toAddr == interflux, "Must be a transfer to interflux");
         bytes32 domainSeparator = keccak256(abi.encode(keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"), keccak256(abi.encodePacked("WrappedToken")), keccak256(abi.encodePacked("v1")), block.chainid, address(this)));
-        bytes32 dataHash = keccak256(abi.encode(uniqueNumber, keccak256(bytes(token)), fromAddr, toAddr, keccak256(bytes(targetNetwork)), keccak256(bytes(targetAddress)), keccak256(bytes(metadata)), amount, amountCents, fee, feeCents));
+        bytes32 dataHash = keccak256(abi.encode(uniqueNumber, keccak256(bytes(token)), fromAddr, keccak256(bytes(targetNetwork)), keccak256(bytes(targetAddress)), keccak256(bytes(metadata)), amount, amountCents));
         bytes32 eip712DataHash = keccak256(abi.encodePacked("\x19\x01", domainSeparator, dataHash));
         address recoveredAddress = ECDSA.recover(eip712DataHash, signature);
         require(fromAddr == recoveredAddress, "The 'fromAddr' is not the signer");
         uint256 decimalsFactor = uint256(10) ** decimals;
-        uint256 baseAmount = uint256(amount) * decimalsFactor + uint256(amountCents) * (decimalsFactor / 100);
-        uint256 feeAmount = uint256(fee) * decimalsFactor + uint256(feeCents) * (decimalsFactor / 100);
-        _beforeTokenTransfer(fromAddr, interflux, baseAmount + feeAmount);
-        _transfer(fromAddr, interflux, baseAmount + feeAmount);
+        uint256 transferAmount = uint256(amount) * decimalsFactor + uint256(amountCents) * (decimalsFactor / 100);
+        _beforeTokenTransfer(fromAddr, interflux, transferAmount);
+        _transfer(fromAddr, interflux, transferAmount);
         emit CrossChainTransferLog(targetAddress, targetNetwork);
         emit MetadataLog(metadata);
-        emit FeeLog(feeAmount);
     }
 
     // Event definitions
     event CrossChainTransferLog(string account, string network);
     event MetadataLog(string metadata);
-    event FeeLog(uint256 feeAmount);
 
     // Ethereum Interflux address variable
     address public interflux;
