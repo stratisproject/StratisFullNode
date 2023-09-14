@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Stratis.SCL;
 using Stratis.SmartContracts.Standards;
 
 namespace Stratis.SmartContracts.CLR.Compilation
