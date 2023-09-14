@@ -59,26 +59,26 @@ contract WrappedToken is ERC20, Ownable {
     }
     
     // Perform a cross-chain transfer using delegated transfer with metadata
-    function transferForNetwork(
+    function _transferForNetwork(
         address fromAddr,
         string memory targetNetwork,
         string memory targetAddress,
         string memory metadata,
         uint256 transferAmount
-    ) public {
+    ) internal {
         _beforeTokenTransfer(fromAddr, interflux, transferAmount);
         _transfer(fromAddr, interflux, transferAmount);
         emit CrossChainTransferLog(targetAddress, targetNetwork);
         emit MetadataLog(metadata);
     }
 
-    function _getDomainSeparator() internal view returns(bytes32 domainSeparator) {
-        uint chainId;
-        assembly {
-            chainId := chainid()
-        }
-        
-        return keccak256(abi.encode(keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"), keccak256(abi.encodePacked(CONTRACT_NAME)), keccak256(abi.encodePacked(CONTRACT_VERSION)), chainId, address(this)));
+    function transferForNetwork(
+        string memory targetNetwork,
+        string memory targetAddress,
+        string memory metadata,
+        uint256 transferAmount
+    ) public {
+        _transferForNetwork(msg.sender, targetNetwork, targetAddress, metadata, transferAmount);
     }
 
     // Perform a cross-chain transfer using delegated transfer with metadata
@@ -103,7 +103,7 @@ contract WrappedToken is ERC20, Ownable {
         uint256 decimalsFactor = uint256(10) ** decimals();
         uint256 transferAmount = uint256(amount) * decimalsFactor + uint256(amountCents) * (decimalsFactor / 100);
 
-        transferForNetwork(fromAddr, targetNetwork, targetAddress, metadata, transferAmount);
+        _transferForNetwork(fromAddr, targetNetwork, targetAddress, metadata, transferAmount);
     }
 
     // Event definitions
@@ -116,5 +116,14 @@ contract WrappedToken is ERC20, Ownable {
     // Method to update the Ethereum Interflux address
     function setInterflux(address newAddress) public onlyOwner {
         interflux = newAddress;
+    }
+
+    function _getDomainSeparator() internal view returns(bytes32 domainSeparator) {
+        uint chainId;
+        assembly {
+            chainId := chainid()
+        }
+        
+        return keccak256(abi.encode(keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"), keccak256(abi.encodePacked(CONTRACT_NAME)), keccak256(abi.encodePacked(CONTRACT_VERSION)), chainId, address(this)));
     }
 }
