@@ -54,11 +54,24 @@ contract WrappedToken is ERC20, Ownable {
         super._beforeTokenTransfer(from, to, amount);
         require(!isBlacklisted[from] && !isBlacklisted[to], "This address is blacklisted");
     }
+    
+    // Perform a cross-chain transfer using delegated transfer with metadata
+    function transferForNetwork(
+        address fromAddr,
+        string memory targetNetwork,
+        string memory targetAddress,
+        string memory metadata,
+        uint256 transferAmount
+    ) public {
+        _beforeTokenTransfer(fromAddr, interflux, transferAmount);
+        _transfer(fromAddr, interflux, transferAmount);
+        emit CrossChainTransferLog(targetAddress, targetNetwork);
+        emit MetadataLog(metadata);
+    }
 
     // Perform a cross-chain transfer using delegated transfer with metadata
     function delegatedTransferForNetwork(
         uint128 uniqueNumber, 
-        string memory token,
         address fromAddr,
         string memory targetNetwork,
         string memory targetAddress,
@@ -69,17 +82,16 @@ contract WrappedToken is ERC20, Ownable {
     ) public {
         require(!uniqueNumberUsed[uniqueNumber], "Unique number already used");
         uniqueNumberUsed[uniqueNumber] = true;
+        string token = symbol();
         bytes32 domainSeparator = keccak256(abi.encode(keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"), keccak256(abi.encodePacked("WrappedToken")), keccak256(abi.encodePacked("v1")), block.chainid, address(this)));
         bytes32 dataHash = keccak256(abi.encode(uniqueNumber, keccak256(bytes(token)), fromAddr, keccak256(bytes(targetNetwork)), keccak256(bytes(targetAddress)), keccak256(bytes(metadata)), amount, amountCents));
         bytes32 eip712DataHash = keccak256(abi.encodePacked("\x19\x01", domainSeparator, dataHash));
         address recoveredAddress = ECDSA.recover(eip712DataHash, signature);
         require(fromAddr == recoveredAddress, "The 'fromAddr' is not the signer");
-        uint256 decimalsFactor = uint256(10) ** decimals;
+        uint256 decimalsFactor = uint256(10) ** decimals();
         uint256 transferAmount = uint256(amount) * decimalsFactor + uint256(amountCents) * (decimalsFactor / 100);
-        _beforeTokenTransfer(fromAddr, interflux, transferAmount);
-        _transfer(fromAddr, interflux, transferAmount);
-        emit CrossChainTransferLog(targetAddress, targetNetwork);
-        emit MetadataLog(metadata);
+
+        transferForNetwork(fromAddr, targetNetwork, targetAddress, metadata, transferAmount);
     }
 
     // Event definitions
