@@ -7,6 +7,9 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.3.0/contr
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.3.0/contracts/cryptography/ECDSA.sol";
 
 contract WrappedToken is ERC20, Ownable {
+    string public constant CONTRACT_NAME = "WrappedToken";
+    string public constant CONTRACT_VERSION = "v1";
+
     mapping (string => string) public withdrawalAddresses;
     mapping (uint128 => bool) public uniqueNumberUsed;
     mapping (address => bool) public isBlacklisted;
@@ -69,6 +72,15 @@ contract WrappedToken is ERC20, Ownable {
         emit MetadataLog(metadata);
     }
 
+    function _getDomainSeparator() internal view returns(bytes32 domainSeparator) {
+        uint chainId;
+        assembly {
+            chainId := chainid()
+        }
+        
+        return keccak256(abi.encode(keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"), keccak256(abi.encodePacked(CONTRACT_NAME)), keccak256(abi.encodePacked(CONTRACT_VERSION)), chainId, address(this)));
+    }
+
     // Perform a cross-chain transfer using delegated transfer with metadata
     function delegatedTransferForNetwork(
         uint128 uniqueNumber, 
@@ -79,12 +91,12 @@ contract WrappedToken is ERC20, Ownable {
         uint32 amount,
         uint8 amountCents,
         bytes memory signature
-    ) public {
+    ) public {    
         require(!uniqueNumberUsed[uniqueNumber], "Unique number already used");
         uniqueNumberUsed[uniqueNumber] = true;
-        string token = symbol();
-        bytes32 domainSeparator = keccak256(abi.encode(keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"), keccak256(abi.encodePacked("WrappedToken")), keccak256(abi.encodePacked("v1")), block.chainid, address(this)));
+        string memory token = symbol();
         bytes32 dataHash = keccak256(abi.encode(uniqueNumber, keccak256(bytes(token)), fromAddr, keccak256(bytes(targetNetwork)), keccak256(bytes(targetAddress)), keccak256(bytes(metadata)), amount, amountCents));
+        bytes32 domainSeparator = _getDomainSeparator();
         bytes32 eip712DataHash = keccak256(abi.encodePacked("\x19\x01", domainSeparator, dataHash));
         address recoveredAddress = ECDSA.recover(eip712DataHash, signature);
         require(fromAddr == recoveredAddress, "The 'fromAddr' is not the signer");
