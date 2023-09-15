@@ -9,9 +9,12 @@
 
   <ItemGroup>
     <PackageReference Include="Mono.Cecil" Version="0.11.4" />
-    <PackageReference Include="Stratis.SCL" Version="2.0.3-PreRelease" />
     <PackageReference Include="Stratis.SmartContracts" Version="2.0.0" />
     <PackageReference Include="Stratis.SmartContracts.Standards" Version="2.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Stratis.SCL\Stratis.SCL.csproj" />
   </ItemGroup>
 
 </Project>
