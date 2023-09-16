@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using Nethereum.BlockchainProcessing.BlockStorage.Repositories;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration.Logging;
@@ -448,6 +447,19 @@ namespace Stratis.Features.FederatedPeg.Controllers
 
             return this.Json($"{depositIdTransactionId} does not exist.");
         }
+        
+        [Route(FederationGatewayRouteEndPoint.DeleteSuspended)]
+        [HttpDelete]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult DeleteSuspendedTransfers([FromBody] DeleteSuspendedTransferModel model)
+        {
+            (bool result, string message) deleteResult = this.crossChainTransferStore.DeleteSuspendedTransfer(new uint256(model.DepositId));
+            if (deleteResult.result)
+                return Ok($"'{model.DepositId}' was deleted.");
+
+            return BadRequest(deleteResult.message);
+        }
 
         [Route(FederationGatewayRouteEndPoint.GetPartialTransactionSignersEndpoint)]
         [HttpPost]
@@ -523,19 +535,6 @@ namespace Stratis.Features.FederatedPeg.Controllers
                 this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
-        }
-
-        [Route(FederationGatewayRouteEndPoint.DeleteSuspended)]
-        [HttpDelete]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        public IActionResult DeleteSuspendedTransfers([FromBody] DeleteSuspendedTransferModel model)
-        {
-            (bool result, string message) deleteResult = this.crossChainTransferStore.DeleteSuspendedTransfer(new uint256(model.DepositId));
-            if (deleteResult.result)
-                return Ok($"'{model.DepositId}' was deleted.");
-
-            return BadRequest(deleteResult.message);
         }
     }
 }
