@@ -7,7 +7,7 @@
 
   <ItemGroup>
     <PackageReference Include="Flurl.Http" Version="3.0.1" />
-    <PackageReference Include="NStratis" Version="4.0.0.80" />
+    <PackageReference Include="NStratis" Version="4.0.0.87" />
   </ItemGroup>
 
   <ItemGroup>
