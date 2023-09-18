@@ -13,7 +13,7 @@ using Stratis.SmartContracts;
 
 namespace Stratis.Features.Unity3dApi
 {
-    // TODO: Move this to a more central point once 1.4.0.0 stabilises
+    // TODO: Move this to a more central point once 1.5.0.0 stabilises
     public interface ILocalCallContract
     {
         LocalExecutionResponse LocalCallSmartContract(LocalCallContractRequest request);
