@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
+using NBitcoin;
 using NBitcoin.DataEncoders;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -72,12 +73,12 @@ namespace Stratis.Bitcoin.Features.RPC
                 if (token is JArray)
                 {
                     // Batch request, invoke each request and accumulate responses into JArray.
-                    response = await this.InvokeBatchAsync(httpContext, token as JArray);
+                    response = await this.InvokeBatchAsync(httpContext, token as JArray).ConfigureAwait(false);
                 }
                 else if (token is JObject)
                 {
                     // Single request, invoke single request and return single response object.
-                    response = await this.InvokeSingleAsync(httpContext, token as JObject);
+                    response = await this.InvokeSingleAsync(httpContext, token as JObject).ConfigureAwait(false);
 
                     if (response == null)
                         response = JValue.CreateNull();
@@ -248,11 +249,13 @@ namespace Stratis.Bitcoin.Features.RPC
 
                 responseMemoryStream.Position = 0;
                 using (var streamReader = new StreamReader(responseMemoryStream))
-                using (var textReader = new JsonTextReader(streamReader))
                 {
-                    // Ensure floats are parsed as decimals and not as doubles.
-                    textReader.FloatParseHandling = FloatParseHandling.Decimal;
-                    response = await JObject.LoadAsync(textReader);
+                    using (var textReader = new JsonTextReader(streamReader))
+                    {
+                        // Ensure floats are parsed as decimals and not as doubles.
+                        textReader.FloatParseHandling = FloatParseHandling.Decimal;
+                        response = await JObject.LoadAsync(textReader).ConfigureAwait(false);
+                    }
                 }
             }
             catch (Exception ex)
@@ -266,9 +269,9 @@ namespace Stratis.Bitcoin.Features.RPC
                     // Ensure floats are parsed as decimals and not as doubles.
                     textReader.FloatParseHandling = FloatParseHandling.Decimal;
 
-                    string val = streamReader.ReadToEnd();
+                    string val = await streamReader.ReadToEndAsync().ConfigureAwait(false);
                     context.Response.Body.Position = 0;
-                    response = await JObject.LoadAsync(textReader);
+                    response = await JObject.LoadAsync(textReader).ConfigureAwait(false);
                 }
             }
 
