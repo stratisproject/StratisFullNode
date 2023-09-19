@@ -44,6 +44,10 @@ namespace Stratis.Features.FederatedPeg.Coordination
         /// <returns>A dictionary of pubkeys that voted on a request.</returns>
         Dictionary<string, HashSet<PubKey>> GetStatus();
 
+        /// <summary>Provides mapping of all request ids to the vote tally per transactionId for that request.</summary>
+        /// <returns>A dictionary of vote tallies per potential transactionId for a given request.</returns>
+        Dictionary<string, Dictionary<BigInteger, int>> GetTransactionIdStatus();
+
         /// <summary>
         /// Registers the quorum for conversion request transactions, i.e. minimum amount of votes required to process it.
         /// </summary>
@@ -167,6 +171,15 @@ namespace Stratis.Features.FederatedPeg.Coordination
             lock (this.lockObject)
             {
                 return this.receivedVotes;
+            }
+        }
+
+        /// <inheritdoc/>
+        public Dictionary<string, Dictionary<BigInteger, int>> GetTransactionIdStatus()
+        {
+            lock (this.lockObject)
+            {
+                return this.transactionIdVotes;
             }
         }
 
