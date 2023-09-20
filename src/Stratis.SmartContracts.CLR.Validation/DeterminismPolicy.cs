@@ -14,7 +14,9 @@ namespace Stratis.SmartContracts.CLR.Validation
         public static WhitelistPolicy WhitelistPolicy = new WhitelistPolicy()
             .Namespace(nameof(System), AccessPolicy.Denied, SystemPolicy)
             .Namespace(typeof(RuntimeHelpers).Namespace, AccessPolicy.Denied, CompilerServicesPolicy)
-            .Namespace(typeof(SmartContract).Namespace, AccessPolicy.Allowed, SmartContractsPolicy);
+            .Namespace(typeof(SmartContract).Namespace, AccessPolicy.Allowed, SmartContractsPolicy)
+            .Namespace(typeof(SCL.Crypto.ECRecover).Namespace, AccessPolicy.Allowed, SmartContractsPolicy)
+            .Namespace(typeof(SCL.Base.Operations).Namespace, AccessPolicy.Allowed, SmartContractsPolicy);
 
         public static ValidationPolicy Default = new ValidationPolicy()
             .WhitelistValidator(WhitelistPolicy)

@@ -111,13 +111,6 @@ namespace Stratis.Bitcoin.Controllers
         {
             HttpResponseMessage response = await this.SendPostRequestAsync(requestModel, apiMethodName, cancellation).ConfigureAwait(false);
 
-            if (response != null && !response.IsSuccessStatusCode && response.Content != null)
-            {
-                string errorJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                var errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(errorJson);
-                throw new Exception(errorResponse.Errors[0].Message);
-            }
-
             return await this.ParseHttpResponseMessageAsync<Response>(response).ConfigureAwait(false);
         }
 

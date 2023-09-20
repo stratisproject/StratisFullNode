@@ -104,6 +104,10 @@ namespace Stratis.Bitcoin.Features.Interop.Settings
         /// against the federation multisig wallet. These are mapped to their corresponding SRC721 contract.</summary>
         public Dictionary<string, string> WatchedErc721Contracts { get; set; }
 
+        /// <summary>A collection of contract addresses for SRC721 tokens that should be monitored for minting events.
+        /// These are mapped to a suitable ERC721 contract that the federation has minting rights for.</summary>
+        public Dictionary<string, string> WatchedSrc721Contracts { get; set; }
+
         #region unused
 
         /// <summary>This is intended for future functionality and should therefore not be provided/set yet.</summary>
@@ -130,6 +134,7 @@ namespace Stratis.Bitcoin.Features.Interop.Settings
             this.InteropContractAddress = nodeSettings.ConfigReader.GetOrDefault(this.GetSettingsPrefix() + "interopcontractaddress", "");
             this.WatchedErc20Contracts = new Dictionary<string, string>();
             this.WatchedErc721Contracts = new Dictionary<string, string>();
+            this.WatchedSrc721Contracts = new Dictionary<string, string>();
 
             string watchErc20Key = this.GetSettingsPrefix() + "watcherc20";
 
@@ -173,6 +178,28 @@ namespace Stratis.Bitcoin.Features.Interop.Settings
                 BitcoinAddress.Create(splitWatched[1], nodeSettings.Network);
 
                 this.WatchedErc721Contracts[splitWatched[0]] = splitWatched[1];
+            }
+
+            string watchSrc721Key = this.GetSettingsPrefix() + "watchsrc721";
+
+            foreach (string watched in nodeSettings.ConfigReader.GetAll(watchSrc721Key))
+            {
+                if (!watched.Contains(","))
+                {
+                    throw new Exception($"Value of -{watchSrc721Key} invalid, should be -{watchSrc721Key}=<SRC721address>,<ERC721address>: {watched}");
+                }
+
+                string[] splitWatched = watched.Split(",");
+
+                if (splitWatched.Length != 2)
+                {
+                    throw new Exception($"Value of -{watchSrc721Key} invalid, should be -{watchSrc721Key}=<SRC721address>,<ERC721address>: {watched}");
+                }
+
+                // Ensure that a valid Cirrus address was provided.
+                BitcoinAddress.Create(splitWatched[0], nodeSettings.Network);
+
+                this.WatchedSrc721Contracts[splitWatched[0]] = splitWatched[1];
             }
 
             this.MultisigWalletQuorum = nodeSettings.ConfigReader.GetOrDefault(MultisigWalletContractQuorumKey, 6);

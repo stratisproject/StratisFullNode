@@ -45,6 +45,11 @@ namespace Stratis.Bitcoin.P2P
 
         private const int MaxAddressesToStoreFromSingleIp = 1500;
 
+        /// <summary>
+        /// Bounds the maximum memory the peer address manager can be allowed to consume.
+        /// </summary>
+        private const int MaxAddressesToStore = 100_000;
+
         /// <summary>Constructor used by dependency injection.</summary>
         public PeerAddressManager(IDateTimeProvider dateTimeProvider, DataFolder peerFilePath, ILoggerFactory loggerFactory, ISelfEndpointTracker selfEndpointTracker)
         {
@@ -129,7 +134,8 @@ namespace Stratis.Bitcoin.P2P
             IPEndPoint ipv6EndPoint = endPoint.MapToIpv6();
 
             PeerAddress peerToAdd = PeerAddress.Create(ipv6EndPoint, source.MapToIPv6());
-            var added = this.peerInfoByPeerAddress.TryAdd(ipv6EndPoint, peerToAdd);
+            bool added = this.peerInfoByPeerAddress.TryAdd(ipv6EndPoint, peerToAdd);
+
             if (added)
             {
                 this.logger.LogTrace("(-)[PEER_ADDED]:{0}", endPoint);
@@ -143,10 +149,70 @@ namespace Stratis.Bitcoin.P2P
         /// <inheritdoc/>
         public void AddPeers(IEnumerable<IPEndPoint> endPoints, IPAddress source)
         {
-            foreach (IPEndPoint endPoint in endPoints)
+            // Pre-filter for peers that exist already.
+            IEnumerable<IPEndPoint> cleanedList = endPoints.Where(proposed => !this.peerInfoByPeerAddress.ContainsKey(proposed));
+
+            if (cleanedList.IsEmpty())
+                return;
+
+            cleanedList = this.EnsureMaxItems(cleanedList);
+
+            foreach (IPEndPoint endPoint in cleanedList)
                 this.AddPeerWithoutCleanup(endPoint, source);
 
             this.EnsureMaxItemsPerSource(source);
+        }
+
+        private IEnumerable<IPEndPoint> EnsureMaxItems(IEnumerable<IPEndPoint> endPoints)
+        {
+            int numberToEvict = (this.peerInfoByPeerAddress.Count + endPoints.Count()) - MaxAddressesToStore;
+
+            if (numberToEvict <= 0)
+                return endPoints;
+
+            // Otherwise, we need to figure out whether to evict already-stored addresses or just trim the incoming list to fit.
+            // If we never evict already-stored addresses there is a potential risk that we only store dud addresses forever and land up with no valid peers.
+
+            var evictions = new List<IPEndPoint>();
+
+            foreach (IPEndPoint endPoint in this.peerInfoByPeerAddress.Keys)
+            {
+                if (!this.peerInfoByPeerAddress.TryGetValue(endPoint, out PeerAddress address))
+                    continue;
+
+                // If the peer is not 'good', or we have never connected to them, then they are an eviction candidate.
+                if (address.Attempted ||
+                    address.IsBanned(this.dateTimeProvider.GetUtcNow()) ||
+                    address.Fresh)
+                {
+                    evictions.Add(endPoint);
+                }
+            }
+
+            // Shuffle the candidates.
+            evictions.Shuffle();
+
+            foreach (IPEndPoint endPointToEvict in evictions)
+            {
+                if (numberToEvict == 0)
+                    break;
+
+                this.peerInfoByPeerAddress.TryRemove(endPointToEvict, out _);
+
+                numberToEvict--;
+            }
+
+            if (numberToEvict >= endPoints.Count())
+            {
+                return new List<IPEndPoint>();
+            }
+
+            if (numberToEvict > 0)
+            {
+                return endPoints.Skip(numberToEvict);
+            }
+
+            return endPoints;
         }
 
         private void EnsureMaxItemsPerSource(IPAddress source)

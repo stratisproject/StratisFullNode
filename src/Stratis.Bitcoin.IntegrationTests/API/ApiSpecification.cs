@@ -192,7 +192,7 @@ namespace Stratis.Bitcoin.IntegrationTests.API
         }
 
         [Fact]
-        public void Proof_of_stake_node_calls_generate_after_last_Pow_block_and_receives_error()
+        public void PoS_node_calls_generate_after_last_Pow_block_and_receives_error()
         {
             Given(a_proof_of_stake_node_with_api_enabled);
             And(the_proof_of_stake_node_has_passed_LastPOWBlock);

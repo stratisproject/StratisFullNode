@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <Company>Stratis Group Ltd.</Company>
     <Copyright>Copyright © 2022</Copyright>
   </PropertyGroup>

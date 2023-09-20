@@ -16,9 +16,11 @@ using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers.Models;
+using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.BlockStore.Models;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Primitives;
+using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 using FileMode = LiteDB.FileMode;
 using Script = NBitcoin.Script;
@@ -67,6 +69,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         private readonly IAsyncProvider asyncProvider;
 
         private readonly IScriptAddressReader scriptAddressReader;
+
         private readonly IBlockStore blockStore;
 
         private readonly TimeSpan flushChangesInterval;
@@ -116,6 +119,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         private readonly IUtxoIndexer utxoIndexer;
 
+        private readonly ISignals signals;
+
         private Task indexingTask;
 
         private DateTime lastFlushTime;
@@ -143,8 +148,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         public IFullNodeFeature InitializingFeature { get; set; }
 
-        public AddressIndexer(StoreSettings storeSettings, DataFolder dataFolder, Network network, INodeStats nodeStats,
-            IConsensusManager consensusManager, IAsyncProvider asyncProvider, ChainIndexer chainIndexer, IDateTimeProvider dateTimeProvider, IUtxoIndexer utxoIndexer)
+        public AddressIndexer(StoreSettings storeSettings, DataFolder dataFolder, Network network, INodeStats nodeStats, IBlockStore blockStore,
+            IConsensusManager consensusManager, IAsyncProvider asyncProvider, ChainIndexer chainIndexer, IDateTimeProvider dateTimeProvider, IUtxoIndexer utxoIndexer, ISignals signals)
         {
             this.storeSettings = storeSettings;
             this.network = network;
@@ -155,6 +160,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             this.dateTimeProvider = dateTimeProvider;
             this.utxoIndexer = utxoIndexer;
             this.scriptAddressReader = new ScriptAddressReader();
+            this.signals = signals;
             this.blockStore = blockStore;
 
             this.lockObject = new object();
@@ -406,6 +412,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                                 " AddressCache%: " + this.addressIndexRepository.GetLoadPercentage().ToString().PadRight(8) +
                                 "OutPointCache%: " + this.outpointsRepository.GetLoadPercentage().ToString().PadRight(8) +
                                 $"Ms/block: {Math.Round(this.averageTimePerBlock.Average, 2)}");
+
+            this.signals.Publish(new AddressIndexerStatusEvent() { Tip = this.IndexerTip.Height });
         }
 
         /// <summary>Processes a block that was added or removed from the consensus chain.</summary>

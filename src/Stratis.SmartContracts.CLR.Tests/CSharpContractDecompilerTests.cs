@@ -36,6 +36,7 @@ namespace Stratis.SmartContracts.CLR.Tests
             Result<string> result = this.decompiler.GetSource(contractBytes);
             Assert.True(result.IsSuccess);
             Assert.Contains("public class Auction", result.Value);
+            Assert.DoesNotContain("Unknown result type (might be due to invalid IL or missing references)", result.Value);
         }
 
         [Fact]
@@ -46,6 +47,7 @@ namespace Stratis.SmartContracts.CLR.Tests
             Assert.True(result.IsSuccess);
             Assert.Contains("public class CatOwner : SmartContract", result.Value);
             Assert.Contains("public class Cat : SmartContract", result.Value);
+            Assert.DoesNotContain("Unknown result type (might be due to invalid IL or missing references)", result.Value);
         }
     }
 }

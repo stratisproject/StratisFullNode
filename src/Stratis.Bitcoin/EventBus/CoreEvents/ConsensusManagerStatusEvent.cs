@@ -6,8 +6,9 @@ namespace Stratis.Bitcoin.EventBus.CoreEvents
 {
     public class ConsensusManagerStatusEvent : EventBase
     {
-        public readonly bool IsIbd;
-        public readonly int? HeaderHeight;
+        public bool IsIbd { get; }
+
+        public int? HeaderHeight { get; }
 
         public ConsensusManagerStatusEvent(bool isIbd, int? headerHeight)
         {

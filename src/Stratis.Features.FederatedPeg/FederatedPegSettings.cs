@@ -144,6 +144,8 @@ namespace Stratis.Features.FederatedPeg
 
             this.MaximumPartialTransactionThreshold = configReader.GetOrDefault(MaximumPartialTransactionsParam, CrossChainTransferStore.MaximumPartialTransactions);
             this.WalletSyncFromHeight = configReader.GetOrDefault(WalletSyncFromHeightParam, 0);
+
+            this.EnableMultisigMonitoring = configReader.GetOrDefault("enablemultisigmonitoring", false);
         }
 
         /// <inheritdoc/>
@@ -200,5 +202,8 @@ namespace Stratis.Features.FederatedPeg
 
         /// <inheritdoc/>
         public Script MultiSigRedeemScript { get; }
+
+        /// <inheritdoc/>
+        public bool EnableMultisigMonitoring { get; }
     }
 }

@@ -10,9 +10,11 @@ using NBitcoin.Policy;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
+using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Interfaces;
+using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Controllers;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -59,10 +61,17 @@ namespace Stratis.Features.FederatedPeg.Wallet
         /// <summary>Timer for saving wallet files to the file system.</summary>
         private const int WalletSavetimeIntervalInMinutes = 5;
 
+        /// <summary>Minimum time to wait between saving wallet if not forced.</summary>
+        private const int WalletSavetimeMinIntervalInMinutes = 1;
+
         /// <summary>Keep at least this many transactions in the wallet despite the
         /// max reorg age limit for spent transactions. This is so that it never
         /// looks like the wallet has become empty to the user.</summary>
         private const int MinimumRetainedTransactions = 100;
+
+
+        /// <summary>The last time the wallet was saved.</summary>
+        private DateTime lastWalletSave;
 
         /// <summary>The async loop we need to wait upon before we can shut down this manager.</summary>
         private IAsyncLoop asyncLoop;
@@ -98,6 +107,8 @@ namespace Stratis.Features.FederatedPeg.Wallet
         private readonly IDateTimeProvider dateTimeProvider;
 
         private readonly IBlockStore blockStore;
+
+        private readonly ISignals signals;
 
         /// <summary>Indicates whether the federation is active.</summary>
         private bool isFederationActive;
@@ -138,7 +149,8 @@ namespace Stratis.Features.FederatedPeg.Wallet
             IDateTimeProvider dateTimeProvider,
             IFederatedPegSettings federatedPegSettings,
             IWithdrawalExtractor withdrawalExtractor,
-            IBlockStore blockStore) : base()
+            IBlockStore blockStore,
+            ISignals signals) : base()
         {
             Guard.NotNull(network, nameof(network));
             Guard.NotNull(chainIndexer, nameof(chainIndexer));
@@ -164,6 +176,8 @@ namespace Stratis.Features.FederatedPeg.Wallet
             this.withdrawalExtractor = withdrawalExtractor;
             this.isFederationActive = false;
             this.blockStore = blockStore;
+            this.signals = signals;
+            this.lastWalletSave = DateTime.Now;
 
             nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
             nodeStats.RegisterStats(this.AddInlineStats, StatsType.Inline, this.GetType().Name, 800);
@@ -266,6 +280,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 if (this.fileStorage.Exists(WalletFileName))
                 {
                     this.Wallet = this.fileStorage.LoadByFileName(WalletFileName);
+                    Guard.Assert(this.Wallet.MultiSigAddress.Address == this.federatedPegSettings.MultiSigAddress.ToString());
                     this.RemoveUnconfirmedTransactionData();
                 }
                 else
@@ -283,7 +298,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 // save the wallets file every 5 minutes to help against crashes.
                 this.asyncLoop = this.asyncProvider.CreateAndRunAsyncLoop("wallet persist job", token =>
                 {
-                    this.SaveWallet();
+                    this.SaveWallet(true);
                     this.logger.LogInformation("Wallets saved to file at {0}.", this.dateTimeProvider.GetUtcNow());
 
                     return Task.CompletedTask;
@@ -300,7 +315,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
             lock (this.lockObject)
             {
                 this.asyncLoop?.Dispose();
-                this.SaveWallet();
+                this.SaveWallet(true);
             }
         }
 
@@ -476,9 +491,25 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 IWithdrawal withdrawal = this.withdrawalExtractor.ExtractWithdrawalFromTransaction(transaction, blockHash, blockHeight ?? 0);
                 if (withdrawal != null)
                 {
-                    // Exit if already present and included in a block.
+                    // Check the wallet for any existing transactions related to this deposit id.
                     List<(Transaction transaction, IWithdrawal withdrawal)> walletData = this.FindWithdrawalTransactions(withdrawal.DepositId);
-                    if ((walletData.Count == 1) && (walletData[0].withdrawal.BlockNumber != 0))
+
+                    // Already redeemed in a confirmed block?
+                    if (walletData.Count != 0 && blockHeight != null)
+                    {
+                        (_, IWithdrawal existingWithdrawal) = walletData.LastOrDefault(d => d.withdrawal.BlockNumber != 0 && d.withdrawal.Id != withdrawal.Id);
+
+                        if (existingWithdrawal != null)
+                        {
+                            string error = string.Format("Deposit '{0}' last redeemed in transaction '{1}' (height {2}) and then redeemed again in '{3}' (height {4})!.", withdrawal.DepositId, existingWithdrawal.Id, existingWithdrawal.BlockNumber, withdrawal.Id, withdrawal.BlockNumber);
+
+                            // Just display an error on the console for now.
+                            this.logger.LogError(error);
+
+                            // Fall through and keep the latest withdrawal.
+                        }
+                    }
+                    else if ((walletData.Count == 1) && (walletData[0].withdrawal.BlockNumber != 0))
                     {
                         this.logger.LogDebug("Deposit '{0}' already included in block.", withdrawal.DepositId);
                         return false;
@@ -865,16 +896,18 @@ namespace Stratis.Features.FederatedPeg.Wallet
         }
 
         /// <inheritdoc />
-        public void SaveWallet()
+        public void SaveWallet(bool force = false)
         {
             lock (this.lockObject)
             {
+                // If this is not a forced save then check that we're not saving the wallet too often.
+                if (!force && ((DateTime.Now - this.lastWalletSave) < TimeSpan.FromMinutes(WalletSavetimeMinIntervalInMinutes)))
+                    return;
+
                 if (this.Wallet != null)
                 {
-                    lock (this.lockObject)
-                    {
-                        this.fileStorage.SaveToFile(this.Wallet, WalletFileName);
-                    }
+                    this.fileStorage.SaveToFile(this.Wallet, WalletFileName);
+                    this.lastWalletSave = DateTime.Now;
                 }
             }
         }
@@ -922,7 +955,8 @@ namespace Stratis.Features.FederatedPeg.Wallet
 
                 foreach ((Transaction transaction, IWithdrawal withdrawal) in this.FindWithdrawalTransactions(depositId))
                 {
-                    walletUpdated |= this.RemoveTransaction(transaction);
+                    if (withdrawal.BlockNumber == 0)
+                        walletUpdated |= this.RemoveTransaction(transaction);
                 }
 
                 return walletUpdated;
@@ -1110,6 +1144,22 @@ namespace Stratis.Features.FederatedPeg.Wallet
 
                 return ValidateTransactionResult.Valid();
             }
+        }
+
+
+        public string GetSpendingInfo(Transaction partialTransaction)
+        {
+            string ret = "";
+
+            foreach (TxIn input in partialTransaction.Inputs)
+            {
+                if (this.outpointLookup.TryGetValue(input.PrevOut, out TransactionData transactionData))
+                    ret += transactionData.BlockHeight + "-";
+
+                ret += input.PrevOut.Hash.ToString().Substring(0, 6) + "-" + input.PrevOut.N + ",";
+            }
+
+            return ret;
         }
 
         /// <inheritdoc />
@@ -1355,6 +1405,8 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 benchLog.AppendLine("".PadRight(133, '='));
                 benchLog.AppendLine();
             }
+
+            this.signals.Publish(new FederationWalletStatusEvent(ConfirmedAmount, UnConfirmedAmount));
         }
     }
 }

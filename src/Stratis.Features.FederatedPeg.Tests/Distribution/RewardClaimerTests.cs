@@ -100,7 +100,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Distribution
                 for (int i = 11; i <= 15; i++)
                 {
                     Transaction rewardTransaction = rewardClaimer.BuildRewardTransaction(false);
-                    IDeposit deposit = await depositExtractor.ExtractDepositFromTransaction(rewardTransaction, i, this.blocks[i].Block.GetHash());
+                    IDeposit deposit = await depositExtractor.ExtractDepositFromTransaction(rewardTransaction, i, this.blocks[i].Block.GetHash(), 0);
                     Assert.NotNull(deposit);
                 }
             }
@@ -131,7 +131,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Distribution
                 Assert.Equal(Money.Coins(90), rewardTransaction.TotalOut);
 
                 var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader, this.blockStore);
-                IDeposit deposit = await depositExtractor.ExtractDepositFromTransaction(rewardTransaction, 30, this.blocks[30].Block.GetHash());
+                IDeposit deposit = await depositExtractor.ExtractDepositFromTransaction(rewardTransaction, 30, this.blocks[30].Block.GetHash(), 0);
                 Assert.Equal(Money.Coins(90), deposit.Amount);
             }
         }
