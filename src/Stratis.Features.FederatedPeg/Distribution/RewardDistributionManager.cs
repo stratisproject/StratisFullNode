@@ -30,6 +30,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
         private readonly ILogger logger;
         private readonly Network network;
         private readonly IFederationHistory federationHistory;
+        private readonly IConversionConfirmationTracker conversionConfirmationTracker;
 
         private readonly Dictionary<Script, long> blocksMinedEach = new Dictionary<Script, long>();
         private readonly Dictionary<uint256, Transaction> commitmentTransactionByHashDictionary = new Dictionary<uint256, Transaction>();
@@ -46,7 +47,8 @@ namespace Stratis.Features.FederatedPeg.Distribution
             ChainIndexer chainIndexer,
             IConversionRequestRepository conversionRequestRepository,
             IConsensusManager consensusManager,
-            IFederationHistory federationHistory)
+            IFederationHistory federationHistory,
+            IConversionConfirmationTracker conversionConfirmationTracker)
         {
             this.network = network;
             this.chainIndexer = chainIndexer;
@@ -54,6 +56,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             this.consensusManager = consensusManager;
             this.logger = LogManager.GetCurrentClassLogger();
             this.federationHistory = federationHistory;
+            this.conversionConfirmationTracker = conversionConfirmationTracker;
 
             this.encoder = new CollateralHeightCommitmentEncoder();
             this.epoch = this.network.Consensus.MaxReorgLength == 0 ? DefaultEpoch : (int)this.network.Consensus.MaxReorgLength;
@@ -79,8 +82,23 @@ namespace Stratis.Features.FederatedPeg.Distribution
             // For Strax to wStrax transfers and SRC20 to ERC20 the deposit id will match the conversion request id.
             ConversionRequest conversionRequest = this.conversionRequestRepository.Get(depositId.ToString());
 
+            // We want to apportion fees fairly to active federation members that are confirming InterFlux transfers.
+            // However, at the time the distribution transaction is constructed the conversion request it relates to may not have been
+            // confirmed yet. So we use the recent conversion requests that are already processed
+            IEnumerable<ConversionRequest> requests = this.conversionRequestRepository.GetAll(false).Where(c => c.Processed).OrderByDescending(a => a.BlockHeight).ThenBy(b => b.RequestId).Take(5);
+
+            var participants = new HashSet<PubKey>();
+
+            foreach (ConversionRequest request in requests)
+            {
+                foreach (PubKey participant in this.conversionConfirmationTracker.GetParticipants(request.RequestId))
+                {
+                    participants.Add(participant);
+                }
+            }
+
             // Start checking if a multisig member mined a block at the conversion deposit block height tip less epoch window blocks.
-            var startHeight = conversionRequest.BlockHeight - this.epochWindow;
+            int startHeight = conversionRequest.BlockHeight - this.epochWindow;
 
             // Inspect the round of blocks equal to the federation size
             // and determine if a multisig member mined the block.
@@ -88,7 +106,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
             // Look back at least 8 federation sizes to ensure that we collect enough data on the multisig
             // members that mined.
-            var inspectionRange = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeader(conversionRequest.BlockHeight)).Count * 8;
+            int inspectionRange = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeader(conversionRequest.BlockHeight)).Count * 8;
 
             for (int i = inspectionRange; i >= 0; i--)
             {
@@ -103,6 +121,9 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
                 // Check if the multisig is an owner of the multisig contract.
                 if (!MultiSigMembers.IsContractOwner(this.network, collateralFederationMember.PubKey))
+                    continue;
+
+                if (!participants.Contains(collateralFederationMember.PubKey))
                     continue;
 
                 if (chainedHeader.Block == null)

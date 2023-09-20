@@ -321,6 +321,7 @@ namespace Stratis.Features.FederatedPeg
                         // The reward distribution manager only runs on the side chain.
                         if (!isMainChain)
                         {
+                            services.AddSingleton<IConversionConfirmationTracker, ConversionConfirmationTracker>();
                             services.AddSingleton<IRewardDistributionManager, RewardDistributionManager>();
                             services.AddSingleton<ICoinbaseSplitter, PremineCoinbaseSplitter>();
                             services.AddSingleton<IBlockBufferGenerator, BlockBufferGenerator>();

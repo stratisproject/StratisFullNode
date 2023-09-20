@@ -79,6 +79,7 @@ namespace Stratis.Bitcoin.Features.Interop
         private readonly ILogger logger;
         private readonly IMaturedBlocksSyncManager maturedBlocksSyncManager;
         private readonly IReplenishmentKeyValueStore replenishmentKeyValueStore;
+        private readonly IConversionConfirmationTracker conversionConfirmationTracker;
         private readonly Network network;
         private readonly INodeLifetime nodeLifetime;
 
@@ -118,7 +119,8 @@ namespace Stratis.Bitcoin.Features.Interop
             INodeStats nodeStats,
             ICirrusContractClient cirrusClient,
             IMaturedBlocksSyncManager maturedBlocksSyncManager,
-            IReplenishmentKeyValueStore replenishmentKeyValueStore)
+            IReplenishmentKeyValueStore replenishmentKeyValueStore,
+            IConversionConfirmationTracker conversionConfirmationTracker)
         {
             this.interopSettings = interopSettings;
             this.ethClientProvider = ethClientProvider;
@@ -139,6 +141,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.keyValueRepository = keyValueRepository;
             this.maturedBlocksSyncManager = maturedBlocksSyncManager;
             this.replenishmentKeyValueStore = replenishmentKeyValueStore;
+            this.conversionConfirmationTracker = conversionConfirmationTracker;
 
             this.logger = LogManager.GetCurrentClassLogger();
             this.cirrusClient = cirrusClient;
@@ -994,7 +997,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             this.logger.Info("There are {0} unprocessed mint requests.", mintRequests.Count);
 
-            var stateMachine = new InteropPollerStateMachine(this.logger, this.externalApiPoller, this.conversionRequestCoordinationService, this.federationManager, this.federatedPegBroadcaster);
+            var stateMachine = new InteropPollerStateMachine(this.logger, this.externalApiPoller, this.conversionRequestCoordinationService, this.federationManager, this.federatedPegBroadcaster, this.conversionConfirmationTracker, this.network);
 
             foreach (ConversionRequest request in mintRequests)
             {
@@ -1278,7 +1281,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             this.logger.Info("There are {0} unprocessed burn requests.", burnRequests.Count);
 
-            var stateMachine = new InteropPollerStateMachine(this.logger, this.externalApiPoller, this.conversionRequestCoordinationService, this.federationManager, this.federatedPegBroadcaster);
+            var stateMachine = new InteropPollerStateMachine(this.logger, this.externalApiPoller, this.conversionRequestCoordinationService, this.federationManager, this.federatedPegBroadcaster, this.conversionConfirmationTracker, this.network);
 
             foreach (ConversionRequest request in burnRequests)
             {

@@ -1,5 +1,8 @@
-﻿using System.Numerics;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
 using System.Threading.Tasks;
+using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
@@ -7,8 +10,10 @@ using Stratis.Bitcoin.Features.Interop.Payloads;
 using Stratis.Bitcoin.Features.Interop.Settings;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.Wallet;
+using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Coordination;
+using Stratis.Features.FederatedPeg.Distribution;
 using Stratis.Features.FederatedPeg.Interfaces;
 
 namespace Stratis.Bitcoin.Features.Interop
@@ -23,14 +28,18 @@ namespace Stratis.Bitcoin.Features.Interop
         private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
         private readonly IFederationManager federationManager;
         private readonly IFederatedPegBroadcaster federatedPegBroadcaster;
+        private readonly IConversionConfirmationTracker conversionConfirmationTracker;
+        private readonly Network network;
 
-        public InteropPollerStateMachine(ILogger logger, IExternalApiPoller externalApiPoller, IConversionRequestCoordinationService conversionRequestCoordinationService, IFederationManager federationManager, IFederatedPegBroadcaster federatedPegBroadcaster)
+        public InteropPollerStateMachine(ILogger logger, IExternalApiPoller externalApiPoller, IConversionRequestCoordinationService conversionRequestCoordinationService, IFederationManager federationManager, IFederatedPegBroadcaster federatedPegBroadcaster, IConversionConfirmationTracker conversionConfirmationTracker, Network network)
         {
             this.logger = logger;
             this.externalApiPoller = externalApiPoller;
             this.conversionRequestCoordinationService = conversionRequestCoordinationService;
             this.federationManager = federationManager;
             this.federatedPegBroadcaster = federatedPegBroadcaster;
+            this.conversionConfirmationTracker = conversionConfirmationTracker;
+            this.network = network;
         }
 
         public void Unprocessed(ConversionRequest request, bool originator, IFederationMember designatedMember, bool mintOnCirrus, ContractType contractType)
@@ -170,6 +179,22 @@ namespace Stratis.Bitcoin.Features.Interop
 
                     request.RequestStatus = ConversionRequestStatus.Processed;
                     request.Processed = true;
+
+                    List<string> owners = await clientForDestChain.GetOwnersAsync().ConfigureAwait(false);
+
+                    foreach (string owner in owners)
+                    {
+                        bool ownerConfirmed = await clientForDestChain.AddressConfirmedTransactionAsync(transactionId3, owner).ConfigureAwait(false);
+
+                        if (ownerConfirmed)
+                        {
+                            PubKey pubKey = this.network.IsTest() ? MultiSigMembers.InteropMultisigAccountsTestNet.First(v => v.Value == owner).Key : MultiSigMembers.InteropMultisigAccountsMainNet.First(v => v.Value == owner).Key;
+
+                            this.logger.Debug($"Confirmation tracker: {owner} ({pubKey}) confirmed {request.RequestId}.");
+
+                            this.conversionConfirmationTracker.RecordParticipant(request.RequestId, pubKey);
+                        }
+                    }
 
                     // We no longer need to track votes for this transaction.
                     this.conversionRequestCoordinationService.RemoveTransaction(request.RequestId);
