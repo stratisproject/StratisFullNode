@@ -30,6 +30,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
     public sealed class RewardClaimer : IDisposable
     {
         private const string LastDistributionHeightKey = "rewardClaimerLastDistributionHeight";
+        private const int UnspentRewardsToTrack = 200;
 
         private readonly IBroadcasterManager broadcasterManager;
         private readonly ChainIndexer chainIndexer;
@@ -42,6 +43,10 @@ namespace Stratis.Features.FederatedPeg.Distribution
         private readonly ISignals signals;
 
         private readonly SubscriptionToken blockConnectedSubscription;
+        private readonly SubscriptionToken blockDisconnectedSubscription;
+
+        private readonly List<ScriptCoin> unspentRewardOutputs;
+        private readonly Dictionary<string, ScriptCoin> unspentRewardLookup;
 
         public RewardClaimer(
             IBroadcasterManager broadcasterManager,
@@ -61,7 +66,13 @@ namespace Stratis.Features.FederatedPeg.Distribution
             this.network = network;
             this.signals = signals;
 
+            this.unspentRewardOutputs = new List<ScriptCoin>();
+            this.unspentRewardLookup = new Dictionary<string, ScriptCoin>();
+
+            // TODO: Populate unspentRewardOutputs for the past 100-200 blocks
+
             this.blockConnectedSubscription = this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
+            this.blockDisconnectedSubscription = this.signals.Subscribe<BlockDisconnected>(this.OnBlockDisconnected);
 
             LoadLastDistributionHeight();
         }
@@ -82,45 +93,24 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
             if (batchRewards)
             {
-                var coins = new List<ScriptCoin>();
-
-                var startFromHeight = (this.lastDistributionHeight + 1) - minStakeConfirmations;
-
-                this.logger.LogInformation($"[Reward Batching] Calculating rewards from height {startFromHeight} to {startFromHeight + this.network.RewardClaimerBlockInterval} (last distribution [{this.lastDistributionHeight + 1}] less minimum stake confirmations [{minStakeConfirmations}]).");
-                for (int height = startFromHeight; height < startFromHeight + this.network.RewardClaimerBlockInterval; height++)
-                {
-                    // Get the block that is minStakeConfirmations behind the current tip.
-                    Block maturedBlock = GetMaturedBlock(height);
-                    if (maturedBlock == null)
-                        continue;
-
-                    // We are only interested in the coinstake, as it is the only transaction that we expect to contain outputs paying the reward script.
-                    List<ScriptCoin> coinsToAdd = GetRewardCoins(maturedBlock.Transactions[1]);
-                    if (!coinsToAdd.Any())
-                        continue;
-
-                    coins.AddRange(coinsToAdd);
-                }
-
-                if (!coins.Any())
+                if (!this.unspentRewardOutputs.Any())
                     return null;
 
-                return BuildRewardTransaction(coins);
+                // The list will be cleared automatically when the spent outputs appear in a block, so we just have to pass it in here.
+                return BuildRewardTransaction(this.unspentRewardOutputs);
             }
-            else
-            {
-                // Get the block that is minStakeConfirmations behind the current tip.
-                Block maturedBlock = GetMaturedBlock(this.chainIndexer.Tip.Height - minStakeConfirmations);
-                if (maturedBlock == null)
-                    return null;
 
-                // We are only interested in the coinstake, as it is the only transaction that we expect to contain outputs paying the reward script.
-                List<ScriptCoin> coins = GetRewardCoins(maturedBlock.Transactions[1]);
-                if (!coins.Any())
-                    return null;
+            // Get the block that is minStakeConfirmations behind the current tip.
+            Block maturedBlock = GetMaturedBlock(this.chainIndexer.Tip.Height - minStakeConfirmations);
+            if (maturedBlock == null)
+                return null;
 
-                return BuildRewardTransaction(coins);
-            }
+            // We are only interested in the coinstake, as it is the only transaction that we expect to contain outputs paying the reward script.
+            List<ScriptCoin> coins = GetRewardCoins(maturedBlock.Transactions[1]);
+            if (!coins.Any())
+                return null;
+
+            return BuildRewardTransaction(coins);
         }
 
         private List<ScriptCoin> GetRewardCoins(Transaction coinStake)
@@ -137,6 +127,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
                 {
                     // The reward script is P2SH, so we need to inform the builder of the corresponding redeem script to enable it to be spent.
                     var coin = ScriptCoin.Create(this.network, coinStake, txOutput, StraxCoinstakeRule.CirrusRewardScriptRedeem);
+
                     coins.Add(coin);
                 }
             }
@@ -205,6 +196,41 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
         private void OnBlockConnected(BlockConnected blockConnected)
         {
+            if (blockConnected.ConnectedBlock.Block.Transactions.Count > 1 && blockConnected.ConnectedBlock.Block.Transactions[1].IsCoinStake)
+            {
+                foreach (ScriptCoin reward in GetRewardCoins(blockConnected.ConnectedBlock.Block.Transactions[1]))
+                {
+                    if (reward.Amount == Money.Zero || reward.Outpoint.IsNull)
+                        continue;
+
+                    this.unspentRewardOutputs.Add(reward);
+                    this.unspentRewardLookup.Add($"{reward.Outpoint.Hash}:{reward.Outpoint.N}", reward);
+                }
+            }
+
+            // Remove reward outputs that have been spent as inputs in transactions.
+            foreach (Transaction tx in blockConnected.ConnectedBlock.Block.Transactions)
+            {
+                if (tx.IsCoinBase)
+                    continue;
+
+                foreach (TxIn txIn in tx.Inputs)
+                {
+                    if (txIn.PrevOut.IsNull)
+                        continue;
+
+                    string prevOut = $"{txIn.PrevOut.Hash}:{txIn.PrevOut.N}";
+
+                    if (this.unspentRewardLookup.TryGetValue(prevOut, out ScriptCoin toRemove))
+                    {
+                        this.unspentRewardOutputs.Remove(toRemove);
+                        this.unspentRewardLookup.Remove(prevOut);
+                    }
+                }
+            }
+
+            TrimUnspentRewards();
+
             if (this.initialBlockDownloadState.IsInitialBlockDownload())
                 return;
 
@@ -246,14 +272,61 @@ namespace Stratis.Features.FederatedPeg.Distribution
             }
         }
 
-        private void BuildAndCompleteRewardClaim(bool batchRewards, int lastDistributionHeight)
+        private void OnBlockDisconnected(BlockDisconnected blockDisconnected)
+        {
+            /* Adding back reward outputs upon reorg is a bit tricky, as we don't have the amounts of the transaction inputs without an additional data source.
+
+            foreach (Transaction tx in blockDisconnected.DisconnectedBlock.Block.Transactions)
+            {
+                if (tx.IsCoinBase || tx.IsCoinStake)
+                    continue;
+
+                // Check if the federation is being paid.
+                if (tx.Outputs.All(t => t.ScriptPubKey != this.network.Federations.GetOnlyFederation().MultisigScript))
+                    continue;
+
+                // Paying the federation is an insufficient indication that it is a reward claim cross-chain transfer, so we need to inspect the scriptSigs to see if they are for the anyone-can-spend script.
+                foreach (TxIn txIn in tx.Inputs)
+                {
+                    if (txIn.GetSigner(this.network) != StraxCoinstakeRule.CirrusRewardScriptRedeem.Hash)
+                        continue;
+
+                    // Recreating the ScriptCoin is a lot messier in this case as we can't necessarily look up the original transaction without guaranteeing txindex is available.
+                    ScriptCoin reward = ScriptCoin.Create(this.network, txIn.PrevOut.Hash, txIn.PrevOut.N, value, StraxCoinstakeRule.CirrusRewardScript, StraxCoinstakeRule.CirrusRewardScriptRedeem);
+
+                    this.unspentRewardOutputs.Add(reward);
+                    this.unspentRewardLookup.Add($"{reward.Outpoint.Hash}:{reward.Outpoint.N}", reward);
+                }
+            }
+
+            TrimUnspentRewards();
+            */
+        }
+
+        private void TrimUnspentRewards()
+        {
+            if (this.unspentRewardOutputs.Count <= UnspentRewardsToTrack)
+                return;
+
+            int excess = this.unspentRewardOutputs.Count - UnspentRewardsToTrack;
+
+            List<ScriptCoin> excessEntries = this.unspentRewardOutputs.TakeLast(excess).ToList();
+
+            foreach (ScriptCoin excessEntry in excessEntries)
+            {
+                this.unspentRewardOutputs.Remove(excessEntry);
+                this.unspentRewardLookup.Remove($"{excessEntry.Outpoint.Hash}:{excessEntry.Outpoint.N}");
+            }
+        }
+
+        private void BuildAndCompleteRewardClaim(bool batchRewards, int newLastDistributionHeight)
         {
             Transaction transaction = BuildRewardTransaction(batchRewards);
 
             if (transaction == null)
                 return;
 
-            this.lastDistributionHeight = lastDistributionHeight;
+            this.lastDistributionHeight = newLastDistributionHeight;
 
             SaveLastDistributionHeight();
 
@@ -288,6 +361,9 @@ namespace Stratis.Features.FederatedPeg.Distribution
         {
             if (this.blockConnectedSubscription != null)
                 this.signals.Unsubscribe(this.blockConnectedSubscription);
+
+            if (this.blockDisconnectedSubscription != null)
+                this.signals.Unsubscribe(this.blockDisconnectedSubscription);
         }
     }
 }

@@ -187,6 +187,7 @@ namespace Stratis.Sidechains.Networks
                 ContractSerializerV2ActivationHeight = 3_386_335, // Monday 13 December 16:00:00 (Estimated)
                 Release1300ActivationHeight = 4_334_400,
                 Release1400ActivationHeight = 5_345_325, // 7 December 2022 (Estimated)
+                Release1500ActivationHeight = 6_000_000, // Placeholder
             };
 
             var buriedDeployments = new BuriedDeploymentsArray

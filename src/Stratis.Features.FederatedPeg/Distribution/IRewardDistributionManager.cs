@@ -1,10 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using NBitcoin;
 using Stratis.Features.FederatedPeg.Wallet;
 
 namespace Stratis.Features.FederatedPeg.Distribution
 {
-    public interface IRewardDistributionManager
+    public interface IRewardDistributionManager : IDisposable
     {
         /// <summary>
         /// For wSTRAX and SRC20 to ERC20 transfers, the multisig needs to have a fee for submitting and confirming the transaction on the external chain, paid out to them.
@@ -17,6 +18,11 @@ namespace Stratis.Features.FederatedPeg.Distribution
         /// Finds the proportion of blocks mined by each miner.
         /// Creates a corresponding list of recipient scriptPubKeys and reward amounts.
         /// </summary>
-        List<Recipient> Distribute(int blockHeight, Money totalReward);
+        List<Recipient> Distribute(int blockHeight, Money totalReward, uint blockTime, uint256 depositId);
+
+        /// <summary>
+        /// Rotates the stored distribution transaction metadata so that the range for the next one will be updated.
+        /// </summary>
+        void SetNewMetadata();
     }
 }
