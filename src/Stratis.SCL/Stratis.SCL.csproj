@@ -13,7 +13,6 @@
   <ItemGroup>
     <PackageReference Include="CSharpFunctionalExtensions" Version="1.10.0" />
     <PackageReference Include="ICSharpCode.Decompiler" Version="7.2.1.6856" />
-    <PackageReference Include="NStratis" Version="4.0.0.86" />
     <PackageReference Include="Stratis.SmartContracts.Standards" Version="2.0.0" />
 	<PackageReference Include="Nethereum.RLP" Version="3.8.0" />
   </ItemGroup>
