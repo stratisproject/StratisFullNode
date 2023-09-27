@@ -55,8 +55,10 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.network = new CirrusRegTest();
             this.mainChainNetwork = new StraxRegTest();
 
+            int oldValue = ((PoAConsensusOptions)this.network.Consensus.Options).Release1300ActivationHeight;
+
             // TODO: Upgrade these tests to conform with release 1.3.0.0 activation.
-            ((PoAConsensusOptions)this.network.Consensus.Options).Release1300ActivationHeight = int.MaxValue;
+            ((PoAConsensusOptions)this.network.Consensus.Options).SetPrivatePropertyValue("Release1300ActivationHeight", int.MaxValue);
 
             this.opReturnDataReader = Substitute.For<IOpReturnDataReader>();
             this.opReturnDataReader.TryGetTargetAddress(null, out string address).Returns(callInfo => { callInfo[1] = null; return false; });
@@ -89,6 +91,8 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
 
             this.retrievalTypeConfirmations = new RetrievalTypeConfirmations(this.network, new NodeDeployments(this.network, new ChainIndexer(this.network)), this.federatedPegSettings, null, null);
+
+            ((PoAConsensusOptions)this.network.Consensus.Options).SetPrivatePropertyValue("Release1300ActivationHeight", oldValue);
         }
 
         [Fact]

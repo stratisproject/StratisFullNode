@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
-using Org.BouncyCastle.Crypto.Parameters;
 using Stratis.Bitcoin.Utilities;
 using TracerAttributes;
 

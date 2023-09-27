@@ -133,7 +133,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
         [Fact]
         public void MinerPairStarts()
         {
-            CirrusRegTest collateralSidechainNetwork = new CirrusSingleCollateralRegTest(this.mainNetwork);
+            CirrusRegTest collateralSidechainNetwork = new CirrusSingleCollateralRegTest(this.sidechainNetwork);
 
             using var sideNodeBuilder = SidechainNodeBuilder.CreateSidechainNodeBuilder(this);
             using var nodeBuilder = NodeBuilder.Create(this);
@@ -167,7 +167,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
         {
             using (var nodeBuilder = SidechainNodeBuilder.CreateSidechainNodeBuilder(this))
             {
-                CirrusRegTest collateralSidechainNetwork = new CirrusSingleCollateralRegTest();
+                CirrusRegTest collateralSidechainNetwork = new CirrusSingleCollateralRegTest(this.sidechainNetwork);
 
                 CoreNode side = nodeBuilder.CreateSidechainFederationNode(collateralSidechainNetwork, this.mainNetwork, collateralSidechainNetwork.FederationKeys[0]);
                 side.AppendToConfig("sidechain=1");
