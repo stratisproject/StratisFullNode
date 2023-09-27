@@ -172,6 +172,9 @@ namespace Stratis.Bitcoin.Configuration.Logging
                 AutoFlush = true,
             };
 
+            // Ensure non-ascii characters don't get omitted from the console output (e.g. if this defaults to 'OSEncoding').
+            consoleTarget.Encoding = Encoding.UTF8;
+
             consoleTarget.RowHighlightingRules.Add(new ConsoleRowHighlightingRule("level == LogLevel.Info", ConsoleOutputColor.Gray, ConsoleOutputColor.Black));
             consoleTarget.RowHighlightingRules.Add(new ConsoleRowHighlightingRule("level == LogLevel.Warn", ConsoleOutputColor.Gray, ConsoleOutputColor.Black));
             consoleTarget.RowHighlightingRules.Add(new ConsoleRowHighlightingRule("level == LogLevel.Error", ConsoleOutputColor.Gray, ConsoleOutputColor.Black));

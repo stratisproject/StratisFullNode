@@ -133,7 +133,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
         [Fact]
         public void MinerPairStarts()
         {
-            CirrusRegTest collateralSidechainNetwork = new CirrusSingleCollateralRegTest(this.mainNetwork);
+            CirrusRegTest collateralSidechainNetwork = new CirrusSingleCollateralRegTest(this.sidechainNetwork);
 
             using var sideNodeBuilder = SidechainNodeBuilder.CreateSidechainNodeBuilder(this);
             using var nodeBuilder = NodeBuilder.Create(this);
@@ -167,17 +167,20 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
         {
             using (var nodeBuilder = SidechainNodeBuilder.CreateSidechainNodeBuilder(this))
             {
-                CoreNode side = nodeBuilder.CreateSidechainFederationNode(this.sidechainNetwork, this.mainNetwork, this.sidechainNetwork.FederationKeys[0]);
+                CirrusRegTest collateralSidechainNetwork = new CirrusSingleCollateralRegTest(this.sidechainNetwork);
+
+                CoreNode side = nodeBuilder.CreateSidechainFederationNode(collateralSidechainNetwork, this.mainNetwork, collateralSidechainNetwork.FederationKeys[0]);
                 side.AppendToConfig("sidechain=1");
                 side.AppendToConfig($"redeemscript={this.scriptAndAddresses.payToMultiSig}");
-                side.AppendToConfig($"publickey={this.sidechainNetwork.FederationMnemonics[0].DeriveExtKey().PrivateKey.PubKey}");
+                side.AppendToConfig($"publickey={collateralSidechainNetwork.FederationMnemonics[0].DeriveExtKey().PrivateKey.PubKey}");
                 side.AppendToConfig("federationips=0.0.0.0,0.0.0.1"); // Placeholders
                 side.AppendToConfig($"mindepositconfirmations={DepositConfirmations}");
 
-                CoreNode main = nodeBuilder.CreateMainChainFederationNode(this.mainNetwork, this.sidechainNetwork).WithWallet();
+                CoreNode main = nodeBuilder.CreateMainChainFederationNode(this.mainNetwork, collateralSidechainNetwork).WithWallet();
+                main.AppendToConfig("addressindex=1");
                 main.AppendToConfig("mainchain=1");
                 main.AppendToConfig($"redeemscript={this.scriptAndAddresses.payToMultiSig}");
-                main.AppendToConfig($"publickey={this.sidechainNetwork.FederationMnemonics[0].DeriveExtKey().PrivateKey.PubKey}");
+                main.AppendToConfig($"publickey={collateralSidechainNetwork.FederationMnemonics[0].DeriveExtKey().PrivateKey.PubKey}");
                 main.AppendToConfig("federationips=0.0.0.0,0.0.0.1"); // Placeholders
                 main.AppendToConfig($"mindepositconfirmations={DepositConfirmations}");
 

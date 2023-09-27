@@ -57,7 +57,15 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <summary>
         /// The height at which Release 1.3.0.0 became BIP activated.
         /// </summary>
-        public int Release1300ActivationHeight { get; set; }
+        public int Release1300ActivationHeight { get; protected set; }
+
+        /// <summary>
+        /// The height at which Release 1.4.0.0 became active.
+        /// <para>
+        /// This was primarily used for activating ScriptPubkey sorting for paying multisig recipients.
+        /// </para>
+        /// </summary>
+        public int Release1400ActivationHeight { get; protected set; }
 
         /// <summary>
         /// The height at which inituitive mining slots become active.
@@ -110,6 +118,8 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <param name="release1100ActivationHeight"><see cref="Release1100ActivationHeight"/>.</param>
         /// <param name="pollExpiryBlocks"><see cref="PollExpiryBlocks"/>.</param>
         /// <param name="contractSerializerV2ActivationHeight"><see cref="ContractSerializerV2ActivationHeight"/>.</param>
+        /// <param name="release1300ActivationHeight"><see cref="Release1300ActivationHeight"/>.</param>
+        /// <param name="release1400ActivationHeight"><see cref="Release1400ActivationHeight"/>.</param>
         public PoAConsensusOptions(
             uint maxBlockBaseSize,
             int maxStandardVersion,
@@ -131,7 +141,8 @@ namespace Stratis.Bitcoin.Features.PoA
             int? release1100ActivationHeight = null,
             int? pollExpiryBlocks = null,
             int? contractSerializerV2ActivationHeight = null,
-            int? release1300ActivationHeight = null)
+            int? release1300ActivationHeight = null,
+            int? release1400ActivationHeight = null)
                 : base(maxBlockBaseSize, maxStandardVersion, maxStandardTxWeight, maxBlockSigopsCost, maxStandardTxSigopsCost, witnessScaleFactor: 1)
         {
             this.GenesisFederationMembers = genesisFederationMembers;
@@ -161,6 +172,8 @@ namespace Stratis.Bitcoin.Features.PoA
                 this.ContractSerializerV2ActivationHeight = contractSerializerV2ActivationHeight.Value;
             if (release1300ActivationHeight.HasValue)
                 this.Release1300ActivationHeight = release1300ActivationHeight.Value;
+            if (release1400ActivationHeight.HasValue)
+                this.Release1400ActivationHeight = release1400ActivationHeight.Value;
 
             if (this.AutoKickIdleMembers && !this.VotingEnabled)
                 throw new ArgumentException("Voting should be enabled for automatic kicking to work.");

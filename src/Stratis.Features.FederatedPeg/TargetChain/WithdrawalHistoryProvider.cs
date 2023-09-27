@@ -3,6 +3,7 @@ using System.Linq;
 using NBitcoin;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Features.MemoryPool;
+using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -22,6 +23,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly MempoolManager mempoolManager;
         private readonly Network network;
         private readonly IWithdrawalExtractor withdrawalExtractor;
+        private readonly IFederationWalletManager federationWalletManager;
 
         /// <summary>
         /// The <see cref="WithdrawalHistoryProvider"/> constructor.
@@ -31,17 +33,20 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// /// <param name="conversionRequestRepository">Repository containing all cross-network mint and burn transactions.</param>
         /// <param name="mempoolManager">Mempool which provides information about transactions in the mempool.</param>
         /// <param name="counterChainNetworkWrapper">Counter chain network.</param>
+        /// <param name="federationWalletManager">Federation wallet manager.</param>
         public WithdrawalHistoryProvider(
             Network network,
             IFederatedPegSettings federatedPegSettings,
             IConversionRequestRepository conversionRequestRepository,
             MempoolManager mempoolManager,
-            CounterChainNetworkWrapper counterChainNetworkWrapper)
+            CounterChainNetworkWrapper counterChainNetworkWrapper,
+            IFederationWalletManager federationWalletManager)
         {
             this.network = network;
             this.federatedPegSettings = federatedPegSettings;
             this.withdrawalExtractor = new WithdrawalExtractor(federatedPegSettings, new OpReturnDataReader(counterChainNetworkWrapper.CounterChainNetwork), network);
             this.mempoolManager = mempoolManager;
+            this.federationWalletManager = federationWalletManager;
         }
 
         /// <summary>
@@ -106,14 +111,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
         private string GetSpendingInfo(Transaction partialTransaction)
         {
-            string ret = "";
-
-            foreach (TxIn input in partialTransaction.Inputs)
-            {
-                ret += input.PrevOut.Hash.ToString().Substring(0, 6) + "-" + input.PrevOut.N + ",";
-            }
-
-            return ret;
+            return this.federationWalletManager.GetSpendingInfo(partialTransaction);
         }
     }
 }

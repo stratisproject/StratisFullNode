@@ -39,23 +39,20 @@ namespace Stratis.Features.Collateral
 
         private readonly ChainIndexer chainIndexer;
 
-        private readonly JoinFederationRequestMonitor joinFederationRequestMonitor;
-
         private readonly CancellationTokenSource cancellationSource;
 
-        public CollateralPoAMiner(IConsensusManager consensusManager, IDateTimeProvider dateTimeProvider, Network network, INodeLifetime nodeLifetime, IInitialBlockDownloadState ibdState,
-            BlockDefinition blockDefinition, ISlotsManager slotsManager, IConnectionManager connectionManager, JoinFederationRequestMonitor joinFederationRequestMonitor, PoABlockHeaderValidator poaHeaderValidator,
+        public CollateralPoAMiner(IConsensusManager consensusManager, IDateTimeProvider dateTimeProvider, Network network, INodeLifetime nodeLifetime, ILoggerFactory loggerFactory,
+            IInitialBlockDownloadState ibdState, BlockDefinition blockDefinition, ISlotsManager slotsManager, IConnectionManager connectionManager, PoABlockHeaderValidator poaHeaderValidator,
             IFederationManager federationManager, IFederationHistory federationHistory, IIntegrityValidator integrityValidator, IWalletManager walletManager, ChainIndexer chainIndexer, INodeStats nodeStats,
-            VotingManager votingManager, PoASettings poAMinerSettings, ICollateralChecker collateralChecker, IAsyncProvider asyncProvider, ICounterChainSettings counterChainSettings, IIdleFederationMembersKicker idleFederationMembersKicker, ISignals signals,
-            NodeSettings nodeSettings)
-            : base(consensusManager, dateTimeProvider, network, nodeLifetime, ibdState, blockDefinition, slotsManager, connectionManager, poaHeaderValidator,
-            federationManager, federationHistory, integrityValidator, walletManager, nodeStats, votingManager, poAMinerSettings, asyncProvider, idleFederationMembersKicker, signals, nodeSettings)
+            VotingManager votingManager, PoASettings poAMinerSettings, ICollateralChecker collateralChecker, IAsyncProvider asyncProvider, ICounterChainSettings counterChainSettings, IIdleFederationMembersKicker idleFederationMembersKicker,
+            ISignals signals, NodeSettings nodeSettings)
+            : base(consensusManager, dateTimeProvider, network, nodeLifetime, ibdState, blockDefinition, slotsManager, connectionManager,
+            poaHeaderValidator, federationManager, federationHistory, integrityValidator, walletManager, nodeStats, votingManager, poAMinerSettings, asyncProvider, idleFederationMembersKicker, signals, nodeSettings)
         {
             this.counterChainNetwork = counterChainSettings.CounterChainNetwork;
             this.collateralChecker = collateralChecker;
             this.encoder = new CollateralHeightCommitmentEncoder();
             this.chainIndexer = chainIndexer;
-            this.joinFederationRequestMonitor = joinFederationRequestMonitor;
             this.cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(nodeLifetime.ApplicationStopping);
         }
 

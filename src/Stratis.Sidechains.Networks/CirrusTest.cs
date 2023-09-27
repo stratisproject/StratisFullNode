@@ -134,7 +134,8 @@ namespace Stratis.Sidechains.Networks
                 getMiningTimestampV2ActivationStrictHeight: 3_121_500, // 17 January 2022
                 pollExpiryBlocks: 450, // 2 hours
                 contractSerializerV2ActivationHeight: 2_842_681,
-                release1300ActivationHeight: 3_280_032
+                release1300ActivationHeight: 3_280_032,
+                release1400ActivationHeight: 4_074_250
             );
 
             var buriedDeployments = new BuriedDeploymentsArray

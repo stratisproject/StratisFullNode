@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Stratis.Bitcoin.EventBus;
+﻿using Stratis.Bitcoin.EventBus;
 
 namespace Stratis.Bitcoin.Features.PoA.Events
 {

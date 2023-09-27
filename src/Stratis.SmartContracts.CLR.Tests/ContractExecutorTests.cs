@@ -333,6 +333,12 @@ namespace Stratis.SmartContracts.CLR.Tests
             AssertSuccessfulContractMethodExecution(nameof(MultipleIfElseBlocks), nameof(MultipleIfElseBlocks.PersistNormalizeValue), new object[] { "z" });
         }
 
+        [Fact]
+        public void Execute_LibraryContract_ExecutionSucceeds()
+        {
+            AssertSuccessfulContractMethodExecution(nameof(LibraryTest), nameof(LibraryTest.Exists));
+        }
+
         private void AssertSuccessfulContractMethodExecution(string contractName, string methodName, object[] methodParameters = null, string expectedReturn = null)
         {
             var transactionValue = (Money)100;

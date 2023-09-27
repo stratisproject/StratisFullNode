@@ -87,6 +87,13 @@ namespace Stratis.Features.FederatedPeg.Tests
         {
             InitializeCollateralChecker();
 
+            var blockStoreClientMock = new Mock<IBlockStoreClient>();
+            var collateralData = default(VerboseAddressBalancesResult);
+
+            blockStoreClientMock.Setup(x => x.VerboseAddressesBalancesDataAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>())).ReturnsAsync(collateralData);
+
+            this.collateralChecker.SetPrivateVariableValue("blockStoreClient", blockStoreClientMock.Object);
+
             Task initTask = this.collateralChecker.InitializeAsync();
 
             await Task.Delay(10_000);

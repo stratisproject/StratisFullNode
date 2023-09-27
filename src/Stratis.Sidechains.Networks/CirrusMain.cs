@@ -183,7 +183,8 @@ namespace Stratis.Sidechains.Networks
                 release1100ActivationHeight: 3_426_950, // Monday, 20 December 2021 10:00:00 AM (Estimated)
                 pollExpiryBlocks: 50_000, // Roughly 9 days
                 contractSerializerV2ActivationHeight: 3_386_335, // Monday 13 December 16:00:00 (Estimated)
-                release1300ActivationHeight: 4_334_400
+                release1300ActivationHeight: 4_334_400,
+                release1400ActivationHeight: 5_345_325 // 7 December 2022 (Estimated)
             );
 
             var buriedDeployments = new BuriedDeploymentsArray

@@ -115,7 +115,7 @@ namespace Stratis.Features.Unity3dApi
 
             this.logger.LogInformation("Finished building cache of known contract addresses.");
 
-            this.indexingLoop = this.asyncProvider.CreateAndRunAsyncLoop("IndexNftsContinuously", async (cancellationTokenSource) =>
+            this.indexingLoop = this.asyncProvider.CreateAndRunAsyncLoop(nameof(IndexNFTsContinuouslyAsync), async (cancellationTokenSource) =>
                 {
                     try
                     {
@@ -201,8 +201,6 @@ namespace Stratis.Features.Unity3dApi
         /// <inheritdoc />
         public void ReindexAllContracts()
         {
-            this.logger.LogTrace("ReindexAllContracts()");
-
             var updated = new List<NFTContractModel>();
 
             foreach (NFTContractModel contractModel in this.NFTContractCollection.FindAll().ToList())
@@ -216,7 +214,7 @@ namespace Stratis.Features.Unity3dApi
 
             this.UpdateLastUpdatedBlock(GetWatchFromHeight());
 
-            this.logger.LogTrace("ReindexAllContracts(-)");
+            this.logger.LogInformation($"A re-index of all contracts will be triggered from block {GetWatchFromHeight()}.");
         }
 
         /// <inheritdoc />
@@ -277,7 +275,7 @@ namespace Stratis.Features.Unity3dApi
                             break;
                         }
 
-                        this.logger.LogDebug("Found new NFT contract: " + logResponse.Address);
+                        this.logger.LogInformation($"Found new NFT contract '{logResponse.Address}'");
 
                         this.knownContracts.Add(logResponse.Address);
 
@@ -296,7 +294,10 @@ namespace Stratis.Features.Unity3dApi
 
                     this.logger.LogDebug("Log from: {0}, to: {1}, ID: {2}", transferInfo.From, transferInfo.To, transferInfo.TokenId);
 
-                    NFTContractModel currentContract = this.NFTContractCollection.FindOne(c => c.ContractAddress == logResponse.Address);
+                    // Check if the contract already had modifications and if so, use that one.
+                    NFTContractModel currentContract = changedContracts.FirstOrDefault(c => c.ContractAddress == logResponse.Address);
+                    if (currentContract == null)
+                        currentContract = this.NFTContractCollection.FindOne(c => c.ContractAddress == logResponse.Address);
 
                     if ((transferInfo.From != null) && currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.From))
                     {
