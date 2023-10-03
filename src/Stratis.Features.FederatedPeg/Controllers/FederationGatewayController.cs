@@ -462,7 +462,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
 
         [Route(FederationGatewayRouteEndPoint.GetPartialTransactionSignersEndpoint)]
         [HttpPost]
-        public async Task<IActionResult> GetPartialTransactionSignersAsync([FromBody] string trxid, [FromBody] int input)
+        public async Task<IActionResult> GetPartialTransactionSignersAsync([FromBody] string trxid, [FromBody] int input, [FromBody] bool pubKeys = false)
         {
             try
             {
@@ -522,7 +522,10 @@ namespace Stratis.Features.FederatedPeg.Controllers
 
                         if (federation.transactionSigningKeys != null && federation.transactionSigningKeys.Contains(pubKey))
                         {
-                            signers.Add(pubKey.GetAddress(this.network).ToString());
+                            if (pubKeys)
+                                signers.Add(pubKey.ToHex());
+                            else
+                                signers.Add(pubKey.GetAddress(this.network).ToString());
                         }
                     }
                 }
