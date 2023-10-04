@@ -10,6 +10,7 @@ using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.Extensions;
@@ -115,6 +116,10 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// <remarks>All access to this object has to be protected by <see cref="lockobj"/>.</remarks>
         private readonly Dictionary<OutPoint, CacheItem> cachedUtxoItems;
 
+        /// <summary>Tracks pending balance updates for dirty cache entries.</summary>
+        /// <remarks>All access to this object has to be protected by <see cref="lockobj"/>.</remarks>
+        private readonly Dictionary<TxDestination, Dictionary<uint, long>> cacheBalancesByDestination;
+
         /// <summary>Number of items in the cache.</summary>
         /// <remarks>The getter violates the lock contract on <see cref="cachedUtxoItems"/>, but the lock here is unnecessary as the <see cref="cachedUtxoItems"/> is marked as readonly.</remarks>
         private int cacheCount => this.cachedUtxoItems.Count;
@@ -133,12 +138,14 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         private IConsensusManager consensusManager;
         private readonly ConsensusSettings consensusSettings;
         private readonly ChainIndexer chainIndexer;
+        private readonly bool addressIndexingEnabled;
         private CachePerformanceSnapshot latestPerformanceSnapShot;
+        private IScriptAddressReader scriptAddressReader;
 
         private readonly Random random;
 
         public CachedCoinView(Network network, ICoindb coindb, IDateTimeProvider dateTimeProvider, ILoggerFactory loggerFactory, INodeStats nodeStats, ConsensusSettings consensusSettings, ChainIndexer chainIndexer,
-            StakeChainStore stakeChainStore = null, IRewindDataIndexCache rewindDataIndexCache = null, INodeLifetime nodeLifetime = null, NodeSettings nodeSettings = null)
+            StakeChainStore stakeChainStore = null, IRewindDataIndexCache rewindDataIndexCache = null, IScriptAddressReader scriptAddressReader = null, INodeLifetime nodeLifetime = null, NodeSettings nodeSettings = null)
         {
             Guard.NotNull(coindb, nameof(CachedCoinView.coindb));
 
@@ -153,9 +160,12 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             this.cancellationToken = (nodeLifetime == null) ? new CancellationTokenSource() : CancellationTokenSource.CreateLinkedTokenSource(nodeLifetime.ApplicationStopping);
             this.lockobj = new object();
             this.cachedUtxoItems = new Dictionary<OutPoint, CacheItem>();
+            this.cacheBalancesByDestination = new Dictionary<TxDestination, Dictionary<uint, long>>();
             this.performanceCounter = new CachePerformanceCounter(this.dateTimeProvider);
             this.lastCacheFlushTime = this.dateTimeProvider.GetUtcNow();
             this.cachedRewindData = new Dictionary<int, RewindData>();
+            this.scriptAddressReader = scriptAddressReader;
+            this.addressIndexingEnabled = nodeSettings?.ConfigReader.GetOrDefault("addressindex", false) ?? false;
             this.random = new Random();
 
             this.MaxCacheSizeBytes = consensusSettings.MaxCoindbCacheInMB * 1024 * 1024;
@@ -269,7 +279,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         {
             this.consensusManager = consensusManager;
 
-            this.coindb.Initialize();
+            this.coindb.Initialize(this.addressIndexingEnabled);
 
             Sync();
 
@@ -490,10 +500,11 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
                 this.logger.LogDebug("Flushing {0} items.", modify.Count);
 
-                this.coindb.SaveChanges(modify, this.innerBlockHash, this.blockHash, this.cachedRewindData.Select(c => c.Value).ToList());
+                this.coindb.SaveChanges(modify, this.cacheBalancesByDestination, this.innerBlockHash, this.blockHash, this.cachedRewindData.Select(c => c.Value).ToList());
 
                 // All the cached utxos are now on disk so we can clear the cached entry list.
                 this.cachedUtxoItems.Clear();
+                this.cacheBalancesByDestination.Clear();
                 this.cacheSizeBytes = 0;
 
                 this.cachedRewindData.Clear();
@@ -584,6 +595,10 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     {
                         // DELETE COINS
 
+                        // Record the UTXO as having been spent at this height.
+                        if (cacheItem.Coins != null)
+                            this.RecordBalanceChange(cacheItem.Coins.TxOut.ScriptPubKey, -cacheItem.Coins.TxOut.Value, (uint)nextBlockHash.Height);
+
                         // In cases of an output spent in the same block 
                         // it wont exist in cash or in disk so its safe to remove it
                         if (cacheItem.Coins == null)
@@ -631,6 +646,9 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     else
                     {
                         // ADD COINS
+
+                        // Update the balance.
+                        this.RecordBalanceChange(output.Coins.TxOut.ScriptPubKey, output.Coins.TxOut.Value, output.Coins.Height);
 
                         if (cacheItem.Coins != null)
                         {
@@ -713,6 +731,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
                 // All the cached utxos are now on disk so we can clear the cached entry list.
                 this.cachedUtxoItems.Clear();
+                this.cacheBalancesByDestination.Clear();
                 this.cacheSizeBytes = 0;
                 this.dirtyCacheCount = 0;
 
@@ -771,6 +790,63 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 log.AppendLine((snapShot - this.latestPerformanceSnapShot).ToString());
 
             this.latestPerformanceSnapShot = snapShot;
+        }
+
+        private void RecordBalanceChange(Script scriptPubKey, long satoshis, uint height)
+        {
+            if (!this.coindb.BalanceIndexingEnabled || scriptPubKey.Length == 0 || satoshis == 0)
+                return;
+
+            foreach (TxDestination txDestination in this.scriptAddressReader.GetDestinationFromScriptPubKey(this.network, scriptPubKey))
+            {
+                if (!this.cacheBalancesByDestination.TryGetValue(txDestination, out Dictionary<uint, long> value))
+                {
+                    value = new Dictionary<uint, long>();
+                    this.cacheBalancesByDestination[txDestination] = value;
+                }
+
+                if (!value.TryGetValue(height, out long balance))
+                    balance = 0;
+
+                balance += satoshis;
+
+                value[height] = balance;
+            }
+        }
+
+        public IEnumerable<(uint, long)> GetBalance(TxDestination txDestination)
+        {
+            IEnumerable<(uint, long)> CachedBalances()
+            {
+                if (this.cacheBalancesByDestination.TryGetValue(txDestination, out Dictionary<uint, long> itemsByHeight))
+                {
+                    long balance = 0;
+
+                    foreach (uint height in itemsByHeight.Keys.OrderBy(k => k))
+                    {
+                        balance += itemsByHeight[height];
+                        yield return (height, balance);
+                    }
+                }
+            }
+
+            bool first = true;
+            foreach ((uint height, long satoshis) in this.coindb.GetBalance(txDestination))
+            {
+                if (first)
+                {
+                    first = false;
+
+                    foreach ((uint height2, long satoshis2) in CachedBalances().Reverse())
+                        yield return (height2, satoshis2 + satoshis);
+                }
+
+                yield return (height, satoshis);
+            }
+
+            if (first)
+                foreach ((uint height2, long satoshis2) in CachedBalances().Reverse())
+                    yield return (height2, satoshis2);
         }
     }
 }

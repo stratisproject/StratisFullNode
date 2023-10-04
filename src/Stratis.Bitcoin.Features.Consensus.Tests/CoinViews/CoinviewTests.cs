@@ -42,8 +42,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.CoinViews
             this.loggerFactory = new ExtendedLoggerFactory();
             this.nodeStats = new NodeStats(this.dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object);
 
-            this.coindb = new Coindb<DBreezeDbWithCoinDbNames>(this.network, this.dataFolder, this.dateTimeProvider, this.nodeStats, new DBreezeSerializer(this.network.Consensus.ConsensusFactory));
-            this.coindb.Initialize();
+            this.coindb = new Coindb<DBreezeDbWithCoinDbNames>(this.network, this.dataFolder, this.dateTimeProvider, this.nodeStats, new DBreezeSerializer(this.network.Consensus.ConsensusFactory), new ScriptAddressReader());
+            this.coindb.Initialize(false);
 
             this.chainIndexer = new ChainIndexer(this.network);
             this.stakeChainStore = new StakeChainStore(this.network, this.chainIndexer, (IStakedb)this.coindb, this.loggerFactory);

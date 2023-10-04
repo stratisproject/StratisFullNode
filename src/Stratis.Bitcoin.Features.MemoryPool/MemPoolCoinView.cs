@@ -60,6 +60,11 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         {
         }
 
+        public IEnumerable<(uint height, long satoshis)> GetBalance(TxDestination txDestination)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Gets the unspent transaction output set.
         /// </summary>

@@ -237,7 +237,7 @@ namespace Stratis.Bitcoin.Base
                     // Ensure that we don't try to rewind further than the coin view is capable of doing.
                     var utxoSet = ((dynamic)this.consensusRules).UtxoSet;
                     var coinDatabase = ((dynamic)utxoSet).ICoindb;
-                    ((dynamic)coinDatabase).Initialize(initializedAt);
+                    ((dynamic)coinDatabase).Initialize(false);
                     int minRewindHeight = ((dynamic)coinDatabase).GetMinRewindHeight();
                     ((dynamic)coinDatabase).Dispose();
 

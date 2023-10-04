@@ -30,6 +30,7 @@ namespace Stratis.Bitcoin.Features.Consensus
                     {
                         ConfigureCoinDatabaseImplementation(services, coindbType);
 
+                        services.Replace<IScriptAddressReader>((p, old) => old ?? new ScriptAddressReader(), ServiceLifetime.Singleton);
                         services.AddSingleton<ConsensusOptions, ConsensusOptions>();
                         services.AddSingleton<ICoinView, CachedCoinView>();
                         services.AddSingleton<IConsensusRuleEngine, PowConsensusRuleEngine>();
