@@ -461,17 +461,17 @@ namespace Stratis.Features.FederatedPeg.Controllers
         }
 
         [Route(FederationGatewayRouteEndPoint.GetPartialTransactionSignersEndpoint)]
-        [HttpPost]
-        public async Task<IActionResult> GetPartialTransactionSignersAsync([FromBody] string trxid, [FromBody] int input, [FromBody] bool pubKeys = false)
+        [HttpGet]
+        public async Task<IActionResult> GetPartialTransactionSignersAsync([FromQuery(Name = "transactionId")] string transactionId, [FromQuery(Name = "input")] int input, [FromQuery(Name = "pubKeys")] bool pubKeys = false)
         {
             try
             {
-                Guard.NotEmpty(trxid, nameof(trxid));
+                Guard.NotEmpty(transactionId, nameof(transactionId));
 
                 uint256 txid;
-                if (!uint256.TryParse(trxid, out txid))
+                if (!uint256.TryParse(transactionId, out txid))
                 {
-                    throw new ArgumentException(nameof(trxid));
+                    throw new ArgumentException(nameof(transactionId));
                 }
 
                 ICrossChainTransfer[] cctx = await this.crossChainTransferStore.GetAsync(new[] { txid }).ConfigureAwait(false);
@@ -494,10 +494,10 @@ namespace Stratis.Features.FederatedPeg.Controllers
                     return this.Json(null);
                 }
 
-                TxOut txout = prevTrx.Outputs[prevOutIndex];
+                TxOut txOut = prevTrx.Outputs[prevOutIndex];
 
                 var txData = new PrecomputedTransactionData(trx);
-                var checker = new TransactionChecker(trx, input, txout.Value, txData);
+                var checker = new TransactionChecker(trx, input, txOut.Value, txData);
 
                 var ctx = new PartialTransactionScriptEvaluationContext(this.network)
                 {
@@ -505,7 +505,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
                 };
 
                 // Run the verification to populate the context, but don't actually check the result as this is only a partially signed transaction.
-                ctx.VerifyScript(trx.Inputs[input].ScriptSig, txout.ScriptPubKey, checker);
+                ctx.VerifyScript(trx.Inputs[input].ScriptSig, txOut.ScriptPubKey, checker);
 
                 var signers = new HashSet<string>();
 
