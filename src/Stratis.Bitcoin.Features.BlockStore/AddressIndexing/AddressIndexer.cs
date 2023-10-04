@@ -143,7 +143,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         public IFullNodeFeature InitializingFeature { get; set; }
 
-        public AddressIndexer(StoreSettings storeSettings, DataFolder dataFolder, Network network, INodeStats nodeStats,
+        public AddressIndexer(StoreSettings storeSettings, DataFolder dataFolder, Network network, INodeStats nodeStats, IBlockStore blockStore,
             IConsensusManager consensusManager, IAsyncProvider asyncProvider, ChainIndexer chainIndexer, IDateTimeProvider dateTimeProvider, IUtxoIndexer utxoIndexer)
         {
             this.storeSettings = storeSettings;
