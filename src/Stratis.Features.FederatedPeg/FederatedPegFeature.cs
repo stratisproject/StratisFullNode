@@ -75,6 +75,8 @@ namespace Stratis.Features.FederatedPeg
 
         private readonly MultiSigStateMonitor multiSigStateMonitor;
 
+        private readonly IRewardDistributionManager rewardDistributionManager;
+
         private readonly ISignals signals;
 
         public FederatedPegFeature(
@@ -93,7 +95,8 @@ namespace Stratis.Features.FederatedPeg
             IInputConsolidator inputConsolidator,
             ISignals signals,
             IFederationManager federationManager = null,
-            MultiSigStateMonitor multiSigStateMonitor = null)
+            MultiSigStateMonitor multiSigStateMonitor = null,
+            IRewardDistributionManager rewardDistributionManager = null)
         {
             this.connectionManager = connectionManager;
             this.federatedPegSettings = federatedPegSettings;
@@ -109,6 +112,7 @@ namespace Stratis.Features.FederatedPeg
             this.inputConsolidator = inputConsolidator;
             this.federationManager = federationManager;
             this.multiSigStateMonitor = multiSigStateMonitor;
+            this.rewardDistributionManager = rewardDistributionManager;
             this.signals = signals;
 
             this.logger = LogManager.GetCurrentClassLogger();
@@ -190,6 +194,9 @@ namespace Stratis.Features.FederatedPeg
             this.maturedBlocksSyncManager.Dispose();
 
             this.crossChainTransferStore.Dispose();
+
+            // Only present on the sidechain.
+            this.rewardDistributionManager?.Dispose();
         }
 
         [NoTrace]
@@ -306,6 +313,8 @@ namespace Stratis.Features.FederatedPeg
                         if (!isMainChain)
                         {
                             services.AddSingleton<IConversionRequestCoordinationService, ConversionRequestCoordinationService>();
+                            services.AddSingleton<IConversionRequestCoordinationVoteKeyValueStore, ConversionRequestCoordinationVoteKeyValueStore>();
+                            services.AddSingleton<IConversionRequestCoordinationVoteRepository, ConversionRequestCoordinationVoteRepository>();
                             services.AddSingleton<IConversionRequestFeeService, ConversionRequestFeeService>();
                             services.AddSingleton<IConversionRequestFeeKeyValueStore, ConversionRequestFeeKeyValueStore>();
                             services.AddSingleton<IReplenishmentKeyValueStore, ReplenishmentKeyValueStore>();

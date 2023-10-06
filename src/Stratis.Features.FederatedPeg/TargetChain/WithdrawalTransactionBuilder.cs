@@ -89,7 +89,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         // Use the distribution manager to determine the actual list of recipients.
                         this.logger.LogDebug("Generating recipient list for reward distribution.");
                         
-                        multiSigContext.Recipients = this.distributionManager.Distribute(blockHeight, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount); // Reduce the overall amount by the fee first before splitting it up.
+                        multiSigContext.Recipients = this.distributionManager.Distribute(blockHeight, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount, blockTime, depositId); // Reduce the overall amount by the fee first before splitting it up.
                     }
 
                     if (recipient.ScriptPubKey == this.conversionTransactionFeeDistributionScriptPubKey)
@@ -118,7 +118,12 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 // Build the transaction.
                 Transaction transaction = this.federationWalletTransactionHandler.BuildTransaction(multiSigContext);
 
-                this.logger.LogDebug("transaction = {0}", transaction.ToString(this.network, RawFormat.BlockExplorer));
+                if (transaction != null)
+                {
+                    this.logger.LogDebug("transaction = {0}", transaction.ToString(this.network, RawFormat.BlockExplorer));
+
+                    this.distributionManager.SetNewMetadata();
+                }
 
                 return transaction;
             }

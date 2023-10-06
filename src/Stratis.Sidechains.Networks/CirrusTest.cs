@@ -138,6 +138,7 @@ namespace Stratis.Sidechains.Networks
                 ContractSerializerV2ActivationHeight = 2_842_681,
                 Release1300ActivationHeight = 3_280_032,
                 Release1400ActivationHeight = 4_074_250,
+                Release1500ActivationHeight = 5_000_000, // Placeholder
             };
 
             var buriedDeployments = new BuriedDeploymentsArray

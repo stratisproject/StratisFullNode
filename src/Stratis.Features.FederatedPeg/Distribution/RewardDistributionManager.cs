@@ -6,6 +6,7 @@ using NBitcoin;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.PoA;
+using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Wallet;
@@ -20,6 +21,9 @@ namespace Stratis.Features.FederatedPeg.Distribution
     public sealed class RewardDistributionManager : IRewardDistributionManager
     {
         private const int DefaultEpoch = 240;
+        private const string BeginRangeMetadataKey = "RewardDistributionBeginRangeMetadata";
+        private const string EndRangeMetadataKey = "RewardDistributionEndRangeMetadata";
+        private const string NewMetadataKey = "RewardDistributionNewMetadata";
 
         private readonly ChainIndexer chainIndexer;
         private readonly IConversionRequestRepository conversionRequestRepository;
@@ -30,10 +34,15 @@ namespace Stratis.Features.FederatedPeg.Distribution
         private readonly ILogger logger;
         private readonly Network network;
         private readonly IFederationHistory federationHistory;
+        private readonly IKeyValueRepository keyValueRepository;
 
         private readonly Dictionary<Script, long> blocksMinedEach = new Dictionary<Script, long>();
         private readonly Dictionary<uint256, Transaction> commitmentTransactionByHashDictionary = new Dictionary<uint256, Transaction>();
         private readonly Dictionary<uint256, int?> commitmentHeightsByHash = new Dictionary<uint256, int?>();
+
+        private RewardDistributionMetadata beginRangeMetadata;
+        private RewardDistributionMetadata endRangeMetadata;
+        private RewardDistributionMetadata newMetadata;
 
         // The reward each miner receives upon distribution is computed as a proportion of the overall accumulated reward since the last distribution.
         // The proportion is based on how many blocks that miner produced in the period (each miner is identified by their block's coinbase's scriptPubKey).
@@ -46,7 +55,8 @@ namespace Stratis.Features.FederatedPeg.Distribution
             ChainIndexer chainIndexer,
             IConversionRequestRepository conversionRequestRepository,
             IConsensusManager consensusManager,
-            IFederationHistory federationHistory)
+            IFederationHistory federationHistory,
+            IKeyValueRepository keyValueRepository)
         {
             this.network = network;
             this.chainIndexer = chainIndexer;
@@ -54,6 +64,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             this.consensusManager = consensusManager;
             this.logger = LogManager.GetCurrentClassLogger();
             this.federationHistory = federationHistory;
+            this.keyValueRepository = keyValueRepository;
 
             this.encoder = new CollateralHeightCommitmentEncoder();
             this.epoch = this.network.Consensus.MaxReorgLength == 0 ? DefaultEpoch : (int)this.network.Consensus.MaxReorgLength;
@@ -68,6 +79,10 @@ namespace Stratis.Features.FederatedPeg.Distribution
                 if (sidechainAdvancement > this.epoch)
                     this.epoch = sidechainAdvancement;
             }
+
+            this.beginRangeMetadata = this.keyValueRepository.LoadValueJson<RewardDistributionMetadata>(BeginRangeMetadataKey);
+            this.endRangeMetadata = this.keyValueRepository.LoadValueJson<RewardDistributionMetadata>(EndRangeMetadataKey);
+            this.newMetadata = this.keyValueRepository.LoadValueJson<RewardDistributionMetadata>(NewMetadataKey);
         }
 
         /// <inheritdoc />
@@ -152,31 +167,78 @@ namespace Stratis.Features.FederatedPeg.Distribution
         }
 
         /// <inheritdoc />
-        public List<Recipient> Distribute(int heightOfRecordedDistributionDeposit, Money totalReward)
+        public List<Recipient> Distribute(int heightOfRecordedDistributionDeposit, Money totalReward, uint blockTime, uint256 depositId)
         {
-            // First determine the main chain blockheight of the recorded deposit less max reorg * 2 (epoch window)
-            var applicableMainChainDepositHeight = heightOfRecordedDistributionDeposit - this.epochWindow;
-            this.logger.LogTrace("{0} : {1}", nameof(applicableMainChainDepositHeight), applicableMainChainDepositHeight);
+            int sidechainStartHeight;
+            int sidechainEndHeight;
 
-            // Then find the header on the sidechain that contains the applicable commitment height.
-            int sidechainTipHeight = this.chainIndexer.Tip.Height;
+            // We need to update the metadata even if we are still under the activation height for the updated reward methodology, otherwise
+            // we will not have metadata to work with at the crossover point.
+            if (this.beginRangeMetadata == null || this.endRangeMetadata == null)
+            {
+                if (this.beginRangeMetadata == null)
+                {
+                    this.beginRangeMetadata = new RewardDistributionMetadata()
+                    {
+                        TransactionId = depositId,
+                        MainChainHeaderTimestamp = blockTime
+                    };
+                }
+                else
+                {
+                    this.endRangeMetadata = new RewardDistributionMetadata()
+                    {
+                        TransactionId = depositId,
+                        MainChainHeaderTimestamp = blockTime
+                    };
+                }
+            }
+            else
+            {
+                // Once we have a 'beginning' and an 'end' then we can populate the new metadata without issues. It will be cycled by SetNewMetadata() automatically.
+                // If we are still below the activation height then it will still cycle the metadata but they won't be used.
+                this.newMetadata = new RewardDistributionMetadata()
+                {
+                    TransactionId = depositId,
+                    MainChainHeaderTimestamp = blockTime
+                };
+            }
 
-            // Get the set of miners (more specifically, the scriptPubKeys they generated blocks with) to distribute rewards to.
-            // Based on the computed 'common block height' we define the distribution epoch:
-            int currentHeaderHeight = FindSidechainHeightWithCommitmentBelowOrEqualMainchainHeight(applicableMainChainDepositHeight, sidechainTipHeight);
-            int sidechainStartHeight = currentHeaderHeight;
+            if (this.chainIndexer.Tip.Height < (this.network.Consensus.Options as PoAConsensusOptions).Release1500ActivationHeight)
+            {
+                // First determine the main chain blockheight of the recorded deposit less max reorg * 2 (epoch window)
+                int applicableMainChainDepositHeight = heightOfRecordedDistributionDeposit - this.epochWindow;
+                this.logger.LogTrace("{0} : {1}", nameof(applicableMainChainDepositHeight), applicableMainChainDepositHeight);
 
-            this.logger.LogTrace("Initial {0} : {1}", nameof(sidechainStartHeight), sidechainStartHeight);
+                // Then find the header on the sidechain that contains the applicable commitment height.
+                int sidechainTipHeight = this.chainIndexer.Tip.Height;
 
-            // This is a special case which will not be the case on the live network.
-            if (sidechainStartHeight < this.epoch)
-                sidechainStartHeight = 0;
+                // Get the set of miners (more specifically, the scriptPubKeys they generated blocks with) to distribute rewards to.
+                // Based on the computed 'common block height' we define the distribution epoch:
+                int currentHeaderHeight = FindSidechainHeightWithCommitmentBelowOrEqualMainchainHeight(applicableMainChainDepositHeight, sidechainTipHeight);
+                sidechainStartHeight = currentHeaderHeight;
 
-            // If the sidechain start is more than the epoch, then deduct the epoch window.
-            if (sidechainStartHeight > this.epoch)
-                sidechainStartHeight -= this.epoch;
+                this.logger.LogTrace("Initial {0} : {1}", nameof(sidechainStartHeight), sidechainStartHeight);
 
-            this.logger.LogTrace("Adjusted {0} : {1}", nameof(sidechainStartHeight), sidechainStartHeight);
+                // This is a special case which will not be the case on the live network.
+                if (sidechainStartHeight < this.epoch)
+                    sidechainStartHeight = 0;
+
+                // If the sidechain start is more than the epoch, then deduct the epoch window.
+                if (sidechainStartHeight > this.epoch)
+                    sidechainStartHeight -= this.epoch;
+
+                this.logger.LogTrace("Adjusted {0} : {1}", nameof(sidechainStartHeight), sidechainStartHeight);
+
+                sidechainEndHeight = currentHeaderHeight;
+            }
+            else
+            {
+                sidechainStartHeight = BinarySearch.BinaryFindFirst((h) => this.chainIndexer.GetHeader(h).Header.Time > this.beginRangeMetadata.MainChainHeaderTimestamp, 0, this.chainIndexer.Tip.Height);
+                sidechainEndHeight = BinarySearch.BinaryFindFirst((h) => this.chainIndexer.GetHeader(h).Header.Time > this.endRangeMetadata.MainChainHeaderTimestamp, 0, this.chainIndexer.Tip.Height);
+
+                this.logger.LogTrace("Initial {0} : {1}, {2} : {3}", nameof(sidechainStartHeight), sidechainStartHeight, nameof(sidechainEndHeight), sidechainEndHeight);
+            }
 
             // Ensure that the dictionary is cleared on every run.
             // As this is a static class, new instances of this dictionary will
@@ -184,8 +246,29 @@ namespace Stratis.Features.FederatedPeg.Distribution
             // to use a single instance to work with.
             this.blocksMinedEach.Clear();
 
-            var totalBlocks = CalculateBlocksMinedPerMiner(sidechainStartHeight, currentHeaderHeight);
+            long totalBlocks = CalculateBlocksMinedPerMiner(sidechainStartHeight, sidechainEndHeight);
             return ConstructRecipients(heightOfRecordedDistributionDeposit, totalBlocks, totalReward);
+        }
+
+        /// <inheritdoc />
+        public void SetNewMetadata()
+        {
+            // Check if we do not yet have fully populated metadata information, which would generally indicate that we are below the activation height.
+            if (this.beginRangeMetadata == null || this.endRangeMetadata == null || this.newMetadata == null)
+                return;
+
+            this.beginRangeMetadata = this.endRangeMetadata;
+            this.endRangeMetadata = this.newMetadata;
+            this.newMetadata = null;
+
+            SaveMetadata();
+        }
+
+        private void SaveMetadata()
+        {
+            this.keyValueRepository.SaveValueJson(BeginRangeMetadataKey, this.beginRangeMetadata);
+            this.keyValueRepository.SaveValueJson(EndRangeMetadataKey, this.endRangeMetadata);
+            this.keyValueRepository.SaveValueJson(NewMetadataKey, this.newMetadata);
         }
 
         private int FindSidechainHeightWithCommitmentBelowOrEqualMainchainHeight(int mainchainHeight, int sidechainTipHeight)
@@ -317,6 +400,11 @@ namespace Stratis.Features.FederatedPeg.Distribution
             this.logger.LogInformation("Reward distribution at main chain height {0} will distribute {1} STRAX between {2} mining keys.", heightOfRecordedDistributionDeposit, totalReward, recipients.Count);
 
             return recipients;
+        }
+
+        public void Dispose()
+        {
+            SaveMetadata();
         }
     }
 }
