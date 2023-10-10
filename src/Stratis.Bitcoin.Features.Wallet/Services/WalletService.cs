@@ -7,6 +7,7 @@ using System.Security;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Policy;
@@ -1356,6 +1357,56 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                 }
 
                 return transaction.ToHex();
+            }, cancellationToken);
+        }
+
+        public async Task<IActionResult> Vote(VoteRequest request, CancellationToken cancellationToken)
+        {
+            return await Task.Run(async () =>
+            {
+                try
+                {
+                    var voteTransactions = new List<(string Address, OutPoint UTXO, bool Vote)>();
+                    var accounts = this.walletManager.GetAccounts(request.WalletName);
+                    var account = accounts.FirstOrDefault(a => a.Name.ToLowerInvariant() == request.AccountName);
+                    if (account == null)
+                        throw new FeatureException(HttpStatusCode.NotFound, "Unable to cast your vote.", $"Error: '{request.AccountName}' account does not exist.");
+                    IEnumerable<UnspentOutputReference> unspentOutputs = this.walletManager.GetSpendableTransactionsInAccount(new WalletAccountReference(request.WalletName, request.AccountName), 1);
+                    if (!unspentOutputs.Any())
+                        throw new FeatureException(HttpStatusCode.NotFound, "Unable to cast your vote.", $"The wallet does not contain any spendable transactions.");
+                    var spendables = unspentOutputs.Where(s => s.Transaction.GetUnspentAmount(true) >= Money.Coins(1)).GroupBy(s => s.Address.Address).Select(g => g.First());
+                    foreach (var spendable in spendables)
+                        voteTransactions.Add((spendable.Address.Address, spendable.ToOutPoint(), request.Vote.Value));
+                    if (!voteTransactions.Any())
+                        throw new FeatureException(HttpStatusCode.OK, "Unable to cast your vote.", $"You do not have any addresses with a balance of 1 or more STRAX to be able to vote.");
+                    foreach (var vote in voteTransactions)
+                    {
+                        this.logger.LogInformation($"Casting vote {voteTransactions.IndexOf(vote)}/{voteTransactions.Count}");
+                        var voteCharacter = request.Vote.Value ? 1 : 0;
+                        var transactionRequest = new BuildTransactionRequest()
+                        {
+                            AccountName = request.AccountName,
+                            WalletName = request.WalletName,
+                            Password = request.WalletPassword,
+                            ChangeAddress = vote.Address,
+                            Outpoints = new List<OutpointRequest>() { new OutpointRequest() { Index = (int)vote.UTXO.N, TransactionId = vote.UTXO.Hash.ToString() } },
+                            OpReturnAmount = Money.Satoshis(1).ToString(),
+                            OpReturnData = $"V{voteCharacter}{vote.Address}",
+                        };
+                        var transaction = await BuildTransaction(transactionRequest);
+                        var sendRequest = new SendTransactionRequest(transaction.Hex);
+                        await this.SendTransaction(sendRequest, cancellationToken);
+                    }
+                    return new OkResult();
+                }
+                catch (WalletException e)
+                {
+                    throw new FeatureException(HttpStatusCode.NotFound, "Unable to cast your vote.", e.Message);
+                }
+                catch (Exception e)
+                {
+                    throw new FeatureException(HttpStatusCode.Forbidden, "Unable to cast your vote.", e.Message);
+                }
             }, cancellationToken);
         }
 
