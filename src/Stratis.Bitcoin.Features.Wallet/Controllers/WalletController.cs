@@ -899,5 +899,17 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
             return await this.ExecuteAsync(request, cancellationToken,
                 async (req, token) => this.Json(await this.walletService.Consolidate(req, token)));
         }
+
+        /// <summary>
+        /// Builds a transaction with an op_return that includes a vote.
+        /// </summary>
+        /// <param name="request">An object containing the parameters used to build a the vote transaction.</param>
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        [Route("vote")]
+        [HttpPost]
+        public async Task<IActionResult> VoteAsync([FromBody] VoteRequest request, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return await this.ExecuteAsync(request, cancellationToken, async (req, token) => Json(await this.walletService.Vote(req, token)));
+        }
     }
 }
