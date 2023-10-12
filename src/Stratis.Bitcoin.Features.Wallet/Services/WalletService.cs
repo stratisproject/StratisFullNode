@@ -1378,7 +1378,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                     foreach (var spendable in spendables)
                         voteTransactions.Add((spendable.Address.Address, spendable.ToOutPoint(), request.Vote.Value));
                     if (!voteTransactions.Any())
-                        throw new FeatureException(HttpStatusCode.OK, "Unable to cast your vote.", $"You do not have any addresses with a balance of 1 or more STRAX to be able to vote.");
+                        throw new FeatureException(HttpStatusCode.NotFound, "Unable to cast your vote.", $"You do not have any addresses with a balance of 1 or more STRAX to be able to vote.");
                     foreach (var vote in voteTransactions)
                     {
                         this.logger.LogInformation($"Casting vote {voteTransactions.IndexOf(vote)}/{voteTransactions.Count}");
