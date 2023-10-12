@@ -1402,6 +1402,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                 catch (WalletException e)
                 {
                     throw new FeatureException(HttpStatusCode.NotFound, "Unable to cast your vote.", e.Message);
+                }                
+                catch (FeatureException)
+                {
+                    // add this so that the exception doesn't get swallowed.
+                    throw;
                 }
                 catch (Exception e)
                 {
