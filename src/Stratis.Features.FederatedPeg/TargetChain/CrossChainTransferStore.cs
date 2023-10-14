@@ -1388,7 +1388,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                             Transaction transaction = this.withdrawalTransactionBuilder.BuildWithdrawalTransaction(transfer.DepositHeight.Value, transfer.DepositTransactionId, 0, null, recipients);
 
                             transfer.SetPartialTransaction(transaction);
-                            transfer.SetStatus(newStatus);
+                            transfer.SetStatus(newStatus, force: true);
                             this.PutTransfer(dbreezeTransaction, transfer);
 
                             dbreezeTransaction.Commit();
