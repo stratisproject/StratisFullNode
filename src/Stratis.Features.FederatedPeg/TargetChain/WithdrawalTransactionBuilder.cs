@@ -58,7 +58,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         }
 
         /// <inheritdoc />
-        public Transaction BuildWithdrawalTransaction(int blockHeight, uint256 depositId, uint blockTime, Recipient recipient)
+        public Transaction BuildWithdrawalTransaction(int blockHeight, uint256 depositId, uint blockTime, Recipient recipient, List<Recipient> overrideRecipients = null)
         {
             try
             {
@@ -79,27 +79,32 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     Time = this.network.Consensus.IsProofOfStake ? blockTime : (uint?)null
                 };
 
-                multiSigContext.Recipients = new List<Recipient> { recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee) };
-
-                // Withdrawals from the sidechain won't have the OP_RETURN transaction tag, so we need to check against the ScriptPubKey of the Cirrus Dummy address.
-                if (!this.federatedPegSettings.IsMainChain && recipient.ScriptPubKey.Length > 0)
+                if (overrideRecipients == null)
                 {
-                    if (recipient.ScriptPubKey == this.cirrusRewardDummyAddressScriptPubKey)
-                    {
-                        // Use the distribution manager to determine the actual list of recipients.
-                        this.logger.LogDebug("Generating recipient list for reward distribution.");
-                        
-                        multiSigContext.Recipients = this.distributionManager.Distribute(blockHeight, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount); // Reduce the overall amount by the fee first before splitting it up.
-                    }
+                    multiSigContext.Recipients = new List<Recipient> { recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee) };
 
-                    if (recipient.ScriptPubKey == this.conversionTransactionFeeDistributionScriptPubKey)
+                    // Withdrawals from the sidechain won't have the OP_RETURN transaction tag, so we need to check against the ScriptPubKey of the Cirrus Dummy address.
+                    if (!this.federatedPegSettings.IsMainChain && recipient.ScriptPubKey.Length > 0)
                     {
-                        // Use the distribution manager to determine the actual list of recipients.
-                        this.logger.LogDebug("Generating recipient list for conversion transaction fee distribution.");
+                        if (recipient.ScriptPubKey == this.cirrusRewardDummyAddressScriptPubKey)
+                        {
+                            // Use the distribution manager to determine the actual list of recipients.
+                            this.logger.LogDebug("Generating recipient list for reward distribution.");
 
-                        multiSigContext.Recipients = this.distributionManager.DistributeToMultisigNodes(depositId, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount);
+                            multiSigContext.Recipients = this.distributionManager.Distribute(blockHeight, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount); // Reduce the overall amount by the fee first before splitting it up.
+                        }
+
+                        if (recipient.ScriptPubKey == this.conversionTransactionFeeDistributionScriptPubKey)
+                        {
+                            // Use the distribution manager to determine the actual list of recipients.
+                            this.logger.LogDebug("Generating recipient list for conversion transaction fee distribution.");
+
+                            multiSigContext.Recipients = this.distributionManager.DistributeToMultisigNodes(depositId, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount);
+                        }
                     }
                 }
+                else
+                    multiSigContext.Recipients = overrideRecipients;
 
                 // TODO: Amend this so we're not picking coins twice.
                 (List<Coin> coins, List<Wallet.UnspentOutputReference> unspentOutputs) = FederationWalletTransactionHandler.DetermineCoins(this.federationWalletManager, this.network, multiSigContext, this.federatedPegSettings);

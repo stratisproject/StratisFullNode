@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -22,6 +23,7 @@ using Stratis.Features.FederatedPeg.Events;
 using Stratis.Features.FederatedPeg.Exceptions;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
+using Stratis.Features.FederatedPeg.SourceChain;
 using Stratis.Features.FederatedPeg.Wallet;
 using Stratis.SmartContracts.Core.State;
 
@@ -1346,6 +1348,61 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             }
 
             return tracker;
+        }
+
+        public void ForceTransferStatusUpdate(ICrossChainTransfer transfer, CrossChainTransferStatus newStatus)
+        {
+            lock (this.lockObject)
+            {
+                this.federationWalletManager.Synchronous(() =>
+                {
+                    using (DBreeze.Transactions.Transaction dbreezeTransaction = this.DBreeze.GetTransaction())
+                    {
+                        try
+                        {
+                            dbreezeTransaction.SynchronizeTables(transferTableName, commonTableName);
+
+                            var recipients = new List<Recipient>();
+
+                            this.logger.LogDebug("DepositId {0} has {1} outputs", transfer.DepositTransactionId, transfer.PartialTransaction.Outputs.Count);
+
+                            // We do not have the original Deposit instance to work with, so we have to reconstitute the partial transaction
+                            // with recipient logic already applied.
+                            foreach (TxOut output in transfer.PartialTransaction.Outputs)
+                            {
+                                if (output.ScriptPubKey.IsUnspendable)
+                                    continue;
+
+                                recipients.Add(new Recipient()
+                                {
+                                    Amount = output.Value,
+                                    ScriptPubKey = output.ScriptPubKey
+                                });
+                            }
+
+                            // Note: since the PoS transaction serialisation does not have a time field it
+                            // does not matter what we pass through for the block time.
+                            Transaction transaction = this.withdrawalTransactionBuilder.BuildWithdrawalTransaction(transfer.DepositHeight.Value, transfer.DepositTransactionId, 0, null, recipients);
+
+                            transfer.SetPartialTransaction(transaction);
+                            transfer.SetStatus(newStatus);
+                            this.PutTransfer(dbreezeTransaction, transfer);
+
+                            dbreezeTransaction.Commit();
+
+                            this.TransferStatusUpdated(transfer, CrossChainTransferStatus.Partial);
+                        }
+                        catch (Exception err)
+                        {
+                            this.logger.LogError("Error: {0} ", err);
+                            
+                            this.RollbackAndThrowTransactionError(dbreezeTransaction, err, "UNSUSPEND_ERROR");
+                        }
+
+                        return transfer.PartialTransaction;
+                    }
+                });
+            }
         }
 
         /// <summary>Updates the status lookup based on a transfer and its previous status.</summary>
