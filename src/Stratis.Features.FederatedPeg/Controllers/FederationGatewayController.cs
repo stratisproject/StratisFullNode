@@ -545,7 +545,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public async Task<IActionResult> UnsuspendTransactionsAsync([FromQuery] UnsuspendTransactionsModel request)
+        public async Task<IActionResult> UnsuspendTransactionsAsync([FromBody] UnsuspendTransactionsModel request)
         {
             Guard.NotNull(request, nameof(request));
 
