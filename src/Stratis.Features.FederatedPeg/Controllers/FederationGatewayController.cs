@@ -39,6 +39,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         public const string GetTransfersSuspendedEndpoint = "transfers/suspended";
         public const string VerifyPartialTransactionEndpoint = "transfer/verify";
         public const string GetPartialTransactionSignersEndpoint = "transfer/signers";
+        public const string UnsuspendTransactions = "unsuspend-transactions";
     }
 
     /// <summary>
@@ -531,6 +532,84 @@ namespace Stratis.Features.FederatedPeg.Controllers
                 }
 
                 return this.Json(signers);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        [Route(FederationGatewayRouteEndPoint.UnsuspendTransactions)]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public async Task<IActionResult> UnsuspendTransactionsAsync([FromQuery] UnsuspendTransactionsModel request)
+        {
+            Guard.NotNull(request, nameof(request));
+
+            // Checks the request is valid.
+            if (!this.ModelState.IsValid)
+            {
+                return ModelStateErrors.BuildErrorResponse(this.ModelState);
+            }
+
+            try
+            {
+                var model = new List<uint256>();
+
+                foreach (TransactionToUnsuspend toUnsuspend in request.ToUnsuspend)
+                {
+                    ICrossChainTransfer[] deposits = await this.crossChainTransferStore.GetAsync(new[] { toUnsuspend.DepositId }, false).ConfigureAwait(false);
+
+                    if (deposits.Length == 0)
+                        continue;
+
+                    ICrossChainTransfer deposit = deposits[0];
+
+                    if (deposit.Status != CrossChainTransferStatus.Suspended)
+                        continue;
+
+                    // For safety it is preferable that only Suspended transfers that have already-spent
+                    // UTXOs in their partial transactions get unsuspended.
+                    if (toUnsuspend.BlockHashContainingSpentUtxo != null)
+                    {
+                        bool alreadySpent = false;
+
+                        Block block = this.blockStore.GetBlock(toUnsuspend.BlockHashContainingSpentUtxo);
+
+                        foreach (Transaction transaction in block.Transactions)
+                        {
+                            if (alreadySpent)
+                                break;
+
+                            foreach (TxIn input in transaction.Inputs)
+                            {
+                                if (alreadySpent)
+                                    break;
+
+                                foreach (TxIn partialTransactionInput in deposit.PartialTransaction.Inputs)
+                                {
+                                    if (alreadySpent)
+                                        break;
+
+                                    if (input.PrevOut.Hash == partialTransactionInput.PrevOut.Hash && input.PrevOut.N == partialTransactionInput.PrevOut.N)
+                                        alreadySpent = true;
+                                }
+                            }
+                        }
+
+                        if (alreadySpent)
+                            continue;
+                    }
+
+                    this.crossChainTransferStore.ForceTransferStatusUpdate(deposit, CrossChainTransferStatus.Partial);
+
+                    model.Add(deposit.DepositTransactionId);
+                }
+
+                return this.Json(model);
             }
             catch (Exception e)
             {

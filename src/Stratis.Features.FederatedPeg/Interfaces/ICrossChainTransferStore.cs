@@ -122,5 +122,7 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// <param name="depositId">The id of suspended deposit to delete.</param>
         /// <returns><c>true</c> or <c>false</c> if the suspended transfers was deleted and if not, an associated message.</returns>
         (bool result, string message) DeleteSuspendedTransfer(uint256 depositId);
+
+        void ForceTransferStatusUpdate(ICrossChainTransfer transfer, CrossChainTransferStatus newStatus);
     }
 }
