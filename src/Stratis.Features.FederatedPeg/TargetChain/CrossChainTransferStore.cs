@@ -1373,6 +1373,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                 if (output.ScriptPubKey.IsUnspendable)
                                     continue;
 
+                                if (!output.ScriptPubKey.IsScriptType(ScriptType.P2PKH))
+                                    continue;
+
                                 recipients.Add(new Recipient()
                                 {
                                     Amount = output.Value,

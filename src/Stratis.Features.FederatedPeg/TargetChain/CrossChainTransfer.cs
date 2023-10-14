@@ -137,7 +137,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         }
 
         /// <inheritdoc />
-        public void SetStatus(CrossChainTransferStatus status, uint256 blockHash = null, int? blockHeight = null)
+        public void SetStatus(CrossChainTransferStatus status, uint256 blockHash = null, int? blockHeight = null, bool force = false)
         {
             this.status = status;
 
@@ -147,7 +147,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 this.blockHeight = blockHeight;
             }
 
-            Guard.Assert(this.IsValid());
+            if (!force)
+                Guard.Assert(this.IsValid());
         }
 
         /// <inheritdoc />
