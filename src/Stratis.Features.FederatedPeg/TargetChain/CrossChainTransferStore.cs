@@ -1387,6 +1387,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                             // does not matter what we pass through for the block time.
                             Transaction transaction = this.withdrawalTransactionBuilder.BuildWithdrawalTransaction(transfer.DepositHeight.Value, transfer.DepositTransactionId, 0, null, recipients);
 
+                            this.federationWalletManager.ProcessTransaction(transaction);
+
                             transfer.SetPartialTransaction(transaction);
                             transfer.SetStatus(newStatus, force: true);
                             this.PutTransfer(dbreezeTransaction, transfer);
