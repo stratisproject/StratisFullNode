@@ -972,6 +972,8 @@ namespace Stratis.Features.FederatedPeg.Wallet
         /// <inheritdoc />
         public List<(Transaction, IWithdrawal)> FindWithdrawalTransactions(uint256 depositId = null, bool sort = false)
         {
+            this.logger.LogTrace($"{nameof(depositId)}={depositId}, {nameof(sort)}={sort}");
+
             lock (this.lockObject)
             {
                 var withdrawals = new List<(Transaction transaction, IWithdrawal withdrawal)>();
@@ -979,10 +981,19 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 var txList = new List<TransactionData>();
                 foreach ((uint256 _, List<TransactionData> txListDeposit) in this.Wallet.MultiSigAddress.Transactions.GetSpendingTransactionsByDepositId(depositId))
                 {
+                    this.logger.LogTrace($"Adding spending transaction data {txListDeposit.Count}");
+
+                    foreach (TransactionData data in txListDeposit)
+                    {
+                        this.logger.LogTrace($"Adding spending transaction data {data.Id}-{data.Index}");
+                    }
+
                     txList.AddRange(txListDeposit);
                 }
 
                 Dictionary<TransactionData, Transaction> spendingTransactions = this.GetSpendingTransactions(txList);
+
+                this.logger.LogTrace($"Found {txList.Count} spending transactions");
 
                 foreach (TransactionData txData in txList)
                 {

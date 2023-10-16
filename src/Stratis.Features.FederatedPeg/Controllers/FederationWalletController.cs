@@ -25,6 +25,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         public const string Balance = "balance";
         public const string History = "history";
         public const string Sync = "sync";
+        public const string UnspentTransactions = "unspent-transactions";
         public const string EnableFederation = "enable-federation";
         public const string RemoveTransactions = "remove-transactions";
     }
@@ -207,6 +208,30 @@ namespace Stratis.Features.FederatedPeg.Controllers
 
             this.walletSyncManager.SyncFromHeight(block.Height);
             return this.Ok();
+        }
+
+        [Route(FederationWalletRouteEndPoint.UnspentTransactions)]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        public IActionResult UnspentTransactions()
+        {
+            try
+            {
+                FederationWallet wallet = this.federationWalletManager.GetWallet();
+                if (wallet == null)
+                    return this.NotFound("No federation wallet found.");
+
+                Wallet.TransactionData[] unspent = wallet.MultiSigAddress.Transactions.GetUnspentTransactions();
+
+                return this.Json(unspent);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
         }
 
         /// <summary>
