@@ -10,6 +10,7 @@ using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Base.Deployments.Models;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 
@@ -23,17 +24,21 @@ namespace Stratis.Bitcoin.Features.Consensus
     {
         /// <summary>Instance logger.</summary>
         private readonly ILogger logger;
+        private readonly IBlockStore blockStore;
 
         public ConsensusController(
             ILoggerFactory loggerFactory,
             IChainState chainState,
             IConsensusManager consensusManager,
+            IBlockStore blockStore,
             ChainIndexer chainIndexer)
             : base(chainState: chainState, consensusManager: consensusManager, chainIndexer: chainIndexer)
         {
             Guard.NotNull(loggerFactory, nameof(loggerFactory));
             Guard.NotNull(chainIndexer, nameof(chainIndexer));
             Guard.NotNull(chainState, nameof(chainState));
+
+            this.blockStore = blockStore;
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
         }
@@ -165,6 +170,14 @@ namespace Stratis.Bitcoin.Features.Consensus
             if (bestBlock == null)
                 return null;
             ChainedHeader block = this.ChainIndexer.GetHeader(height);
+
+            if (block == null)
+            {
+                var blockFromStore = this.blockStore.GetBlock(block.HashBlock);
+
+                return blockFromStore.GetHash();
+            }
+
             uint256 hash = block == null || block.Height > bestBlock.Height ? null : block.HashBlock;
 
             if (hash == null)
