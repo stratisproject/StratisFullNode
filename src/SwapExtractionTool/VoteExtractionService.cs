@@ -20,11 +20,11 @@ namespace SwapExtractionTool
         {
         }
 
-        public async Task RunAsync(VoteType voteType, int startBlock)
+        public async Task RunAsync(VoteType voteType, int startBlock, int endBlock)
         {
-            Console.WriteLine($"Scanning for {voteType} votes...");
+            Console.WriteLine($"Scanning for {voteType} votes from block {startBlock} to {endBlock}...");
 
-            for (int height = startBlock; height < EndHeight; height++)
+            for (int height = startBlock; height < endBlock; height++)
             {
                 BlockTransactionDetailsModel block = await RetrieveBlockAtHeightAsync(height);
                 if (block == null)

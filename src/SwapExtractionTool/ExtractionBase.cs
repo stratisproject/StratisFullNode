@@ -12,8 +12,6 @@ namespace SwapExtractionTool
         public readonly int StratisNetworkApiPort;
         public readonly Network StraxNetwork;
 
-        public const int EndHeight = 1994940;
-
         protected ExtractionBase(string apiUrl, int stratisNetworkApiPort, Network straxNetwork)
         {
             this.StratisNetworkApiUrl = apiUrl;
