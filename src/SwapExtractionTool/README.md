@@ -12,4 +12,4 @@ To run the Extraction Tool to establish the current status of the StratisEVM Ini
 
  3.  Run this project with the StraxMain Node still running and speicfy the following parameter
 	
-	dotnet run -swapvote -startblock=xxxx -endblock=yyyy
+	dotnet run -swapvote -startblock=1997000 -endblock=2023880
