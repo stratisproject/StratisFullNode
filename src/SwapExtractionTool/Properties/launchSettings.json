@@ -1,6 +1,10 @@
 {
   "profiles": {
-    "SwapExtractionTool": {
+    "SwapExtractionTool Local": {
+      "commandName": "Project",
+      "commandLineArgs": "-swapvote -apiuri=http://172.16.64.117 -apiport=17103"
+    },
+    "SwapExtractionTool API": {
       "commandName": "Project",
       "commandLineArgs": "-swapvote -apiuri=https://strax-api-ha.stratisplatform.com -apiport=443"
     }

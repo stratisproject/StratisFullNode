@@ -16,16 +16,26 @@ namespace SwapExtractionTool
     {
         private readonly List<CastVote> castVotes = new List<CastVote>();
 
-        public VoteExtractionService(string apiUrl, int stratisNetworkApiPort, Network straxNetwork) : base(apiUrl, stratisNetworkApiPort, straxNetwork)
+        public VoteExtractionService(string apiUrl, int stratisNetworkApiPort) : base(apiUrl, stratisNetworkApiPort)
         {
         }
 
         public async Task RunAsync(VoteType voteType, int startBlock, int endBlock)
         {
+            if (endBlock == -1)
+            {
+                endBlock = await RetrieveBlockHeightAsync();
+            }
+
             Console.WriteLine($"Scanning for {voteType} votes from block {startBlock} to {endBlock}...");
 
             for (int height = startBlock; height < endBlock; height++)
             {
+                if (height % 100 == 0)
+                {
+                    Console.WriteLine($"Checking block {height}...");
+                }
+
                 BlockTransactionDetailsModel block = await RetrieveBlockAtHeightAsync(height);
                 if (block == null)
                     break;

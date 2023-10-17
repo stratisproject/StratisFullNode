@@ -2,21 +2,41 @@
 using Flurl;
 using Flurl.Http;
 using NBitcoin;
+using Newtonsoft.Json;
 using Stratis.Bitcoin.Features.BlockStore.Models;
 
 namespace SwapExtractionTool
 {
+    public class ConsensusTipModel
+    {
+        [JsonProperty(PropertyName = "tipHash")]
+        public string TipHash { get; set; }
+
+        [JsonProperty(PropertyName = "tipHeight")]
+        public int TipHeight { get; set; }
+    }
+
     public abstract class ExtractionBase
     {
         public readonly string StratisNetworkApiUrl;
         public readonly int StratisNetworkApiPort;
-        public readonly Network StraxNetwork;
-
-        protected ExtractionBase(string apiUrl, int stratisNetworkApiPort, Network straxNetwork)
+        
+        protected ExtractionBase(string apiUrl, int stratisNetworkApiPort)
         {
             this.StratisNetworkApiUrl = apiUrl;
             this.StratisNetworkApiPort = stratisNetworkApiPort;
-            this.StraxNetwork = straxNetwork;
+        }
+
+        protected async Task<int> RetrieveBlockHeightAsync()
+        {
+            var consensusTip = await $"{this.StratisNetworkApiUrl}:{this.StratisNetworkApiPort}/api"
+                .AppendPathSegment("consensus/tip")
+                .GetJsonAsync<ConsensusTipModel>();
+
+            if (consensusTip == null)
+                return -1;
+
+            return consensusTip.TipHeight;
         }
 
         protected async Task<BlockTransactionDetailsModel> RetrieveBlockAtHeightAsync(int blockHeight)
