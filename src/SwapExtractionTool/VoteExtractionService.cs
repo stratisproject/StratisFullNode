@@ -16,7 +16,7 @@ namespace SwapExtractionTool
     {
         private readonly List<CastVote> castVotes = new List<CastVote>();
 
-        public VoteExtractionService(int stratisNetworkApiPort, Network straxNetwork) : base(stratisNetworkApiPort, straxNetwork)
+        public VoteExtractionService(string apiUrl, int stratisNetworkApiPort, Network straxNetwork) : base(apiUrl, stratisNetworkApiPort, straxNetwork)
         {
         }
 
@@ -80,7 +80,7 @@ namespace SwapExtractionTool
                     {
                         // Verify the sender address is a valid Strax address
                         var potentialStratAddress = potentialVote.Substring(2);
-                        ValidatedAddress validateResult = await $"http://localhost:{this.StratisNetworkApiPort}/api"
+                        ValidatedAddress validateResult = await $"{this.StratisNetworkApiUrl}:{this.StratisNetworkApiPort}/api"
                             .AppendPathSegment("node/validateaddress")
                             .SetQueryParams(new { address = potentialStratAddress })
                             .GetJsonAsync<ValidatedAddress>();
@@ -91,7 +91,7 @@ namespace SwapExtractionTool
                             continue;
                         }
 
-                        AddressBalancesResult balance = await $"http://localhost:{this.StratisNetworkApiPort}/api"
+                        AddressBalancesResult balance = await $"{this.StratisNetworkApiUrl}:{this.StratisNetworkApiPort}/api"
                                 .AppendPathSegment($"blockstore/{BlockStoreRouteEndPoint.GetAddressesBalances}")
                                 .SetQueryParams(new { addresses = potentialStratAddress, minConfirmations = 0 })
                                 .GetJsonAsync<AddressBalancesResult>();
