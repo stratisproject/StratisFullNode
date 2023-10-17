@@ -11,7 +11,7 @@ namespace SwapExtractionTool
         public readonly int StratisNetworkApiPort;
         public readonly Network StraxNetwork;
 
-        public const int EndHeight = 2500000;
+        public const int EndHeight = 1994940;
 
         protected ExtractionBase(int stratisNetworkApiPort, Network straxNetwork)
         {
@@ -36,11 +36,5 @@ namespace SwapExtractionTool
 
             return blockModel;
         }
-    }
-
-    public enum ExtractionType
-    {
-        Swap,
-        Vote
     }
 }
