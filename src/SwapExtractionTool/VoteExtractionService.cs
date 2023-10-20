@@ -55,6 +55,12 @@ namespace SwapExtractionTool
             foreach (IGrouping<string, CastVote> group in grouped)
             {
                 IOrderedEnumerable<CastVote> finalVote = group.OrderByDescending(t => t.BlockHeight);
+
+                if (group.Count() > 1)
+                {
+                    Console.WriteLine($"Address {finalVote.First().Address} voted {group.Count()} times, using most recent vote at height {finalVote.First().BlockHeight} with current balance {finalVote.First().Balance}");
+                }
+
                 votes.Add(finalVote.First());
             }
 
@@ -109,13 +115,13 @@ namespace SwapExtractionTool
                         if (isVoteValue == "0")
                         {
                             this.castVotes.Add(new CastVote() { Address = potentialStratAddress, Balance = balance.Balances[0].Balance, InFavour = false, BlockHeight = blockHeight });
-                            Console.WriteLine($"'No' vote found at height {blockHeight}.");
+                            Console.WriteLine($"'No' vote found at height {blockHeight}. Address {potentialStratAddress} current balance {balance.Balances[0].Balance}");
                         }
 
                         if (isVoteValue == "1")
                         {
                             this.castVotes.Add(new CastVote() { Address = potentialStratAddress, Balance = balance.Balances[0].Balance, InFavour = true, BlockHeight = blockHeight });
-                            Console.WriteLine($"'Yes' vote found at height {blockHeight}.");
+                            Console.WriteLine($"'Yes' vote found at height {blockHeight}. Address {potentialStratAddress} current balance {balance.Balances[0].Balance}");
                         }
                     }
                 }

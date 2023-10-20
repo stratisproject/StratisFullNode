@@ -2,7 +2,7 @@
   "profiles": {
     "SwapExtractionTool Local": {
       "commandName": "Project",
-      "commandLineArgs": "-swapvote -apiuri=http://172.16.64.117 -apiport=17103"
+      "commandLineArgs": "-swapvote"
     },
     "SwapExtractionTool API": {
       "commandName": "Project",
