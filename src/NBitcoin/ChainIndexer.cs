@@ -1,5 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.CompilerServices;
+
+[assembly: InternalsVisibleTo("Stratis.Bitcoin.Tests.Common")]
+[assembly: InternalsVisibleTo("Stratis.SmartContracts.Core.Tests")]
+[assembly: InternalsVisibleTo("Stratis.Bitcoin.Features.PoA.Tests")]
 
 namespace NBitcoin
 {
@@ -28,6 +34,7 @@ namespace NBitcoin
         /// The tip height of the best known validated chain.
         /// </summary>
         public int Height => this.Tip.Height;
+
         public ChainedHeader Genesis => this.GetHeader(0);
 
         public ChainIndexer()
@@ -37,46 +44,36 @@ namespace NBitcoin
         }
 
         public ChainIndexer(Network network) : this()
-        {   
-            this.Network = network;
-
-            this.Initialize(new ChainedHeader(network.GetGenesis().Header, network.GetGenesis().GetHash(), 0));
-        }
-
-        public ChainIndexer(Network network, ChainedHeader chainedHeader) : this()
         {
             this.Network = network;
 
-            this.Initialize(chainedHeader);
+            var tip = new ChainedHeader(this.Network.GetGenesis().Header, this.Network.GetGenesis().GetHash(), 0);
+            AddInternal(tip);
+
+            this.Tip = tip;
         }
 
-        public void Initialize(ChainedHeader chainedHeader)
+        public ChainedHeader SetTip(ChainedHeader chainedHeader)
         {
             lock (this.lockObject)
             {
-                this.blocksById.Clear();
-                this.blocksByHeight.Clear();
+                ChainedHeader fork = chainedHeader.FindFork(this.Tip);
 
-                ChainedHeader iterator = chainedHeader;
+                if (fork == null)
+                    throw new InvalidOperationException("Wrong network");
 
-                while (iterator != null)
-                {
-                    this.blocksById.Add(iterator.HashBlock, iterator);
-                    this.blocksByHeight.Add(iterator.Height, iterator);
+                foreach (ChainedHeader header in this.Tip.EnumerateToGenesis().TakeWhile(h => h.Height > fork.Height))
+                    RemoveInternal(header);
 
-                    if (iterator.Height == 0)
-                    {
-                        if (this.Network.GenesisHash != iterator.HashBlock)
-                            throw new InvalidOperationException("Wrong network");
-                    }
-
-                    iterator = iterator.Previous;
-                }
+                foreach (ChainedHeader header in chainedHeader.EnumerateToGenesis().TakeWhile(h => h.Height > fork.Height))
+                    AddInternal(header);
 
                 this.Tip = chainedHeader;
+
+                return fork;
             }
         }
-        
+
         /// <summary>
         /// Returns the first chained block header that exists in the chain from the list of block hashes.
         /// </summary>
@@ -87,15 +84,18 @@ namespace NBitcoin
             if (hashes == null)
                 throw new ArgumentNullException("hashes");
 
-            // Find the first block the caller has in the main chain.
-            foreach (uint256 hash in hashes)
+            lock (this.lockObject)
             {
-                ChainedHeader chainedHeader = this.GetHeader(hash);
-                if (chainedHeader != null)
-                    return chainedHeader;
-            }
+                // Find the first block the caller has in the main chain.
+                foreach (uint256 hash in hashes)
+                {
+                    ChainedHeader chainedHeader = this.GetHeader(hash);
+                    if (chainedHeader != null)
+                        return chainedHeader;
+                }
 
-            return null;
+                return null;
+            }
         }
 
         /// <summary>
@@ -112,25 +112,11 @@ namespace NBitcoin
         }
 
         /// <summary>
-        /// Enumerate chain block headers after given block hash to genesis block.
-        /// </summary>
-        /// <param name="blockHash">Block hash to enumerate after.</param>
-        /// <returns>Enumeration of chained block headers after given block hash.</returns>
-        public IEnumerable<ChainedHeader> EnumerateAfter(uint256 blockHash)
-        {
-            ChainedHeader block = this.GetHeader(blockHash);
-
-            if (block == null)
-                return new ChainedHeader[0];
-
-            return this.EnumerateAfter(block);
-        }
-
-        /// <summary>
         /// Enumerates chain block headers from the given chained block header to tip.
         /// </summary>
         /// <param name="block">Chained block header to enumerate from.</param>
         /// <returns>Enumeration of chained block headers from given chained block header to tip.</returns>
+        /// <remarks>The chain could re-org in which case the enumeration may exit early when encountering a block from a different chain.</remarks>
         public IEnumerable<ChainedHeader> EnumerateToTip(ChainedHeader block)
         {
             if (block == null)
@@ -144,16 +130,14 @@ namespace NBitcoin
         /// </summary>
         /// <param name="blockHash">Block hash to enumerate from.</param>
         /// <returns>Enumeration of chained block headers from the given block hash to tip.</returns>
+        /// <remarks>The chain could re-org in which case the enumeration may exit early when encountering a block from a different chain.</remarks>
         public IEnumerable<ChainedHeader> EnumerateToTip(uint256 blockHash)
         {
-            ChainedHeader block = this.GetHeader(blockHash);
+            ChainedHeader block = this[blockHash];
             if (block == null)
-                yield break;
+                return new ChainedHeader[0];
 
-            yield return block;
-
-            foreach (ChainedHeader chainedBlock in this.EnumerateAfter(blockHash))
-                yield return chainedBlock;
+            return EnumerateAfter(block).Prepend(block);
         }
 
         /// <summary>
@@ -161,55 +145,61 @@ namespace NBitcoin
         /// </summary>
         /// <param name="block">The chained block header to enumerate after.</param>
         /// <returns>Enumeration of chained block headers after the given block.</returns>
-        public virtual IEnumerable<ChainedHeader> EnumerateAfter(ChainedHeader block)
+        /// <remarks>The chain could re-org in which case the enumeration may exit early when encountering a block from a different chain.</remarks>
+        internal virtual IEnumerable<ChainedHeader> EnumerateAfter(ChainedHeader block)
         {
-            int i = block.Height + 1;
-            ChainedHeader prev = block;
-
-            while (true)
+            for (int i = block.Height + 1; i <= this.Tip.Height; i++)
             {
-                ChainedHeader b = this.GetHeader(i);
-                if ((b == null) || (b.Previous != prev))
-                    yield break;
+                lock (this.lockObject)
+                {
+                    ChainedHeader nextBlock = this.blocksByHeight[i];
 
-                yield return b;
-                i++;
-                prev = b;
+                    if (nextBlock.Previous != block)
+                        yield break;
+
+                    block = nextBlock;
+                }
+
+                yield return block;
             }
         }
 
-        /// <summary>
-        /// TODO: Make this internal when the component moves to Stratis.Bitcoin
-        /// </summary>
-        public void Add(ChainedHeader addTip)
+        internal void Add(ChainedHeader addTip)
         {
             lock (this.lockObject)
             {
-                if(this.Tip.HashBlock != addTip.Previous.HashBlock)
+                if (this.Tip.HashBlock != addTip.Previous.HashBlock)
                     throw new InvalidOperationException("New tip must be consecutive");
 
-                this.blocksById.Add(addTip.HashBlock, addTip);
-                this.blocksByHeight.Add(addTip.Height, addTip);
+                AddInternal(addTip);
 
                 this.Tip = addTip;
             }
         }
 
-        /// <summary>
-        /// TODO: Make this internal when the component moves to Stratis.Bitcoin
-        /// </summary>
-        public void Remove(ChainedHeader removeTip)
+        private void AddInternal(ChainedHeader addTip)
+        {
+            this.blocksById.Add(addTip.HashBlock, addTip);
+            this.blocksByHeight.Add(addTip.Height, addTip);
+        }
+
+        internal void Remove(ChainedHeader removeTip)
         {
             lock (this.lockObject)
             {
                 if (this.Tip.HashBlock != removeTip.HashBlock)
                     throw new InvalidOperationException("Trying to remove item that is not the tip.");
 
-                this.blocksById.Remove(removeTip.HashBlock);
-                this.blocksByHeight.Remove(removeTip.Height);
+                RemoveInternal(removeTip);
 
                 this.Tip = this.blocksById[removeTip.Previous.HashBlock];
             }
+        }
+
+        private void RemoveInternal(ChainedHeader removeTip)
+        {
+            this.blocksById.Remove(removeTip.HashBlock);
+            this.blocksByHeight.Remove(removeTip.Height);
         }
 
         /// <summary>

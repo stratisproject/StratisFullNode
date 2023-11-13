@@ -429,7 +429,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
             ChainedHeader newTip = this.chainIndexer[firstNotFound - 1];
 
             // Set chain store to be same as the store tip.
-            this.chainIndexer.Initialize(newTip);
+            this.chainIndexer.SetTip(newTip);
 
             this.logger.LogWarning("Block store tip recovered to block '{0}'.", newTip);
 

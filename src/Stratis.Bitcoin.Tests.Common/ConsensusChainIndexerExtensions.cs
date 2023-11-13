@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using NBitcoin;
 using Xunit;
@@ -33,48 +32,6 @@ namespace Stratis.Bitcoin.Tests.Common
             chainedHeader = new ChainedHeader(header, header.GetHash(), chainIndexer.GetHeader(header.HashPrevBlock));
             chainIndexer.SetTip(chainedHeader);
             return true;
-        }
-
-        public static ChainedHeader SetTip(this ChainIndexer chainIndexer, ChainedHeader block)
-        {
-            ChainedHeader fork = chainIndexer.Tip.FindFork(block);
-
-            chainIndexer.Initialize(block);
-
-            return fork;
-        }
-
-        private static IEnumerable<ChainedHeader> EnumerateThisToFork(this ChainIndexer chainIndexer, ChainedHeader block)
-        {
-            if (chainIndexer.Tip == null)
-                yield break;
-
-            ChainedHeader tip = chainIndexer.Tip;
-            while (true)
-            {
-                if (ReferenceEquals(null, block) || ReferenceEquals(null, tip))
-                    throw new InvalidOperationException("No fork found between the two chains");
-
-                if (tip.Height > block.Height)
-                {
-                    yield return tip;
-                    tip = tip.Previous;
-                }
-                else if (tip.Height < block.Height)
-                {
-                    block = block.Previous;
-                }
-                else if (tip.Height == block.Height)
-                {
-                    if (tip.HashBlock == block.HashBlock)
-                        break;
-
-                    yield return tip;
-
-                    block = block.Previous;
-                    tip = tip.Previous;
-                }
-            }
         }
 
         public static ChainIndexer Load(this ChainIndexer chainIndexer, byte[] chain)

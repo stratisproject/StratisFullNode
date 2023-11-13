@@ -87,7 +87,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
         {
             var provenHeaderChain = BuildProvenHeaderChain(10);
 
-            var chain = new ChainIndexer(this.Network, provenHeaderChain);
+            var chain = new ChainIndexer(this.Network);
+            chain.SetTip(provenHeaderChain);
 
             var consensusManager = new Mock<IConsensusManager>();
             consensusManager.Setup(c => c.Tip).Returns(provenHeaderChain);
