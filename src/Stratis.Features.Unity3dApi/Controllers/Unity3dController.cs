@@ -187,7 +187,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// <response code="400">Unexpected exception occurred</response>
         [Route("getaddressbalance")]
         [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.OK, Type = typeof(GetBalanceResponseModel))]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         public IActionResult GetAddressBalance(string address)
         {
@@ -304,10 +304,10 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// <response code="500">Request is null</response>
         [Route("send-transaction")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        [ProducesResponseType((int)HttpStatusCode.Forbidden)]
-        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        [ProducesResponseType((int)HttpStatusCode.OK, Type = typeof(WalletSendTransactionModel))]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest, Type = typeof(ErrorResult))]
+        [ProducesResponseType((int)HttpStatusCode.Forbidden, Type = typeof(ErrorResult))]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError, Type = typeof(ErrorResult))]
         public async Task<IActionResult> SendTransactionAsync([FromBody] SendTransactionRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -521,9 +521,9 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// <response code="500">Unable to deserialize method parameters</response>
         [Route("local-call")]
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        [ProducesResponseType((int)HttpStatusCode.OK, Type = typeof(ILocalExecutionResult))]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest, Type = typeof(ErrorResult))]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError, Type = typeof(ErrorResult))]
         public IActionResult LocalCallSmartContractTransaction([FromBody] LocalCallContractRequest request)
         {
             if (!this.ModelState.IsValid)

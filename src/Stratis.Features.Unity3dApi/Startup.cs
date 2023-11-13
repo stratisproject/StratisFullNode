@@ -8,6 +8,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.OpenApi.Any;
+using Microsoft.OpenApi.Models;
+using NBitcoin;
 using Newtonsoft.Json.Serialization;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Features.Api;
@@ -128,7 +131,26 @@ namespace Stratis.Features.Unity3dApi
             services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
 
             // Register the Swagger generator. This will use the options we injected just above.
-            services.AddSwaggerGen();
+            services.AddSwaggerGen(options => {
+                options.MapType(typeof(Money), () => new OpenApiSchema
+                {
+                    Type = "integer",
+                    Example = new OpenApiInteger(9999)
+                });
+
+                options.MapType(typeof(uint160), () => new OpenApiSchema
+                {
+                    Type = "string",
+                    Example = new OpenApiString("ffffffffffffffffffffffffffffffffffffffff")
+                });
+
+                options.MapType(typeof(uint256), () => new OpenApiSchema
+                {
+                    Type = "string",
+                    Example = new OpenApiString("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+                });
+            });
+
             services.AddSwaggerGenNewtonsoftSupport(); // Use Newtonsoft JSON serializer with swagger. Needs to be placed after AddSwaggerGen()
 
             // Hack to be able to access and modify the options object
