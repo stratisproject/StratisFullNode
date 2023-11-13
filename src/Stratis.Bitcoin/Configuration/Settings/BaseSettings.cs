@@ -30,7 +30,7 @@ namespace Stratis.Bitcoin.Configuration.Settings
 
     public abstract class BaseSettings
     {
-        protected readonly NodeSettings nodeSettings;
+        protected NodeSettings NodeSettings { get; private set; }
 
         private static string TypeDescription(Type type)
         {
@@ -62,7 +62,7 @@ namespace Stratis.Bitcoin.Configuration.Settings
         {
             Guard.NotNull(nodeSettings, nameof(nodeSettings));
 
-            this.nodeSettings = nodeSettings;
+            this.NodeSettings = nodeSettings;
 
             ILogger logger = nodeSettings.LoggerFactory.CreateLogger(this.GetType().FullName);
 

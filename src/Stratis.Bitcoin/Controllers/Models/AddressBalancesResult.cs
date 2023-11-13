@@ -136,7 +136,7 @@ namespace Stratis.Bitcoin.Controllers.Models
             foreach (AddressBalanceChange change in balancesByHeight)
             {
                 balance += change.Satoshi;
- 
+
                 if (change.BalanceChangedHeight < startHeight)
                     continue;
 
