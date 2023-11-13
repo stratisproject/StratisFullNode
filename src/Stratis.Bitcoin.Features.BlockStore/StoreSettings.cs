@@ -77,7 +77,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
             this.ReIndex = config.GetOrDefault<bool>("reindex", false, this.logger);
             this.ReIndexChain = config.GetOrDefault<bool>("reindex-chain", false, this.logger);
             this.AddressIndex = config.GetOrDefault<bool>("addressindex", false, this.logger);
-            this.AddressIndexerCompactionThreshold = config.GetOrDefault<int>("compactionthreshold", 8000, this.logger);
+            this.AddressIndexerCompactionThreshold = config.GetOrDefault<int>("compactionthreshold", 500, this.logger);
 
             if (this.PruningEnabled && this.TxIndex)
                 throw new ConfigurationException("Prune mode is incompatible with -txindex");
