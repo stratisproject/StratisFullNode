@@ -49,7 +49,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.CoinViews
             this.stakeChainStore = new StakeChainStore(this.network, this.chainIndexer, (IStakedb)this.coindb, this.loggerFactory);
             this.stakeChainStore.Load();
 
-            this.rewindDataIndexCache = new RewindDataIndexCache(this.dateTimeProvider, this.network, new FinalizedBlockInfoRepository(new HashHeightPair()), new Checkpoints());
+            this.rewindDataIndexCache = new RewindDataIndexCache(this.dateTimeProvider, this.network);
 
             this.cachedCoinView = new CachedCoinView(this.network, this.coindb, this.dateTimeProvider, this.loggerFactory, this.nodeStats, new ConsensusSettings(new NodeSettings(this.network)), this.chainIndexer, this.stakeChainStore, this.rewindDataIndexCache);
 
