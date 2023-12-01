@@ -165,6 +165,12 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.partialTransaction = SigningUtils.CheckTemplateAndCombineSignatures(builder, this.partialTransaction, partialTransactions);
         }
 
+        public void SetDestination(Script destination, long amount)
+        {
+            this.depositTargetAddress = destination;
+            this.depositAmount = amount;
+        }
+
         /// <inheritdoc />
         public void SetPartialTransaction(Transaction partialTransaction)
         {

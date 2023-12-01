@@ -14,6 +14,18 @@ namespace Stratis.Features.FederatedPeg.Models
         [JsonProperty(PropertyName = "blockHashContainingSpentUtxo")]
         [JsonConverter(typeof(UInt256JsonConverter))]
         public uint256 BlockHashContainingSpentUtxo { get; set; }
+
+        /// <summary>
+        /// Not required, this field is only used if the partial transaction in the CCTS is empty and the sending output needs to be recreated.
+        /// </summary>
+        [JsonProperty(PropertyName = "counterChainDestination")]
+        public string CounterChainDestination { get; set; }
+
+        /// <summary>
+        /// Not required, this field is only used if the partial transaction in the CCTS is empty and the sending output needs to be recreated.
+        /// </summary>
+        [JsonProperty(PropertyName = "amountToSend")]
+        public string AmountToSend { get; set; }
     }
 
     public class UnsuspendTransactionsModel

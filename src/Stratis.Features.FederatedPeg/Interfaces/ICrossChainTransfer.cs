@@ -83,6 +83,8 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// <param name="partialTransactions">Partial transactions received from other federation members.</param>
         void CombineSignatures(TransactionBuilder builder, Transaction[] partialTransactions);
 
+        void SetDestination(Script destination, long amount);
+
         /// <summary>
         /// Sets the partial transaction.
         /// </summary>

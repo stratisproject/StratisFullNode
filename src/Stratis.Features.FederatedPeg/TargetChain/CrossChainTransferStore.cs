@@ -1364,23 +1364,30 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                             var recipients = new List<Recipient>();
 
-                            this.logger.LogDebug("DepositId {0} has {1} outputs", transfer.DepositTransactionId, transfer.PartialTransaction.Outputs.Count);
-
-                            // We do not have the original Deposit instance to work with, so we have to reconstitute the partial transaction
-                            // with recipient logic already applied.
-                            foreach (TxOut output in transfer.PartialTransaction.Outputs)
+                            if (transfer.PartialTransaction == null || transfer.PartialTransaction.Outputs.Count == 0)
                             {
-                                if (output.ScriptPubKey.IsUnspendable)
-                                    continue;
+                                // Done in controller instead
+                            }
+                            else
+                            {
+                                this.logger.LogDebug("DepositId {0} has {1} outputs", transfer.DepositTransactionId, transfer.PartialTransaction.Outputs.Count);
 
-                                if (!output.ScriptPubKey.IsScriptType(ScriptType.P2PKH))
-                                    continue;
-
-                                recipients.Add(new Recipient()
+                                // We do not have the original Deposit instance to work with, so we have to reconstitute the partial transaction
+                                // with recipient logic already applied.
+                                foreach (TxOut output in transfer.PartialTransaction.Outputs)
                                 {
-                                    Amount = output.Value,
-                                    ScriptPubKey = output.ScriptPubKey
-                                });
+                                    if (output.ScriptPubKey.IsUnspendable)
+                                        continue;
+
+                                    if (!output.ScriptPubKey.IsScriptType(ScriptType.P2PKH))
+                                        continue;
+
+                                    recipients.Add(new Recipient()
+                                    {
+                                        Amount = output.Value,
+                                        ScriptPubKey = output.ScriptPubKey
+                                    });
+                                }
                             }
 
                             // Note: since the PoS transaction serialisation does not have a time field it

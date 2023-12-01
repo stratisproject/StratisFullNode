@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Security.Cryptography.Xml;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -570,6 +571,20 @@ namespace Stratis.Features.FederatedPeg.Controllers
 
                     if (deposit.Status != CrossChainTransferStatus.Suspended)
                         continue;
+
+                    if (deposit.PartialTransaction == null || deposit.PartialTransaction.Outputs.Count == 0)
+                    {
+                        if (!string.IsNullOrEmpty(toUnsuspend.CounterChainDestination) && !string.IsNullOrEmpty(toUnsuspend.AmountToSend))
+                        {
+                            BitcoinAddress depositTargetAddress = BitcoinAddress.Create(toUnsuspend.CounterChainDestination, this.network);
+                            Money depositAmount = Money.Parse(toUnsuspend.AmountToSend);
+                            
+                            if (deposit.PartialTransaction == null)
+                                deposit.SetPartialTransaction(this.network.Consensus.ConsensusFactory.CreateTransaction());
+
+                            deposit.PartialTransaction.AddOutput(depositAmount, depositTargetAddress.ScriptPubKey);
+                        }
+                    }
 
                     // For safety it is preferable that only Suspended transfers that have already-spent
                     // UTXOs in their partial transactions get unsuspended.
