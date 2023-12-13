@@ -78,6 +78,18 @@ namespace Stratis.Bitcoin.Features.BlockStore
                 i++;
             }
 
+            // Do a final clean of the ordered list
+            var tempList = new List<OutPoint>();
+
+            foreach (OutPoint outPoint in coinView.UnspentOutputsOrdered)
+            {
+                if (coinView.UnspentOutputs.Contains(outPoint))
+                    tempList.Add(outPoint);
+            }
+
+            coinView.UnspentOutputsOrdered.Clear();
+            coinView.UnspentOutputsOrdered.AddRange(tempList);
+
             return coinView;
         }
 
@@ -94,6 +106,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
                         continue;
 
                     coinView.UnspentOutputs.Add(new OutPoint(tx, i));
+                    coinView.UnspentOutputsOrdered.Add(new OutPoint(tx, i));
                     coinView.Transactions[tx.GetHash()] = tx;
                 }
 

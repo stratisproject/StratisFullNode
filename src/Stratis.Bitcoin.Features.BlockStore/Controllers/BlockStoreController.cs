@@ -7,12 +7,14 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NBitcoin.Policy;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
 using Stratis.Bitcoin.Features.BlockStore.Models;
 using Stratis.Bitcoin.Features.Consensus;
+using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
@@ -88,6 +90,78 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
             this.scriptAddressReader = scriptAddressReader;
             this.stakeChain = stakeChain;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+        }
+
+        [Route("makeitrain")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult MakeItRain(int cutoffBlockHeight, int batchSize, bool sendTransaction)
+        {
+            try
+            {
+                if (cutoffBlockHeight == -1)
+                    cutoffBlockHeight = this.chainIndexer.Height - 200;
+
+                ReconstructedCoinviewContext coinView = this.utxoIndexer.GetCoinviewAtHeight(cutoffBlockHeight);
+
+                // Build a transaction using the unclaimed rewards, paying the federation.
+                var builder = new TransactionBuilder(this.network);
+
+                int batch = 0;
+                Money totalReward = 0;
+                foreach (OutPoint outPoint in coinView.UnspentOutputsOrdered)
+                {
+                    if (batch >= batchSize)
+                        break;
+
+                    Transaction originalCoinstake = coinView.Transactions[outPoint.Hash];
+                    TxOut txOut = originalCoinstake.Outputs[outPoint.N];
+
+                    if (txOut.ScriptPubKey != StraxCoinstakeRule.CirrusRewardScript || txOut.Value == 0)
+                        continue;
+
+                    if (originalCoinstake == null)
+                        continue;
+
+                    // The reward script is P2SH, so we need to inform the builder of the corresponding redeem script to enable it to be spent.
+                    var coin = ScriptCoin.Create(this.network, originalCoinstake, txOut, StraxCoinstakeRule.CirrusRewardScriptRedeem);
+                    builder.AddCoins(coin);
+
+                    totalReward += txOut.Value;
+                    batch++;
+                }
+
+                if (totalReward == 0 || batch == 0)
+                    return this.Json(null);
+
+                // An OP_RETURN for a dummy Cirrus address that tells the sidechain federation they can distribute the transaction.
+                builder.Send(StraxCoinstakeRule.CirrusTransactionTag(this.network.CirrusRewardDummyAddress), Money.Zero);
+
+                // The mempool will accept a zero-fee transaction as long as it matches this structure, paying to the federation.
+                builder.Send(this.network.Federations.GetOnlyFederation().MultisigScript.PaymentScript, totalReward);
+
+                Transaction builtTransaction = builder.BuildTransaction(true);
+
+                // Filter out FeeTooLowPolicyError errors as reward transaction's will not contain any fees.
+                IEnumerable<TransactionPolicyError> errors = builder.Check(builtTransaction).Where(e => !(e is FeeTooLowPolicyError));
+
+                if (errors.Any())
+                {
+                    foreach (TransactionPolicyError error in errors)
+                        this.logger.LogWarning("Unable to validate reward claim transaction '{0}', error: {1}", builtTransaction.ToHex(), error.ToString());
+
+                    // Not much further can be done at this point.
+                    return this.Json(null);
+                }
+                
+                return this.Json(builtTransaction.ToHex());
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
         }
 
         /// <summary>

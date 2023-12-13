@@ -13,6 +13,8 @@ namespace Stratis.Bitcoin.Features.BlockStore
         /// </summary>
         public HashSet<OutPoint> UnspentOutputs { get; }
 
+        public List<OutPoint> UnspentOutputsOrdered { get; }
+
         /// <summary>
         /// Easy access to all of the loaded transactions.
         /// </summary>
@@ -21,6 +23,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
         public ReconstructedCoinviewContext()
         {
             this.UnspentOutputs = new HashSet<OutPoint>();
+            this.UnspentOutputsOrdered = new List<OutPoint>();
             this.Transactions = new Dictionary<uint256, Transaction>();
         }
     }
