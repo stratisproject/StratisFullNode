@@ -35,7 +35,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
         Task<BlockWithTransactions> GetBlockAsync(BigInteger blockNumber);
 
-        List<(string TransactionHash, BurnFunction Burn)> GetWStraxBurnsFromBlock(BlockWithTransactions block);
+        Task<List<(string TransactionHash, BurnFunction Burn)>> GetWStraxBurnsFromBlock(BlockWithTransactions block);
 
         Task<List<(string TransactionHash, string TransferContractAddress, TransferDetails Transfer)>> GetTransfersFromBlockAsync(BlockWithTransactions block, HashSet<string> erc20tokens, HashSet<string> erc721tokens);
 
@@ -292,7 +292,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
             return await this.web3.Eth.Blocks.GetBlockWithTransactionsByNumber.SendRequestAsync(new HexBigInteger(blockNumber)).ConfigureAwait(false);
         }
 
-        public List<(string TransactionHash, BurnFunction Burn)> GetWStraxBurnsFromBlock(BlockWithTransactions block)
+        public async Task<List<(string TransactionHash, BurnFunction Burn)>> GetWStraxBurnsFromBlock(BlockWithTransactions block)
         {
             var burns = new List<(string TransactionHash, BurnFunction Burn)>();
 
@@ -325,6 +325,11 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
                     continue;
                 }
 
+                TransactionReceipt receipt = await this.web3.Eth.Transactions.GetTransactionReceipt.SendRequestAsync(tx.TransactionHash).ConfigureAwait(false);
+
+                if (receipt.Status.Value != BigInteger.One)
+                    continue;
+
                 burns.Add((tx.TransactionHash, burn));
             }
 
@@ -346,6 +351,9 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
                     this.logger.Debug($"Decoding transaction of interest '{tx.TransactionHash}'");
 
                     TransactionReceipt receipt = await this.web3.Eth.Transactions.GetTransactionReceipt.SendRequestAsync(tx.TransactionHash).ConfigureAwait(false);
+
+                    if (receipt.Status.Value != BigInteger.One) 
+                        continue;
 
                     IEnumerable<FilterLogVO> logs = tx.GetTransactionLogs(receipt);
 
