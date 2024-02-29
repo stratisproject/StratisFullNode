@@ -725,7 +725,7 @@ namespace Stratis.Bitcoin.Features.Interop
             BlockWithTransactions block = await supportedChain.Value.GetBlockAsync(this.lastPolledBlock[supportedChain.Key]).ConfigureAwait(false);
 
             // TODO: Move this check into the same method as the transfers to save iterating over the entire Ethereum block twice
-            List<(string TransactionHash, BurnFunction Burn)> burns = supportedChain.Value.GetWStraxBurnsFromBlock(block);
+            List<(string TransactionHash, BurnFunction Burn)> burns = await supportedChain.Value.GetWStraxBurnsFromBlock(block).ConfigureAwait(false);
 
             foreach ((string TransactionHash, BurnFunction Burn) in burns)
             {
