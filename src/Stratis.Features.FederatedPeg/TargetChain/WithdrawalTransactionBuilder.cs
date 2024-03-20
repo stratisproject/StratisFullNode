@@ -62,7 +62,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         {
             try
             {
-                this.logger.LogDebug("BuildDeterministicTransaction depositId(opReturnData)={0}; recipient.ScriptPubKey={1}; recipient.Amount={2}; height={3}", depositId, recipient?.ScriptPubKey, recipient?.Amount, blockHeight);
+                this.logger.LogInformation("BuildDeterministicTransaction depositId(opReturnData)={0}; recipient.ScriptPubKey={1}; recipient.Amount={2}; height={3}", depositId, recipient?.ScriptPubKey, recipient?.Amount, blockHeight);
 
                 // Build the multisig transaction template.
                 uint256 opReturnData = depositId;
@@ -89,7 +89,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         if (recipient.ScriptPubKey == this.cirrusRewardDummyAddressScriptPubKey)
                         {
                             // Use the distribution manager to determine the actual list of recipients.
-                            this.logger.LogDebug("Generating recipient list for reward distribution.");
+                            this.logger.LogInformation("Generating recipient list for reward distribution.");
 
                             multiSigContext.Recipients = this.distributionManager.Distribute(blockHeight, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount); // Reduce the overall amount by the fee first before splitting it up.
                         }
@@ -97,7 +97,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         if (recipient.ScriptPubKey == this.conversionTransactionFeeDistributionScriptPubKey)
                         {
                             // Use the distribution manager to determine the actual list of recipients.
-                            this.logger.LogDebug("Generating recipient list for conversion transaction fee distribution.");
+                            this.logger.LogInformation("Generating recipient list for conversion transaction fee distribution.");
 
                             multiSigContext.Recipients = this.distributionManager.DistributeToMultisigNodes(depositId, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount);
                         }
@@ -111,9 +111,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                 if (coins.Count > FederatedPegSettings.MaxInputs)
                 {
-                    this.logger.LogDebug("Too many inputs. Triggering the consolidation process.");
+                    this.logger.LogInformation("Too many inputs. Triggering the consolidation process.");
                     //this.signals.Publish(new WalletNeedsConsolidation(recipient.Amount));
-                    this.logger.LogTrace("(-)[CONSOLIDATING_INPUTS]");
+                    this.logger.LogInformation("(-)[CONSOLIDATING_INPUTS]");
                     return null;
                 }
 
@@ -123,7 +123,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 // Build the transaction.
                 Transaction transaction = this.federationWalletTransactionHandler.BuildTransaction(multiSigContext);
 
-                this.logger.LogDebug("transaction = {0}", transaction.ToString(this.network, RawFormat.BlockExplorer));
+                this.logger.LogInformation("transaction = {0}", transaction.ToString(this.network, RawFormat.BlockExplorer));
 
                 return transaction;
             }

@@ -1367,6 +1367,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                             if (transfer.PartialTransaction == null || transfer.PartialTransaction.Outputs.Count == 0)
                             {
                                 // Done in controller instead
+                                this.logger.LogError("Error: Partial transaction null");
                             }
                             else
                             {
@@ -1393,6 +1394,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                             // Note: since the PoS transaction serialisation does not have a time field it
                             // does not matter what we pass through for the block time.
                             Transaction transaction = this.withdrawalTransactionBuilder.BuildWithdrawalTransaction(transfer.DepositHeight.Value, transfer.DepositTransactionId, 0, null, recipients);
+
+                            if (transaction == null)
+                            {
+                                this.logger.LogError("Error: Transaction builder returned null");
+                            }
 
                             this.federationWalletManager.ProcessTransaction(transaction);
 

@@ -562,6 +562,8 @@ namespace Stratis.Features.FederatedPeg.Controllers
 
                 foreach (TransactionToUnsuspend toUnsuspend in request.ToUnsuspend)
                 {
+                    this.logger.LogError("Attempting to unsuspend {0}", toUnsuspend.DepositId);
+
                     ICrossChainTransfer[] deposits = await this.crossChainTransferStore.GetAsync(new[] { toUnsuspend.DepositId }, false).ConfigureAwait(false);
 
                     if (deposits.Length == 0)
@@ -582,6 +584,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
                         deposit.PartialTransaction.AddOutput(depositAmount, depositTargetAddress.ScriptPubKey);
                     }
 
+                    /*
                     // For safety it is preferable that only Suspended transfers that have already-spent
                     // UTXOs in their partial transactions get unsuspended.
                     if (toUnsuspend.BlockHashContainingSpentUtxo != null)
@@ -614,6 +617,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
                         if (alreadySpent)
                             continue;
                     }
+                    */
 
                     this.crossChainTransferStore.ForceTransferStatusUpdate(deposit, CrossChainTransferStatus.Partial);
 

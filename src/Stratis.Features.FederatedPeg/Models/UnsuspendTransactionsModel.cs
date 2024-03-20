@@ -11,8 +11,8 @@ namespace Stratis.Features.FederatedPeg.Models
         [JsonConverter(typeof(UInt256JsonConverter))]
         public uint256 DepositId { get; set; }
 
-        [JsonProperty(PropertyName = "blockHashContainingSpentUtxo")]
-        [JsonConverter(typeof(UInt256JsonConverter))]
+        //[JsonProperty(PropertyName = "blockHashContainingSpentUtxo")]
+        //[JsonConverter(typeof(UInt256JsonConverter))]
         public uint256 BlockHashContainingSpentUtxo { get; set; }
 
         /// <summary>
