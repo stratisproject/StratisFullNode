@@ -112,7 +112,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 if (coins.Count > FederatedPegSettings.MaxInputs)
                 {
                     this.logger.LogInformation("Too many inputs. Triggering the consolidation process.");
-                    //this.signals.Publish(new WalletNeedsConsolidation(recipient.Amount));
+                    this.signals.Publish(new WalletNeedsConsolidation(recipient.Amount));
                     this.logger.LogInformation("(-)[CONSOLIDATING_INPUTS]");
                     return null;
                 }
